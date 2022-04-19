@@ -1,0 +1,38 @@
+complete-test-run:
+
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+
+  image: ghcr.io/gakonst/foundry:latest
+
+  cache:
+   paths:
+   - lib/
+   - src/
+
+  script:
+    - forge test -vvv --gas-report
+
+
+
+
+# complete-test-run:
+
+#   cache:
+#    paths:
+#    - lib/
+#    - src/
+
+#   script:
+#     - apt-get update
+#     - apt-get install cargo -y
+#     - apt-get install git -y
+#     - curl https://sh.rustup.rs -sSf | sh -s -- -y
+#     - source $HOME/.cargo/env 
+#     - . ~/.profile
+#     - rustup default nightly && rustup update
+#     - cargo install --git https://github.com/gakonst/foundry --rev 22323e21c3e00d9eccc5914589c23f2a0115413b --bins --locked
+#     - forge test -vvv
+
+#   only:
+#     - merge_requests

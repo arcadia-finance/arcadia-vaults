@@ -1,0 +1,267 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity >0.8.10;
+
+import "../../../lib/ds-test/src/test.sol";
+import "../../../lib/forge-std/src/stdlib.sol";
+import "../../../lib/forge-std/src/console.sol";
+import "../../../lib/forge-std/src/Vm.sol";
+
+import "../../Factory.sol";
+import "../../Proxy.sol";
+import "../../Vault.sol";
+import "../../tests/ERC20NoApprove.sol";
+import "../../tests/ERC721NoApprove.sol";
+import "../../tests/ERC1155NoApprove.sol";
+import "../../Stable.sol";
+import "../../AssetRegistry/MainRegistry.sol";
+import "../../AssetRegistry/FloorERC721SubRegistry.sol";
+import "../../AssetRegistry/StandardERC20SubRegistry.sol";
+import "../../AssetRegistry/TestERC1155SubRegistry.sol";
+import "../../InterestRateModule.sol";
+import "../../Liquidator.sol";
+import "../../OracleHub.sol";
+import "../../tests/SimplifiedChainlinkOracle.sol";
+import "../../utils/Constants.sol";
+
+contract gasProxyDeploy is DSTest {
+  using stdStorage for StdStorage;
+
+  Vm private vm = Vm(HEVM_ADDRESS);  
+  StdStorage private stdstore;
+
+  Factory private factory;
+  Vault private vault;
+  Vault private proxy;
+  address private proxyAddr;
+  ERC20NoApprove private eth;
+  ERC20NoApprove private snx;
+  ERC20NoApprove private link;
+  ERC20NoApprove private safemoon;
+  ERC721NoApprove private bayc;
+  ERC721NoApprove private mayc;
+  ERC721NoApprove private dickButs;
+  ERC20NoApprove private wbayc;
+  ERC20NoApprove private wmayc;
+  ERC1155NoApprove private interleave;
+  OracleHub private oracleHub;
+  SimplifiedChainlinkOracle private oracleEthToUsd;
+  SimplifiedChainlinkOracle private oracleLinkToUsd;
+  SimplifiedChainlinkOracle private oracleSnxToEth;
+  SimplifiedChainlinkOracle private oracleWbaycToEth;
+  SimplifiedChainlinkOracle private oracleWmaycToUsd;
+  SimplifiedChainlinkOracle private oracleInterleaveToEth;
+  MainRegistry private mainRegistry;
+  StandardERC20Registry private standardERC20Registry;
+  FloorERC721SubRegistry private floorERC721SubRegistry;
+  TestERC1155SubRegistry private testERC1155SubRegistry;
+  InterestRateModule private interestRateModule;
+  Stable private stable;
+  Liquidator private liquidator;
+
+  address private creatorAddress = address(1);
+  address private tokenCreatorAddress = address(2);
+  address private oracleOwner = address(3);
+  address private unprivilegedAddress = address(4);
+  address private stakeContract = address(5);
+  address private vaultOwner = address(6);
+
+
+  uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
+  uint256 rateLinkToUsd = 20 * 10 ** Constants.oracleLinkToUsdDecimals;
+  uint256 rateSnxToEth = 1600000000000000;
+  uint256 rateWbaycToEth = 85 * 10 ** Constants.oracleWbaycToEthDecimals;
+  uint256 rateWmaycToUsd = 50000 * 10 ** Constants.oracleWmaycToUsdDecimals;
+  uint256 rateInterleaveToEth = 1 * 10 ** (Constants.oracleInterleaveToEthDecimals - 2);
+
+  address[] public oracleEthToUsdArr = new address[](1);
+  address[] public oracleLinkToUsdArr = new address[](1);
+  address[] public oracleSnxToEthEthToUsd = new address[](2);
+  address[] public oracleWbaycToEthEthToUsd = new address[](2);
+  address[] public oracleWmaycToUsdArr = new address[](1);
+  address[] public oracleInterleaveToEthEthToUsd = new address[](2);
+
+
+
+  // EVENTS
+  event Transfer(address indexed from, address indexed to, uint256 amount);
+
+  //this is a before
+  constructor() {
+    vm.startPrank(tokenCreatorAddress);
+
+    eth = new ERC20NoApprove(uint8(Constants.ethDecimals));
+    eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
+
+    snx = new ERC20NoApprove(uint8(Constants.snxDecimals));
+    snx.mint(tokenCreatorAddress, 200000 * 10**Constants.snxDecimals);
+
+    link = new ERC20NoApprove(uint8(Constants.linkDecimals));
+    link.mint(tokenCreatorAddress, 200000 * 10**Constants.linkDecimals);
+
+    safemoon = new ERC20NoApprove(uint8(Constants.safemoonDecimals));
+    safemoon.mint(tokenCreatorAddress, 200000 * 10**Constants.safemoonDecimals);
+
+    bayc = new ERC721NoApprove();
+    bayc.mint(tokenCreatorAddress, 0);
+    bayc.mint(tokenCreatorAddress, 1);
+    bayc.mint(tokenCreatorAddress, 2);
+    bayc.mint(tokenCreatorAddress, 3);
+
+    mayc = new ERC721NoApprove();
+    mayc.mint(tokenCreatorAddress, 0);
+
+    dickButs = new ERC721NoApprove();
+    dickButs.mint(tokenCreatorAddress, 0);
+
+    wbayc = new ERC20NoApprove(uint8(Constants.wbaycDecimals));
+    wbayc.mint(tokenCreatorAddress, 100000 * 10**Constants.wbaycDecimals);
+
+    interleave = new ERC1155NoApprove("ERC1155 No Appr", "1155NAP");
+    interleave.mint(tokenCreatorAddress, 1, 100000);
+
+    vm.stopPrank();
+
+    vm.prank(creatorAddress);
+    oracleHub = new OracleHub();
+
+    vm.startPrank(oracleOwner);
+    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
+    oracleLinkToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
+    oracleSnxToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
+    oracleWbaycToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
+    oracleWmaycToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WMAYC / USD");
+    oracleInterleaveToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
+
+    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleLinkToUsd.setAnswer(int256(rateLinkToUsd));
+    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
+    oracleWbaycToEth.setAnswer(int256(rateWbaycToEth));
+    oracleWmaycToUsd.setAnswer(int256(rateWmaycToUsd));
+    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEth));
+    vm.stopPrank();
+
+    vm.startPrank(creatorAddress);
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleLinkToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'LINK', baseAsset:'USD', oracleAddress:address(oracleLinkToUsd), quoteAssetAddress:address(link), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthUnit), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWbaycToEthUnit), baseAssetNumeraire: 1, quoteAsset:'WBAYC', baseAsset:'ETH', oracleAddress:address(oracleWbaycToEth), quoteAssetAddress:address(wbayc), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWmaycToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'WMAYC', baseAsset:'USD', oracleAddress:address(oracleWmaycToUsd), quoteAssetAddress:address(wmayc), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleInterleaveToEthUnit), baseAssetNumeraire: 1, quoteAsset:'INTERLEAVE', baseAsset:'ETH', oracleAddress:address(oracleInterleaveToEth), quoteAssetAddress:address(interleave), baseAssetIsNumeraire: true}));
+    vm.stopPrank();
+
+    vm.startPrank(tokenCreatorAddress);
+    eth.transfer(vaultOwner, 100000 * 10 ** Constants.ethDecimals);
+    link.transfer(vaultOwner, 100000 * 10 ** Constants.linkDecimals);
+    snx.transfer(vaultOwner, 100000 * 10 ** Constants.snxDecimals);
+    safemoon.transfer(vaultOwner, 100000 * 10 ** Constants.safemoonDecimals);
+    bayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
+    bayc.transferFrom(tokenCreatorAddress, vaultOwner, 1);
+    bayc.transferFrom(tokenCreatorAddress, vaultOwner, 2);
+    bayc.transferFrom(tokenCreatorAddress, vaultOwner, 3);
+    mayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
+    dickButs.transferFrom(tokenCreatorAddress, vaultOwner, 0);
+    interleave.safeTransferFrom(tokenCreatorAddress, vaultOwner, 1, 100000, '0x0000000000000000000000000000000000000000000000000000000000000000');
+    eth.transfer(unprivilegedAddress, 1000 * 10 ** Constants.ethDecimals);
+    vm.stopPrank();
+
+    vm.startPrank(creatorAddress);
+    interestRateModule = new InterestRateModule();
+    interestRateModule.setBaseInterestRate(5 * 10 ** 16);
+    vm.stopPrank();
+
+    vm.startPrank(tokenCreatorAddress);
+    stable = new Stable(uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
+    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
+    vm.stopPrank();
+
+    oracleEthToUsdArr[0] = address(oracleEthToUsd);
+
+    oracleLinkToUsdArr[0] = address(oracleLinkToUsd);
+
+    oracleSnxToEthEthToUsd[0] = address(oracleSnxToEth);
+    oracleSnxToEthEthToUsd[1] = address(oracleEthToUsd);
+
+    oracleWbaycToEthEthToUsd[0] = address(oracleWbaycToEth);
+    oracleWbaycToEthEthToUsd[1] = address(oracleEthToUsd);
+
+    oracleWmaycToUsdArr[0] = address(oracleWmaycToUsd);
+
+    oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
+    oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
+  }
+
+  //this is a before each
+  function setUp() public {
+
+    vm.startPrank(creatorAddress);
+    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+    uint256[] memory emptyList = new uint256[](0);
+    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+
+    standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
+    floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
+    testERC1155SubRegistry = new TestERC1155SubRegistry(address(mainRegistry), address(oracleHub));
+
+    mainRegistry.addSubRegistry(address(standardERC20Registry));
+    mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+    mainRegistry.addSubRegistry(address(testERC1155SubRegistry));
+
+    uint256[] memory assetCreditRatings = new uint256[](2);
+    assetCreditRatings[0] = 0;
+    assetCreditRatings[1] = 0;
+
+    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), assetCreditRatings);
+    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**Constants.linkDecimals), assetAddress: address(link)}), assetCreditRatings);
+    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleSnxToEthEthToUsd, assetUnit: uint64(10**Constants.snxDecimals), assetAddress: address(snx)}), assetCreditRatings);
+
+    floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWbaycToEthEthToUsd, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(bayc)}), assetCreditRatings);
+
+    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    vm.stopPrank();
+
+    vm.startPrank(vaultOwner);
+    vault = new Vault();
+    stable.transfer(address(0), stable.balanceOf(vaultOwner));
+    vm.stopPrank();
+
+    vm.prank(tokenCreatorAddress);
+    stable.setLiquidator(address(liquidator));
+
+    vm.startPrank(creatorAddress);
+    factory = new Factory();
+    factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule));
+   factory.setVaultVersion(1);
+factory.setLiquidator(address(liquidator));
+    liquidator.setFactory(address(factory));
+    mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+
+    vm.prank(vaultOwner);
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))));
+    proxy = Vault(proxyAddr);
+
+    vm.startPrank(oracleOwner);
+    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleLinkToUsd.setAnswer(int256(rateLinkToUsd));
+    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
+    oracleWbaycToEth.setAnswer(int256(rateWbaycToEth));
+    oracleWmaycToUsd.setAnswer(int256(rateWmaycToUsd));
+    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEth));
+    vm.stopPrank();
+
+    vm.roll(1); //increase block for random salt
+  }
+
+  function testCreateProxyVault() public {
+    uint256 salt = 123456789;
+    factory.createVault(salt);
+  }
+
+
+  //This test should probably be deleted
+  function testTransferOwnership() public {
+    vm.prank(vaultOwner);
+    factory.safeTransferFrom(vaultOwner, unprivilegedAddress, 0);
+  }
+
+}

@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"github.gitAuthentication": false,
+		"git.terminalAuthentication": false
+	}
+}
