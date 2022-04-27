@@ -14,7 +14,7 @@ import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
  */
 contract InterestRateModule is Ownable {
 
-  uint64 public baseInterestRate;
+  uint256 public baseInterestRate;
 
   mapping (uint256 => uint256) public creditRatingToInterestRate;
 
@@ -104,9 +104,9 @@ contract InterestRateModule is Ownable {
    *  The interest rate is the relative compounded interest after one year, it is an integer with 18 decimals
    *  Example: For a yearly interest rate of 2% APY, yearlyInterestRate will equal 20 000 000 000 000 000
    */
-	function getYearlyInterestRate(uint256[] memory valuesPerCreditRating, uint256 minCollValue) external view returns (uint64 yearlyInterestRate) {
+	function getYearlyInterestRate(uint256[] calldata valuesPerCreditRating, uint256 minCollValue) external view returns (uint64 yearlyInterestRate) {
     //ToDo: checks on min and max length to implement
-		yearlyInterestRate =  baseInterestRate + uint64(calculateWeightedCollateralInterestrate(valuesPerCreditRating, minCollValue));
+		yearlyInterestRate =  uint64(baseInterestRate) + uint64(calculateWeightedCollateralInterestrate(valuesPerCreditRating, minCollValue));
 	}
   
 }

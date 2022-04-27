@@ -758,7 +758,7 @@ contract Vault {
 
     //gas: transferAmount cannot be larger than debt._openDebt,
     //which is a uint128, thus can't underflow
-    assert(debt._openDebt >= transferAmount);
+    assert(openDebt >= transferAmount);
     unchecked {debt._openDebt -= uint128(transferAmount);}
 
     // if interest is calculated on a fixed rate, set interest to zero if opendebt is zero

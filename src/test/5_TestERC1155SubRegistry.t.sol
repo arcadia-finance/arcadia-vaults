@@ -93,7 +93,7 @@ contract TestERC1155SubRegistryTest is DSTest {
 		vm.startPrank(creatorAddress);
     uint256[] memory assetCreditRatings = new uint256[](1);
     assetCreditRatings[0] = 0;
-		vm.expectRevert("Length list of credit ratings must be 0 or equal to number of numeraires");
+		vm.expectRevert("MR_AA: LENGTH_MISMATCH");
     testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
 
 

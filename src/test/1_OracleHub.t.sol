@@ -83,7 +83,7 @@ contract OracleHubTest is DSTest {
   function testOwnerAddsOracleBigOracleUnitFail(uint64 oracleEthToUsdUnit) public {
     vm.assume(oracleEthToUsdUnit > 10 ** 18);
     vm.startPrank(creatorAddress);
-    vm.expectRevert("0racle can have maximal 18 decimals");
+    vm.expectRevert("Oracle can have maximal 18 decimals");
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
     vm.stopPrank();
   }
@@ -119,7 +119,7 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
     oraclesSnxToUsd[0] = address(oracleSnxToEth);
     oraclesSnxToUsd[1] = address(oracleLinkToUsd);
-    vm.expectRevert("quoteAsset does not match with baseAsset of previous oracle");
+    vm.expectRevert("qAsset doesnt match with bAsset of prev oracle");
     oracleHub.checkOracleSequence(oraclesSnxToUsd);
   }
 
@@ -128,7 +128,7 @@ contract OracleHubTest is DSTest {
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthDecimals), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
     vm.stopPrank();
     oraclesSnxToEth[0] = address(oracleSnxToEth);
-    vm.expectRevert("Last oracle does not have USD as baseAsset");
+    vm.expectRevert("Last oracle does not have USD as bAsset");
     oracleHub.checkOracleSequence(oraclesSnxToEth);
   }
 
@@ -137,7 +137,7 @@ contract OracleHubTest is DSTest {
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthDecimals), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
     vm.stopPrank();
     address[] memory oraclesSequence = new address[](4);
-    vm.expectRevert("Oracle sequence cannot consist of more than three oracles");
+    vm.expectRevert("Oracle seq. cant be longer than 3");
     oracleHub.checkOracleSequence(oraclesSequence);
   }
 
@@ -351,6 +351,7 @@ contract OracleHubTest is DSTest {
 
     assertEq(expectedRateInUsd, actualRateInUsd);
     assertEq(expectedRateInNumeraire, actualRateInNumeraire);
+    
   }
 
   function testReturnNumeraireRateWhenNumeraireIsNotUsdOverflow(uint256 rateSnxToEth, uint256 rateEthToUsd, uint8 oracleSnxToEthDecimals, uint8 oracleEthToUsdDecimals) public {
