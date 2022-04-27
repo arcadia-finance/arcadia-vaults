@@ -35,9 +35,7 @@ contract OracleHub is Ownable {
   /**
    * @notice Constructor
    */
-  constructor () {
-    //owner = msg.sender;
-  }
+  constructor () {}
 
   /**
    * @notice Add a new oracle to the Oracle Hub
@@ -47,7 +45,7 @@ contract OracleHub is Ownable {
   function addOracle(OracleInformation calldata oracleInformation) external onlyOwner { //Need separate function to edit existing oracles?
     address oracleAddress = oracleInformation.oracleAddress;
     require(!inOracleHub[oracleAddress], 'Oracle already in oracle-hub');
-    require(oracleInformation.oracleUnit <= 10**18, '0racle can have maximal 18 decimals');
+    require(oracleInformation.oracleUnit <= 1000000000000000000, 'Oracle can have maximal 18 decimals');
     inOracleHub[oracleAddress] = true;
     oracleToOracleInformation[oracleAddress] = oracleInformation;
   }
@@ -70,24 +68,23 @@ contract OracleHub is Ownable {
    * @notice Checks if a series of oracles , if so returns true
    * @param oracleAdresses An array of addresses of oracle contracts
    * @dev Function will do nothing if all checks pass, but reverts if at least one check fails.
-   *  The following checks are performed:
-   *  The oracle-address must be previously added to the Oracle-Hub.
-   *  The last oracle in the series must have USD as base-asset.
-   *  The Base-asset of all oracles must be equal to the quote-asset of the next oracle (except for the last oracle in the series).
+   *      The following checks are performed:
+   *      The oracle-address must be previously added to the Oracle-Hub.
+   *      The last oracle in the series must have USD as base-asset.
+   *      The Base-asset of all oracles must be equal to the quote-asset of the next oracle (except for the last oracle in the series).
    */
   function checkOracleSequence (address[] memory oracleAdresses) external view {
     uint256 oracleAdressesLength = oracleAdresses.length;
-    require(oracleAdressesLength <= 3, "Oracle sequence cannot consist of more than three oracles");
+    require(oracleAdressesLength <= 3, "Oracle seq. cant be longer than 3");
     for (uint256 i; i < oracleAdressesLength;) {
       require(inOracleHub[oracleAdresses[i]], "Unknown oracle");
-      OracleInformation memory oracleInformation = oracleToOracleInformation[oracleAdresses[i]];
       //Add test that in all other cases, the quote asset of next oracle matches base asset of previous oracle
       if (i > 0) {
-        require(compareStrings(oracleToOracleInformation[oracleAdresses[i-1]].baseAsset, oracleInformation.quoteAsset), "quoteAsset does not match with baseAsset of previous oracle");
+        require(compareStrings(oracleToOracleInformation[oracleAdresses[i-1]].baseAsset, oracleToOracleInformation[oracleAdresses[i]].quoteAsset), "qAsset doesnt match with bAsset of prev oracle");
       }
       //Add test that base asset of last oracle is USD
       if (i == oracleAdressesLength-1) {
-        require(compareStrings(oracleInformation.baseAsset, "USD"), "Last oracle does not have USD as baseAsset");
+        require(compareStrings(oracleToOracleInformation[oracleAdresses[i]].baseAsset, "USD"), "Last oracle does not have USD as bAsset");
       }
       unchecked {++i;} 
     }
@@ -101,17 +98,17 @@ contract OracleHub is Ownable {
    * @return rateInUsd The exchange rate of the asset denominated in USD with 18 Decimals precision
    * @return rateInNumeraire The exchange rate of the asset denominated in a Numeraire different from USD with 18 Decimals precision
    * @dev The Function will loop over all oracles-addresses and find the total exchange rate of the asset by
-   *  multiplying the intermediate exchangerates (max 3) with eachother. Exchange rates can be with any Decimals precision, but smaller than 18.
-   *  All intermediate exchange rates are calculated with a precision of 18 decimals and rounded down.
-   *  Todo: check precision when multiplying multiple small rates -> go to 27 decimals precision??
-   *  The exchange rate of an asset will be denominated in a Numeraire different from USD if and only if
-   *  the given Numeraire is different from USD and one of the intermediate oracles to price the asset has
-   *  the given numeraire as base-asset
-   *  Function will overflow if any of the intermediate or the final exchange rate overflows
-   *  Example of 3 oracles with R1 the first exchange rate with D1 decimals and R2 the second exchange rate with D2 decimals R3...
-   *    First intermediate rate will overflow when R1 * 10**18 > MAXUINT256
-   *    Second rate will overflow when R1 * R2 * 10**(18 - D1) > MAXUINT256
-   *    Third and final exchange rate will overflow when R1 * R2 * R3 * 10**(18 - D1 - D2) > MAXUINT256
+   *      multiplying the intermediate exchangerates (max 3) with eachother. Exchange rates can be with any Decimals precision, but smaller than 18.
+   *      All intermediate exchange rates are calculated with a precision of 18 decimals and rounded down.
+   *      Todo: check precision when multiplying multiple small rates -> go to 27 decimals precision??
+   *      The exchange rate of an asset will be denominated in a Numeraire different from USD if and only if
+   *      the given Numeraire is different from USD and one of the intermediate oracles to price the asset has
+   *      the given numeraire as base-asset
+   *      Function will overflow if any of the intermediate or the final exchange rate overflows
+   *      Example of 3 oracles with R1 the first exchange rate with D1 decimals and R2 the second exchange rate with D2 decimals R3...
+   *        First intermediate rate will overflow when R1 * 10**18 > MAXUINT256
+   *        Second rate will overflow when R1 * R2 * 10**(18 - D1) > MAXUINT256
+   *        Third and final exchange rate will overflow when R1 * R2 * R3 * 10**(18 - D1 - D2) > MAXUINT256
    */
   function getRate(address[] memory oracleAdresses, uint256 numeraire) public view returns (uint256, uint256) {
 
@@ -120,24 +117,26 @@ contract OracleHub is Ownable {
     int256 tempRate;
 
     uint256 oraclesLength = oracleAdresses.length;
-    for (uint256 i; i < oraclesLength;) {
-      OracleInformation memory oracle = oracleToOracleInformation[oracleAdresses[i]];
 
-      (, tempRate,,,) = IChainLinkData(oracle.oracleAddress).latestRoundData();
+    //taking into memory, saves 209 gas
+    address oracleAddressAtIndex;
+    for (uint256 i; i < oraclesLength;) {
+      oracleAddressAtIndex = oracleAdresses[i];
+      (, tempRate,,,) = IChainLinkData(oracleToOracleInformation[oracleAddressAtIndex].oracleAddress).latestRoundData();
       require(tempRate >= 0, "Negative oracle price");
 
-      rate = rate.mulDivDown(uint256(tempRate), oracle.oracleUnit);
+      rate = rate.mulDivDown(uint256(tempRate), oracleToOracleInformation[oracleAddressAtIndex].oracleUnit);
 
-      if (oracle.baseAssetIsNumeraire && oracle.baseAssetNumeraire == 0) {
+      if (oracleToOracleInformation[oracleAddressAtIndex].baseAssetIsNumeraire && oracleToOracleInformation[oracleAddressAtIndex].baseAssetNumeraire == 0) {
         //If rate is expressed in USD, break loop and return rate expressed in numeraire
         return (rate, 0);
-      } else if (oracle.baseAssetIsNumeraire && oracle.baseAssetNumeraire == numeraire) {
+      } else if (oracleToOracleInformation[oracleAddressAtIndex].baseAssetIsNumeraire && oracleToOracleInformation[oracleAddressAtIndex].baseAssetNumeraire == numeraire) {
         //If rate is expressed in numeraire, break loop and return rate expressed in numeraire
         return (0, rate);
       }
       unchecked {++i;}
     }
-    revert('No oracle with USD or numeraire as baseAsset');
+    revert('No oracle with USD or numeraire as bAsset');
   }
 
 }

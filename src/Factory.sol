@@ -29,19 +29,19 @@ contract Factory is ERC721 {
 
     string public baseURI;
 
-    event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 id);
-
     address public owner;
 
     //Set this on construction?
     address public liquidatorAddress;
+
+    event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 id);
 
     modifier onlyOwner() {
       require(msg.sender == owner, "You are not the owner");
       _;
     }
 
-    constructor() ERC721("Arcadia Vault Factory", "ARCADIA") {
+    constructor() ERC721("Arcadia Vault", "ARCADIA") {
         owner = msg.sender;
     }
 
@@ -57,13 +57,14 @@ contract Factory is ERC721 {
         liquidatorAddress = _newLiquidator;
     }
 
-    function setVaultInfo(uint256 version, address registryAddress, address logic, address stable, address stakeContract, address interestModule) public onlyOwner {
+    function setVaultInfo(uint256 version, address registryAddress, address logic, address stable, address stakeContract, address interestModule) external onlyOwner {
         vaultDetails[version].registryAddress = registryAddress;
         vaultDetails[version].logic = logic;
         vaultDetails[version].stable = stable;
         vaultDetails[version].stakeContract = stakeContract;
         vaultDetails[version].interestModule = interestModule;
     }
+
     /** 
     @notice Function used to create a Vault
     @dev This is the starting point of the Vault creation process. 
@@ -104,6 +105,7 @@ contract Factory is ERC721 {
   /** 
     @notice Internal function used to transfer a vault between users
     @dev This function is used to transfer a vault between users.
+         Overriding to transfer ownership of linked vault.
     @param from sender.
     @param to target.
     @param id of the vault that is about to be transfered.
@@ -136,7 +138,7 @@ contract Factory is ERC721 {
     @param sender The msg.sender of the liquidator. Also the 'keeper'
   */
     function _liquidate(address vault, address sender) internal {
-        require(IVault(vault).liquidateVault(sender, liquidatorAddress), "Vault liquidation failed");
+        require(IVault(vault).liquidateVault(sender, liquidatorAddress), "FTRY: Vault liquidation failed");
         // Vault version read via Ivault?
          IVault(allVaults[vaultIndex[vault]]).transferOwnership(liquidatorAddress);
         _liquidateTransfer(vault);
@@ -144,7 +146,9 @@ contract Factory is ERC721 {
 
     /** 
     @notice Helper transfer function that allows the contract to transfer ownership of the erc721.
-    @dev This function is called by the contract when a vault is liquidated. ~This includes a transfer of ownership of the vault. Where we circumvent the ERC721 transfer function requires.
+    @dev This function is called by the contract when a vault is liquidated. 
+         This includes a transfer of ownership of the vault.
+         We circumvent the ERC721 transfer function.
     @param vault Vault that needs to get transfered.
   */
 
@@ -180,6 +184,5 @@ contract Factory is ERC721 {
   function onERC721Received(address, address, uint256, bytes calldata ) public pure returns (bytes4) {
     return this.onERC721Received.selector;
   }
-
 
 }

@@ -121,6 +121,7 @@ contract factoryTest is DSTest {
     emit log_named_address("sender", sender);
     emit log_named_address("addr(this)", address(this));
     emit log_named_address("owner", factoryContr.owner());
+    
 
     vm.startPrank(sender);
     vm.expectRevert("You are not the owner");

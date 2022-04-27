@@ -61,21 +61,21 @@ contract StandardERC20Registry is SubRegistry {
 
   /**
    * @notice Returns the information that is stored in the Sub-registry for a given asset
+   * @dev struct is not taken into memory; saves 6613 gas
    * @param asset The Token address of the asset
    * @return assetDecimals The number of decimals of the asset
    * @return assetAddress The Token address of the asset
    * @return oracleAddresses The list of addresses of the oracles to get the exchange rate of the asset in USD
    */
   function getAssetInformation(address asset) public view returns (uint64, address, address[] memory) {
-    AssetInformation memory assetInfo = assetToInformation[asset];
-    return (assetInfo.assetUnit, assetInfo.assetAddress, assetInfo.oracleAddresses);
+    return (assetToInformation[asset].assetUnit, assetToInformation[asset].assetAddress, assetToInformation[asset].oracleAddresses);
   }
 
   /**
    * @notice Checks for a token address and the corresponding Id if it is white-listed
    * @param assetAddress The address of the asset
    * @dev For each token address, a corresponding id at the same index should be present,
-   *  for tokens without Id (ERC20 for instance), the Id should be set to 0
+   *      for tokens without Id (ERC20 for instance), the Id should be set to 0
    * @return A boolean, indicating if the asset passed as input is whitelisted
    */
   function isWhiteListed(address assetAddress, uint256) external override view returns (bool) {
@@ -93,10 +93,10 @@ contract StandardERC20Registry is SubRegistry {
    * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
    * @return valueInNumeraire The value of the asset denominated in Numeraire different from USD with 18 Decimals precision
    * @dev The value of an asset will be denominated in a Numeraire different from USD if and only if
-   *  the given Numeraire is different from USD and one of the intermediate oracles to price the asset has
-   *  the given numeraire as base-asset.
-   *  Only one of the two values can be different from 0.
-   *  Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
+   *      the given Numeraire is different from USD and one of the intermediate oracles to price the asset has
+   *      the given numeraire as base-asset.
+   *      Only one of the two values can be different from 0.
+   *      Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
    */
   function getValue(GetValueInput memory getValueInput) public view override returns (uint256, uint256) {
     uint256 value;
@@ -106,15 +106,14 @@ contract StandardERC20Registry is SubRegistry {
     //Will return empty struct when asset is not first added to subregisrty -> still return a value without error
     //In reality however call will always pass via mainregistry, that already does the check
     //ToDo
-    AssetInformation memory assetInformation = assetToInformation[getValueInput.assetAddress];
-    
-    (rateInUsd, rateInNumeraire) = IOraclesHub(_oracleHub).getRate(assetInformation.oracleAddresses, getValueInput.numeraire);
+
+    (rateInUsd, rateInNumeraire) = IOraclesHub(_oracleHub).getRate(assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.numeraire);
 
     if (rateInNumeraire > 0) {
-      value = (getValueInput.assetAmount).mulDivDown(rateInNumeraire, assetInformation.assetUnit);
+      value = (getValueInput.assetAmount).mulDivDown(rateInNumeraire, assetToInformation[getValueInput.assetAddress].assetUnit);
       return (0, value);
     } else {
-      value = (getValueInput.assetAmount).mulDivDown(rateInUsd, assetInformation.assetUnit);
+      value = (getValueInput.assetAmount).mulDivDown(rateInUsd, assetToInformation[getValueInput.assetAddress].assetUnit);
       return (value, 0);
     }
         

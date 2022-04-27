@@ -10,7 +10,7 @@ import "./AbstractSubRegistry.sol";
   * @title Sub-registry for ERC721 tokens for which a oracle exists for the floor price of the collection
   * @author Arcadia Finance
   * @notice The FloorERC721SubRegistry stores pricing logic and basic information for ERC721 tokens for which a direct price feeds exists
-  *   for the floor price of the collection
+  *         for the floor price of the collection
   * @dev No end-user should directly interact with the Main-registry, only the Main-registry, Oracle-Hub or the contract owner
  */
 contract FloorERC721SubRegistry is SubRegistry {
@@ -40,11 +40,11 @@ contract FloorERC721SubRegistry is SubRegistry {
    * @param assetInformation A Struct with information about the asset 
    * @param assetCreditRatings The List of Credit Ratings for the asset for the different Numeraires
    * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
-   *  or the list must have lenth 0. If the list has length zero, the credit ratings of the asset for all numeraires is
-   *  is initiated as credit rating with index 0 by default (worst credit rating)
+   *      or the list must have lenth 0. If the list has length zero, the credit ratings of the asset for all numeraires is
+   *      is initiated as credit rating with index 0 by default (worst credit rating)
    * @dev The asset needs to be added/overwritten in the Main-Registry as well
    */ 
-  function setAssetInformation(AssetInformation calldata assetInformation, uint256[] memory assetCreditRatings) external onlyOwner {
+  function setAssetInformation(AssetInformation calldata assetInformation, uint256[] calldata assetCreditRatings) external onlyOwner {
 
     IOraclesHub(_oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
     
@@ -92,17 +92,16 @@ contract FloorERC721SubRegistry is SubRegistry {
   /**
    * @notice Returns the value of a certain asset, denominated in USD or in another Numeraire
    * @param getValueInput A Struct with all the information neccessary to get the value of an asset denominated in USD or
-   *  denominated in a given Numeraire different from USD
+   *                      denominated in a given Numeraire different from USD
    * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
    * @return valueInNumeraire The value of the asset denominated in Numeraire different from USD with 18 Decimals precision
    * @dev The value of an asset will be denominated in a Numeraire different from USD if and only if
-   *  the given Numeraire is different from USD and one of the intermediate oracles to price the asset has
-   *  the given numeraire as base-asset.
-   *  Only one of the two values can be different from 0.
+   *      the given Numeraire is different from USD and one of the intermediate oracles to price the asset has
+   *      the given numeraire as base-asset.
+   *      Only one of the two values can be different from 0.
    */
   function getValue(GetValueInput memory getValueInput) public view override returns (uint256 valueInUsd, uint256 valueInNumeraire) {
-    AssetInformation memory assetInformation = assetToInformation[getValueInput.assetAddress];
-    
-    (valueInUsd, valueInNumeraire) = IOraclesHub(_oracleHub).getRate(assetInformation.oracleAddresses, getValueInput.numeraire);
+ 
+    (valueInUsd, valueInNumeraire) = IOraclesHub(_oracleHub).getRate(assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.numeraire);
   }
 }

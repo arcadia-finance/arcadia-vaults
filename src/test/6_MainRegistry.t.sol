@@ -162,7 +162,7 @@ contract MainRegistryTest is DSTest {
 
     uint256[] memory assetCreditRatings = new uint256[](1);
     assetCreditRatings[0] = 0;
-		vm.expectRevert("Length list of credit ratings must be 0 or equal number of assets in main registy");
+		vm.expectRevert("MR_AN: lenght");
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), assetCreditRatings);
 		vm.stopPrank();
 	}
@@ -176,7 +176,7 @@ contract MainRegistryTest is DSTest {
     uint256[] memory assetCreditRatings = new uint256[](2);
     assetCreditRatings[0] = mainRegistry.CREDIT_RATING_CATOGERIES();
 		assetCreditRatings[1] = 0;
-		vm.expectRevert("Non existing credit Rating Category");
+		vm.expectRevert("MR_AN: non existing credRat");
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), assetCreditRatings);
 		vm.stopPrank();
 	}
@@ -184,8 +184,8 @@ contract MainRegistryTest is DSTest {
 	function testOwnerAddsNumeraireWithEmptyListOfCreditRatings () public {
 		vm.startPrank(creatorAddress);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**Constants.linkDecimals), assetAddress: address(link)}), emptyList);
+    	standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
+    	standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**Constants.linkDecimals), assetAddress: address(link)}), emptyList);
 
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		vm.stopPrank();
@@ -268,7 +268,7 @@ contract MainRegistryTest is DSTest {
     assetCreditRatings[0] = 0;
 
 		vm.startPrank(address(standardERC20Registry));
-		vm.expectRevert("Length list of credit ratings must be 0 or equal to number of numeraires");
+		vm.expectRevert("MR_AA: LENGTH_MISMATCH");
 		mainRegistry.addAsset(address(eth), assetCreditRatings);
 		vm.stopPrank();
 	}
@@ -284,7 +284,7 @@ contract MainRegistryTest is DSTest {
 		assetCreditRatings[1] = 0;
 
 		vm.startPrank(address(standardERC20Registry));
-		vm.expectRevert("Non existing credit Rating Category");
+		vm.expectRevert("MR_AA: non-existing");
 		mainRegistry.addAsset(address(eth), assetCreditRatings);
 		vm.stopPrank();
 	}
@@ -354,7 +354,7 @@ contract MainRegistryTest is DSTest {
 		assertEq(address(standardERC20Registry), mainRegistry.assetToSubRegistry(address(eth)));
 
 		vm.startPrank(address(floorERC721SubRegistry));
-		vm.expectRevert("Asset already known in Registry and not updatable");
+		vm.expectRevert("MR_AA: already known");
 		mainRegistry.addAsset(address(eth), emptyList);
 		vm.stopPrank();
 
@@ -618,7 +618,7 @@ contract MainRegistryTest is DSTest {
     assetAmounts[0] = 10;
 		assetAmounts[1] = 10;
 
-		vm.expectRevert("MR GV: LENGTH_MISMATCH");
+		vm.expectRevert("MR_GTV: LENGTH_MISMATCH");
 		mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdNumeraire);
 
     assetIds = new uint256[](2);
@@ -628,7 +628,7 @@ contract MainRegistryTest is DSTest {
     assetAmounts = new uint256[](1);
     assetAmounts[0] = 10;
 
-		vm.expectRevert("MR GV: LENGTH_MISMATCH");
+		vm.expectRevert("MR_GTV: LENGTH_MISMATCH");
 		mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdNumeraire);
 	}
 
@@ -652,7 +652,7 @@ contract MainRegistryTest is DSTest {
     assetAmounts[0] = 10;
 		assetAmounts[1] = 10;
 
-		vm.expectRevert("MR GLV: LENGTH_MISMATCH");
+		vm.expectRevert("MR_GLV: LENGTH_MISMATCH");
 		mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdNumeraire);
 
     assetIds = new uint256[](2);
@@ -662,7 +662,7 @@ contract MainRegistryTest is DSTest {
     assetAmounts = new uint256[](1);
     assetAmounts[0] = 10;
 		
-		vm.expectRevert("MR GLV: LENGTH_MISMATCH");
+		vm.expectRevert("MR_GLV: LENGTH_MISMATCH");
 		mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdNumeraire);
 	}
 
@@ -688,7 +688,7 @@ contract MainRegistryTest is DSTest {
     assetAmounts[0] = 10;
 		assetAmounts[1] = 10;
 
-		vm.expectRevert("Unknown Numeraire");
+		vm.expectRevert("MR_GTV: Unknown Numeraire");
 		mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.SafemoonNumeraire);
 	}
 
@@ -714,7 +714,7 @@ contract MainRegistryTest is DSTest {
     assetAmounts[0] = 10;
 		assetAmounts[1] = 10;
 
-		vm.expectRevert("Unknown Numeraire");
+		vm.expectRevert("MR_GLV: Unknown Numeraire");
 		mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.SafemoonNumeraire);
 	}
 
@@ -740,7 +740,7 @@ contract MainRegistryTest is DSTest {
     assetAmounts[0] = 10;
 		assetAmounts[1] = 10;
 
-		vm.expectRevert("Unknown asset");
+		vm.expectRevert("MR_GTV: Unknown asset");
 		mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdNumeraire);
 	}
 
@@ -766,7 +766,7 @@ contract MainRegistryTest is DSTest {
     assetAmounts[0] = 10;
 		assetAmounts[1] = 10;
 
-		vm.expectRevert("Unknown asset");
+		vm.expectRevert("MR_GLV: Unknown asset");
 		mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdNumeraire);
 	}
 
@@ -966,7 +966,7 @@ contract MainRegistryTest is DSTest {
     assetCreditRatings[1] = Constants.ethCreditRatingEth;
 
 		vm.startPrank(creatorAddress);
-		vm.expectRevert("MR BSCR: LENGTH_MISMATCH");
+		vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
 		mainRegistry.batchSetCreditRating(assetAddresses, numeraires, assetCreditRatings);
 		vm.stopPrank();
 
@@ -978,7 +978,7 @@ contract MainRegistryTest is DSTest {
     assetCreditRatings[0] = Constants.ethCreditRatingUsd;
 
 		vm.startPrank(creatorAddress);
-		vm.expectRevert("MR BSCR: LENGTH_MISMATCH");
+		vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
 		mainRegistry.batchSetCreditRating(assetAddresses, numeraires, assetCreditRatings);
 		vm.stopPrank();	
 	}
@@ -1036,7 +1036,7 @@ contract MainRegistryTest is DSTest {
     assetCreditRatings[1] = mainRegistry.CREDIT_RATING_CATOGERIES();
 
 		vm.startPrank(creatorAddress);
-		vm.expectRevert("Non existing credit Rating Category");
+		vm.expectRevert("MR_BSCR: non-existing creditRat");
 		mainRegistry.batchSetCreditRating(assetAddresses, numeraires, assetCreditRatings);
 		vm.stopPrank();
 	}

@@ -114,7 +114,7 @@ contract StandardERC20RegistryTest is DSTest {
 		vm.startPrank(creatorAddress);
     uint256[] memory assetCreditRatings = new uint256[](1);
     assetCreditRatings[0] = 0;
-		vm.expectRevert("Length list of credit ratings must be 0 or equal to number of numeraires");
+		vm.expectRevert("MR_AA: LENGTH_MISMATCH");
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), assetCreditRatings);
 		vm.stopPrank();
 	}

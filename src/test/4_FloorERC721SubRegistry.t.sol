@@ -104,7 +104,7 @@ contract FloorERC721SubRegistryTest is DSTest {
 		vm.startPrank(creatorAddress);
     uint256[] memory assetCreditRatings = new uint256[](1);
     assetCreditRatings[0] = 0;
-		vm.expectRevert("Length list of credit ratings must be 0 or equal to number of numeraires");
+		vm.expectRevert("MR_AA: LENGTH_MISMATCH");
 		floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWbaycToEthEthToUsd, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(bayc)}), assetCreditRatings);
 
 		vm.stopPrank();

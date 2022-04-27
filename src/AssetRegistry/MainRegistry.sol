@@ -32,9 +32,10 @@ interface ISubRegistry {
 contract MainRegistry is Ownable {
   using FixedPointMathLib for uint256;
 
+  bool public assetsUpdatable = true;
+
   uint256 public constant CREDIT_RATING_CATOGERIES = 10;
 
-  bool public assetsUpdatable = true;
   address[] private subRegistries;
   address[] public assetsInMainRegistry;
 
@@ -56,9 +57,6 @@ contract MainRegistry is Ownable {
   mapping (uint256 => NumeraireInformation) public numeraireToInformation;
 
   mapping (address => mapping (uint256 => uint256)) public assetToNumeraireToCreditRating;
-
-
-
 
   /**
    * @dev Only Sub-registries can call functions marked by this modifier.
@@ -103,10 +101,12 @@ contract MainRegistry is Ownable {
     uint256 addressesLength = _assetAddresses.length;
     require(addressesLength == _assetIds.length, "LENGTH_MISMATCH");
 
+    address assetAddress;
     for (uint256 i; i < addressesLength;) {
-      if (!inMainRegistry[_assetAddresses[i]]) {
+      assetAddress = _assetAddresses[i];
+      if (!inMainRegistry[assetAddress]) {
         return false;
-      } else if (!ISubRegistry(assetToSubRegistry[_assetAddresses[i]]).isWhiteListed(_assetAddresses[i], _assetIds[i])) {
+      } else if (!ISubRegistry(assetToSubRegistry[assetAddress]).isWhiteListed(assetAddress, _assetIds[i])) {
         return false;
       }
       unchecked {++i;}
@@ -161,19 +161,19 @@ contract MainRegistry is Ownable {
    */
   function addAsset(address assetAddress, uint256[] memory assetCreditRatings) external onlySubRegistry {
     if (inMainRegistry[assetAddress]) {
-      require(assetsUpdatable, 'Asset already known in Registry and not updatable');
+      require(assetsUpdatable, 'MR_AA: already known');
     } else {
       inMainRegistry[assetAddress] = true;
       assetsInMainRegistry.push(assetAddress);
     }
     assetToSubRegistry[assetAddress] = msg.sender;
 
-  
     uint256 assetCreditRatingsLength = assetCreditRatings.length;
-    require(assetCreditRatingsLength == numeraireLastIndex + 1 || assetCreditRatingsLength == 0, 'Length list of credit ratings must be 0 or equal to number of numeraires');
-    for (uint256 i; i < assetCreditRatingsLength; i++) {
-      require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "Non existing credit Rating Category");
+    require(assetCreditRatingsLength == numeraireLastIndex + 1 || assetCreditRatingsLength == 0, 'MR_AA: LENGTH_MISMATCH');
+    for (uint256 i; i < assetCreditRatingsLength;) {
+      require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AA: non-existing");
       assetToNumeraireToCreditRating[assetAddress][i] = assetCreditRatings[i];
+      unchecked {++i;}
     }
   }
 
@@ -190,10 +190,10 @@ contract MainRegistry is Ownable {
    */
   function batchSetCreditRating(address[] calldata assets, uint256[] calldata numeraires, uint256[] calldata newCreditRating) external onlyOwner {
     uint256 assetsLength = assets.length;
-    require(assetsLength == numeraires.length && assetsLength == newCreditRating.length, "MR BSCR: LENGTH_MISMATCH");
+    require(assetsLength == numeraires.length && assetsLength == newCreditRating.length, "MR_BSCR: LENGTH_MISMATCH");
 
-    for (uint i; i < assetsLength;) {
-      require(newCreditRating[i] < CREDIT_RATING_CATOGERIES, "Non existing credit Rating Category");
+    for (uint256 i; i < assetsLength;) {
+      require(newCreditRating[i] < CREDIT_RATING_CATOGERIES, "MR_BSCR: non-existing creditRat");
       assetToNumeraireToCreditRating[assets[i]][numeraires[i]] = newCreditRating[i];
       unchecked {++i;}
     }
@@ -217,15 +217,16 @@ contract MainRegistry is Ownable {
    *  Category from 1 to 10 will be used to label groups of assets with similart risk profiles
    *  (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
    *  ToDo: Add tests that existing numeraire cannot be entered second time?
+   *  ToDo: check if assetCreditRating can be put in a struct
    */
-  function addNumeraire(NumeraireInformation calldata numeraireInformation, uint256[] memory assetCreditRatings) external onlyOwner {
+  function addNumeraire(NumeraireInformation calldata numeraireInformation, uint256[] calldata assetCreditRatings) external onlyOwner {
     unchecked {++numeraireLastIndex;}
     numeraireToInformation[numeraireLastIndex] = numeraireInformation;
 
     uint256 assetCreditRatingsLength = assetCreditRatings.length;
-    require(assetCreditRatingsLength == assetsInMainRegistry.length || assetCreditRatingsLength == 0, 'Length list of credit ratings must be 0 or equal number of assets in main registy');
+    require(assetCreditRatingsLength == assetsInMainRegistry.length || assetCreditRatingsLength == 0, 'MR_AN: lenght');
     for (uint256 i; i < assetCreditRatingsLength;) {
-      require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "Non existing credit Rating Category");
+      require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AN: non existing credRat");
       assetToNumeraireToCreditRating[assetsInMainRegistry[i]][numeraireLastIndex] = assetCreditRatings[i];
       unchecked {++i;}
     }    
@@ -239,36 +240,35 @@ contract MainRegistry is Ownable {
    *  for tokens without Id (ERC20 for instance), the Id should be set to 0
    * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
    * @param numeraire An identifier (uint256) of the Numeraire
-   * @return The total value of the list of assets denominated in Numeraire
+   * @return valueInNumeraire The total value of the list of assets denominated in Numeraire
    * @dev Todo: Not yet tested for Over-and underflow
+  *       ToDo: value sum unchecked. Cannot overflow on 1e18 decimals
    */
   function getTotalValue(
-    address[] calldata _assetAddresses, 
-    uint256[] calldata _assetIds,
-    uint256[] calldata _assetAmounts,
-    uint256 numeraire
-  ) public view returns (uint256) {
+                        address[] calldata _assetAddresses, 
+                        uint256[] calldata _assetIds,
+                        uint256[] calldata _assetAmounts,
+                        uint256 numeraire
+                      ) public view returns (uint256 valueInNumeraire) {
     uint256 valueInUsd;
-    uint256 valueInNumeraire;
 
-    require(numeraire <= numeraireLastIndex, "Unknown Numeraire");
-    NumeraireInformation memory numeraireInformation = numeraireToInformation[numeraire];
+    require(numeraire <= numeraireLastIndex, "MR_GTV: Unknown Numeraire");
 
-    uint256 len = _assetAddresses.length;
-    require(len == _assetIds.length && len == _assetAmounts.length, "MR GV: LENGTH_MISMATCH");
+    uint256 assetAddressesLength = _assetAddresses.length;
+    require(assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length, "MR_GTV: LENGTH_MISMATCH");
     ISubRegistry.GetValueInput memory getValueInput;
     getValueInput.numeraire = numeraire;
 
-    for (uint256 i; i < len;) {
+    for (uint256 i; i < assetAddressesLength;) {
       address assetAddress = _assetAddresses[i];
-      require(inMainRegistry[assetAddress], "Unknown asset");
+      require(inMainRegistry[assetAddress], "MR_GTV: Unknown asset");
 
       getValueInput.assetAddress = assetAddress;
       getValueInput.assetId = _assetIds[i];
       getValueInput.assetAmount = _assetAmounts[i];
 
-      if (assetAddress == numeraireInformation.assetAddress) { //Should only be allowed if the numeraire is ETH, not for stablecoins or wrapped tokens
-        valueInNumeraire = valueInNumeraire + _assetAmounts[i].mulDivDown(FixedPointMathLib.WAD, numeraireInformation.numeraireUnit); //_assetAmounts must be a with 18 decimals precision
+      if (assetAddress == numeraireToInformation[numeraire].assetAddress) { //Should only be allowed if the numeraire is ETH, not for stablecoins or wrapped tokens
+        valueInNumeraire = valueInNumeraire + _assetAmounts[i].mulDivDown(FixedPointMathLib.WAD, numeraireToInformation[numeraire].numeraireUnit); //_assetAmounts must be a with 18 decimals precision
       } else {
           //Calculate value of the next asset and add it to the total value of the vault
           (uint256 tempValueInUsd, uint256 tempValueInNumeraire) = ISubRegistry(assetToSubRegistry[assetAddress]).getValue(getValueInput);
@@ -281,12 +281,10 @@ contract MainRegistry is Ownable {
       return valueInUsd;
     } else if (valueInUsd > 0) {
       //Get the Numeraire-USD rate
-      (,int256 rate,,,) = IChainLinkData(numeraireInformation.numeraireToUsdOracle).latestRoundData();
+      (,int256 rate,,,) = IChainLinkData(numeraireToInformation[numeraire].numeraireToUsdOracle).latestRoundData();
       //Add valueInUsd to valueInNumeraire, to check if conversion from int to uint can always be done
-      valueInNumeraire = valueInNumeraire + valueInUsd.mulDivDown(numeraireInformation.numeraireToUsdOracleUnit, uint256(rate));
+      valueInNumeraire = valueInNumeraire + valueInUsd.mulDivDown(numeraireToInformation[numeraire].numeraireToUsdOracleUnit, uint256(rate));
     }
-
-    return valueInNumeraire;       
 
   }
 
@@ -295,10 +293,10 @@ contract MainRegistry is Ownable {
    * @param _assetAddresses The List of token addresses of the assets
    * @param _assetIds The list of corresponding token Ids that needs to be checked
    * @dev For each token address, a corresponding id at the same index should be present,
-   *  for tokens without Id (ERC20 for instance), the Id should be set to 0
+   *      for tokens without Id (ERC20 for instance), the Id should be set to 0
    * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
    * @param numeraire An identifier (uint256) of the Numeraire
-   * @return The list of values per assets denominated in Numeraire
+   * @return valuesPerAsset sThe list of values per assets denominated in Numeraire
    * @dev Todo: Not yet tested for Over-and underflow
    */
   function getListOfValuesPerAsset(
@@ -306,30 +304,29 @@ contract MainRegistry is Ownable {
     uint256[] calldata _assetIds,
     uint256[] calldata _assetAmounts,
     uint256 numeraire
-  ) public view returns (uint256[] memory) {
+  ) public view returns (uint256[] memory valuesPerAsset) {
     
-    uint256[] memory valuesPerAsset = new uint256[](_assetAddresses.length);
+    valuesPerAsset = new uint256[](_assetAddresses.length);
 
-    require(numeraire <= numeraireLastIndex, "Unknown Numeraire");
-    NumeraireInformation memory numeraireInformation = numeraireToInformation[numeraire];
+    require(numeraire <= numeraireLastIndex, "MR_GLV: Unknown Numeraire");
 
-    uint256 len = _assetAddresses.length;
-    require(len == _assetIds.length && len == _assetAmounts.length, "MR GLV: LENGTH_MISMATCH");
+    uint256 assetAddressesLength = _assetAddresses.length;
+    require(assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length, "MR_GLV: LENGTH_MISMATCH");
     ISubRegistry.GetValueInput memory getValueInput;
     getValueInput.numeraire = numeraire;
 
     int256 rateNumeraireToUsd;
 
-    for (uint256 i; i < len;) {
+    for (uint256 i; i < assetAddressesLength;) {
       address assetAddress = _assetAddresses[i];
-      require(inMainRegistry[assetAddress], "Unknown asset");
+      require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
 
       getValueInput.assetAddress = assetAddress;
       getValueInput.assetId = _assetIds[i];
       getValueInput.assetAmount = _assetAmounts[i];
 
-      if (assetAddress == numeraireInformation.assetAddress) { //Should only be allowed if the numeraire is ETH, not for stablecoins or wrapped tokens
-        valuesPerAsset[i] = _assetAmounts[i].mulDivDown(FixedPointMathLib.WAD, numeraireInformation.numeraireUnit); //_assetAmounts must be a with 18 decimals precision
+      if (assetAddress == numeraireToInformation[numeraire].assetAddress) { //Should only be allowed if the numeraire is ETH, not for stablecoins or wrapped tokens
+        valuesPerAsset[i] = _assetAmounts[i].mulDivDown(FixedPointMathLib.WAD, numeraireToInformation[numeraire].numeraireUnit); //_assetAmounts must be a with 18 decimals precision
       } else {
         //Calculate value of the next asset and add it to the total value of the vault
         (uint256 valueInUsd, uint256 valueInNumeraire) = ISubRegistry(assetToSubRegistry[assetAddress]).getValue(getValueInput);
@@ -341,9 +338,9 @@ contract MainRegistry is Ownable {
           //Check if the Numeraire-USD rate is already fetched
           if (rateNumeraireToUsd == 0) {
             //Get the Numeraire-USD rate ToDo: Ask via the OracleHub?
-            (,rateNumeraireToUsd,,,) = IChainLinkData(numeraireInformation.numeraireToUsdOracle).latestRoundData();  
+            (,rateNumeraireToUsd,,,) = IChainLinkData(numeraireToInformation[numeraire].numeraireToUsdOracle).latestRoundData();  
           }
-          valuesPerAsset[i] = valueInUsd.mulDivDown(numeraireInformation.numeraireToUsdOracleUnit, uint256(rateNumeraireToUsd));
+          valuesPerAsset[i] = valueInUsd.mulDivDown(numeraireToInformation[numeraire].numeraireToUsdOracleUnit, uint256(rateNumeraireToUsd));
         }
       }
       unchecked {++i;}
@@ -359,7 +356,7 @@ contract MainRegistry is Ownable {
    *  for tokens without Id (ERC20 for instance), the Id should be set to 0
    * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
    * @param numeraire An identifier (uint256) of the Numeraire
-   * @return The list of values per Credit Rating Category denominated in Numeraire
+   * @return valuesPerCreditRating The list of values per Credit Rating Category denominated in Numeraire
    * @dev Todo: Not yet tested for Over-and underflow
    */
  function getListOfValuesPerCreditRating(
@@ -367,19 +364,19 @@ contract MainRegistry is Ownable {
     uint256[] calldata _assetIds,
     uint256[] calldata _assetAmounts,
     uint256 numeraire
-  ) public view returns (uint256[] memory) {
+  ) public view returns (uint256[] memory valuesPerCreditRating) {
 
-    uint256[] memory ValuesPerCreditRating = new uint256[](CREDIT_RATING_CATOGERIES);
+    valuesPerCreditRating = new uint256[](CREDIT_RATING_CATOGERIES);
     uint256[] memory valuesPerAsset = getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, numeraire);
 
     uint256 valuesPerAssetLength = valuesPerAsset.length;
     for (uint256 i; i < valuesPerAssetLength;) {
       address assetAdress = _assetAddresses[i];
-      ValuesPerCreditRating[assetToNumeraireToCreditRating[assetAdress][numeraire]] += valuesPerAsset[i];
+      valuesPerCreditRating[assetToNumeraireToCreditRating[assetAdress][numeraire]] += valuesPerAsset[i];
       unchecked {++i;}
     }
 
-    return ValuesPerCreditRating;
+    return valuesPerCreditRating;
   }
 
 }

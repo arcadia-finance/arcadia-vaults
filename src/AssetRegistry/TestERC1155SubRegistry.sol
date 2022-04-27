@@ -43,7 +43,7 @@ contract TestERC1155SubRegistry is SubRegistry {
    *  is initiated as credit rating with index 0 by default (worst credit rating)
    * @dev The asset needs to be added/overwritten in the Main-Registry as well
    */ 
-  function setAssetInformation(AssetInformation calldata assetInformation, uint256[] memory assetCreditRatings) external onlyOwner {
+  function setAssetInformation(AssetInformation calldata assetInformation, uint256[] calldata assetCreditRatings) external onlyOwner {
 
     IOraclesHub(_oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
     
@@ -91,8 +91,7 @@ contract TestERC1155SubRegistry is SubRegistry {
     uint256 rateInUsd;
     uint256 rateInNumeraire;
     
-    AssetInformation memory assetInformation = assetToInformation[getValueInput.assetAddress];
-    (rateInUsd, rateInNumeraire) = IOraclesHub(_oracleHub).getRate(assetInformation.oracleAddresses, getValueInput.numeraire);
+    (rateInUsd, rateInNumeraire) = IOraclesHub(_oracleHub).getRate(assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.numeraire);
 
     if (rateInNumeraire > 0) {
       value = getValueInput.assetAmount * rateInNumeraire;
