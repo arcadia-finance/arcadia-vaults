@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.0;
 
-import "./tests/ERC20SolmateNoApprove.sol";
+import "./mockups/ERC20SolmateMock.sol";
 
 contract Stable is ERC20 {
 
@@ -16,7 +16,7 @@ contract Stable is ERC20 {
       _;
   }
 
-  constructor(uint8 _decimalsInput, address liquidatorAddress) ERC20("No approve", "No approve", _decimalsInput) {
+  constructor(string memory name, string memory symbol, uint8 _decimalsInput, address liquidatorAddress) ERC20(name, symbol, _decimalsInput) {
       liquidator = liquidatorAddress;
       owner = msg.sender;
   }
