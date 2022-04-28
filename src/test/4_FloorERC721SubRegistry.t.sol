@@ -6,9 +6,9 @@ import "../../lib/forge-std/src/stdlib.sol";
 import "../../lib/forge-std/src/console.sol";
 import "../../lib/forge-std/src/Vm.sol";
 
-import "../tests/ERC20NoApprove.sol";
-import "../tests/ERC721NoApprove.sol";
-import "../tests/SimplifiedChainlinkOracle.sol";
+import "../mockups/ERC20SolmateMock.sol";
+import "../mockups/ERC721SolmateMock.sol";
+import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
@@ -23,11 +23,11 @@ contract FloorERC721SubRegistryTest is DSTest {
 	OracleHub private oracleHub;
 	MainRegistry private mainRegistry;
 
-  ERC20NoApprove private eth;
-  ERC721NoApprove private bayc;
-  ERC721NoApprove private mayc;
-  ERC20NoApprove private wbayc;
-  ERC20NoApprove private wmayc;
+  ERC20Mock private eth;
+  ERC721Mock private bayc;
+  ERC721Mock private mayc;
+  ERC20Mock private wbayc;
+  ERC20Mock private wmayc;
 	SimplifiedChainlinkOracle private oracleEthToUsd;
   SimplifiedChainlinkOracle private oracleWbaycToEth;
   SimplifiedChainlinkOracle private oracleWmaycToUsd;
@@ -51,8 +51,8 @@ contract FloorERC721SubRegistryTest is DSTest {
   constructor () {
 
     vm.startPrank(tokenCreatorAddress);
-    bayc = new ERC721NoApprove();
-		mayc = new ERC721NoApprove();
+    bayc = new ERC721Mock("BAYC Mock", "mBAYC");
+		mayc = new ERC721Mock("MAYC Mock", "mMAYC");
     vm.stopPrank();
 
 		vm.startPrank(creatorAddress);
