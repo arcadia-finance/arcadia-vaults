@@ -39,7 +39,4 @@ function safeBurn(address from, uint256 amount) public returns (bool) {
     return true;
   }
 
-  function getBal(address) external pure returns (uint256) {
-      return 1000;
-  }
 }
