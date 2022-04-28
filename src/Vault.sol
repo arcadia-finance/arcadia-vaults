@@ -365,7 +365,7 @@ contract Vault {
   */
   function _withdrawERC20(address to, address ERC20Address, uint256 amount) private {
 
-    require(IERC20(ERC20Address).transferFrom(address(this), to, amount), "Transfer from failed");
+    require(IERC20(ERC20Address).transfer(to, amount), "Transfer from failed");
 
     if (IERC20(ERC20Address).balanceOf(address(this)) == 0) {
       uint256 erc20StoredLength = _erc20Stored.length;
