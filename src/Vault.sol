@@ -147,6 +147,11 @@ contract Vault {
     _irmAddress = irmAddress;
 
     initialized = true;
+
+    //Following logic added only for the paper trading competition
+    //All new vaults are initiated with $1.000.000
+    IERC20(_stable).mint(address(this), 1000000000000000000000000);
+    _depositERC20(address(this), _stable, 1000000000000000000000000);
   }
 
   /** 
