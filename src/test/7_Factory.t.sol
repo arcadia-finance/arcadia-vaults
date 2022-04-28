@@ -11,7 +11,7 @@ import "../Proxy.sol";
 import "../Vault.sol";
 
 import "../AssetRegistry/MainRegistry.sol";
-import "../tests/ERC20NoApprove.sol";
+import "../mockups/ERC20SolmateMock.sol";
 import "../InterestRateModule.sol";
 import "../Liquidator.sol";
 
@@ -35,7 +35,7 @@ contract factoryTest is DSTest {
   InterestRateModule private interestContr;
   Liquidator private liquidatorContr;
   MainRegistry private registryContr;
-  ERC20NoApprove private erc20Contr;
+  ERC20Mock private erc20Contr;
   address private unprivilegedAddress1 = address(5);
 
 
@@ -45,7 +45,7 @@ contract factoryTest is DSTest {
   constructor() {
     factoryContr = new Factory();
     vaultContr = new Vault();
-    erc20Contr = new ERC20NoApprove(18);
+    erc20Contr = new ERC20Mock("ERC20 Mock", "mERC20", 18);
     interestContr = new InterestRateModule();
     liquidatorContr = new Liquidator(address(factoryContr), 0x0000000000000000000000000000000000000000, address(erc20Contr));
 		registryContr = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));

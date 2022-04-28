@@ -9,11 +9,11 @@ import "./AbstractSubRegistry.sol";
 /** 
   * @title Test Sub-registry for ERC1155 tokens
   * @author Arcadia Finance
-  * @notice The TestERC1155SubRegistry stores pricing logic and basic information for ERC721 tokens for which a direct price feeds exists
+  * @notice The FloorERC1155SubRegistry stores pricing logic and basic information for ERC721 tokens for which a direct price feeds exists
   *   for the floor price of the collection
   * @dev No end-user should directly interact with the Main-registry, only the Main-registry, Oracle-Hub or the contract owner
  */
-contract TestERC1155SubRegistry is SubRegistry {
+contract FloorERC1155SubRegistry is SubRegistry {
 
   struct AssetInformation {
     uint256 id;

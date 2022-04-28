@@ -6,8 +6,8 @@ import "../../lib/forge-std/src/stdlib.sol";
 import "../../lib/forge-std/src/console.sol";
 import "../../lib/forge-std/src/Vm.sol";
 
-import "../tests/ERC20NoApprove.sol";
-import "../tests/SimplifiedChainlinkOracle.sol";
+import "../mockups/ERC20SolmateMock.sol";
+import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
@@ -22,9 +22,9 @@ contract StandardERC20RegistryTest is DSTest {
 	OracleHub private oracleHub;
 	MainRegistry private mainRegistry;
 
-  ERC20NoApprove private eth;
-  ERC20NoApprove private snx;
-  ERC20NoApprove private link;
+  ERC20Mock private eth;
+  ERC20Mock private snx;
+  ERC20Mock private link;
 	SimplifiedChainlinkOracle private oracleEthToUsd;
   SimplifiedChainlinkOracle private oracleLinkToUsd;
   SimplifiedChainlinkOracle private oracleSnxToEth;
@@ -49,9 +49,9 @@ contract StandardERC20RegistryTest is DSTest {
   constructor () {
 
     vm.startPrank(tokenCreatorAddress);
-    eth = new ERC20NoApprove(uint8(Constants.ethDecimals));
-    snx = new ERC20NoApprove(uint8(Constants.snxDecimals));
-    link = new ERC20NoApprove(uint8(Constants.linkDecimals));
+    eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
+    snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
+    link = new ERC20Mock("LINK Mock", "mLINK", uint8(Constants.linkDecimals));
     vm.stopPrank();
 
 		vm.startPrank(creatorAddress);

@@ -6,15 +6,15 @@ import "../../lib/forge-std/src/stdlib.sol";
 import "../../lib/forge-std/src/console.sol";
 import "../../lib/forge-std/src/Vm.sol";
 
-import "../tests/ERC20NoApprove.sol";
-import "../tests/ERC1155NoApprove.sol";
-import "../tests/SimplifiedChainlinkOracle.sol";
+import "../mockups/ERC20SolmateMock.sol";
+import "../mockups/ERC1155SolmateMock.sol";
+import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../AssetRegistry/TestERC1155SubRegistry.sol";
+import "../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../AssetRegistry/MainRegistry.sol";
 
-contract TestERC1155SubRegistryTest is DSTest {
+contract FloorERC1155SubRegistryTest is DSTest {
   using stdStorage for StdStorage;
 
   Vm private vm = Vm(HEVM_ADDRESS);  
@@ -23,12 +23,12 @@ contract TestERC1155SubRegistryTest is DSTest {
 	OracleHub private oracleHub;
 	MainRegistry private mainRegistry;
 
-  ERC20NoApprove private eth;
-  ERC1155NoApprove private interleave;
+  ERC20Mock private eth;
+  ERC1155Mock private interleave;
 	SimplifiedChainlinkOracle private oracleEthToUsd;
   SimplifiedChainlinkOracle private oracleInterleaveToEth;
 
-	TestERC1155SubRegistry private testERC1155SubRegistry;
+	FloorERC1155SubRegistry private floorERC1155SubRegistry;
 
   address private creatorAddress = address(1);
   address private tokenCreatorAddress = address(2);
@@ -45,7 +45,7 @@ contract TestERC1155SubRegistryTest is DSTest {
   constructor () {
 
     vm.startPrank(tokenCreatorAddress);
-    interleave = new ERC1155NoApprove("ERC1155 No Appr", "1155NAP");
+    interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
     vm.stopPrank();
 
 		vm.startPrank(creatorAddress);
@@ -76,15 +76,15 @@ contract TestERC1155SubRegistryTest is DSTest {
     mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
     
-    testERC1155SubRegistry = new TestERC1155SubRegistry(address(mainRegistry), address(oracleHub));
-    mainRegistry.addSubRegistry(address(testERC1155SubRegistry));
+    floorERC1155SubRegistry = new FloorERC1155SubRegistry(address(mainRegistry), address(oracleHub));
+    mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
 		vm.stopPrank();
   }
 
 	function testNonOwnerAddsAsset (address unprivilegedAddress) public {
 		vm.startPrank(unprivilegedAddress);
 		vm.expectRevert("Ownable: caller is not the owner");
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
 
 		vm.stopPrank();
 	}
@@ -94,7 +94,7 @@ contract TestERC1155SubRegistryTest is DSTest {
     uint256[] memory assetCreditRatings = new uint256[](1);
     assetCreditRatings[0] = 0;
 		vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
 
 
 		vm.stopPrank();
@@ -102,10 +102,10 @@ contract TestERC1155SubRegistryTest is DSTest {
 
 	function testOwnerAddsAssetWithEmptyListCreditRatings () public {
 		vm.startPrank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
 		vm.stopPrank();
 
-		assertTrue(testERC1155SubRegistry.inSubRegistry(address(interleave)));
+		assertTrue(floorERC1155SubRegistry.inSubRegistry(address(interleave)));
 	}
 
 	function testOwnerAddsAssetWithFullListCreditRatings () public {
@@ -113,53 +113,53 @@ contract TestERC1155SubRegistryTest is DSTest {
     uint256[] memory assetCreditRatings = new uint256[](2);
     assetCreditRatings[0] = 0;
     assetCreditRatings[1] = 0;
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
 		vm.stopPrank();
 
-		assertTrue(testERC1155SubRegistry.inSubRegistry(address(interleave)));
+		assertTrue(floorERC1155SubRegistry.inSubRegistry(address(interleave)));
 	}
 
 	function testOwnerOverwritesExistingAsset () public {
 		vm.startPrank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
 		vm.stopPrank();
 
-		assertTrue(testERC1155SubRegistry.inSubRegistry(address(interleave)));
+		assertTrue(floorERC1155SubRegistry.inSubRegistry(address(interleave)));
 	}
 
 	function testIsWhitelistedPositive () public {
 		vm.startPrank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
 		vm.stopPrank();
 
-		assertTrue(testERC1155SubRegistry.isWhiteListed(address(interleave), 1));
+		assertTrue(floorERC1155SubRegistry.isWhiteListed(address(interleave), 1));
 	}
 
 	function testIsWhitelistedNegativeWrongAddress (address randomAsset) public {
-		assertTrue(!testERC1155SubRegistry.isWhiteListed(randomAsset, 1));
+		assertTrue(!floorERC1155SubRegistry.isWhiteListed(randomAsset, 1));
 	}
 
 	function testIsWhitelistedNegativeIdOutsideRange (uint256 id) public {
 		vm.assume(id != 1);
 		vm.startPrank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
 		vm.stopPrank();
 
-		assertTrue(!testERC1155SubRegistry.isWhiteListed(address(interleave), id));
+		assertTrue(!floorERC1155SubRegistry.isWhiteListed(address(interleave), id));
 	}
 
 	function testReturnUsdValueWhenNumeraireIsUsd (uint128 amountInterleave) public {
 		//Does not test on overflow, test to check if function correctly returns value in Numeraire
 		vm.startPrank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
 		vm.stopPrank();
 
 		uint256 expectedValueInUsd = amountInterleave * rateInterleaveToEth * rateEthToUsd * Constants.WAD / 10 ** (Constants.oracleInterleaveToEthDecimals + Constants.oracleEthToUsdDecimals);
 		uint256 expectedValueInNumeraire = 0;
 
 		SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({assetAddress:address(interleave), assetId:1, assetAmount:amountInterleave, numeraire:0});
-		(uint256 actualValueInUsd, uint256 actualValueInNumeraire) = testERC1155SubRegistry.getValue(getValueInput);
+		(uint256 actualValueInUsd, uint256 actualValueInNumeraire) = floorERC1155SubRegistry.getValue(getValueInput);
 
     assertEq(actualValueInUsd, expectedValueInUsd);
     assertEq(actualValueInNumeraire, expectedValueInNumeraire);		
@@ -168,14 +168,14 @@ contract TestERC1155SubRegistryTest is DSTest {
 	function testreturnNumeraireValueWhenNumeraireIsNotUsd (uint128 amountInterleave) public {
 		//Does not test on overflow, test to check if function correctly returns value in Numeraire
 		vm.startPrank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
 		vm.stopPrank();
 
 		uint256 expectedValueInUsd = 0;
 		uint256 expectedValueInNumeraire = amountInterleave * rateInterleaveToEth * Constants.WAD / 10 ** (Constants.oracleInterleaveToEthDecimals);
 
 		SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({assetAddress:address(interleave), assetId:1, assetAmount:amountInterleave, numeraire:1});
-		(uint256 actualValueInUsd, uint256 actualValueInNumeraire) = testERC1155SubRegistry.getValue(getValueInput);
+		(uint256 actualValueInUsd, uint256 actualValueInNumeraire) = floorERC1155SubRegistry.getValue(getValueInput);
 
     assertEq(actualValueInUsd, expectedValueInUsd);
     assertEq(actualValueInNumeraire, expectedValueInNumeraire);	
@@ -184,14 +184,14 @@ contract TestERC1155SubRegistryTest is DSTest {
 	function testReturnUsdValueWhenNumeraireIsNotUsd (uint128 amountInterleave) public {
 		//Does not test on overflow, test to check if function correctly returns value in Numeraire
 		vm.startPrank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
 		vm.stopPrank();
 
 		uint256 expectedValueInUsd = amountInterleave * rateInterleaveToEth * rateEthToUsd * Constants.WAD / 10 ** (Constants.oracleInterleaveToEthDecimals + Constants.oracleEthToUsdDecimals);
 		uint256 expectedValueInNumeraire = 0;
 
 		SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({assetAddress:address(interleave), assetId:1, assetAmount:amountInterleave, numeraire:2});
-		(uint256 actualValueInUsd, uint256 actualValueInNumeraire) = testERC1155SubRegistry.getValue(getValueInput);
+		(uint256 actualValueInUsd, uint256 actualValueInNumeraire) = floorERC1155SubRegistry.getValue(getValueInput);
 
     assertEq(actualValueInUsd, expectedValueInUsd);
     assertEq(actualValueInNumeraire, expectedValueInNumeraire);	
@@ -212,14 +212,14 @@ contract TestERC1155SubRegistryTest is DSTest {
     vm.stopPrank();
 
 		vm.startPrank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
 		vm.stopPrank();
 
 		uint256 expectedValueInUsd = 0;
 		uint256 expectedValueInNumeraire = rateInterleaveToEthNew * Constants.WAD / 10 ** Constants.oracleInterleaveToEthDecimals * amountInterleave;
 
 		SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({assetAddress:address(interleave), assetId:1, assetAmount:amountInterleave, numeraire:1});
-		(uint256 actualValueInUsd, uint256 actualValueInNumeraire) = testERC1155SubRegistry.getValue(getValueInput);
+		(uint256 actualValueInUsd, uint256 actualValueInNumeraire) = floorERC1155SubRegistry.getValue(getValueInput);
 
     assertEq(actualValueInUsd, expectedValueInUsd);
     assertEq(actualValueInNumeraire, expectedValueInNumeraire);	
@@ -237,12 +237,12 @@ contract TestERC1155SubRegistryTest is DSTest {
     vm.stopPrank();
 
 		vm.startPrank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);
 		vm.stopPrank();
 
 		SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({assetAddress:address(interleave), assetId:1, assetAmount:amountInterleave, numeraire:1});
     //Arithmetic overflow.
-		testERC1155SubRegistry.getValue(getValueInput);
+		floorERC1155SubRegistry.getValue(getValueInput);
 	}
 
 }

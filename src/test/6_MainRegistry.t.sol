@@ -6,15 +6,15 @@ import "../../lib/forge-std/src/stdlib.sol";
 import "../../lib/forge-std/src/console.sol";
 import "../../lib/forge-std/src/Vm.sol";
 
-import "../tests/ERC20NoApprove.sol";
-import "../tests/ERC721NoApprove.sol";
-import "../tests/ERC1155NoApprove.sol";
+import "../mockups/ERC20SolmateMock.sol";
+import "../mockups/ERC721SolmateMock.sol";
+import "../mockups/ERC1155SolmateMock.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../AssetRegistry/TestERC1155SubRegistry.sol";
+import "../AssetRegistry/floorERC1155SubRegistry.sol";
 import "../OracleHub.sol";
-import "../tests/SimplifiedChainlinkOracle.sol";
+import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../utils/Constants.sol";
 import "../utils/StringHelpers.sol";
 import "../utils/CompareArrays.sol";
@@ -25,16 +25,16 @@ contract MainRegistryTest is DSTest {
   Vm private vm = Vm(HEVM_ADDRESS);  
   StdStorage private stdstore;
 
-  ERC20NoApprove private eth;
-  ERC20NoApprove private snx;
-  ERC20NoApprove private link;
-  ERC20NoApprove private safemoon;
-  ERC721NoApprove private bayc;
-  ERC721NoApprove private mayc;
-  ERC721NoApprove private dickButs;
-  ERC20NoApprove private wbayc;
-  ERC20NoApprove private wmayc;
-  ERC1155NoApprove private interleave;
+  ERC20Mock private eth;
+  ERC20Mock private snx;
+  ERC20Mock private link;
+  ERC20Mock private safemoon;
+  ERC721Mock private bayc;
+  ERC721Mock private mayc;
+  ERC721Mock private dickButs;
+  ERC20Mock private wbayc;
+  ERC20Mock private wmayc;
+  ERC1155Mock private interleave;
   OracleHub private oracleHub;
   SimplifiedChainlinkOracle private oracleEthToUsd;
   SimplifiedChainlinkOracle private oracleLinkToUsd;
@@ -45,7 +45,7 @@ contract MainRegistryTest is DSTest {
   MainRegistry private mainRegistry;
   StandardERC20Registry private standardERC20Registry;
   FloorERC721SubRegistry private floorERC721SubRegistry;
-  TestERC1155SubRegistry private testERC1155SubRegistry;
+  FloorERC1155SubRegistry private floorERC1155SubRegistry;
 
   address private creatorAddress = address(1);
   address private tokenCreatorAddress = address(2);
@@ -71,15 +71,15 @@ contract MainRegistryTest is DSTest {
   constructor() {
     vm.startPrank(tokenCreatorAddress);
 
-    eth = new ERC20NoApprove(uint8(Constants.ethDecimals));
-    snx = new ERC20NoApprove(uint8(Constants.snxDecimals));
-    link = new ERC20NoApprove(uint8(Constants.linkDecimals));
-    safemoon = new ERC20NoApprove(uint8(Constants.safemoonDecimals));
-    bayc = new ERC721NoApprove();
-    mayc = new ERC721NoApprove();
-    dickButs = new ERC721NoApprove();
-    wbayc = new ERC20NoApprove(uint8(Constants.wbaycDecimals));
-    interleave = new ERC1155NoApprove("ERC1155 No Appr", "1155NAP");
+    eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
+    snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
+    link = new ERC20Mock("LINK Mock", "mLINK", uint8(Constants.linkDecimals));
+    safemoon = new ERC20Mock("Safemoon Mock", "mSFMN", uint8(Constants.safemoonDecimals));
+    bayc = new ERC721Mock("BAYC Mock", "mBAYC");
+    mayc = new ERC721Mock("MAYC Mock", "mMAYC");
+    dickButs = new ERC721Mock("DickButs Mock", "mDICK");
+    wbayc = new ERC20Mock("wBAYC Mock", "mwBAYC", uint8(Constants.wbaycDecimals));
+    interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
 
     vm.stopPrank();
 
@@ -134,7 +134,7 @@ contract MainRegistryTest is DSTest {
 
     standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
     floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
-    testERC1155SubRegistry = new TestERC1155SubRegistry(address(mainRegistry), address(oracleHub));
+    floorERC1155SubRegistry = new FloorERC1155SubRegistry(address(mainRegistry), address(oracleHub));
     vm.stopPrank();
   }
 
