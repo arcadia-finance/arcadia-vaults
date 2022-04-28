@@ -25,7 +25,4 @@ contract ERC20NoApprove is ERC20 {
       _burn(msg.sender, amount);
   }
 
-  function getBal(address) external pure returns (uint256) {
-      return 1000;
-  }
 }
