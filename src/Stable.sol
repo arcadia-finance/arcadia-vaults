@@ -39,7 +39,12 @@ function safeBurn(address from, uint256 amount) public returns (bool) {
     return true;
   }
 
-  function getBal(address) external pure returns (uint256) {
-      return 1000;
+//Following logic added only for the paper trading competition
+  function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+    if (from == to) {
+      return true; 
+    } else {
+      return super.transferFrom(from, to, amount);
+    }
   }
 }
