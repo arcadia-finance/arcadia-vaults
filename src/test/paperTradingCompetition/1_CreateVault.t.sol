@@ -11,14 +11,14 @@ import "../../Proxy.sol";
 import "../../Vault.sol";
 import "../../Stable.sol";
 import "../../AssetRegistry/MainRegistry.sol";
-import "../../tests/ERC20NoApprove.sol";
+import "../../mockups/ERC20SolmateMock.sol";
 import "../../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../../InterestRateModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
 import "../../utils/Constants.sol";
 import "../../Oracles/StableOracle.sol";
-import "../../tests/SimplifiedChainlinkOracle.sol";
+import "../../mockups/SimplifiedChainlinkOracle.sol";
 
 contract CreateVaultTest is DSTest {
   using stdStorage for StdStorage;
@@ -30,7 +30,7 @@ contract CreateVaultTest is DSTest {
   Vault private vault;
   Vault private proxy;
   address private proxyAddr;
-  ERC20NoApprove private eth;
+  ERC20Mock private eth;
   OracleHub private oracleHub;
   SimplifiedChainlinkOracle private oracleEthToUsd;
   StableOracle private oracleStableToUsd;
@@ -57,7 +57,7 @@ contract CreateVaultTest is DSTest {
   constructor() {
 
     vm.prank(tokenCreatorAddress);
-    eth = new ERC20NoApprove(uint8(Constants.ethDecimals));
+    eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
 
     vm.startPrank(oracleOwner);
     oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
@@ -71,7 +71,7 @@ contract CreateVaultTest is DSTest {
     uint256[] memory emptyList = new uint256[](0);
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 
-    stable = new Stable(uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
+    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
     liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
     stable.setLiquidator(address(liquidator));
 
