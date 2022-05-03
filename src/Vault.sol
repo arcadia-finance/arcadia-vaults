@@ -48,6 +48,7 @@ contract Vault {
   address public _stable;
   address public _stakeContract;
   address public _irmAddress;
+  address public _tokenShop; //Variable only added for the paper trading competition
 
   // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
   // Used by the liquidator contract for proceed claims
@@ -104,6 +105,15 @@ contract Vault {
   }
 
   /**
+   * @dev Throws if called by any address other than the tokenshop
+   *  only added for the paper trading competition
+   */
+  modifier onlyTokenShop() {
+    require(msg.sender == _tokenShop, "Not tokenshop");
+    _;
+  }
+
+  /**
    * @dev Transfers ownership of the contract to a new account (`newOwner`).
    * Can only be called by the current owner.
    */
@@ -135,8 +145,9 @@ contract Vault {
                          Used when syncing debt: interest in stable is minted to stakecontract.
     @param irmAddress The contract address of the InterestRateModule, which calculates the going interest rate
                       for a credit line, based on the underlying assets.
+    @param tokenShop The contract with the mocked token shop, added for the paper trading competition
   */
-  function initialize(address _owner, address registryAddress, address stable, address stakeContract, address irmAddress) external payable {
+  function initialize(address _owner, address registryAddress, address stable, address stakeContract, address irmAddress, address tokenShop) external payable {
     require(initialized == false);
     _registryAddress = registryAddress;
     owner = _owner;
@@ -145,6 +156,7 @@ contract Vault {
     _stable = stable;
     _stakeContract = stakeContract;
     _irmAddress = irmAddress;
+    _tokenShop = tokenShop; //Variable only added for the paper trading competition
 
     initialized = true;
 
@@ -176,7 +188,7 @@ contract Vault {
                       2 = ERC1155
                       Any other number = failed tx
   */
-  function deposit(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) external payable onlyOwner {
+  function deposit(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) external payable onlyTokenShop {
     uint256 assetAddressesLength = assetAddresses.length;
 
     require(assetAddressesLength == assetIds.length &&
@@ -326,7 +338,7 @@ contract Vault {
                       2 = ERC1155
                       Any other number = failed tx
   */
-  function withdraw(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) external payable onlyOwner {
+  function withdraw(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) external payable onlyTokenShop {
     uint256 assetAddressesLength = assetAddresses.length;
 
     require(assetAddressesLength == assetIds.length &&
