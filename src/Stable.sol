@@ -33,7 +33,7 @@ contract Stable is ERC20 {
       factory = _factory;
   }
 
-  function mint(address to, uint256 amount) public {
+  function mint(address to, uint256 amount) public  onlyVault {
       _mint(to, amount);
   }
 
