@@ -238,9 +238,7 @@ contract gasVaultAuction_1ERC20 is DSTest {
     vm.stopPrank();
 
     vm.startPrank(tokenCreatorAddress);
-    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
-    stable.mint(tokenCreatorAddress, 10000000 * 10 ** Constants.stableDecimals);
-    stable.transfer(vaultOwner, 10000000 * 10 ** Constants.stableDecimals);
+    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
     vm.stopPrank();
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -299,9 +297,6 @@ contract gasVaultAuction_1ERC20 is DSTest {
     stable.transfer(address(0), stable.balanceOf(vaultOwner));
     vm.stopPrank();
 
-    vm.prank(tokenCreatorAddress);
-    stable.setLiquidator(address(liquidator));
-
     vm.startPrank(creatorAddress);
     factory = new Factory();
     factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule));
@@ -311,9 +306,19 @@ contract gasVaultAuction_1ERC20 is DSTest {
     mainRegistry.setFactory(address(factory));
     vm.stopPrank();
 
+    vm.startPrank(tokenCreatorAddress);
+    stable.setLiquidator(address(liquidator));
+    stable.setFactory(address(factory));
+    vm.stopPrank();
+
     vm.prank(vaultOwner);
     proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))));
     proxy = Vault(proxyAddr);
+
+    vm.prank(address(proxy));
+    stable.mint(tokenCreatorAddress, 10000000 * 10 ** Constants.stableDecimals);
+    vm.prank(tokenCreatorAddress);
+    stable.transfer(vaultOwner, 10000000 * 10 ** Constants.stableDecimals);
 
     vm.startPrank(oracleOwner);
     oracleEthToUsd.setAnswer(int256(rateEthToUsd));

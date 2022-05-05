@@ -87,6 +87,8 @@ contract vaultTests is DSTest {
 
     vm.startPrank(tokenCreatorAddress);
 
+    factoryContr = new Factory();
+
     eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
     eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
@@ -167,8 +169,7 @@ contract vaultTests is DSTest {
     vm.stopPrank();
 
     vm.startPrank(tokenCreatorAddress);
-    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
-    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
+    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factoryContr));
     vm.stopPrank();
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -213,6 +214,19 @@ contract vaultTests is DSTest {
     vault = new Vault();
     stable.transfer(address(0), stable.balanceOf(vaultOwner));
     vm.stopPrank();
+
+    uint256 slot = stdstore
+            .target(address(factoryContr))
+            .sig(factoryContr.isVault.selector)
+            .with_key(address(vault))
+            .find();
+    bytes32 loc = bytes32(slot);
+    bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
+    vm.store(address(factoryContr), loc, mockedCurrentTokenId);
+
+    vm.prank(address(vault));
+    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
+    
 
     vm.prank(tokenCreatorAddress);
     stable.setLiquidator(address(liquidator));
