@@ -166,7 +166,7 @@ contract LiquidatorTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(tokenCreatorAddress);
-    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
+    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
     stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
     vm.stopPrank();
 
@@ -222,8 +222,10 @@ contract LiquidatorTest is DSTest {
     stable.transfer(address(0), stable.balanceOf(vaultOwner));
     vm.stopPrank();
 
-    vm.prank(tokenCreatorAddress);
+    vm.startPrank(tokenCreatorAddress);
     stable.setLiquidator(address(liquidator));
+    stable.setFactory(address(factory));
+    vm.stopPrank();
 
     vm.startPrank(creatorAddress);
     factory = new Factory();

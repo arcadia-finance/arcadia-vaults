@@ -87,6 +87,8 @@ contract vaultTests is DSTest {
 
     vm.startPrank(tokenCreatorAddress);
 
+    factoryContr = new Factory();
+
     eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
     eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
@@ -167,7 +169,7 @@ contract vaultTests is DSTest {
     vm.stopPrank();
 
     vm.startPrank(tokenCreatorAddress);
-    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
+    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factoryContr));
     stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
     vm.stopPrank();
 

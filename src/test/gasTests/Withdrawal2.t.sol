@@ -237,7 +237,7 @@ contract gasWithdrawal2_2ERC20 is DSTest {
     vm.stopPrank();
 
     vm.startPrank(tokenCreatorAddress);
-    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
+    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
     stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
     vm.stopPrank();
 
@@ -297,16 +297,18 @@ contract gasWithdrawal2_2ERC20 is DSTest {
     stable.transfer(address(0), stable.balanceOf(vaultOwner));
     vm.stopPrank();
 
-    vm.prank(tokenCreatorAddress);
-    stable.setLiquidator(address(liquidator));
-
     vm.startPrank(creatorAddress);
     factory = new Factory();
     factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule));
-   factory.setVaultVersion(1);
-factory.setLiquidator(address(liquidator));
+    factory.setVaultVersion(1);
+    factory.setLiquidator(address(liquidator));
     liquidator.setFactory(address(factory));
     mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+
+    vm.startPrank(tokenCreatorAddress);
+    stable.setLiquidator(address(liquidator));
+    stable.setFactory(address(factory));
     vm.stopPrank();
 
     vm.prank(vaultOwner);

@@ -163,7 +163,7 @@ contract EndToEndTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(tokenCreatorAddress);
-    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
+    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
     stable.mint(tokenCreatorAddress, 100000000000 * 10 ** Constants.stableDecimals);
     vm.stopPrank();
 
@@ -219,8 +219,7 @@ contract EndToEndTest is DSTest {
     stable.transfer(address(0), stable.balanceOf(vaultOwner));
     vm.stopPrank();
 
-    vm.prank(tokenCreatorAddress);
-    stable.setLiquidator(address(liquidator));
+    
 
     vm.startPrank(creatorAddress);
     factory = new Factory();
@@ -230,6 +229,11 @@ contract EndToEndTest is DSTest {
     liquidator.setFactory(address(factory));
     mainRegistry.setFactory(address(factory));
     mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+
+    vm.startPrank(tokenCreatorAddress);
+    stable.setLiquidator(address(liquidator));
+    stable.setFactory(address(factory));
     vm.stopPrank();
 
     vm.prank(vaultOwner);
