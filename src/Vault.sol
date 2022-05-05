@@ -257,7 +257,7 @@ contract Vault {
   */
   function _depositERC721(address _from, address ERC721Address, uint256 id) private {
     
-    IERC721(ERC721Address).safeTransferFrom(_from, address(this), id);
+    IERC721(ERC721Address).transferFrom(_from, address(this), id);
     
     _erc721Stored.push(ERC721Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
     _erc721TokenIds.push(id);
