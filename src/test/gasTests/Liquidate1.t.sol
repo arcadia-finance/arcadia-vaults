@@ -239,8 +239,6 @@ contract gasLiquidate_1ERC20 is DSTest {
 
     vm.startPrank(tokenCreatorAddress);
     stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
-    stable.mint(tokenCreatorAddress, 10000000 * 10 ** Constants.stableDecimals);
-    stable.transfer(vaultOwner, 10000000 * 10 ** Constants.stableDecimals);
     vm.stopPrank();
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -316,6 +314,11 @@ contract gasLiquidate_1ERC20 is DSTest {
     vm.prank(vaultOwner);
     proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))));
     proxy = Vault(proxyAddr);
+
+    vm.prank(address(proxy));
+    stable.mint(tokenCreatorAddress, 10000000 * 10 ** Constants.stableDecimals);
+    vm.prank(tokenCreatorAddress);
+    stable.transfer(vaultOwner, 10000000 * 10 ** Constants.stableDecimals);
 
     vm.startPrank(oracleOwner);
     oracleEthToUsd.setAnswer(int256(rateEthToUsd));

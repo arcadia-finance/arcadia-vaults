@@ -238,9 +238,8 @@ contract gasRepay_2ERC20 is DSTest {
     interestRateModule.setBaseInterestRate(5 * 10 ** 16);
     vm.stopPrank();
 
-    vm.startPrank(tokenCreatorAddress);
+   vm.startPrank(tokenCreatorAddress);
     stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
-    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
     vm.stopPrank();
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);

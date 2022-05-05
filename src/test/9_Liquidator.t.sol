@@ -167,7 +167,6 @@ contract LiquidatorTest is DSTest {
 
     vm.startPrank(tokenCreatorAddress);
     stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
-    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
     vm.stopPrank();
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -222,9 +221,10 @@ contract LiquidatorTest is DSTest {
     stable.transfer(address(0), stable.balanceOf(vaultOwner));
     vm.stopPrank();
 
+
+
     vm.startPrank(tokenCreatorAddress);
     stable.setLiquidator(address(liquidator));
-    stable.setFactory(address(factory));
     vm.stopPrank();
 
     vm.startPrank(creatorAddress);
@@ -236,9 +236,25 @@ contract LiquidatorTest is DSTest {
     mainRegistry.setFactory(address(factory));
     vm.stopPrank();
 
+    vm.startPrank(tokenCreatorAddress);
+    stable.setFactory(address(factory));
+    vm.stopPrank();
+
     vm.prank(vaultOwner);
     proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))));
     proxy = Vault(proxyAddr);
+
+    uint256 slot = stdstore
+            .target(address(factory))
+            .sig(factory.isVault.selector)
+            .with_key(address(vault))
+            .find();
+    bytes32 loc = bytes32(slot);
+    bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
+    vm.store(address(factory), loc, mockedCurrentTokenId);
+
+    vm.prank(address(proxy));
+    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
 
     vm.startPrank(oracleOwner);
     oracleEthToUsd.setAnswer(int256(rateEthToUsd));
@@ -428,7 +444,7 @@ contract LiquidatorTest is DSTest {
     factory.liquidate(address(proxy));
 
     (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy), 0);
-    vm.prank(tokenCreatorAddress);
+    vm.prank(address(proxy));
     stable.mint(auctionBuyer, priceOfVault);
 
     vm.prank(auctionBuyer);
@@ -463,7 +479,7 @@ contract LiquidatorTest is DSTest {
     factory.liquidate(address(proxy));
 
     (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy), 0);
-    vm.prank(tokenCreatorAddress);
+    vm.prank(address(proxy));
     stable.mint(auctionBuyer, priceOfVault);
 
     vm.prank(auctionBuyer);

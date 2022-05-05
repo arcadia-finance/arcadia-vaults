@@ -239,7 +239,6 @@ contract gasBuyVault_2ERC202ERC721 is DSTest {
 
     vm.startPrank(tokenCreatorAddress);
     stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
-    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
     vm.stopPrank();
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -393,7 +392,7 @@ contract gasBuyVault_2ERC202ERC721 is DSTest {
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
 
-    vm.prank(tokenCreatorAddress);
+    vm.prank(address(proxy));
     stable.mint(vaultBuyer, 10**10 * 10**18);
 
   }
