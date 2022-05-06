@@ -27,7 +27,7 @@ contract ERC1155Mock is ERC1155 {
         symbol = _symbol;
     }
 
-    function mint(address to, uint256 id, uint256 amount) public {
+    function mint(address to, uint256 id, uint256 amount) public virtual {
         _mint(to, id, amount, "");
     }
 

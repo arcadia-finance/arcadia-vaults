@@ -21,7 +21,7 @@ contract ERC721Mock is ERC721 {
     }
 
 
-    function mint(address to, uint256 id) public {
+    function mint(address to, uint256 id) public virtual {
         _mint(to, id);
     }
 

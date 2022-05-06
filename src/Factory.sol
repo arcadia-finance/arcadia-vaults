@@ -16,7 +16,6 @@ contract Factory is ERC721 {
     address stable;
     address stakeContract;
     address interestModule;
-    address tokenShop; //Variable only added for the paper trading competition
   }
 
     mapping (uint256 => address) public vaultVersions;
@@ -46,11 +45,6 @@ contract Factory is ERC721 {
         owner = msg.sender;
     }
 
-    //Function only added for the paper trading competition
-    function getVaultAddress(uint256 id) external view returns(address) {
-        return allVaults[id];
-    }
-
     function allVaultsLength() external view returns (uint) {
         return allVaults.length;
     }
@@ -63,13 +57,12 @@ contract Factory is ERC721 {
         liquidatorAddress = _newLiquidator;
     }
 
-    function setVaultInfo(uint256 version, address registryAddress, address logic, address stable, address stakeContract, address interestModule, address tokenShop) external onlyOwner {
+    function setVaultInfo(uint256 version, address registryAddress, address logic, address stable, address stakeContract, address interestModule) external virtual onlyOwner {
         vaultDetails[version].registryAddress = registryAddress;
         vaultDetails[version].logic = logic;
         vaultDetails[version].stable = stable;
         vaultDetails[version].stakeContract = stakeContract;
         vaultDetails[version].interestModule = interestModule;
-        vaultDetails[version].tokenShop = tokenShop; //Variable only added for the paper trading competition
     }
 
     /** 
@@ -77,7 +70,7 @@ contract Factory is ERC721 {
     @dev This is the starting point of the Vault creation process. 
     @param salt A salt to be used to generate the hash.
   */
-    function createVault(uint256 salt) external returns (address vault) {
+    function createVault(uint256 salt) external virtual returns (address vault) {
         bytes memory initCode = type(Proxy).creationCode;
         bytes memory byteCode = abi.encodePacked(initCode, abi.encode(vaultDetails[currentVaultVersion].logic));
 
@@ -88,8 +81,7 @@ contract Factory is ERC721 {
                                   vaultDetails[currentVaultVersion].registryAddress, 
                                   vaultDetails[currentVaultVersion].stable, 
                                   vaultDetails[currentVaultVersion].stakeContract, 
-                                  vaultDetails[currentVaultVersion].interestModule,
-                                  vaultDetails[currentVaultVersion].tokenShop); //Variable only added for the paper trading competition
+                                  vaultDetails[currentVaultVersion].interestModule);
         
         
         allVaults.push(vault);

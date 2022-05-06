@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.4.22 <0.9.0;
 
-interface IFactory {
-  function isVault(address vaultAddress) external view returns (bool);
-  function safeTransferFrom(address from, address to, uint256 id) external;
-  function liquidate(address vault) external returns (bool);
-  function vaultIndex(address vaultAddress) external view returns (uint256);
+import "./../../interfaces/IERC721.sol";
+
+interface IERC721PaperTrading is IERC721 {
+  function mint(address to, uint256 id) external;
+  function burn(uint256 id) external;
 }

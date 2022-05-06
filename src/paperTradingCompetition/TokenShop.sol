@@ -5,11 +5,11 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./../interfaces/IERC20.sol";
-import "./../interfaces/IERC721.sol";
-import "./../interfaces/IERC1155.sol";
-import "./../interfaces/IVault.sol";
-import "./../interfaces/IFactory.sol";
+import "./interfaces/IERC20PaperTrading.sol";
+import "./interfaces/IERC721PaperTrading.sol";
+import "./interfaces/IERC1155PaperTrading.sol";
+import "./interfaces/IVaultPaperTrading.sol";
+import "./interfaces/IFactoryPaperTrading.sol";
 import "./../interfaces/IMainRegistry.sol";
 
 import {Printing} from "./../utils/Printer.sol";
@@ -28,6 +28,18 @@ contract TokenShop is Ownable {
   address private factory;
   address private mainRegistry;
 
+  struct SwapInput {
+    address[] tokensIn;
+    uint256[] idsIn;
+    uint256[] amountsIn;
+    uint256[] assetTypesIn;
+    address[] tokensOut;
+    uint256[] idsOut;
+    uint256[] amountsOut;
+    uint256[] assetTypesOut;
+    uint256 vaultId;
+  }
+
   constructor (address _mainRegistry) {
     mainRegistry = _mainRegistry;
   }
@@ -40,33 +52,23 @@ contract TokenShop is Ownable {
     factory = _factory;
   }
 
-  function swapExactTokensForTokens(
-      address[] calldata tokensIn,
-      uint256[] calldata idsIn,
-      uint256[] calldata amountsIn,
-      uint256[] calldata assetTypesIn,
-      address[] calldata tokensOut,
-      uint256[] calldata idsOut,
-      uint256[] calldata amountsOut,
-      uint256[] calldata assetTypesOut,
-      uint256 vaultId
-    ) external {
-    require(msg.sender == IERC721(factory).ownerOf(vaultId), "You are not the owner");
-    address vault = IFactory(factory).getVaultAddress(vaultId);
-    (,,,,,uint8 numeraire) = IVault(vault).debt();
+  function swapExactTokensForTokens(SwapInput calldata swapInput) external {
+    require(msg.sender == IERC721(factory).ownerOf(swapInput.vaultId), "You are not the owner");
+    address vault = IFactoryPaperTrading(factory).getVaultAddress(swapInput.vaultId);
+    (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
 
-    uint256 totalValueIn = IMainRegistry(mainRegistry).getTotalValue(tokensIn, idsIn, amountsIn, numeraire);
-    uint256 totalValueOut = IMainRegistry(mainRegistry).getTotalValue(tokensOut, idsOut, amountsOut, numeraire);
+    uint256 totalValueIn = IMainRegistry(mainRegistry).getTotalValue(swapInput.tokensIn, swapInput.idsIn, swapInput.amountsIn, numeraire);
+    uint256 totalValueOut = IMainRegistry(mainRegistry).getTotalValue(swapInput.tokensOut, swapInput.idsOut, swapInput.amountsOut, numeraire);
     require (totalValueIn >= totalValueOut, "Not enough funds");
 
-    IVault(vault).withdraw(tokensIn, idsIn, amountsIn, assetTypesIn);
-    _burn(tokensIn, idsIn, amountsIn, assetTypesIn);
-    _mint(tokensOut, idsOut, amountsOut, assetTypesOut);
-    IVault(vault).deposit(tokensOut, idsOut, amountsOut, assetTypesOut);
+    IVaultPaperTrading(vault).withdraw(swapInput.tokensIn, swapInput.idsIn, swapInput.amountsIn, swapInput.assetTypesIn);
+    _burn(swapInput.tokensIn, swapInput.idsIn, swapInput.amountsIn, swapInput.assetTypesIn);
+    _mint(swapInput.tokensOut, swapInput.idsOut, swapInput.amountsOut, swapInput.assetTypesOut);
+    IVaultPaperTrading(vault).deposit(swapInput.tokensOut, swapInput.idsOut, swapInput.amountsOut, swapInput.assetTypesOut);
 
     if (totalValueIn > totalValueOut) {
       uint256 amountNumeraire = totalValueIn - totalValueOut;
-      address stable = IVault(vault)._stable();
+      address stable = IVaultPaperTrading(vault)._stable();
       _mintERC20(stable, amountNumeraire);
 
       address[] memory stableArr = new address[](1);
@@ -79,7 +81,7 @@ contract TokenShop is Ownable {
       stableAmountArr[0] = amountNumeraire;
       stableTypeArr[0] = 0; //can delete
 
-      IVault(vault).deposit(stableArr, stableIdArr, stableAmountArr, stableTypeArr);
+      IVaultPaperTrading(vault).deposit(stableArr, stableIdArr, stableAmountArr, stableTypeArr);
     }
 
   }
@@ -135,27 +137,27 @@ contract TokenShop is Ownable {
   }
 
   function _mintERC20(address tokenAddress, uint256 tokenAmount) internal {
-    IERC20(tokenAddress).mint(address(this), tokenAmount);
+    IERC20PaperTrading(tokenAddress).mint(address(this), tokenAmount);
   }
 
   function _mintERC721(address tokenAddress, uint256 tokenId) internal {
-    IERC721(tokenAddress).mint(address(this), tokenId);
+    IERC721PaperTrading(tokenAddress).mint(address(this), tokenId);
   }
 
   function _mintERC1155(address tokenAddress, uint256 tokenId, uint256 tokenAmount) internal {
-    IERC1155(tokenAddress).mint(address(this), tokenId, tokenAmount);
+    IERC1155PaperTrading(tokenAddress).mint(address(this), tokenId, tokenAmount);
   }
 
   function _burnERC20(address tokenAddress, uint256 tokenAmount) internal {
-    IERC20(tokenAddress).burn(tokenAmount);
+    IERC20PaperTrading(tokenAddress).burn(tokenAmount);
   }
 
   function _burnERC721(address tokenAddress, uint256 tokenId) internal {
-    IERC721(tokenAddress).burn(tokenId);
+    IERC721PaperTrading(tokenAddress).burn(tokenId);
   }
 
   function _burnERC1155(address tokenAddress, uint256 tokenId, uint256 tokenAmount) internal {
-    IERC1155(tokenAddress).burn(tokenId, tokenAmount);
+    IERC1155PaperTrading(tokenAddress).burn(tokenId, tokenAmount);
   }
 
 }
