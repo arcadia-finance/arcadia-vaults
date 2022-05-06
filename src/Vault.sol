@@ -48,7 +48,6 @@ contract Vault {
   address public _stable;
   address public _stakeContract;
   address public _irmAddress;
-  address public _tokenShop; //Variable only added for the paper trading competition
 
   // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
   // Used by the liquidator contract for proceed claims
@@ -105,15 +104,6 @@ contract Vault {
   }
 
   /**
-   * @dev Throws if called by any address other than the tokenshop
-   *  only added for the paper trading competition
-   */
-  modifier onlyTokenShop() {
-    require(msg.sender == _tokenShop, "Not tokenshop");
-    _;
-  }
-
-  /**
    * @dev Transfers ownership of the contract to a new account (`newOwner`).
    * Can only be called by the current owner.
    */
@@ -145,9 +135,8 @@ contract Vault {
                          Used when syncing debt: interest in stable is minted to stakecontract.
     @param irmAddress The contract address of the InterestRateModule, which calculates the going interest rate
                       for a credit line, based on the underlying assets.
-    @param tokenShop The contract with the mocked token shop, added for the paper trading competition
   */
-  function initialize(address _owner, address registryAddress, address stable, address stakeContract, address irmAddress, address tokenShop) external payable {
+  function initialize(address _owner, address registryAddress, address stable, address stakeContract, address irmAddress) external payable virtual {
     require(initialized == false);
     _registryAddress = registryAddress;
     owner = _owner;
@@ -156,14 +145,8 @@ contract Vault {
     _stable = stable;
     _stakeContract = stakeContract;
     _irmAddress = irmAddress;
-    _tokenShop = tokenShop; //Variable only added for the paper trading competition
 
     initialized = true;
-
-    //Following logic added only for the paper trading competition
-    //All new vaults are initiated with $1.000.000
-    IERC20(_stable).mint(address(this), 1000000000000000000000000);
-    _depositERC20(address(this), _stable, 1000000000000000000000000);
   }
 
   /** 
@@ -188,7 +171,7 @@ contract Vault {
                       2 = ERC1155
                       Any other number = failed tx
   */
-  function deposit(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) external payable onlyTokenShop {
+  function deposit(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) external payable virtual onlyOwner {
     uint256 assetAddressesLength = assetAddresses.length;
 
     require(assetAddressesLength == assetIds.length &&
@@ -244,7 +227,7 @@ contract Vault {
     @param ERC20Address The asset address that should be transferred.
     @param amount The amount of ERC20 tokens to be transferred.
   */
-  function _depositERC20(address _from, address ERC20Address, uint256 amount) private {
+  function _depositERC20(address _from, address ERC20Address, uint256 amount) internal {
 
     require(IERC20(ERC20Address).transferFrom(_from, address(this), amount), "Transfer from failed");
 
@@ -272,7 +255,7 @@ contract Vault {
     @param ERC721Address The asset address that should be transferred.
     @param id The ID of the token to be transferred.
   */
-  function _depositERC721(address _from, address ERC721Address, uint256 id) private {
+  function _depositERC721(address _from, address ERC721Address, uint256 id) internal {
     
     IERC721(ERC721Address).transferFrom(_from, address(this), id);
     
@@ -291,7 +274,7 @@ contract Vault {
     @param id The ID of the token to be transferred.
     @param amount The amount of ERC1155 tokens to be transferred.
   */
-  function _depositERC1155(address _from, address ERC1155Address, uint256 id, uint256 amount) private {
+  function _depositERC1155(address _from, address ERC1155Address, uint256 id, uint256 amount) internal {
 
       IERC1155(ERC1155Address).safeTransferFrom(_from, address(this), id, amount, "");
 
@@ -338,7 +321,7 @@ contract Vault {
                       2 = ERC1155
                       Any other number = failed tx
   */
-  function withdraw(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) external payable onlyTokenShop {
+  function withdraw(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) external payable virtual onlyOwner {
     uint256 assetAddressesLength = assetAddresses.length;
 
     require(assetAddressesLength == assetIds.length &&
@@ -380,7 +363,7 @@ contract Vault {
     @param ERC20Address The asset address that should be transferred.
     @param amount The amount of ERC20 tokens to be transferred.
   */
-  function _withdrawERC20(address to, address ERC20Address, uint256 amount) private {
+  function _withdrawERC20(address to, address ERC20Address, uint256 amount) internal {
 
     require(IERC20(ERC20Address).transfer(to, amount), "Transfer from failed");
 
@@ -409,7 +392,7 @@ contract Vault {
     @param ERC721Address The asset address that should be transferred.
     @param id The ID of the token to be transferred.
   */
-  function _withdrawERC721(address to, address ERC721Address, uint256 id) private {
+  function _withdrawERC721(address to, address ERC721Address, uint256 id) internal {
 
     uint256 tokenIdLength = _erc721TokenIds.length;
 
@@ -448,7 +431,7 @@ contract Vault {
     @param id The ID of the token to be transferred.
     @param amount The amount of ERC1155 tokens to be transferred.
   */
-  function _withdrawERC1155(address to, address ERC1155Address, uint256 id, uint256 amount) private {
+  function _withdrawERC1155(address to, address ERC1155Address, uint256 id, uint256 amount) internal {
 
     uint256 tokenIdLength = _erc1155TokenIds.length;
     if (IERC1155(ERC1155Address).balanceOf(address(this), id) - amount == 0) {
