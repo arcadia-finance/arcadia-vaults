@@ -39,16 +39,17 @@ contract FactoryPaperTrading is Factory {
     assembly {
         vault := create2(0, add(byteCode, 32), mload(byteCode), salt)
     }
+
+    allVaults.push(vault);
+    isVault[vault] = true;
+
     IVaultPaperTrading(vault).initialize(msg.sender, 
                               vaultDetails[currentVaultVersion].registryAddress, 
                               vaultDetails[currentVaultVersion].stable, 
                               vaultDetails[currentVaultVersion].stakeContract, 
                               vaultDetails[currentVaultVersion].interestModule,
                               tokenShop);
-    
-    
-    allVaults.push(vault);
-    isVault[vault] = true;
+
 
     _mint(msg.sender, allVaults.length -1);
     emit VaultCreated(vault, msg.sender, allVaults.length);
