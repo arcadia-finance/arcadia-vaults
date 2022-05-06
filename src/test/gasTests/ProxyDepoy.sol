@@ -9,18 +9,18 @@ import "../../../lib/forge-std/src/Vm.sol";
 import "../../Factory.sol";
 import "../../Proxy.sol";
 import "../../Vault.sol";
-import "../../tests/ERC20NoApprove.sol";
-import "../../tests/ERC721NoApprove.sol";
-import "../../tests/ERC1155NoApprove.sol";
+import "../../mockups/ERC20SolmateMock.sol";
+import "../../mockups/ERC721SolmateMock.sol";
+import "../../mockups/ERC1155SolmateMock.sol";
 import "../../Stable.sol";
 import "../../AssetRegistry/MainRegistry.sol";
 import "../../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../../AssetRegistry/TestERC1155SubRegistry.sol";
+import "../../AssetRegistry/floorERC1155SubRegistry.sol";
 import "../../InterestRateModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
-import "../../tests/SimplifiedChainlinkOracle.sol";
+import "../../mockups/SimplifiedChainlinkOracle.sol";
 import "../../utils/Constants.sol";
 
 contract gasProxyDeploy is DSTest {
@@ -33,16 +33,16 @@ contract gasProxyDeploy is DSTest {
   Vault private vault;
   Vault private proxy;
   address private proxyAddr;
-  ERC20NoApprove private eth;
-  ERC20NoApprove private snx;
-  ERC20NoApprove private link;
-  ERC20NoApprove private safemoon;
-  ERC721NoApprove private bayc;
-  ERC721NoApprove private mayc;
-  ERC721NoApprove private dickButs;
-  ERC20NoApprove private wbayc;
-  ERC20NoApprove private wmayc;
-  ERC1155NoApprove private interleave;
+  ERC20Mock private eth;
+  ERC20Mock private snx;
+  ERC20Mock private link;
+  ERC20Mock private safemoon;
+  ERC721Mock private bayc;
+  ERC721Mock private mayc;
+  ERC721Mock private dickButs;
+  ERC20Mock private wbayc;
+  ERC20Mock private wmayc;
+  ERC1155Mock private interleave;
   OracleHub private oracleHub;
   SimplifiedChainlinkOracle private oracleEthToUsd;
   SimplifiedChainlinkOracle private oracleLinkToUsd;
@@ -53,7 +53,7 @@ contract gasProxyDeploy is DSTest {
   MainRegistry private mainRegistry;
   StandardERC20Registry private standardERC20Registry;
   FloorERC721SubRegistry private floorERC721SubRegistry;
-  TestERC1155SubRegistry private testERC1155SubRegistry;
+  FloorERC1155SubRegistry private floorERC1155SubRegistry;
   InterestRateModule private interestRateModule;
   Stable private stable;
   Liquidator private liquidator;
@@ -89,34 +89,34 @@ contract gasProxyDeploy is DSTest {
   constructor() {
     vm.startPrank(tokenCreatorAddress);
 
-    eth = new ERC20NoApprove(uint8(Constants.ethDecimals));
+    eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
     eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
-    snx = new ERC20NoApprove(uint8(Constants.snxDecimals));
+    snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
     snx.mint(tokenCreatorAddress, 200000 * 10**Constants.snxDecimals);
 
-    link = new ERC20NoApprove(uint8(Constants.linkDecimals));
+    link = new ERC20Mock("LINK Mock", "mLINK", uint8(Constants.linkDecimals));
     link.mint(tokenCreatorAddress, 200000 * 10**Constants.linkDecimals);
 
-    safemoon = new ERC20NoApprove(uint8(Constants.safemoonDecimals));
+    safemoon = new ERC20Mock("Safemoon Mock", "mSFMN", uint8(Constants.safemoonDecimals));
     safemoon.mint(tokenCreatorAddress, 200000 * 10**Constants.safemoonDecimals);
 
-    bayc = new ERC721NoApprove();
+    bayc = new ERC721Mock("BAYC Mock", "mBAYC");
     bayc.mint(tokenCreatorAddress, 0);
     bayc.mint(tokenCreatorAddress, 1);
     bayc.mint(tokenCreatorAddress, 2);
     bayc.mint(tokenCreatorAddress, 3);
 
-    mayc = new ERC721NoApprove();
+    mayc = new ERC721Mock("MAYC Mock", "mMAYC");
     mayc.mint(tokenCreatorAddress, 0);
 
-    dickButs = new ERC721NoApprove();
+    dickButs = new ERC721Mock("DickButs Mock", "mDICK");
     dickButs.mint(tokenCreatorAddress, 0);
 
-    wbayc = new ERC20NoApprove(uint8(Constants.wbaycDecimals));
+    wbayc = new ERC20Mock("wBAYC Mock", "mwBAYC", uint8(Constants.wbaycDecimals));
     wbayc.mint(tokenCreatorAddress, 100000 * 10**Constants.wbaycDecimals);
 
-    interleave = new ERC1155NoApprove("ERC1155 No Appr", "1155NAP");
+    interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
     interleave.mint(tokenCreatorAddress, 1, 100000);
 
     vm.stopPrank();
@@ -169,9 +169,8 @@ contract gasProxyDeploy is DSTest {
     interestRateModule.setBaseInterestRate(5 * 10 ** 16);
     vm.stopPrank();
 
-    vm.startPrank(tokenCreatorAddress);
-    stable = new Stable(uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
-    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
+   vm.startPrank(tokenCreatorAddress);
+    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
     vm.stopPrank();
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -200,11 +199,11 @@ contract gasProxyDeploy is DSTest {
 
     standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
     floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
-    testERC1155SubRegistry = new TestERC1155SubRegistry(address(mainRegistry), address(oracleHub));
+    floorERC1155SubRegistry = new FloorERC1155SubRegistry(address(mainRegistry), address(oracleHub));
 
     mainRegistry.addSubRegistry(address(standardERC20Registry));
     mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
-    mainRegistry.addSubRegistry(address(testERC1155SubRegistry));
+    mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
 
     uint256[] memory assetCreditRatings = new uint256[](2);
     assetCreditRatings[0] = 0;
@@ -224,16 +223,18 @@ contract gasProxyDeploy is DSTest {
     stable.transfer(address(0), stable.balanceOf(vaultOwner));
     vm.stopPrank();
 
-    vm.prank(tokenCreatorAddress);
-    stable.setLiquidator(address(liquidator));
-
     vm.startPrank(creatorAddress);
     factory = new Factory();
     factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule));
-   factory.setVaultVersion(1);
-factory.setLiquidator(address(liquidator));
+    factory.setVaultVersion(1);
+    factory.setLiquidator(address(liquidator));
     liquidator.setFactory(address(factory));
     mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+
+    vm.startPrank(tokenCreatorAddress);
+    stable.setLiquidator(address(liquidator));
+    stable.setFactory(address(factory));
     vm.stopPrank();
 
     vm.prank(vaultOwner);

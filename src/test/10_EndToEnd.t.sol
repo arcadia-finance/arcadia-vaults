@@ -9,18 +9,18 @@ import "../../lib/forge-std/src/Vm.sol";
 import "../Factory.sol";
 import "../Proxy.sol";
 import "../Vault.sol";
-import "../tests/ERC20NoApprove.sol";
-import "../tests/ERC721NoApprove.sol";
-import "../tests/ERC1155NoApprove.sol";
+import "../mockups/ERC20SolmateMock.sol";
+import "../mockups/ERC721SolmateMock.sol";
+import "../mockups/ERC1155SolmateMock.sol";
 import "../Stable.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../AssetRegistry/TestERC1155SubRegistry.sol";
+import "../AssetRegistry/floorERC1155SubRegistry.sol";
 import "../InterestRateModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
-import "../tests/SimplifiedChainlinkOracle.sol";
+import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../utils/Constants.sol";
 
 contract EndToEndTest is DSTest {
@@ -33,16 +33,16 @@ contract EndToEndTest is DSTest {
   Vault private vault;
   Vault private proxy;
   address private proxyAddr;
-  ERC20NoApprove private eth;
-  ERC20NoApprove private snx;
-  ERC20NoApprove private link;
-  ERC20NoApprove private safemoon;
-  ERC721NoApprove private bayc;
-  ERC721NoApprove private mayc;
-  ERC721NoApprove private dickButs;
-  ERC20NoApprove private wbayc;
-  ERC20NoApprove private wmayc;
-  ERC1155NoApprove private interleave;
+  ERC20Mock private eth;
+  ERC20Mock private snx;
+  ERC20Mock private link;
+  ERC20Mock private safemoon;
+  ERC721Mock private bayc;
+  ERC721Mock private mayc;
+  ERC721Mock private dickButs;
+  ERC20Mock private wbayc;
+  ERC20Mock private wmayc;
+  ERC1155Mock private interleave;
   OracleHub private oracleHub;
   SimplifiedChainlinkOracle private oracleEthToUsd;
   SimplifiedChainlinkOracle private oracleLinkToUsd;
@@ -53,7 +53,7 @@ contract EndToEndTest is DSTest {
   MainRegistry private mainRegistry;
   StandardERC20Registry private standardERC20Registry;
   FloorERC721SubRegistry private floorERC721SubRegistry;
-  TestERC1155SubRegistry private testERC1155SubRegistry;
+  FloorERC1155SubRegistry private floorERC1155SubRegistry;
   InterestRateModule private interestRateModule;
   Stable private stable;
   Liquidator private liquidator;
@@ -89,34 +89,34 @@ contract EndToEndTest is DSTest {
   constructor() {
     vm.startPrank(tokenCreatorAddress);
 
-    eth = new ERC20NoApprove(uint8(Constants.ethDecimals));
+    eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
     eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
-    snx = new ERC20NoApprove(uint8(Constants.snxDecimals));
+    snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
     snx.mint(tokenCreatorAddress, 200000 * 10**Constants.snxDecimals);
 
-    link = new ERC20NoApprove(uint8(Constants.linkDecimals));
+    link = new ERC20Mock("LINK Mock", "mLINK", uint8(Constants.linkDecimals));
     link.mint(tokenCreatorAddress, 200000 * 10**Constants.linkDecimals);
 
-    safemoon = new ERC20NoApprove(uint8(Constants.safemoonDecimals));
+    safemoon = new ERC20Mock("Safemoon Mock", "mSFMN", uint8(Constants.safemoonDecimals));
     safemoon.mint(tokenCreatorAddress, 200000 * 10**Constants.safemoonDecimals);
 
-    bayc = new ERC721NoApprove();
+    bayc = new ERC721Mock("BAYC Mock", "mBAYC");
     bayc.mint(tokenCreatorAddress, 0);
     bayc.mint(tokenCreatorAddress, 1);
     bayc.mint(tokenCreatorAddress, 2);
     bayc.mint(tokenCreatorAddress, 3);
 
-    mayc = new ERC721NoApprove();
+    mayc = new ERC721Mock("MAYC Mock", "mMAYC");
     mayc.mint(tokenCreatorAddress, 0);
 
-    dickButs = new ERC721NoApprove();
+    dickButs = new ERC721Mock("DickButs Mock", "mDICK");
     dickButs.mint(tokenCreatorAddress, 0);
 
-    wbayc = new ERC20NoApprove(uint8(Constants.wbaycDecimals));
+    wbayc = new ERC20Mock("wBAYC Mock", "mwBAYC", uint8(Constants.wbaycDecimals));
     wbayc.mint(tokenCreatorAddress, 100000 * 10**Constants.wbaycDecimals);
 
-    interleave = new ERC1155NoApprove("ERC1155 No Appr", "1155NAP");
+    interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
     interleave.mint(tokenCreatorAddress, 1, 100000);
 
     vm.stopPrank();
@@ -163,8 +163,7 @@ contract EndToEndTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(tokenCreatorAddress);
-    stable = new Stable(uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
-    stable.mint(tokenCreatorAddress, 100000000000 * 10 ** Constants.stableDecimals);
+    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
     vm.stopPrank();
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -195,11 +194,11 @@ contract EndToEndTest is DSTest {
 
     standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
     floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
-    testERC1155SubRegistry = new TestERC1155SubRegistry(address(mainRegistry), address(oracleHub));
+    floorERC1155SubRegistry = new FloorERC1155SubRegistry(address(mainRegistry), address(oracleHub));
 
     mainRegistry.addSubRegistry(address(standardERC20Registry));
     mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
-    mainRegistry.addSubRegistry(address(testERC1155SubRegistry));
+    mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
 
     uint256[] memory assetCreditRatings = new uint256[](2);
     assetCreditRatings[0] = 0;
@@ -219,9 +218,6 @@ contract EndToEndTest is DSTest {
     stable.transfer(address(0), stable.balanceOf(vaultOwner));
     vm.stopPrank();
 
-    vm.prank(tokenCreatorAddress);
-    stable.setLiquidator(address(liquidator));
-
     vm.startPrank(creatorAddress);
     factory = new Factory();
     factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule));
@@ -232,9 +228,17 @@ contract EndToEndTest is DSTest {
     mainRegistry.setFactory(address(factory));
     vm.stopPrank();
 
+    vm.startPrank(tokenCreatorAddress);
+    stable.setLiquidator(address(liquidator));
+    stable.setFactory(address(factory));
+    vm.stopPrank();
+
     vm.prank(vaultOwner);
     proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))));
     proxy = Vault(proxyAddr);
+
+    vm.prank(address(proxy));
+    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
 
     vm.startPrank(oracleOwner);
     oracleEthToUsd.setAnswer(int256(rateEthToUsd));
@@ -244,6 +248,20 @@ contract EndToEndTest is DSTest {
     oracleWmaycToUsd.setAnswer(int256(rateWmaycToUsd));
     oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEth));
     vm.stopPrank();
+
+    vm.startPrank(vaultOwner);
+    bayc.setApprovalForAll(address(proxy), true);
+    mayc.setApprovalForAll(address(proxy), true);
+    dickButs.setApprovalForAll(address(proxy), true);
+    interleave.setApprovalForAll(address(proxy), true);
+    eth.approve(address(proxy), type(uint256).max);
+    link.approve(address(proxy), type(uint256).max);
+    snx.approve(address(proxy), type(uint256).max);
+    safemoon.approve(address(proxy), type(uint256).max);
+    stable.approve(address(proxy), type(uint256).max);
+    stable.approve(address(liquidator), type(uint256).max);
+    vm.stopPrank();
+
   }
 
   function testReturnUsdValueOfEth(uint128 amount) public {
@@ -328,7 +346,7 @@ contract EndToEndTest is DSTest {
     assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingEth;
 
     vm.prank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:tokenId, assetAddress: address(interleave)}), assetCreditRatingsInterleave);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:tokenId, assetAddress: address(interleave)}), assetCreditRatingsInterleave);
 
     depositERC1155InVault(interleave, tokenId, amount, vaultOwner);
     uint256 actualValue = proxy.getValue(uint8(Constants.EthNumeraire));
@@ -734,6 +752,9 @@ contract EndToEndTest is DSTest {
     vm.roll(blocksToRoll);
 
     uint128 openDebt = proxy.getOpenDebt();
+    vm.startPrank(address(proxy));
+    stable.mint(vaultOwner, openDebt > stable.balanceOf(vaultOwner) ? openDebt - stable.balanceOf(vaultOwner) : 0);
+    vm.stopPrank();
 
     vm.prank(vaultOwner);
     proxy.repayDebt(openDebt);
@@ -761,7 +782,7 @@ contract EndToEndTest is DSTest {
     vm.prank(vaultOwner);
     proxy.takeCredit(amountCredit);
 
-    vm.prank(tokenCreatorAddress);
+    vm.prank(address(proxy));
     stable.mint(vaultOwner, factor * amountCredit);
 
     vm.roll(blocksToRoll);
@@ -801,7 +822,7 @@ contract EndToEndTest is DSTest {
     vm.prank(vaultOwner);
     proxy.takeCredit(amountCredit);
 
-    vm.prank(tokenCreatorAddress);
+    vm.prank(address(proxy));
     stable.mint(vaultOwner, 1000 * 10**18);
 
     vm.roll(blocksToRoll);
@@ -842,7 +863,7 @@ contract EndToEndTest is DSTest {
     }
   }
 
-  function depositERC20InVault(ERC20NoApprove token, uint128 amount, address sender) public returns (address[] memory assetAddresses,
+  function depositERC20InVault(ERC20Mock token, uint128 amount, address sender) public returns (address[] memory assetAddresses,
                                                               uint256[] memory assetIds,
                                                               uint256[] memory assetAmounts,
                                                               uint256[] memory assetTypes) {
@@ -867,7 +888,7 @@ contract EndToEndTest is DSTest {
     vm.stopPrank();
   }
 
-  function depositERC721InVault(ERC721NoApprove token, uint128[] memory tokenIds, address sender) public returns (address[] memory assetAddresses,
+  function depositERC721InVault(ERC721Mock token, uint128[] memory tokenIds, address sender) public returns (address[] memory assetAddresses,
                                                               uint256[] memory assetIds,
                                                               uint256[] memory assetAmounts,
                                                               uint256[] memory assetTypes) {
@@ -895,7 +916,7 @@ contract EndToEndTest is DSTest {
     vm.stopPrank();
   }
 
-  function depositERC1155InVault(ERC1155NoApprove token, uint256 tokenId, uint256 amount, address sender) 
+  function depositERC1155InVault(ERC1155Mock token, uint256 tokenId, uint256 amount, address sender) 
                                               public returns (address[] memory assetAddresses,
                                                               uint256[] memory assetIds,
                                                               uint256[] memory assetAmounts,

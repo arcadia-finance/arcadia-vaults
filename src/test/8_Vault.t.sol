@@ -9,18 +9,18 @@ import "../../lib/forge-std/src/Vm.sol";
 import "../Factory.sol";
 import "../Proxy.sol";
 import "../Vault.sol";
-import "../tests/ERC20NoApprove.sol";
-import "../tests/ERC721NoApprove.sol";
-import "../tests/ERC1155NoApprove.sol";
+import "../mockups/ERC20SolmateMock.sol";
+import "../mockups/ERC721SolmateMock.sol";
+import "../mockups/ERC1155SolmateMock.sol";
 import "../Stable.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../AssetRegistry/TestERC1155SubRegistry.sol";
+import "../AssetRegistry/floorERC1155SubRegistry.sol";
 import "../InterestRateModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
-import "../tests/SimplifiedChainlinkOracle.sol";
+import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../utils/Constants.sol";
 
 contract vaultTests is DSTest {
@@ -31,16 +31,16 @@ contract vaultTests is DSTest {
 
   Factory private factoryContr;
   Vault private vault;
-  ERC20NoApprove private eth;
-  ERC20NoApprove private snx;
-  ERC20NoApprove private link;
-  ERC20NoApprove private safemoon;
-  ERC721NoApprove private bayc;
-  ERC721NoApprove private mayc;
-  ERC721NoApprove private dickButs;
-  ERC20NoApprove private wbayc;
-  ERC20NoApprove private wmayc;
-  ERC1155NoApprove private interleave;
+  ERC20Mock private eth;
+  ERC20Mock private snx;
+  ERC20Mock private link;
+  ERC20Mock private safemoon;
+  ERC721Mock private bayc;
+  ERC721Mock private mayc;
+  ERC721Mock private dickButs;
+  ERC20Mock private wbayc;
+  ERC20Mock private wmayc;
+  ERC1155Mock private interleave;
   OracleHub private oracleHub;
   SimplifiedChainlinkOracle private oracleEthToUsd;
   SimplifiedChainlinkOracle private oracleLinkToUsd;
@@ -51,7 +51,7 @@ contract vaultTests is DSTest {
   MainRegistry private mainRegistry;
   StandardERC20Registry private standardERC20Registry;
   FloorERC721SubRegistry private floorERC721SubRegistry;
-  TestERC1155SubRegistry private testERC1155SubRegistry;
+  FloorERC1155SubRegistry private floorERC1155SubRegistry;
   InterestRateModule private interestRateModule;
   Stable private stable;
   Liquidator private liquidator;
@@ -87,34 +87,36 @@ contract vaultTests is DSTest {
 
     vm.startPrank(tokenCreatorAddress);
 
-    eth = new ERC20NoApprove(uint8(Constants.ethDecimals));
+    factoryContr = new Factory();
+
+    eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
     eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
-    snx = new ERC20NoApprove(uint8(Constants.snxDecimals));
+    snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
     snx.mint(tokenCreatorAddress, 200000 * 10**Constants.snxDecimals);
 
-    link = new ERC20NoApprove(uint8(Constants.linkDecimals));
+    link = new ERC20Mock("LINK Mock", "mLINK", uint8(Constants.linkDecimals));
     link.mint(tokenCreatorAddress, 200000 * 10**Constants.linkDecimals);
 
-    safemoon = new ERC20NoApprove(uint8(Constants.safemoonDecimals));
+    safemoon = new ERC20Mock("Safemoon Mock", "mSFMN", uint8(Constants.safemoonDecimals));
     safemoon.mint(tokenCreatorAddress, 200000 * 10**Constants.safemoonDecimals);
 
-    bayc = new ERC721NoApprove();
+    bayc = new ERC721Mock("BAYC Mock", "mBAYC");
     bayc.mint(tokenCreatorAddress, 0);
     bayc.mint(tokenCreatorAddress, 1);
     bayc.mint(tokenCreatorAddress, 2);
     bayc.mint(tokenCreatorAddress, 3);
 
-    mayc = new ERC721NoApprove();
+    mayc = new ERC721Mock("MAYC Mock", "mMAYC");
     mayc.mint(tokenCreatorAddress, 0);
 
-    dickButs = new ERC721NoApprove();
+    dickButs = new ERC721Mock("DickButs Mock", "mDICK");
     dickButs.mint(tokenCreatorAddress, 0);
 
-    wbayc = new ERC20NoApprove(uint8(Constants.wbaycDecimals));
+    wbayc = new ERC20Mock("wBAYC Mock", "mwBAYC", uint8(Constants.wbaycDecimals));
     wbayc.mint(tokenCreatorAddress, 100000 * 10**Constants.wbaycDecimals);
 
-    interleave = new ERC1155NoApprove("ERC1155 No Appr", "1155NAP");
+    interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
     interleave.mint(tokenCreatorAddress, 1, 100000);
 
     vm.stopPrank();
@@ -167,8 +169,7 @@ contract vaultTests is DSTest {
     vm.stopPrank();
 
     vm.startPrank(tokenCreatorAddress);
-    stable = new Stable(uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
-    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
+    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factoryContr));
     vm.stopPrank();
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -201,11 +202,11 @@ contract vaultTests is DSTest {
 
     standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
     floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
-    testERC1155SubRegistry = new TestERC1155SubRegistry(address(mainRegistry), address(oracleHub));
+    floorERC1155SubRegistry = new FloorERC1155SubRegistry(address(mainRegistry), address(oracleHub));
 
     mainRegistry.addSubRegistry(address(standardERC20Registry));
     mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
-    mainRegistry.addSubRegistry(address(testERC1155SubRegistry));
+    mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
     liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
     vm.stopPrank();
 
@@ -214,11 +215,34 @@ contract vaultTests is DSTest {
     stable.transfer(address(0), stable.balanceOf(vaultOwner));
     vm.stopPrank();
 
+    uint256 slot = stdstore
+            .target(address(factoryContr))
+            .sig(factoryContr.isVault.selector)
+            .with_key(address(vault))
+            .find();
+    bytes32 loc = bytes32(slot);
+    bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
+    vm.store(address(factoryContr), loc, mockedCurrentTokenId);
+
+    vm.prank(address(vault));
+    stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
+    
+
     vm.prank(tokenCreatorAddress);
     stable.setLiquidator(address(liquidator));
 
-    vm.prank(vaultOwner);
+    vm.startPrank(vaultOwner);
     vault.initialize(vaultOwner, address(mainRegistry), address(stable), address(stakeContract), address(interestRateModule));
+    bayc.setApprovalForAll(address(vault), true);
+    mayc.setApprovalForAll(address(vault), true);
+    dickButs.setApprovalForAll(address(vault), true);
+    interleave.setApprovalForAll(address(vault), true);
+    eth.approve(address(vault), type(uint256).max);
+    link.approve(address(vault), type(uint256).max);
+    snx.approve(address(vault), type(uint256).max);
+    safemoon.approve(address(vault), type(uint256).max);
+    vm.stopPrank();
+  
   }
 
   //input as uint8 to prevent too long lists as fuzz input
@@ -428,7 +452,7 @@ contract vaultTests is DSTest {
     assetCreditRatings[1] = Constants.interleaveCreditRatingEth;
 
     vm.prank(creatorAddress);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
 
     address[] memory assetAddresses = new address[](1);
     assetAddresses[0] = address(interleave);
@@ -538,7 +562,7 @@ contract vaultTests is DSTest {
     floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWbaycToEthEthToUsd, idRangeStart:0, idRangeEnd:9999, assetAddress: address(bayc)}), assetCreditRatingsERC721);
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**Constants.linkDecimals), assetAddress: address(link)}), assetCreditRatingsLink);
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), assetCreditRatingsEth);
-    testERC1155SubRegistry.setAssetInformation(TestERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatingsInterleave);
+    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatingsInterleave);
     vm.stopPrank();
     
     vm.prank(vaultOwner);
@@ -1066,7 +1090,7 @@ contract vaultTests is DSTest {
 
 
 
-  function depositERC20InVault(ERC20NoApprove token, uint128 amount, address sender) public returns (address[] memory assetAddresses,
+  function depositERC20InVault(ERC20Mock token, uint128 amount, address sender) public returns (address[] memory assetAddresses,
                                                               uint256[] memory assetIds,
                                                               uint256[] memory assetAmounts,
                                                               uint256[] memory assetTypes) {

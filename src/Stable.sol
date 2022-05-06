@@ -4,24 +4,36 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.0;
 
-import "./tests/ERC20SolmateNoApprove.sol";
+import "./mockups/ERC20SolmateMock.sol";
+import "./interfaces/IFactory.sol";
 
 contract Stable is ERC20 {
 
   address public liquidator;
   address public owner;
+  address public factory;
 
   modifier onlyOwner {
       require(msg.sender == owner, "You are not the owner");
       _;
   }
 
-  constructor(uint8 _decimalsInput, address liquidatorAddress) ERC20("No approve", "No approve", _decimalsInput) {
-      liquidator = liquidatorAddress;
-      owner = msg.sender;
+  modifier onlyVault {
+      require(IFactory(factory).isVault(msg.sender), "Only a vault can mint!");
+      _;
   }
 
-  function mint(address to, uint256 amount) public {
+  constructor(string memory name, string memory symbol, uint8 _decimalsInput, address liquidatorAddress, address _factory) ERC20(name, symbol, _decimalsInput) {
+      liquidator = liquidatorAddress;
+      owner = msg.sender;
+      factory = _factory;
+  }
+
+  function setFactory(address _factory) public onlyOwner {
+      factory = _factory;
+  }
+
+  function mint(address to, uint256 amount) public onlyVault {
       _mint(to, amount);
   }
 
@@ -39,7 +51,12 @@ function safeBurn(address from, uint256 amount) public returns (bool) {
     return true;
   }
 
-  function getBal(address) external pure returns (uint256) {
-      return 1000;
+//Following logic added only for the paper trading competition
+  function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+    if (from == to) {
+      return true; 
+    } else {
+      return super.transferFrom(from, to, amount);
+    }
   }
 }
