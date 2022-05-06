@@ -14,8 +14,8 @@ contract FactoryPaperTrading is Factory {
       return allVaults[id];
   }
 
- function setVaultInfo(uint256 version, address registryAddress, address logic, address stable, address stakeContract, address interestModule) external override onlyOwner {
-   
+ function setVaultInfo(uint256, address, address, address, address, address) external view override onlyOwner {
+   revert('Not Allowed');
  }
 
   function setVaultInfo(uint256 version, address registryAddress, address logic, address stable, address stakeContract, address interestModule, address _tokenShop) external onlyOwner {

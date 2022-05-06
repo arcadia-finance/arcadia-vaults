@@ -6,18 +6,18 @@ import "../../../lib/forge-std/src/stdlib.sol";
 import "../../../lib/forge-std/src/console.sol";
 import "../../../lib/forge-std/src/Vm.sol";
 
-import "../../Factory.sol";
+import "../../paperTradingCompetition/FactoryPaperTrading.sol";
 import "../../Proxy.sol";
-import "../../Vault.sol";
-import "../../Stable.sol";
+import "../../paperTradingCompetition/VaultPaperTrading.sol";
+import "../../paperTradingCompetition/StablePaperTrading.sol";
 import "../../AssetRegistry/MainRegistry.sol";
-import "../../mockups/ERC20SolmateMock.sol";
+import "../../paperTradingCompetition/ERC20PaperTrading.sol";
 import "../../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../../InterestRateModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
 import "../../utils/Constants.sol";
-import "../../Oracles/StableOracle.sol";
+import "../../paperTradingCompetition/Oracles/StableOracle.sol";
 import "../../mockups/SimplifiedChainlinkOracle.sol";
 
 contract CreateVaultTest is DSTest {
@@ -26,18 +26,18 @@ contract CreateVaultTest is DSTest {
   Vm private vm = Vm(HEVM_ADDRESS);  
   StdStorage private stdstore;
 
-  Factory private factory;
-  Vault private vault;
-  Vault private proxy;
+  FactoryPaperTrading private factory;
+  VaultPaperTrading private vault;
+  VaultPaperTrading private proxy;
   address private proxyAddr;
-  ERC20Mock private eth;
+  ERC20PaperTrading private eth;
   OracleHub private oracleHub;
   SimplifiedChainlinkOracle private oracleEthToUsd;
   StableOracle private oracleStableToUsd;
   MainRegistry private mainRegistry;
   StandardERC20Registry private standardERC20Registry;
   InterestRateModule private interestRateModule;
-  Stable private stable;
+  StablePaperTrading private stable;
   StableOracle private oracle;
   Liquidator private liquidator;
 
@@ -57,7 +57,7 @@ contract CreateVaultTest is DSTest {
   constructor() {
 
     vm.prank(tokenCreatorAddress);
-    eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
+    eth = new ERC20PaperTrading("ETH Mock", "mETH", uint8(Constants.ethDecimals), 0x0000000000000000000000000000000000000000);
 
     vm.startPrank(oracleOwner);
     oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
@@ -71,7 +71,8 @@ contract CreateVaultTest is DSTest {
     uint256[] memory emptyList = new uint256[](0);
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 
-    stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000);
+    factory = new FactoryPaperTrading();
+    stable = new StablePaperTrading("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factory));
     liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
     stable.setLiquidator(address(liquidator));
 
@@ -92,9 +93,8 @@ contract CreateVaultTest is DSTest {
     interestRateModule = new InterestRateModule();
     interestRateModule.setBaseInterestRate(5 * 10 ** 16);
 
-    vault = new Vault();
-    factory = new Factory();
-    factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule));
+    vault = new VaultPaperTrading();
+    factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule), 0x0000000000000000000000000000000000000000);
     factory.setVaultVersion(1);
     factory.setLiquidator(address(liquidator));
     liquidator.setFactory(address(factory));
@@ -108,7 +108,7 @@ contract CreateVaultTest is DSTest {
   function setUp() public {
     vm.prank(vaultOwner);
     proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))));
-    proxy = Vault(proxyAddr);
+    proxy = VaultPaperTrading(proxyAddr);
   }
 
   function testExample() public {

@@ -24,8 +24,8 @@ contract VaultPaperTrading is Vault {
     _;
   }
 
-  function initialize(address _owner, address registryAddress, address stable, address stakeContract, address irmAddress) external payable override {
-
+  function initialize(address, address, address, address, address) external payable override {
+   revert('Not Allowed');
   }
 
   /** 
