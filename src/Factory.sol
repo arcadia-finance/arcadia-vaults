@@ -14,7 +14,6 @@ contract Factory is ERC721 {
   struct vaultVersionInfo {
     address registryAddress;
     address logic;
-    address stable;
     address stakeContract;
     address interestModule;
   }
@@ -67,10 +66,9 @@ contract Factory is ERC721 {
         liquidatorAddress = _newLiquidator;
     }
 
-    function setNewVaultInfo(address registryAddress, address logic, address stable, address stakeContract, address interestModule) external onlyOwner {
+    function setNewVaultInfo(address registryAddress, address logic, address stakeContract, address interestModule) external onlyOwner {
         vaultDetails[currentVaultVersion+1].registryAddress = registryAddress;
         vaultDetails[currentVaultVersion+1].logic = logic;
-        vaultDetails[currentVaultVersion+1].stable = stable;
         vaultDetails[currentVaultVersion+1].stakeContract = stakeContract;
         vaultDetails[currentVaultVersion+1].interestModule = interestModule;
         newVaultInfoSet = true;
@@ -109,8 +107,11 @@ contract Factory is ERC721 {
     @notice Function used to create a Vault
     @dev This is the starting point of the Vault creation process. 
     @param salt A salt to be used to generate the hash.
+    
     */
-    function createVault(uint256 salt) external returns (address vault) {
+    function createVault(uint256 salt, uint256 numeraire) external returns (address vault) {
+        require(numeraire <= numeraireCounter - 1, "MR_GLV: Unknown Numeraire");
+
         bytes memory initCode = type(Proxy).creationCode;
         bytes memory byteCode = abi.encodePacked(initCode, abi.encode(vaultDetails[currentVaultVersion].logic));
 
@@ -119,7 +120,7 @@ contract Factory is ERC721 {
         }
         IVault(vault).initialize(msg.sender, 
                                   vaultDetails[currentVaultVersion].registryAddress, 
-                                  vaultDetails[currentVaultVersion].stable, 
+                                  numeraireToStable[numeraire], 
                                   vaultDetails[currentVaultVersion].stakeContract, 
                                   vaultDetails[currentVaultVersion].interestModule);
         
