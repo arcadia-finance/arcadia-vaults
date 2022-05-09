@@ -9,4 +9,7 @@ interface IFactory {
   function safeTransferFrom(address from, address to, uint256 id) external;
   function liquidate(address vault) external returns (bool);
   function vaultIndex(address vaultAddress) external view returns (uint256);
+  function getCurrentRegistry() view external returns (address);
+  function addNumeraire(uint256 numeraire, address stable) external;
+  function numeraireCounter() external returns (uint256);
 }

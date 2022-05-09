@@ -7,6 +7,7 @@ pragma solidity >=0.4.22 <0.9.0;
 import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../interfaces/IChainLinkData.sol";
 import "../interfaces/IOraclesHub.sol";
+import "../interfaces/IFactory.sol";
 
 import {FixedPointMathLib} from '../utils/FixedPointMathLib.sol';
 
@@ -50,10 +51,11 @@ contract MainRegistry is Ownable {
     uint64 numeraireUnit;
     address assetAddress;
     address numeraireToUsdOracle;
+    address stableAddress;
     string numeraireLabel;
   }
 
-  uint256 public numeraireLastIndex;
+  uint256 public numeraireCounter;
   mapping (uint256 => NumeraireInformation) public numeraireToInformation;
 
   mapping (address => mapping (uint256 => uint256)) public assetToNumeraireToCreditRating;
@@ -73,7 +75,8 @@ contract MainRegistry is Ownable {
    */
   constructor (NumeraireInformation memory _numeraireInformation) {
     //Main registry must be initialised with usd
-    numeraireToInformation[numeraireLastIndex] = _numeraireInformation;
+    numeraireToInformation[numeraireCounter] = _numeraireInformation;
+    unchecked {++numeraireCounter;}
   }
 
   /**
@@ -81,7 +84,16 @@ contract MainRegistry is Ownable {
    * @param _factoryAddress The address of the Factory
    */
   function setFactory(address _factoryAddress) external onlyOwner {
+    require(IFactory(_factoryAddress).getCurrentRegistry() == address(this), "Main Registry not known in factory");
     factoryAddress = _factoryAddress;
+
+    uint256 factoryNumeraireCounter = IFactory(_factoryAddress).numeraireCounter();
+    if (numeraireCounter > factoryNumeraireCounter) {
+      for (uint256 i = factoryNumeraireCounter; i < numeraireCounter;) {
+        IFactory(factoryAddress).addNumeraire(i, numeraireToInformation[i].stableAddress);
+        unchecked {++i;}
+      }
+    }
   }
 
   /**
@@ -169,7 +181,7 @@ contract MainRegistry is Ownable {
     assetToSubRegistry[assetAddress] = msg.sender;
 
     uint256 assetCreditRatingsLength = assetCreditRatings.length;
-    require(assetCreditRatingsLength == numeraireLastIndex + 1 || assetCreditRatingsLength == 0, 'MR_AA: LENGTH_MISMATCH');
+    require(assetCreditRatingsLength == numeraireCounter || assetCreditRatingsLength == 0, 'MR_AA: LENGTH_MISMATCH');
     for (uint256 i; i < assetCreditRatingsLength;) {
       require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AA: non-existing");
       assetToNumeraireToCreditRating[assetAddress][i] = assetCreditRatings[i];
@@ -220,16 +232,20 @@ contract MainRegistry is Ownable {
    *  ToDo: check if assetCreditRating can be put in a struct
    */
   function addNumeraire(NumeraireInformation calldata numeraireInformation, uint256[] calldata assetCreditRatings) external onlyOwner {
-    unchecked {++numeraireLastIndex;}
-    numeraireToInformation[numeraireLastIndex] = numeraireInformation;
+    numeraireToInformation[numeraireCounter] = numeraireInformation;
 
     uint256 assetCreditRatingsLength = assetCreditRatings.length;
     require(assetCreditRatingsLength == assetsInMainRegistry.length || assetCreditRatingsLength == 0, 'MR_AN: lenght');
     for (uint256 i; i < assetCreditRatingsLength;) {
       require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AN: non existing credRat");
-      assetToNumeraireToCreditRating[assetsInMainRegistry[i]][numeraireLastIndex] = assetCreditRatings[i];
+      assetToNumeraireToCreditRating[assetsInMainRegistry[i]][numeraireCounter] = assetCreditRatings[i];
       unchecked {++i;}
-    }    
+    }
+
+    if (factoryAddress != address(0)) {
+      IFactory(factoryAddress).addNumeraire(numeraireCounter, numeraireInformation.stableAddress);
+    }
+    unchecked {++numeraireCounter;}
   }
 
   /**
@@ -252,7 +268,7 @@ contract MainRegistry is Ownable {
                       ) public view returns (uint256 valueInNumeraire) {
     uint256 valueInUsd;
 
-    require(numeraire <= numeraireLastIndex, "MR_GTV: Unknown Numeraire");
+    require(numeraire <= numeraireCounter - 1, "MR_GTV: Unknown Numeraire");
 
     uint256 assetAddressesLength = _assetAddresses.length;
     require(assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length, "MR_GTV: LENGTH_MISMATCH");
@@ -308,7 +324,7 @@ contract MainRegistry is Ownable {
     
     valuesPerAsset = new uint256[](_assetAddresses.length);
 
-    require(numeraire <= numeraireLastIndex, "MR_GLV: Unknown Numeraire");
+    require(numeraire <= numeraireCounter - 1, "MR_GLV: Unknown Numeraire");
 
     uint256 assetAddressesLength = _assetAddresses.length;
     require(assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length, "MR_GLV: LENGTH_MISMATCH");

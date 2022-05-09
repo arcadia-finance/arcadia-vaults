@@ -6,6 +6,7 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "./Proxy.sol";
 import "./interfaces/IVault.sol";
+import "./interfaces/IMainRegistry.sol";
 import "../lib/solmate/src/tokens/ERC721.sol";
 
 contract Factory is ERC721 {
@@ -22,7 +23,7 @@ contract Factory is ERC721 {
     mapping (uint256 => vaultVersionInfo) public vaultDetails;
 
     uint256 public currentVaultVersion;
-    uint256 public nextVaultVersion;
+    bool public factoryInitialised;
     bool public newVaultInfoSet;
 
     address[] public allVaults;
@@ -32,9 +33,9 @@ contract Factory is ERC721 {
 
     address public owner;
 
-    //Set this on construction?
     address public liquidatorAddress;
 
+    uint256 public numeraireCounter;
     mapping (uint256 => address) public numeraireToStable;
 
     event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 id);
@@ -54,8 +55,11 @@ contract Factory is ERC721 {
 
     function confirmNewVaultInfo() public onlyOwner {
         if (newVaultInfoSet) {
-          unchecked {++nextVaultVersion;}
+          unchecked {++currentVaultVersion;}
           newVaultInfoSet = false;
+          if(!factoryInitialised) {
+            factoryInitialised = true;
+          }
         }
     }
 
@@ -64,21 +68,41 @@ contract Factory is ERC721 {
     }
 
     function setNewVaultInfo(address registryAddress, address logic, address stable, address stakeContract, address interestModule) external onlyOwner {
-        vaultDetails[nextVaultVersion].registryAddress = registryAddress;
-        vaultDetails[nextVaultVersion].logic = logic;
-        vaultDetails[nextVaultVersion].stable = stable;
-        vaultDetails[nextVaultVersion].stakeContract = stakeContract;
-        vaultDetails[nextVaultVersion].interestModule = interestModule;
+        vaultDetails[currentVaultVersion+1].registryAddress = registryAddress;
+        vaultDetails[currentVaultVersion+1].logic = logic;
+        vaultDetails[currentVaultVersion+1].stable = stable;
+        vaultDetails[currentVaultVersion+1].stakeContract = stakeContract;
+        vaultDetails[currentVaultVersion+1].interestModule = interestModule;
         newVaultInfoSet = true;
+
+        //If there is a new Main Registry Contract, Check that numeraires in factory and main registry match
+        if (factoryInitialised && vaultDetails[currentVaultVersion].registryAddress != vaultDetails[currentVaultVersion+1].registryAddress) {
+          address mainRegistryStableAddress;
+          for (uint256 i; i < numeraireCounter;) {
+            (,,,,mainRegistryStableAddress,) = IMainRegistry(registryAddress).numeraireToInformation(i);
+            require(mainRegistryStableAddress == numeraireToStable[i], "Numeraires of Main Registry don't match numeraires of factory");
+            unchecked {++i;}
+          }
+        }
     }
 
     /** 
     @notice Function adds numeraire and corresponding stable contract to the factory
+    @dev Numeraires can only be added by the latest Main Registry
     @param numeraire An identifier (uint256) of the Numeraire
     @param stable The contract address of the corresponding ERC20 token pegged to the numeraire
     */
-    function addNumeraire(uint256 numeraire, address stable) external onlyOwner {
-        numeraireToStable[numeraire] = stable;
+    function addNumeraire(uint256 numeraire, address stable) external {
+      require(vaultDetails[currentVaultVersion].registryAddress == msg.sender, "New Numeraires must be added via most recent Main Registry");
+      numeraireToStable[numeraire] = stable;
+      unchecked {++numeraireCounter;}
+    }
+
+    /** 
+    @notice Returns address of the most recent Main Registry
+    */
+    function getCurrentRegistry() view external returns (address registry) {
+      registry = vaultDetails[currentVaultVersion].registryAddress;
     }
 
     /** 
