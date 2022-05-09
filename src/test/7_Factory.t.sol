@@ -48,7 +48,7 @@ contract factoryTest is DSTest {
     erc20Contr = new ERC20Mock("ERC20 Mock", "mERC20", 18);
     interestContr = new InterestRateModule();
     liquidatorContr = new Liquidator(address(factoryContr), 0x0000000000000000000000000000000000000000, address(erc20Contr));
-		registryContr = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+		registryContr = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
     
 
     factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), address(erc20Contr), 0x0000000000000000000000000000000000000000, address(interestContr));
