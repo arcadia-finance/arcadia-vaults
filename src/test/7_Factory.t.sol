@@ -51,8 +51,8 @@ contract factoryTest is DSTest {
 		registryContr = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
     
 
-    factoryContr.setVaultInfo(1, address(registryContr), address(vaultContr), address(erc20Contr), 0x0000000000000000000000000000000000000000, address(interestContr));
-    factoryContr.setVaultVersion(1);
+    factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), address(erc20Contr), 0x0000000000000000000000000000000000000000, address(interestContr));
+    factoryContr.confirmNewVaultInfo();
     factoryContr.setLiquidator(address(liquidatorContr));
 
     registryContr.setFactory(address(factoryContr));
@@ -125,7 +125,7 @@ contract factoryTest is DSTest {
 
     vm.startPrank(sender);
     vm.expectRevert("You are not the owner");
-    factoryContr.setVaultVersion(5);
+    factoryContr.confirmNewVaultInfo();
     vm.stopPrank();
   }
 

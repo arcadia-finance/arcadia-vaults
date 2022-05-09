@@ -18,11 +18,12 @@ contract Factory is ERC721 {
     address interestModule;
   }
 
-    mapping (uint256 => address) public vaultVersions;
     mapping (address => bool) public isVault;
     mapping (uint256 => vaultVersionInfo) public vaultDetails;
 
     uint256 public currentVaultVersion;
+    uint256 public nextVaultVersion;
+    bool public newVaultInfoSet;
 
     address[] public allVaults;
     mapping(address => uint256) public vaultIndex;
@@ -33,6 +34,8 @@ contract Factory is ERC721 {
 
     //Set this on construction?
     address public liquidatorAddress;
+
+    mapping (uint256 => address) public numeraireToStable;
 
     event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 id);
 
@@ -49,27 +52,40 @@ contract Factory is ERC721 {
         return allVaults.length;
     }
 
-    function setVaultVersion(uint256 _newVersion) public onlyOwner {
-        currentVaultVersion = _newVersion;
+    function confirmNewVaultInfo() public onlyOwner {
+        if (newVaultInfoSet) {
+          unchecked {++nextVaultVersion;}
+          newVaultInfoSet = false;
+        }
     }
 
     function setLiquidator(address _newLiquidator) public onlyOwner {
         liquidatorAddress = _newLiquidator;
     }
 
-    function setVaultInfo(uint256 version, address registryAddress, address logic, address stable, address stakeContract, address interestModule) external onlyOwner {
-        vaultDetails[version].registryAddress = registryAddress;
-        vaultDetails[version].logic = logic;
-        vaultDetails[version].stable = stable;
-        vaultDetails[version].stakeContract = stakeContract;
-        vaultDetails[version].interestModule = interestModule;
+    function setNewVaultInfo(address registryAddress, address logic, address stable, address stakeContract, address interestModule) external onlyOwner {
+        vaultDetails[nextVaultVersion].registryAddress = registryAddress;
+        vaultDetails[nextVaultVersion].logic = logic;
+        vaultDetails[nextVaultVersion].stable = stable;
+        vaultDetails[nextVaultVersion].stakeContract = stakeContract;
+        vaultDetails[nextVaultVersion].interestModule = interestModule;
+        newVaultInfoSet = true;
+    }
+
+    /** 
+    @notice Function adds numeraire and corresponding stable contract to the factory
+    @param numeraire An identifier (uint256) of the Numeraire
+    @param stable The contract address of the corresponding ERC20 token pegged to the numeraire
+    */
+    function addNumeraire(uint256 numeraire, address stable) external onlyOwner {
+        numeraireToStable[numeraire] = stable;
     }
 
     /** 
     @notice Function used to create a Vault
     @dev This is the starting point of the Vault creation process. 
     @param salt A salt to be used to generate the hash.
-  */
+    */
     function createVault(uint256 salt) external returns (address vault) {
         bytes memory initCode = type(Proxy).creationCode;
         bytes memory byteCode = abi.encodePacked(initCode, abi.encode(vaultDetails[currentVaultVersion].logic));

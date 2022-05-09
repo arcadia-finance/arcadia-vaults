@@ -298,8 +298,8 @@ contract gasWithdrawal2_2ERC20 is DSTest {
 
     vm.startPrank(creatorAddress);
     factory = new Factory();
-    factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule));
-    factory.setVaultVersion(1);
+    factory.setNewVaultInfo(address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule));
+    factory.confirmNewVaultInfo();
     factory.setLiquidator(address(liquidator));
     liquidator.setFactory(address(factory));
     mainRegistry.setFactory(address(factory));

@@ -80,7 +80,7 @@ contract MainRegistry is Ownable {
    * @dev Sets the new Factory address
    * @param _factoryAddress The address of the Factory
    */
-  function setFactory(address _factoryAddress) public {
+  function setFactory(address _factoryAddress) external onlyOwner {
     factoryAddress = _factoryAddress;
   }
 
