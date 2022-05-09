@@ -18,15 +18,43 @@ contract DeployPaperTests is DSTest {
 
   constructor() {
     deployer = new DeployContracts();
+    deployer.storeStructs();
   }
+
+  // function setUp() public {
+  //   deployer = new DeployContracts();
+  //   deployer.storeStructs();
+  // }
 
   function test() public {
     assertTrue(address(deployer) != address(0));
   }
 
-  function testDeployAssets() public {
-    deployer.storeStructs();
-    deployer.deployAssetContracts();
+  function testDeployERC20Assets() public {
+    deployer.deployERC20Contracts();
   }
+
+  function testDeployERC721Assets() public {
+    deployer.deployERC721Contracts();
+  }
+
+  function testDeployOracles() public {
+    deployer.deployOracles();
+    deployer.setOracleAnswers();
+    deployer.addOracles();
+    deployer.setAssetInformation();
+  }
+
+  // function testsetOracleAnswers() public {
+  //   deployer.setOracleAnswers();
+  // }
+
+  // function testaddOracles() public {
+  //   deployer.addOracles();
+  // }
+
+  // function testsetAssetInformation() public {
+  //   deployer.setAssetInformation();
+  // }
 
 }
