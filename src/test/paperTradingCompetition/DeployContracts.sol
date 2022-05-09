@@ -1,0 +1,105 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity >0.8.10;
+
+
+import "../../paperTradingCompetition/FactoryPaperTrading.sol";
+import "../../Proxy.sol";
+import "../../paperTradingCompetition/VaultPaperTrading.sol";
+import "../../paperTradingCompetition/StablePaperTrading.sol";
+import "../../AssetRegistry/MainRegistry.sol";
+import "../../paperTradingCompetition//ERC20PaperTrading.sol";
+import "../../AssetRegistry/StandardERC20SubRegistry.sol";
+import "../../InterestRateModule.sol";
+import "../../Liquidator.sol";
+import "../../OracleHub.sol";
+import "../../utils/Constants.sol";
+import "../../paperTradingCompetition/Oracles/StableOracle.sol";
+import "../../mockups/SimplifiedChainlinkOracle.sol";
+import "../../paperTradingCompetition/TokenShop.sol";
+
+contract CreateVaultTest  {
+
+  FactoryPaperTrading private factory;
+  VaultPaperTrading private vault;
+  VaultPaperTrading private proxy;
+  address private proxyAddr;
+  ERC20PaperTrading private eth;
+  OracleHub private oracleHub;
+  SimplifiedChainlinkOracle private oracleEthToUsd;
+  StableOracle private oracleStableToUsd;
+  MainRegistry private mainRegistry;
+  StandardERC20Registry private standardERC20Registry;
+  InterestRateModule private interestRateModule;
+  StablePaperTrading private stable;
+  StableOracle private oracle;
+  Liquidator private liquidator;
+  TokenShop private tokenShop;
+
+  address private creatorAddress = address(1);
+  address private tokenCreatorAddress = address(2);
+  address private oracleOwner = address(3);
+  address private unprivilegedAddress = address(4);
+  address private stakeContract = address(5);
+  address private vaultOwner = address(6);
+
+  uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
+
+  address[] public oracleEthToUsdArr = new address[](1);
+  address[] public oracleStableToUsdArr = new address[](1);
+
+  //this is a before
+  constructor() {
+
+    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+
+
+    tokenShop = new TokenShop(address(mainRegistry));
+
+    eth = new ERC20PaperTrading("ETH Mock", "mETH", uint8(Constants.ethDecimals), address(tokenShop));
+
+    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
+    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+
+    oracleStableToUsd = new StableOracle(uint8(Constants.oracleStableToUsdDecimals), "STABLE / USD");
+
+    uint256[] memory emptyList = new uint256[](0);
+    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+
+    stable = new StablePaperTrading("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    stable.setLiquidator(address(liquidator));
+
+    oracleHub = new OracleHub();
+
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleStableToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'STABLE', baseAsset:'USD', oracleAddress:address(oracleStableToUsd), quoteAssetAddress:address(stable), baseAssetIsNumeraire: true}));
+
+    standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
+    mainRegistry.addSubRegistry(address(standardERC20Registry));
+
+    oracleEthToUsdArr[0] = address(oracleEthToUsd);
+    oracleStableToUsdArr[0] = address(oracleStableToUsd);
+
+    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
+    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableToUsdArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stable)}), emptyList);
+
+    interestRateModule = new InterestRateModule();
+    interestRateModule.setBaseInterestRate(5 * 10 ** 16);
+
+    vault = new VaultPaperTrading();
+    factory = new FactoryPaperTrading();
+    factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule), address(interestRateModule));
+    factory.setVaultVersion(1);
+    factory.setLiquidator(address(liquidator));
+    liquidator.setFactory(address(factory));
+    mainRegistry.setFactory(address(factory));
+    stable.setFactory(address(factory));
+
+  }
+
+  function setUp() public {
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))));
+    proxy = VaultPaperTrading(proxyAddr);
+  }
+
+}
