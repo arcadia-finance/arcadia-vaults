@@ -215,9 +215,9 @@ contract DeployContracts  {
     string desc;
     string symbol;
     uint8 decimals;
-    uint64 oracleDecimals;
-    string tradePair;
+    uint8 oracleDecimals;
     uint128 rate;
+    string tradePair;
     string quoteAsset;
     address oracleAddr;
     address assetAddr;
@@ -225,7 +225,7 @@ contract DeployContracts  {
 
   assetInfo[] public assets;
   function storeStructs() public onlyOwner {
-    assets.push(assetInfo({desc: "Wrapped Ether - Mock", symbol: "mwETH", decimals: uint8(Constants.ethDecimals), tradePair: "ETH / USD", rate: uint128(rateEthToUsd), oracleDecimals: uint64(Constants.oracleEthToUsdDecimals), quoteAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Wrapped Ether - Mock", symbol: "mwETH", decimals: uint8(Constants.ethDecimals), tradePair: "ETH / USD", rate: uint128(rateEthToUsd), oracleDecimals: uint8(Constants.oracleEthToUsdDecimals), quoteAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
     
     assets.push(assetInfo({desc: "Wrapped BTC - Mock", symbol: "mwBTC", decimals: 8, tradePair: "BTC / USD", rate: uint128(rateEthToUsd), oracleDecimals: 8, quoteAsset: "BTC", oracleAddr: address(0), assetAddr: address(0)}));
     assets.push(assetInfo({desc: "USD Coin - Mock", symbol: "mUSDC", decimals: 6, tradePair: "USDC / USD", rate: uint128(rateEthToUsd), oracleDecimals: 8, quoteAsset: "USDC", oracleAddr: address(0), assetAddr: address(0)}));
@@ -295,249 +295,55 @@ contract DeployContracts  {
     }
   }
 
-  function deployAssets() public onlyOwner {
-    weth = new ERC20PaperTrading("Wrapped Ether - Mock", "mwETH", uint8(Constants.ethDecimals), address(tokenShop));
-    wbtc = new ERC20PaperTrading("Wrapped BTC - Mock", "mwBTC", uint8(8), address(tokenShop));
-    usdc = new ERC20PaperTrading("USD Coin - Mock", "mUSDC", uint8(6), address(tokenShop));
-    shib = new ERC20PaperTrading("SHIBA INU - Mock", "mSHIB", uint8(18), address(tokenShop));
-    matic = new ERC20PaperTrading("Matic Token - Mock", "mMATIC", uint8(18), address(tokenShop));
-    cro = new ERC20PaperTrading("Cronos Coin - Mock", "mCRO", uint8(8), address(tokenShop));
-    uni = new ERC20PaperTrading("Uniswap - Mock", "mUNI", uint8(18), address(tokenShop));
-    link = new ERC20PaperTrading("ChainLink Token - Mock", "mLINK", uint8(18), address(tokenShop));
-    ftt = new ERC20PaperTrading("FTX Token - Mock", "mFTT", uint8(18), address(tokenShop));
-    ape = new ERC20PaperTrading("ApeCoin - Mock", "mAPE", uint8(18), address(tokenShop));
-    sandbox = new ERC20PaperTrading("The Sandbox - Mock", "mSAND", uint8(8), address(tokenShop));
-    mana = new ERC20PaperTrading("Decentraland - Mock", "mMANA", uint8(18), address(tokenShop));
-    axs = new ERC20PaperTrading("Axie Infinity - Mock", "mAXS", uint8(18), address(tokenShop));
-    aave = new ERC20PaperTrading("Aave - Mock", "mAAVE", uint8(18), address(tokenShop));
-    ftm = new ERC20PaperTrading("Fantom - Mock", "mFTM", uint8(18), address(tokenShop));
-    kcs = new ERC20PaperTrading("KuCoin Token - Mock", "mKCS", uint8(6), address(tokenShop));
-    mkr = new ERC20PaperTrading("Maker - Mock", "mMKR", uint8(18), address(tokenShop));
-    dai = new ERC20PaperTrading("Dai - Mock", "mDAI", uint8(18), address(tokenShop));
-    cvx = new ERC20PaperTrading("Convex Finance - Mock", "mCVX", uint8(18), address(tokenShop));
-    crv = new ERC20PaperTrading("Curve DAO Token - Mock", "mCRV", uint8(18), address(tokenShop));
-    lrc = new ERC20PaperTrading("Loopring - Mock", "mLRC", uint8(18), address(tokenShop));
-    bat = new ERC20PaperTrading("BAT - Mock", "mBAT", uint8(18), address(tokenShop));
-    amp = new ERC20PaperTrading("Amp - Mock", "mAMP", uint8(18), address(tokenShop));
-    comp = new ERC20PaperTrading("Compound - Mock", "mCOMP", uint8(18), address(tokenShop));
-    oneinch = new ERC20PaperTrading("1INCH Token - Mock", "m1INCH", uint8(18), address(tokenShop));
-    gno = new ERC20PaperTrading("Gnosis - Mock", "mGNO", uint8(18), address(tokenShop));
-    omg = new ERC20PaperTrading("OMG Network - Mock", "mOMG", uint8(18), address(tokenShop));
-    bnt = new ERC20PaperTrading("Bancor - Mock", "mBNT", uint8(18), address(tokenShop));
-    cel = new ERC20PaperTrading("Celsius Network - Mock", "mCEL", uint8(4), address(tokenShop));
-    ankr = new ERC20PaperTrading("Ankr Network - Mock", "mANKR", uint8(18), address(tokenShop));
-    fxs = new ERC20PaperTrading("Frax Share - Mock", "mFXS", uint8(18), address(tokenShop));
-    imx = new ERC20PaperTrading("Immutable X - Mock", "mIMX", uint8(18), address(tokenShop));
-    ens = new ERC20PaperTrading("Ethereum Name Service - Mock", "mENS", uint8(18), address(tokenShop));
-    sushi = new ERC20PaperTrading("SushiToken - Mock", "mSUSHI", uint8(18), address(tokenShop));
-    dydx = new ERC20PaperTrading("dYdX - Mock", "mDYDX", uint8(18), address(tokenShop));
-    celr = new ERC20PaperTrading("CelerToken - Mock", "mCELR", uint8(18), address(tokenShop));
-
-
-    //
-    // ERC721
-    //
-
-    cryptopunks = new ERC721PaperTrading("CRYPTOPUNKS - Mock", "mC", address(tokenShop));
-    bayc = new ERC721PaperTrading("BoredApeYachtClub - Mock", "mBAYC", address(tokenShop));
-    mayc = new ERC721PaperTrading("MutantApeYachtClub - Mock", "mMAYC", address(tokenShop));
-    clonex = new ERC721PaperTrading("CloneX - Mock", "mCloneX", address(tokenShop));
-    loot = new ERC721PaperTrading("Loot - Mock", "mLOOT", address(tokenShop));
-    sandboxnft = new ERC721PaperTrading("Sandbox's LANDs - Mock", "mLAND", address(tokenShop));
-    coolcats = new ERC721PaperTrading("Cool Cats - Mock", "mCOOL", address(tokenShop));
-    azuki = new ERC721PaperTrading("Azuki - Mock", "mAZUKI", address(tokenShop));
-    doodles = new ERC721PaperTrading("Doodles - Mock", "mDOODLE", address(tokenShop));
-    meebits = new ERC721PaperTrading("Meebits - Mock", "mMEEBIT", address(tokenShop));
-    cyberkongz = new ERC721PaperTrading("CyberKongz - Mock", "mKONGZ", address(tokenShop));
-    bakc = new ERC721PaperTrading("BoredApeKennelClub - Mock", "mBAKC", address(tokenShop));
-    decentraland = new ERC721PaperTrading("Decentraland LAND - Mock", "mLAND", address(tokenShop));
-    timeless = new ERC721PaperTrading("Timeless - Mock", "mTMLS", address(tokenShop));
-    foundersplot = new ERC721PaperTrading("Treeverse", "mTRV", address(tokenShop));
-
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleBtcToUsd = new SimplifiedChainlinkOracle(uint8(8), "BTC / USD");
-    oracleUsdcToUsd = new SimplifiedChainlinkOracle(uint8(8), "USDC / USD");
-    oracleShibToUsd = new SimplifiedChainlinkOracle(uint8(8), "SHIB / USD");
-    oracleMaticToUsd = new SimplifiedChainlinkOracle(uint8(8), "MATIC / USD");
-    oracleCroToUsd = new SimplifiedChainlinkOracle(uint8(8), "CRO / USD");
-    oracleUniToUsd = new SimplifiedChainlinkOracle(uint8(8), "UNI / USD");
-    oracleLinkToUsd = new SimplifiedChainlinkOracle(uint8(8), "LINK / USD");
-    oracleFttToUsd = new SimplifiedChainlinkOracle(uint8(8), "FTT / USD");
-    oracleApeToUsd = new SimplifiedChainlinkOracle(uint8(8), "APE / USD");
-    oracleSandboxToUsd = new SimplifiedChainlinkOracle(uint8(8), "SAND / USD");
-    oracleManaToUsd = new SimplifiedChainlinkOracle(uint8(8), "MANA / USD");
-    oracleAxsToUsd = new SimplifiedChainlinkOracle(uint8(8), "AXS / USD");
-    oracleAaveToUsd = new SimplifiedChainlinkOracle(uint8(8), "AAVE / USD");
-    oracleFtmToUsd = new SimplifiedChainlinkOracle(uint8(8), "FTM / USD");
-    oracleKcsToUsd = new SimplifiedChainlinkOracle(uint8(8), "KCS / USD");
-    oracleMkrToUsd = new SimplifiedChainlinkOracle(uint8(8), "MKR / USD");
-    oracleDaiToUsd = new SimplifiedChainlinkOracle(uint8(8), "DAI / USD");
-    oracleCvxToUsd = new SimplifiedChainlinkOracle(uint8(8), "CVX / USD");
-    oracleCrvToUsd = new SimplifiedChainlinkOracle(uint8(8), "CRV / USD");
-    oracleLrcToUsd = new SimplifiedChainlinkOracle(uint8(8), "LRC / USD");
-    oracleBatToUsd = new SimplifiedChainlinkOracle(uint8(8), "BAT / USD");
-    oracleAmpToUsd = new SimplifiedChainlinkOracle(uint8(8), "AMP / USD");
-    oracleCompToUsd = new SimplifiedChainlinkOracle(uint8(8), "COMP / USD");
-    oracle1InchToUsd = new SimplifiedChainlinkOracle(uint8(8), "1INCH / USD");
-    oracleGnoToUsd = new SimplifiedChainlinkOracle(uint8(8), "GNO / USD");
-    oracleOmgToUsd = new SimplifiedChainlinkOracle(uint8(8), "OMG / USD");
-    oracleBntToUsd = new SimplifiedChainlinkOracle(uint8(8), "BNT / USD");
-    oracleCelToUsd = new SimplifiedChainlinkOracle(uint8(8), "CEL / USD");
-    oracleAnkrToUsd = new SimplifiedChainlinkOracle(uint8(8), "ANKR / USD");
-    oracleFxsToUsd = new SimplifiedChainlinkOracle(uint8(8), "FXS / USD");
-    oracleImxToUsd = new SimplifiedChainlinkOracle(uint8(8), "IMX / USD");
-    oracleEnsToUsd = new SimplifiedChainlinkOracle(uint8(8), "ENS / USD");
-    oracleSushiToUsd = new SimplifiedChainlinkOracle(uint8(8), "SUSHI / USD");
-    oracleDydxToUsd = new SimplifiedChainlinkOracle(uint8(8), "DYDX / USD");
-    oracleCelrToUsd = new SimplifiedChainlinkOracle(uint8(8), "CEL / USD");
-
-
-    oraclePunkToUsd = new SimplifiedChainlinkOracle(uint8(8), "PUNK / USD");
-    oracleBaycToUsd = new SimplifiedChainlinkOracle(uint8(8), "BAYC / USD");
-    oracleMaycToUsd = new SimplifiedChainlinkOracle(uint8(8), "MAYC / USD");
-    oracleClonexToUsd = new SimplifiedChainlinkOracle(uint8(8), "CloneX / USD");
-    oracleLootToUsd = new SimplifiedChainlinkOracle(uint8(8), "LOOT / USD");
-    oracleSandboxnftToUsd = new SimplifiedChainlinkOracle(uint8(8), "LAND / USD");
-    oracleCoolcatsToUsd = new SimplifiedChainlinkOracle(uint8(8), "COOL / USD");
-    oracleAzukiToUsd = new SimplifiedChainlinkOracle(uint8(8), "AZUKI / USD");
-    oracleDoodlesToUsd = new SimplifiedChainlinkOracle(uint8(8), "DOODLE / USD");
-    oracleMeebitsToUsd = new SimplifiedChainlinkOracle(uint8(8), "MEEBIT / USD");
-    oracleCyberkongzToUsd = new SimplifiedChainlinkOracle(uint8(8), "KONGZ / USD");
-    oracleBakcToUsd = new SimplifiedChainlinkOracle(uint8(8), "BAKC / USD");
-    oracleDecentralandToUsd = new SimplifiedChainlinkOracle(uint8(8), "LAND / USD");
-    oracleTimelessToUsd = new SimplifiedChainlinkOracle(uint8(8), "TMLS / USD");
-    oracleFoundersplotToUsd = new SimplifiedChainlinkOracle(uint8(8), "TRV / USD");
-
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-    oracleBtcToUsd.setAnswer(int256(rateEthToUsd));
-    oracleUsdcToUsd.setAnswer(int256(rateEthToUsd));
-    oracleShibToUsd.setAnswer(int256(rateEthToUsd));
-    oracleMaticToUsd.setAnswer(int256(rateEthToUsd));
-    oracleCroToUsd.setAnswer(int256(rateEthToUsd));
-    oracleUniToUsd.setAnswer(int256(rateEthToUsd));
-    oracleLinkToUsd.setAnswer(int256(rateEthToUsd));
-    oracleFttToUsd.setAnswer(int256(rateEthToUsd));
-    oracleApeToUsd.setAnswer(int256(rateEthToUsd));
-    oracleSandboxToUsd.setAnswer(int256(rateEthToUsd));
-    oracleManaToUsd.setAnswer(int256(rateEthToUsd));
-    oracleAxsToUsd.setAnswer(int256(rateEthToUsd));
-    oracleAaveToUsd.setAnswer(int256(rateEthToUsd));
-    oracleFtmToUsd.setAnswer(int256(rateEthToUsd));
-    oracleKcsToUsd.setAnswer(int256(rateEthToUsd));
-    oracleMkrToUsd.setAnswer(int256(rateEthToUsd));
-    oracleDaiToUsd.setAnswer(int256(rateEthToUsd));
-    oracleCvxToUsd.setAnswer(int256(rateEthToUsd));
-    oracleCrvToUsd.setAnswer(int256(rateEthToUsd));
-    oracleLrcToUsd.setAnswer(int256(rateEthToUsd));
-    oracleBatToUsd.setAnswer(int256(rateEthToUsd));
-    oracleAmpToUsd.setAnswer(int256(rateEthToUsd));
-    oracleCompToUsd.setAnswer(int256(rateEthToUsd));
-    oracle1InchToUsd.setAnswer(int256(rateEthToUsd));
-    oracleGnoToUsd.setAnswer(int256(rateEthToUsd));
-    oracleOmgToUsd.setAnswer(int256(rateEthToUsd));
-    oracleBntToUsd.setAnswer(int256(rateEthToUsd));
-    oracleCelToUsd.setAnswer(int256(rateEthToUsd));
-    oracleAnkrToUsd.setAnswer(int256(rateEthToUsd));
-    oracleFxsToUsd.setAnswer(int256(rateEthToUsd));
-    oracleImxToUsd.setAnswer(int256(rateEthToUsd));
-    oracleEnsToUsd.setAnswer(int256(rateEthToUsd));
-    oracleSushiToUsd.setAnswer(int256(rateEthToUsd));
-    oracleDydxToUsd.setAnswer(int256(rateEthToUsd));
-    oracleCelrToUsd.setAnswer(int256(rateEthToUsd));
-
-    oraclePunkToUsd.setAnswer(int256(rateEthToUsd));
-    oracleBaycToUsd.setAnswer(int256(rateEthToUsd));
-    oracleMaycToUsd.setAnswer(int256(rateEthToUsd));
-    oracleClonexToUsd.setAnswer(int256(rateEthToUsd));
-    oracleLootToUsd.setAnswer(int256(rateEthToUsd));
-    oracleSandboxnftToUsd.setAnswer(int256(rateEthToUsd));
-    oracleCoolcatsToUsd.setAnswer(int256(rateEthToUsd));
-    oracleAzukiToUsd.setAnswer(int256(rateEthToUsd));
-    oracleDoodlesToUsd.setAnswer(int256(rateEthToUsd));
-    oracleMeebitsToUsd.setAnswer(int256(rateEthToUsd));
-    oracleCyberkongzToUsd.setAnswer(int256(rateEthToUsd));
-    oracleBakcToUsd.setAnswer(int256(rateEthToUsd));
-    oracleDecentralandToUsd.setAnswer(int256(rateEthToUsd));
-    oracleTimelessToUsd.setAnswer(int256(rateEthToUsd));
-    oracleFoundersplotToUsd.setAnswer(int256(rateEthToUsd));
+  function deployOracles() public onlyOwner {
+    address newContr;
+    assetInfo memory asset;
+    for (uint i; i < assets.length; ++i) {
+      asset = assets[i];
+      newContr = address(new SimplifiedChainlinkOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD"))));
+      assets[i].oracleAddr = newContr;
+    }
 
     oracleStableToUsd = new StableOracle(uint8(Constants.oracleStableToUsdDecimals), "STABLE / USD");
-
     uint256[] memory emptyList = new uint256[](0);
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(weth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+  }
 
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(weth), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleStableToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'STABLE', baseAsset:'USD', oracleAddress:address(oracleStableToUsd), quoteAssetAddress:address(stable), baseAssetIsNumeraire: true}));
-    
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'BTC', baseAsset:'USD', oracleAddress:address(oracleBtcToUsd), quoteAssetAddress:address(wbtc), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'USDC', baseAsset:'USD', oracleAddress:address(oracleUsdcToUsd), quoteAssetAddress:address(usdc), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'SHIB', baseAsset:'USD', oracleAddress:address(oracleShibToUsd), quoteAssetAddress:address(shib), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'MATIC', baseAsset:'USD', oracleAddress:address(oracleMaticToUsd), quoteAssetAddress:address(matic), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'CRO', baseAsset:'USD', oracleAddress:address(oracleCroToUsd), quoteAssetAddress:address(cro), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'UNI', baseAsset:'USD', oracleAddress:address(oracleUniToUsd), quoteAssetAddress:address(uni), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'LINK', baseAsset:'USD', oracleAddress:address(oracleLinkToUsd), quoteAssetAddress:address(link), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'FTT', baseAsset:'USD', oracleAddress:address(oracleFttToUsd), quoteAssetAddress:address(ftt), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'APE', baseAsset:'USD', oracleAddress:address(oracleApeToUsd), quoteAssetAddress:address(ape), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'SANDBOX', baseAsset:'USD', oracleAddress:address(oracleSandboxToUsd), quoteAssetAddress:address(sandbox), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'MANA', baseAsset:'USD', oracleAddress:address(oracleManaToUsd), quoteAssetAddress:address(mana), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'AXS', baseAsset:'USD', oracleAddress:address(oracleAxsToUsd), quoteAssetAddress:address(axs), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'AAVE', baseAsset:'USD', oracleAddress:address(oracleAaveToUsd), quoteAssetAddress:address(aave), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'FTM', baseAsset:'USD', oracleAddress:address(oracleFtmToUsd), quoteAssetAddress:address(ftm), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'KCS', baseAsset:'USD', oracleAddress:address(oracleKcsToUsd), quoteAssetAddress:address(kcs), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'MKR', baseAsset:'USD', oracleAddress:address(oracleMkrToUsd), quoteAssetAddress:address(mkr), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'DAI', baseAsset:'USD', oracleAddress:address(oracleDaiToUsd), quoteAssetAddress:address(dai), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'CVX', baseAsset:'USD', oracleAddress:address(oracleCvxToUsd), quoteAssetAddress:address(cvx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'CRV', baseAsset:'USD', oracleAddress:address(oracleCrvToUsd), quoteAssetAddress:address(crv), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'LRC', baseAsset:'USD', oracleAddress:address(oracleLrcToUsd), quoteAssetAddress:address(lrc), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'BAT', baseAsset:'USD', oracleAddress:address(oracleBatToUsd), quoteAssetAddress:address(bat), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'AMP', baseAsset:'USD', oracleAddress:address(oracleAmpToUsd), quoteAssetAddress:address(amp), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'COMP', baseAsset:'USD', oracleAddress:address(oracleCompToUsd), quoteAssetAddress:address(comp), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'1INCH', baseAsset:'USD', oracleAddress:address(oracle1InchToUsd), quoteAssetAddress:address(oneinch), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'GNO', baseAsset:'USD', oracleAddress:address(oracleGnoToUsd), quoteAssetAddress:address(gno), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'OMG', baseAsset:'USD', oracleAddress:address(oracleOmgToUsd), quoteAssetAddress:address(omg), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'BNT', baseAsset:'USD', oracleAddress:address(oracleBntToUsd), quoteAssetAddress:address(bnt), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'CEL', baseAsset:'USD', oracleAddress:address(oracleCelToUsd), quoteAssetAddress:address(cel), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ANKR', baseAsset:'USD', oracleAddress:address(oracleAnkrToUsd), quoteAssetAddress:address(ankr), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'FXS', baseAsset:'USD', oracleAddress:address(oracleFxsToUsd), quoteAssetAddress:address(fxs), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'IMX', baseAsset:'USD', oracleAddress:address(oracleImxToUsd), quoteAssetAddress:address(imx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ENS', baseAsset:'USD', oracleAddress:address(oracleEnsToUsd), quoteAssetAddress:address(ens), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'SUSHI', baseAsset:'USD', oracleAddress:address(oracleSushiToUsd), quoteAssetAddress:address(sushi), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'DYDX', baseAsset:'USD', oracleAddress:address(oracleDydxToUsd), quoteAssetAddress:address(dydx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'CELR', baseAsset:'USD', oracleAddress:address(oracleCelrToUsd), quoteAssetAddress:address(celr), baseAssetIsNumeraire: true}));
-    
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'PUNK', baseAsset:'USD', oracleAddress:address(oraclePunkToUsd), quoteAssetAddress:address(cryptopunks), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'BAYC', baseAsset:'USD', oracleAddress:address(oracleBaycToUsd), quoteAssetAddress:address(bayc), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'MAYC', baseAsset:'USD', oracleAddress:address(oracleMaycToUsd), quoteAssetAddress:address(mayc), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'CloneX', baseAsset:'USD', oracleAddress:address(oracleClonexToUsd), quoteAssetAddress:address(clonex), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'LOOT', baseAsset:'USD', oracleAddress:address(oracleLootToUsd), quoteAssetAddress:address(loot), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'LAND', baseAsset:'USD', oracleAddress:address(oracleSandboxnftToUsd), quoteAssetAddress:address(sandboxnft), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'COOL', baseAsset:'USD', oracleAddress:address(oracleCoolcatsToUsd), quoteAssetAddress:address(coolcats), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'AZUKI', baseAsset:'USD', oracleAddress:address(oracleAzukiToUsd), quoteAssetAddress:address(azuki), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'DOODLE', baseAsset:'USD', oracleAddress:address(oracleDoodlesToUsd), quoteAssetAddress:address(doodles), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'MEEBIT', baseAsset:'USD', oracleAddress:address(oracleMeebitsToUsd), quoteAssetAddress:address(meebits), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'KONGZ', baseAsset:'USD', oracleAddress:address(oracleCyberkongzToUsd), quoteAssetAddress:address(cyberkongz), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'BAKC', baseAsset:'USD', oracleAddress:address(oracleBakcToUsd), quoteAssetAddress:address(bakc), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'LAND', baseAsset:'USD', oracleAddress:address(oracleDecentralandToUsd), quoteAssetAddress:address(decentraland), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'TMLS', baseAsset:'USD', oracleAddress:address(oracleTimelessToUsd), quoteAssetAddress:address(timeless), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'TRV', baseAsset:'USD', oracleAddress:address(oracleFoundersplotToUsd), quoteAssetAddress:address(foundersplot), baseAssetIsNumeraire: true}));
-    
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(weth)}), emptyList);
+  function setOracleAnswers() public onlyOwner {
+    assetInfo memory asset;
+    for (uint i; i < assets.length; ++i) {
+      asset = assets[i];
+      SimplifiedChainlinkOracle(asset.oracleAddr).setAnswer(int256(uint256(asset.rate)));
+    }
+  }
+
+  function addOracles() public onlyOwner {
+    assetInfo memory asset;
+    for (uint i; i < assets.length; ++i) {
+      asset = assets[i];
+      oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit: uint64(10**asset.oracleDecimals), baseAssetNumeraire: 0, quoteAsset: asset.quoteAsset, baseAsset: "USD", oracleAddress: asset.oracleAddr, quoteAssetAddress: asset.assetAddr, baseAssetIsNumeraire: true}));
+    }
+
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit: uint64(10**18), baseAssetNumeraire: 0, quoteAsset: "STABLE", baseAsset: "USD", oracleAddress: address(oracleStableToUsd), quoteAssetAddress: address(0), baseAssetIsNumeraire: true}));
+
+  }
+
+  function setAssetInformation() public onlyOwner {
+    assetInfo memory asset;
+    uint256[] memory emptyList = new uint256[](0);
+    address[] memory genOracleArr = new address[](1);
+    for (uint i; i < assets.length; ++i) {
+      asset = assets[i];
+      genOracleArr[0] = asset.oracleAddr;
+      if (asset.decimals == 0) {
+        floorERC721Registry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: genOracleArr, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), emptyList);
+      }
+      else {
+        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: genOracleArr, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
+        }
+    }
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableToUsdArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stable)}), emptyList);
 
-    address[] memory genOracleArr = new address[](1);
-    address genAddr;
-    
-    genAddr = address(wbtc);
-    genOracleArr[0] = address(oracleBtcToUsd);
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: genOracleArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(genAddr)}), emptyList);
-    genAddr = address(wbtc);
-    genOracleArr[0] = address(oracleBtcToUsd);
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: genOracleArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(genAddr)}), emptyList);
-    genAddr = address(wbtc);
-
-  
-  
-  
   }
 
 }
