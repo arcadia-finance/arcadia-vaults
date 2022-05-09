@@ -299,7 +299,7 @@ contract gasLiquidate_1ERC20 is DSTest {
 
     vm.startPrank(creatorAddress);
     factory = new Factory();
-    factory.setNewVaultInfo(address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule));
+    factory.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
     factory.confirmNewVaultInfo();
     factory.setLiquidator(address(liquidator));
     liquidator.setFactory(address(factory));
@@ -312,7 +312,7 @@ contract gasLiquidate_1ERC20 is DSTest {
     vm.stopPrank();
 
     vm.prank(vaultOwner);
-    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))));
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.UsdNumeraire);
     proxy = Vault(proxyAddr);
 
     vm.prank(address(proxy));

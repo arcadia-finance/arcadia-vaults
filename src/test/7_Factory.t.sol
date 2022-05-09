@@ -48,10 +48,10 @@ contract factoryTest is DSTest {
     erc20Contr = new ERC20Mock("ERC20 Mock", "mERC20", 18);
     interestContr = new InterestRateModule();
     liquidatorContr = new Liquidator(address(factoryContr), 0x0000000000000000000000000000000000000000, address(erc20Contr));
-		registryContr = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+		registryContr = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(erc20Contr), numeraireLabel:'USD', numeraireUnit:1}));
     
 
-    factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), address(erc20Contr), 0x0000000000000000000000000000000000000000, address(interestContr));
+    factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), 0x0000000000000000000000000000000000000000, address(interestContr));
     factoryContr.confirmNewVaultInfo();
     factoryContr.setLiquidator(address(liquidatorContr));
 
@@ -95,7 +95,7 @@ contract factoryTest is DSTest {
 
     // vm.expectEmit(true, true, false, true);
     // emit VaultCreated(toBeDeployedAddr, address(this), factoryContr.allVaultsLength() +1);
-    address actualDeployed = factoryContr.createVault(salt);
+    address actualDeployed = factoryContr.createVault(salt, Constants.UsdNumeraire);
     assertEqDecimal(amountBefore +1, factoryContr.allVaultsLength(), 1);
     assertEqDecimal(IVaultExtra(actualDeployed).life(), 0, 1);
 
@@ -107,7 +107,7 @@ contract factoryTest is DSTest {
     uint256 amountBefore = factoryContr.allVaultsLength();
     vm.prank(sender);
     vm.assume(sender != address(0));
-    address actualDeployed = factoryContr.createVault(salt);
+    address actualDeployed = factoryContr.createVault(salt, Constants.UsdNumeraire);
     assertEqDecimal(amountBefore +1, factoryContr.allVaultsLength(), 1);
     assertEqDecimal(IVaultExtra(actualDeployed).life(), 0, 1);
 
@@ -135,7 +135,7 @@ contract factoryTest is DSTest {
 
 
     vm.startPrank(sender);
-    address vault = factoryContr.createVault(0);
+    address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
 
     //Make sure index in erc721 == vaultIndex
     assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
@@ -165,7 +165,7 @@ contract factoryTest is DSTest {
 
 
     vm.prank(sender);
-    address vault = factoryContr.createVault(0);
+    address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
 
     //Make sure index in erc721 == vaultIndex
     assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
