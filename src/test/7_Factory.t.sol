@@ -185,7 +185,7 @@ contract factoryTest is DSTest {
   //Test addNumeraire
   function testNonRegistryAddsNumeraire(address unprivilegedAddress) public {
     vm.startPrank(unprivilegedAddress);
-    vm.expectRevert("New Numeraires must be added via most recent Main Registry");
+    vm.expectRevert("FTRY_AN: Add Numeraires via MR");
     factoryContr.addNumeraire(2, address(erc20Contr));
     vm.stopPrank();   
   }
@@ -196,7 +196,7 @@ contract factoryTest is DSTest {
     factoryContr.confirmNewVaultInfo();
     registryContr2.setFactory(address(factoryContr));
 
-    vm.expectRevert("New Numeraires must be added via most recent Main Registry");
+    vm.expectRevert("FTRY_AN: Add Numeraires via MR");
 		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newNumeraire, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
   }
 
@@ -243,7 +243,7 @@ contract factoryTest is DSTest {
 
   function testOwnerSetsNewVaultInfoWithDifferentStableContractInMainRegistry(address randomStable, address logic, address stakeContract, address interestModule) public {
     registryContr2 = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:randomStable, numeraireLabel:'USD', numeraireUnit:1}));
-    vm.expectRevert("Numeraires of Main Registry don't match numeraires of factory");
+    vm.expectRevert("FTRY_SNVI:No match numeraires MR");
     factoryContr.setNewVaultInfo(address(registryContr2), logic, stakeContract, interestModule);
     vm.stopPrank();
   }
@@ -254,7 +254,7 @@ contract factoryTest is DSTest {
     assertEq(newStable, factoryContr.numeraireToStable(1));
 
     registryContr2 = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(erc20Contr), numeraireLabel:'USD', numeraireUnit:1}));
-    vm.expectRevert("Numeraires of Main Registry don't match numeraires of factory");
+    vm.expectRevert("FTRY_SNVI:No match numeraires MR");
     factoryContr.setNewVaultInfo(address(registryContr2), logic, stakeContract, interestModule);
   }
 

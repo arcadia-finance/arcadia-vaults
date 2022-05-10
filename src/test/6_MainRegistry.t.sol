@@ -1060,7 +1060,7 @@ contract MainRegistryTest is DSTest {
   function testMainRegistryNotSetInFactory () public {
     vm.startPrank(creatorAddress);
     factory = new Factory();
-    vm.expectRevert("Main Registry not set in factory");
+    vm.expectRevert("MR_AA: MR not set in factory");
     mainRegistry.setFactory(address(factory));
     vm.stopPrank();
   }
@@ -1069,7 +1069,7 @@ contract MainRegistryTest is DSTest {
     vm.startPrank(creatorAddress);
     factory = new Factory();
     factory.setNewVaultInfo(address(mainRegistry), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
-    vm.expectRevert("Main Registry not set in factory");
+    vm.expectRevert("MR_AA: MR not set in factory");
     mainRegistry.setFactory(address(factory));
     vm.stopPrank();
   }
