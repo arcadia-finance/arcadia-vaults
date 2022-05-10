@@ -15,6 +15,7 @@ import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/floorERC1155SubRegistry.sol";
 import "../OracleHub.sol";
 import "../mockups/SimplifiedChainlinkOracle.sol";
+import "../Factory.sol";
 import "../utils/Constants.sol";
 import "../utils/StringHelpers.sol";
 import "../utils/CompareArrays.sol";
@@ -46,6 +47,7 @@ contract MainRegistryTest is DSTest {
   StandardERC20Registry private standardERC20Registry;
   FloorERC721SubRegistry private floorERC721SubRegistry;
   FloorERC1155SubRegistry private floorERC1155SubRegistry;
+  Factory private factory;
 
   address private creatorAddress = address(1);
   address private tokenCreatorAddress = address(2);
@@ -130,7 +132,7 @@ contract MainRegistryTest is DSTest {
   //this is a before each
   function setUp() public {
     vm.startPrank(creatorAddress);
-    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
 
     standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
     floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
@@ -139,18 +141,18 @@ contract MainRegistryTest is DSTest {
   }
 
 	function testMainRegistryInitialisedWithUsdAsNumeraire () public {
-		(,,,,string memory numeraireLabel) = mainRegistry.numeraireToInformation(0);
+		(,,,,,string memory numeraireLabel) = mainRegistry.numeraireToInformation(0);
 		assertTrue(StringHelpers.compareStrings('USD', numeraireLabel));
 	}
 
 	function testMainRegistryInitialisedWithNumeraireCounterOfZero () public {
-		assertEq(0, mainRegistry.numeraireLastIndex());
+		assertEq(1, mainRegistry.numeraireCounter());
 	}
 
 	function testNonOwnerAddsNumeraire (address unprivilegedAddress) public {
 		vm.startPrank(unprivilegedAddress);
 		vm.expectRevert("Ownable: caller is not the owner");
-    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		vm.stopPrank();
 	}
 
@@ -163,7 +165,7 @@ contract MainRegistryTest is DSTest {
     uint256[] memory assetCreditRatings = new uint256[](1);
     assetCreditRatings[0] = 0;
 		vm.expectRevert("MR_AN: lenght");
-    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), assetCreditRatings);
+    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), assetCreditRatings);
 		vm.stopPrank();
 	}
 
@@ -177,7 +179,7 @@ contract MainRegistryTest is DSTest {
     assetCreditRatings[0] = mainRegistry.CREDIT_RATING_CATOGERIES();
 		assetCreditRatings[1] = 0;
 		vm.expectRevert("MR_AN: non existing credRat");
-    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), assetCreditRatings);
+    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), assetCreditRatings);
 		vm.stopPrank();
 	}
 
@@ -187,10 +189,10 @@ contract MainRegistryTest is DSTest {
     	standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
     	standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**Constants.linkDecimals), assetAddress: address(link)}), emptyList);
 
-    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		vm.stopPrank();
 
-		assertEq(1, mainRegistry.numeraireLastIndex());
+		assertEq(2, mainRegistry.numeraireCounter());
 	}
 
 	function testOwnerAddsNumeraireWithFullListOfCreditRatings () public {
@@ -203,10 +205,10 @@ contract MainRegistryTest is DSTest {
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**Constants.linkDecimals), assetAddress: address(link)}), emptyList);
 
-    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), assetCreditRatings);
+    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), assetCreditRatings);
 		vm.stopPrank();
 
-		assertEq(1, mainRegistry.numeraireLastIndex());
+		assertEq(2, mainRegistry.numeraireCounter());
 	}
 
 	function testNonOwnerAddsSubRegistry (address unprivilegedAddress) public {
@@ -260,7 +262,7 @@ contract MainRegistryTest is DSTest {
 
 	function testSubregistryAddsAssetWithWrongNumberOfCreditRatings () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		vm.stopPrank();
 
@@ -275,7 +277,7 @@ contract MainRegistryTest is DSTest {
 
 	function testSubregistryAddsAssetWithNonExistingCreditRatingCategory () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		vm.stopPrank();
 
@@ -291,7 +293,7 @@ contract MainRegistryTest is DSTest {
 
 	function testSubregistryAddsAssetWithEmptyListCreditRatings () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		vm.stopPrank();
 
@@ -304,7 +306,7 @@ contract MainRegistryTest is DSTest {
 
 	function testSubregistryAddsAssetWithFullListCreditRatings () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		vm.stopPrank();
 
@@ -321,7 +323,7 @@ contract MainRegistryTest is DSTest {
 
 	function testSubregistryOverwritesAssetPositive () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		vm.stopPrank();
@@ -341,7 +343,7 @@ contract MainRegistryTest is DSTest {
 
 	function testSubregistryOverwritesAssetNegative () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		mainRegistry.setAssetsToNonUpdatable();
@@ -363,7 +365,7 @@ contract MainRegistryTest is DSTest {
 
 	function testIsBatchWhitelistedPositive () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -383,7 +385,7 @@ contract MainRegistryTest is DSTest {
 
 	function testIsBatchWhitelistedNegativeNonEqualInputLists () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -403,7 +405,7 @@ contract MainRegistryTest is DSTest {
 
 	function testIsBatchWhitelistedNegativeAssetNotWhitelisted () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -423,7 +425,7 @@ contract MainRegistryTest is DSTest {
 
 	function testIsBatchWhitelistedNegativeAssetNotInMainregistry () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -443,7 +445,7 @@ contract MainRegistryTest is DSTest {
 
 	function testGetWhitelistWithMultipleAssets () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -462,7 +464,7 @@ contract MainRegistryTest is DSTest {
 
 	function testGetWhitelistWithAfterRemovalOfAsset () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -481,7 +483,7 @@ contract MainRegistryTest is DSTest {
 
 	function testGetWhitelistWithAfterRemovalAndReaddingOfAsset () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -508,7 +510,7 @@ contract MainRegistryTest is DSTest {
 		vm.assume(amountLink <= type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD * 10 ** Constants.oracleEthToUsdDecimals / 10 ** Constants.oracleLinkToUsdDecimals * 10 ** linkDecimals);
 
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**linkDecimals), assetAddress: address(link)}), emptyList);
 		vm.stopPrank();
@@ -544,7 +546,7 @@ contract MainRegistryTest is DSTest {
 		vm.assume(amountLink > type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD * 10 ** Constants.oracleEthToUsdDecimals / 10 ** (Constants.oracleLinkToUsdDecimals - linkDecimals));
 
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**linkDecimals), assetAddress: address(link)}), emptyList);
 		vm.stopPrank();
@@ -572,7 +574,7 @@ contract MainRegistryTest is DSTest {
 		vm.assume(amountLink > 0);
 
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**Constants.linkDecimals), assetAddress: address(link)}), emptyList);
 		vm.stopPrank();
@@ -600,7 +602,7 @@ contract MainRegistryTest is DSTest {
 	function testGetTotalValueNegativeNonEqualInputLists () public {
 		//Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -634,7 +636,7 @@ contract MainRegistryTest is DSTest {
 
 	function testGetListOfValuesPerAssetNegativeNonEqualInputLists () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -669,7 +671,7 @@ contract MainRegistryTest is DSTest {
 	function testGetTotalValueNegativeUnknownNumeraire () public {
 		//Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -695,7 +697,7 @@ contract MainRegistryTest is DSTest {
 	function testGetListOfValuesPerAsseteNegativeUnknownNumeraire () public {
 		//Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -721,7 +723,7 @@ contract MainRegistryTest is DSTest {
 	function testGetTotalValueNegativeUnknownAsset () public {
 		//Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -747,7 +749,7 @@ contract MainRegistryTest is DSTest {
 	function testGetListOfValuesPerAsseteNegativeUnknownAsset () public {
 		//Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -773,7 +775,7 @@ contract MainRegistryTest is DSTest {
 	function testGetTotalValueSucces () public {
 		//Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -816,7 +818,7 @@ contract MainRegistryTest is DSTest {
 
 	function testGetListOfValuesPerAssetSucces () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -862,7 +864,7 @@ contract MainRegistryTest is DSTest {
 
 	function testGetListOfValuesPerCreditRatingSucces () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 
@@ -918,7 +920,7 @@ contract MainRegistryTest is DSTest {
 
 	function testNonOwnerSetsCreditRatings (address unprivilegedAddress) public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -946,7 +948,7 @@ contract MainRegistryTest is DSTest {
 
 	function testOwnerSetsCreditRatingsNonEqualInputLists () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -985,7 +987,7 @@ contract MainRegistryTest is DSTest {
 
 	function testOwnerSetsCreditRatingsSucces () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -1015,7 +1017,7 @@ contract MainRegistryTest is DSTest {
 
 	function testOwnerSetsCreditRatingsWithNonExistingCreditRatingCategory () public {
 		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
 		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
@@ -1040,5 +1042,48 @@ contract MainRegistryTest is DSTest {
 		mainRegistry.batchSetCreditRating(assetAddresses, numeraires, assetCreditRatings);
 		vm.stopPrank();
 	}
+
+  //Test setFactory
+  function testNonOwnerSetsFactory (address unprivilegedAddress) public {
+    vm.startPrank(creatorAddress);
+    factory = new Factory();
+    factory.setNewVaultInfo(address(mainRegistry), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+    factory.confirmNewVaultInfo();
+    vm.stopPrank();
+
+    vm.startPrank(unprivilegedAddress);
+    vm.expectRevert("Ownable: caller is not the owner");
+    mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+  }
+
+  function testMainRegistryNotSetInFactory () public {
+    vm.startPrank(creatorAddress);
+    factory = new Factory();
+    vm.expectRevert("Main Registry not set in factory");
+    mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+  }
+
+  function testMainRegistryNotConfirmedInFactory () public {
+    vm.startPrank(creatorAddress);
+    factory = new Factory();
+    factory.setNewVaultInfo(address(mainRegistry), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+    vm.expectRevert("Main Registry not set in factory");
+    mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+  }
+
+  function testOwnerSetsFactoryWithMultipleNumeraires () public {
+    vm.startPrank(creatorAddress);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    factory = new Factory();
+    factory.setNewVaultInfo(address(mainRegistry), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+    factory.confirmNewVaultInfo();
+    mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+
+		assertEq(address(factory), mainRegistry.factoryAddress());
+  }
 
 }

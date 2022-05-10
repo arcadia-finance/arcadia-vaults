@@ -49,7 +49,7 @@ contract FloorERC1155SubRegistryTest is DSTest {
     vm.stopPrank();
 
 		vm.startPrank(creatorAddress);
-		mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+		mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
 		oracleHub = new OracleHub();
 		vm.stopPrank();
 
@@ -73,8 +73,8 @@ contract FloorERC1155SubRegistryTest is DSTest {
   //this is a before each
   function setUp() public {
     vm.startPrank(creatorAddress);
-    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
-    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
     
     floorERC1155SubRegistry = new FloorERC1155SubRegistry(address(mainRegistry), address(oracleHub));
     mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));

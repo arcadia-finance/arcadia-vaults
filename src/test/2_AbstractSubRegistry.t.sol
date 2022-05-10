@@ -54,7 +54,7 @@ contract AbstractSubRegistryTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(creatorAddress);
-    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
     oracleHub = new OracleHub();
     vm.stopPrank();
   }
