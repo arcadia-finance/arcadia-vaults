@@ -86,7 +86,7 @@ contract MainRegistry is Ownable {
    * @param _factoryAddress The address of the Factory
    */
   function setFactory(address _factoryAddress) external onlyOwner {
-    require(IFactory(_factoryAddress).getCurrentRegistry() == address(this), "Main Registry not set in factory");
+    require(IFactory(_factoryAddress).getCurrentRegistry() == address(this), "MR_AA: MR not set in factory");
     factoryAddress = _factoryAddress;
 
     uint256 factoryNumeraireCounter = IFactory(_factoryAddress).numeraireCounter();

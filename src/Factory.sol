@@ -70,7 +70,7 @@ contract Factory is ERC721 {
     @notice Function confirms the new contracts to be used for new deployed vaults
     @dev Two step function to confirm new logic to be used for new deployed vaults.
          Changing any of the contracts does NOT change the contracts for already deployed vaults,
-         unless the vault owner explicitly choose to upgrade their vault version to a newer version
+         unless the vault owner explicitly chooses to upgrade their vault version to a newer version
          ToDo Add a time lock between setting a new vault version, and confirming a new vault version
          If no new vault info is being set (newVaultInfoSet is false), this function will not do anything
          The variable factoryInitialised is set to true as soon as one vault version is confirmed
@@ -108,11 +108,11 @@ contract Factory is ERC721 {
     newVaultInfoSet = true;
 
     //If there is a new Main Registry Contract, Check that numeraires in factory and main registry match
-    if (factoryInitialised && vaultDetails[currentVaultVersion].registryAddress != vaultDetails[currentVaultVersion+1].registryAddress) {
+    if (factoryInitialised && vaultDetails[currentVaultVersion].registryAddress != registryAddress) {
       address mainRegistryStableAddress;
       for (uint256 i; i < numeraireCounter;) {
         (,,,,mainRegistryStableAddress,) = IMainRegistry(registryAddress).numeraireToInformation(i);
-        require(mainRegistryStableAddress == numeraireToStable[i], "Numeraires of Main Registry don't match numeraires of factory");
+        require(mainRegistryStableAddress == numeraireToStable[i], "FTRY_SNVI:No match numeraires MR");
         unchecked {++i;}
       }
     }
@@ -125,7 +125,7 @@ contract Factory is ERC721 {
   @param stable The contract address of the corresponding ERC20 token pegged to the numeraire
   */
   function addNumeraire(uint256 numeraire, address stable) external {
-    require(vaultDetails[currentVaultVersion].registryAddress == msg.sender, "New Numeraires must be added via most recent Main Registry");
+    require(vaultDetails[currentVaultVersion].registryAddress == msg.sender, "FTRY_AN: Add Numeraires via MR");
     numeraireToStable[numeraire] = stable;
     unchecked {++numeraireCounter;}
   }
@@ -145,7 +145,7 @@ contract Factory is ERC721 {
   @param numeraire An identifier (uint256) of the Numeraire
   */
   function createVault(uint256 salt, uint256 numeraire) external returns (address vault) {
-    require(numeraire <= numeraireCounter - 1, "MR_GLV: Unknown Numeraire");
+    require(numeraire <= numeraireCounter - 1, "FTRY_CV: Unknown Numeraire");
 
     bytes memory initCode = type(Proxy).creationCode;
     bytes memory byteCode = abi.encodePacked(initCode, abi.encode(vaultDetails[currentVaultVersion].logic));
@@ -163,8 +163,8 @@ contract Factory is ERC721 {
     allVaults.push(vault);
     isVault[vault] = true;
 
-    _mint(msg.sender, allVaults.length -1);
-    emit VaultCreated(vault, msg.sender, allVaults.length);
+    _mint(msg.sender, allVaults.length - 1);
+    emit VaultCreated(vault, msg.sender, allVaults.length - 1);
   }
 
   /** 
@@ -187,9 +187,8 @@ contract Factory is ERC721 {
     @param id of the vault that is about to be transfered.
   */
   function _safeTransferFrom(address from, address to, uint256 id) internal {
-    transferFrom(from, to, id);
-
     IVault(allVaults[id]).transferOwnership(to);
+    transferFrom(from, to, id);
     require(
       to.code.length == 0 ||
         ERC721TokenReceiver(to).onERC721Received(msg.sender, from, id, "") ==
