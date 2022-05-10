@@ -13,4 +13,5 @@ interface IMainRegistry {
               uint256 numeraire
             ) external view returns (uint256);
   function factoryAddress() external view returns (address);
+  function numeraireToInformation(uint256 numeraire) external view returns (uint64, uint64, address, address, address, string memory);
 }

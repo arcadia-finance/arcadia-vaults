@@ -18,9 +18,8 @@ import "../Liquidator.sol";
 import "../utils/Constants.sol";
 
 interface IVaultExtra {
-
-    function life() view external returns (uint256);
-    function owner() view external returns (address);
+  function life() view external returns (uint256);
+  function owner() view external returns (address);
 }
 
 
@@ -35,9 +34,11 @@ contract factoryTest is DSTest {
   InterestRateModule private interestContr;
   Liquidator private liquidatorContr;
   MainRegistry private registryContr;
+  MainRegistry private registryContr2;
   ERC20Mock private erc20Contr;
   address private unprivilegedAddress1 = address(5);
 
+  uint256[] emptyList = new uint256[](0);
 
   event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 length);
 
@@ -48,11 +49,11 @@ contract factoryTest is DSTest {
     erc20Contr = new ERC20Mock("ERC20 Mock", "mERC20", 18);
     interestContr = new InterestRateModule();
     liquidatorContr = new Liquidator(address(factoryContr), 0x0000000000000000000000000000000000000000, address(erc20Contr));
-		registryContr = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+		registryContr = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(erc20Contr), numeraireLabel:'USD', numeraireUnit:1}));
     
 
-    factoryContr.setVaultInfo(1, address(registryContr), address(vaultContr), address(erc20Contr), 0x0000000000000000000000000000000000000000, address(interestContr));
-    factoryContr.setVaultVersion(1);
+    factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), 0x0000000000000000000000000000000000000000, address(interestContr));
+    factoryContr.confirmNewVaultInfo();
     factoryContr.setLiquidator(address(liquidatorContr));
 
     registryContr.setFactory(address(factoryContr));
@@ -65,22 +66,22 @@ contract factoryTest is DSTest {
   }
 
   function getBytecode(address vaultLogic) public pure returns (bytes memory) {
-      bytes memory bytecode = type(Proxy).creationCode;
+    bytes memory bytecode = type(Proxy).creationCode;
 
-      return abi.encodePacked(bytecode, abi.encode(vaultLogic));
+    return abi.encodePacked(bytecode, abi.encode(vaultLogic));
   }
 
   function getAddress(bytes memory bytecode, uint _salt)
-      public
-      view
-      returns (address)
+    public
+    view
+    returns (address)
   {
-      bytes32 hash = keccak256(
-          abi.encodePacked(bytes1(0xff), address(this), _salt, keccak256(bytecode))
-      );
+    bytes32 hash = keccak256(
+      abi.encodePacked(bytes1(0xff), address(this), _salt, keccak256(bytecode))
+    );
 
-      // NOTE: cast last 20 bytes of hash to address
-      return address(uint160(uint(hash)));
+    // NOTE: cast last 20 bytes of hash to address
+    return address(uint160(uint(hash)));
   }
 
 
@@ -89,13 +90,9 @@ contract factoryTest is DSTest {
   }
 
   function testDeployNewProxyWithLogic(uint256 salt) public {
-    //address toBeDeployedAddr = getAddress(getBytecode(address(vaultContr)), salt);
-
     uint256 amountBefore = factoryContr.allVaultsLength();
 
-    // vm.expectEmit(true, true, false, true);
-    // emit VaultCreated(toBeDeployedAddr, address(this), factoryContr.allVaultsLength() +1);
-    address actualDeployed = factoryContr.createVault(salt);
+    address actualDeployed = factoryContr.createVault(salt, Constants.UsdNumeraire);
     assertEqDecimal(amountBefore +1, factoryContr.allVaultsLength(), 1);
     assertEqDecimal(IVaultExtra(actualDeployed).life(), 0, 1);
 
@@ -107,7 +104,7 @@ contract factoryTest is DSTest {
     uint256 amountBefore = factoryContr.allVaultsLength();
     vm.prank(sender);
     vm.assume(sender != address(0));
-    address actualDeployed = factoryContr.createVault(salt);
+    address actualDeployed = factoryContr.createVault(salt, Constants.UsdNumeraire);
     assertEqDecimal(amountBefore +1, factoryContr.allVaultsLength(), 1);
     assertEqDecimal(IVaultExtra(actualDeployed).life(), 0, 1);
 
@@ -116,26 +113,13 @@ contract factoryTest is DSTest {
     emit log_address(address(1));
   }
 
-  function testOnlyUpgradableByOwner(address sender) public {
-    vm.assume(sender != address(this));
-    emit log_named_address("sender", sender);
-    emit log_named_address("addr(this)", address(this));
-    emit log_named_address("owner", factoryContr.owner());
-    
-
-    vm.startPrank(sender);
-    vm.expectRevert("You are not the owner");
-    factoryContr.setVaultVersion(5);
-    vm.stopPrank();
-  }
-
   function testTransferVault(address sender) public {
     address receiver = unprivilegedAddress1;
     vm.assume(sender != address(0));
 
 
     vm.startPrank(sender);
-    address vault = factoryContr.createVault(0);
+    address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
 
     //Make sure index in erc721 == vaultIndex
     assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
@@ -157,6 +141,7 @@ contract factoryTest is DSTest {
     vm.stopPrank();  
 
   }
+
   //TODO: Odd test behavior
   function testFailTransferVaultNotOwner(address sender, address receiver) public {
     vm.assume(sender != address(0));
@@ -165,7 +150,7 @@ contract factoryTest is DSTest {
 
 
     vm.prank(sender);
-    address vault = factoryContr.createVault(0);
+    address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
 
     //Make sure index in erc721 == vaultIndex
     assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
@@ -189,7 +174,7 @@ contract factoryTest is DSTest {
 
   }
 
-    function onERC721Received(address, address, uint256, bytes calldata ) public pure returns (bytes4) {
+  function onERC721Received(address, address, uint256, bytes calldata ) public pure returns (bytes4) {
     return this.onERC721Received.selector;
   }
 
@@ -197,4 +182,152 @@ contract factoryTest is DSTest {
     return this.onERC1155Received.selector;
   }
 
+  //Test addNumeraire
+  function testNonRegistryAddsNumeraire(address unprivilegedAddress) public {
+    vm.startPrank(unprivilegedAddress);
+    vm.expectRevert("FTRY_AN: Add Numeraires via MR");
+    factoryContr.addNumeraire(2, address(erc20Contr));
+    vm.stopPrank();   
+  }
+
+  function testOldRegistryAddsNumeraire(address newNumeraire) public {
+		registryContr2 = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(erc20Contr), numeraireLabel:'USD', numeraireUnit:1}));
+    factoryContr.setNewVaultInfo(address(registryContr2), address(vaultContr), 0x0000000000000000000000000000000000000000, address(interestContr));
+    factoryContr.confirmNewVaultInfo();
+    registryContr2.setFactory(address(factoryContr));
+
+    vm.expectRevert("FTRY_AN: Add Numeraires via MR");
+		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newNumeraire, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+  }
+
+  function testLatestRegistryAddsNumeraire(address newStable) public {
+    assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));	
+    assertEq(address(0), factoryContr.numeraireToStable(1));	
+		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newStable, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+
+    assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
+    assertEq(newStable, factoryContr.numeraireToStable(1));	 
+  }
+
+  //Test setNewVaultInfo
+  function testNonOwnerSetsNewVaultInfo(address unprivilegedAddress) public {
+    vm.startPrank(unprivilegedAddress);
+    vm.expectRevert("You are not the owner");
+    factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), 0x0000000000000000000000000000000000000000, address(interestContr));
+    vm.stopPrank();
+  }
+
+  function testOwnerSetsVaultInfoForFirstTime(address registry, address logic, address stakeContract, address interestModule) public {
+    factoryContr = new Factory();
+    assertTrue(!factoryContr.factoryInitialised());
+    assertTrue(!factoryContr.newVaultInfoSet());
+
+    factoryContr.setNewVaultInfo(registry, logic, stakeContract, interestModule);
+    assertTrue(!factoryContr.factoryInitialised());
+    assertTrue(factoryContr.newVaultInfoSet());
+  }
+
+  function testOwnerSetsNewVaultInfoWithIdenticalMainRegistry(address logic, address stakeContract, address interestModule) public {
+    assertTrue(!factoryContr.newVaultInfoSet());
+    factoryContr.setNewVaultInfo(address(registryContr), logic, stakeContract, interestModule);
+    assertTrue(factoryContr.newVaultInfoSet());
+  }
+
+  function testOwnerSetsNewVaultInfoSecondTimeWithIdenticalMainRegistry(address logic, address stakeContract, address interestModule) public {
+    assertTrue(!factoryContr.newVaultInfoSet());
+    factoryContr.setNewVaultInfo(address(registryContr), logic, stakeContract, interestModule);
+    assertTrue(factoryContr.newVaultInfoSet());
+    factoryContr.setNewVaultInfo(address(registryContr), logic, stakeContract, interestModule);
+    assertTrue(factoryContr.newVaultInfoSet());
+  }
+
+  function testOwnerSetsNewVaultInfoWithDifferentStableContractInMainRegistry(address randomStable, address logic, address stakeContract, address interestModule) public {
+    registryContr2 = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:randomStable, numeraireLabel:'USD', numeraireUnit:1}));
+    vm.expectRevert("FTRY_SNVI:No match numeraires MR");
+    factoryContr.setNewVaultInfo(address(registryContr2), logic, stakeContract, interestModule);
+    vm.stopPrank();
+  }
+
+  function testOwnerSetsNewVaultWithInfoMissingNumeraireInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public {
+		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newStable, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
+    assertEq(newStable, factoryContr.numeraireToStable(1));
+
+    registryContr2 = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(erc20Contr), numeraireLabel:'USD', numeraireUnit:1}));
+    vm.expectRevert("FTRY_SNVI:No match numeraires MR");
+    factoryContr.setNewVaultInfo(address(registryContr2), logic, stakeContract, interestModule);
+  }
+
+  function testOwnerSetsNewVaultWithIdenticalNumerairesInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public {
+		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newStable, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
+    assertEq(newStable, factoryContr.numeraireToStable(1));
+
+    registryContr2 = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(erc20Contr), numeraireLabel:'USD', numeraireUnit:1}));
+		registryContr2.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newStable, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    factoryContr.setNewVaultInfo(address(registryContr2), logic, stakeContract, interestModule);
+    factoryContr.confirmNewVaultInfo();
+    registryContr2.setFactory(address(factoryContr));
+
+    assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
+    assertEq(newStable, factoryContr.numeraireToStable(1));  
+  }
+
+  function testOwnerSetsNewVaultWithMoreNumerairesInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public {
+    assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
+    assertEq(address(0), factoryContr.numeraireToStable(1));
+
+    registryContr2 = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(erc20Contr), numeraireLabel:'USD', numeraireUnit:1}));
+		registryContr2.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newStable, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    factoryContr.setNewVaultInfo(address(registryContr2), logic, stakeContract, interestModule);
+    factoryContr.confirmNewVaultInfo();
+    registryContr2.setFactory(address(factoryContr));
+
+    assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
+    assertEq(newStable, factoryContr.numeraireToStable(1));  
+  }
+
+  //Test confirmNewVaultInfo
+  function testNonOwnerConfirmsNewVaultInfo(address unprivilegedAddress) public {
+    vm.startPrank(unprivilegedAddress);
+    vm.expectRevert("You are not the owner");
+    factoryContr.confirmNewVaultInfo();
+    vm.stopPrank();
+  }
+
+  function testOwnerConfirmsVaultInfoForFirstTime(address registry, address logic, address stakeContract, address interestModule) public {
+    factoryContr = new Factory();
+    assertTrue(!factoryContr.factoryInitialised());
+    assertEq(0, factoryContr.currentVaultVersion());
+
+    factoryContr.setNewVaultInfo(registry, logic, stakeContract, interestModule);
+    assertTrue(factoryContr.newVaultInfoSet());
+
+    factoryContr.confirmNewVaultInfo();
+    assertTrue(factoryContr.factoryInitialised());
+    assertTrue(!factoryContr.newVaultInfoSet());
+    assertEq(1, factoryContr.currentVaultVersion());
+  }
+
+  function testOwnerConfirmsNewVaultInfoWithIdenticalMainRegistry(address logic, address stakeContract, address interestModule) public {
+    assertTrue(!factoryContr.newVaultInfoSet());
+    assertEq(1, factoryContr.currentVaultVersion());
+
+    factoryContr.setNewVaultInfo(address(registryContr), logic, stakeContract, interestModule);
+    assertTrue(factoryContr.newVaultInfoSet());
+    assertEq(1, factoryContr.currentVaultVersion());
+
+    factoryContr.confirmNewVaultInfo();
+    assertTrue(!factoryContr.newVaultInfoSet());
+    assertEq(2, factoryContr.currentVaultVersion());    
+  }
+
+  function testOwnerConfirmsVaultInfoWithoutNewVaultInfoSet() public {
+    assertTrue(!factoryContr.newVaultInfoSet());
+    assertEq(1, factoryContr.currentVaultVersion());
+
+    factoryContr.confirmNewVaultInfo();
+    assertTrue(!factoryContr.newVaultInfoSet());
+    assertEq(1, factoryContr.currentVaultVersion());
+  }
 }
