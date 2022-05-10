@@ -10,8 +10,13 @@ import "./interfaces/IVaultPaperTrading.sol";
 contract FactoryPaperTrading is Factory {
   address tokenShop;
 
-  function getVaultAddress(uint256 id) external view returns(address) {
-      return allVaults[id];
+  /** 
+    @notice returns contract address of individual vaults
+    @param id The id of the Vault
+    @return vaultAddress The contract address of the individual vault
+  */
+  function getVaultAddress(uint256 id) external view returns(address vaultAddress) {
+    vaultAddress = allVaults[id];
   }
 
   /** 
