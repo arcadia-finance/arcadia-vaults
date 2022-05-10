@@ -14,26 +14,12 @@ contract FactoryPaperTrading is Factory {
       return allVaults[id];
   }
 
- function setNewVaultInfo(address, address, address, address) external view override onlyOwner {
-   revert('Not Allowed');
- }
-
-  function setNewVaultInfo(address registryAddress, address logic, address stakeContract, address interestModule, address _tokenShop) external onlyOwner {
-    vaultDetails[currentVaultVersion+1].registryAddress = registryAddress;
-    vaultDetails[currentVaultVersion+1].logic = logic;
-    vaultDetails[currentVaultVersion+1].stakeContract = stakeContract;
-    vaultDetails[currentVaultVersion+1].interestModule = interestModule;
+  /** 
+    @notice Function to set a new contract for the tokenshop logic
+    @param _tokenShop The new tokenshop contract
+  */
+  function setTokenShop(address _tokenShop) public onlyOwner {
     tokenShop = _tokenShop;
-
-    //If there is a new Main Registry Contract, Check that numeraires in factory and main registry match
-    if (factoryInitialised && vaultDetails[currentVaultVersion].registryAddress != registryAddress) {
-      address mainRegistryStableAddress;
-      for (uint256 i; i < numeraireCounter;) {
-        (,,,,mainRegistryStableAddress,) = IMainRegistry(registryAddress).numeraireToInformation(i);
-        require(mainRegistryStableAddress == numeraireToStable[i], "FTRY_SNVI:No match numeraires MR");
-        unchecked {++i;}
-      }
-    }
   }
 
   /** 

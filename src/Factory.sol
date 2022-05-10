@@ -100,7 +100,7 @@ contract Factory is ERC721 {
     @param stakeContract The contract addres of the Staking Contract
     @param interestModule The contract address of the Interest Rate Module
   */
-  function setNewVaultInfo(address registryAddress, address logic, address stakeContract, address interestModule) external virtual onlyOwner {
+  function setNewVaultInfo(address registryAddress, address logic, address stakeContract, address interestModule) external onlyOwner {
     vaultDetails[currentVaultVersion+1].registryAddress = registryAddress;
     vaultDetails[currentVaultVersion+1].logic = logic;
     vaultDetails[currentVaultVersion+1].stakeContract = stakeContract;

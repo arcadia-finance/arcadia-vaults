@@ -69,7 +69,7 @@ contract VaultPaperTrading is Vault {
     amountArr[0] = FixedPointMathLib.WAD;
 
     uint256 rateStableToUsd = IRegistry(_registryAddress).getTotalValue(addressArr, idArr, amountArr, 0);
-    uint256 stableAmount = FixedPointMathLib.mulDivDown(1000000, FixedPointMathLib.WAD, rateStableToUsd);
+    uint256 stableAmount = FixedPointMathLib.mulDivUp(1000000 * FixedPointMathLib.WAD, FixedPointMathLib.WAD, rateStableToUsd);
     IERC20(_stable).mint(address(this), stableAmount);
     super._depositERC20(address(this), _stable, stableAmount);
   }
