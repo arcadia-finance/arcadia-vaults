@@ -15,6 +15,7 @@ import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/floorERC1155SubRegistry.sol";
 import "../OracleHub.sol";
 import "../mockups/SimplifiedChainlinkOracle.sol";
+import "../Factory.sol";
 import "../utils/Constants.sol";
 import "../utils/StringHelpers.sol";
 import "../utils/CompareArrays.sol";
@@ -46,6 +47,7 @@ contract MainRegistryTest is DSTest {
   StandardERC20Registry private standardERC20Registry;
   FloorERC721SubRegistry private floorERC721SubRegistry;
   FloorERC1155SubRegistry private floorERC1155SubRegistry;
+  Factory private factory;
 
   address private creatorAddress = address(1);
   address private tokenCreatorAddress = address(2);
@@ -1040,5 +1042,48 @@ contract MainRegistryTest is DSTest {
 		mainRegistry.batchSetCreditRating(assetAddresses, numeraires, assetCreditRatings);
 		vm.stopPrank();
 	}
+
+  //Test setFactory
+  function testNonOwnerSetsFactory (address unprivilegedAddress) public {
+    vm.startPrank(creatorAddress);
+    factory = new Factory();
+    factory.setNewVaultInfo(address(mainRegistry), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+    factory.confirmNewVaultInfo();
+    vm.stopPrank();
+
+    vm.startPrank(unprivilegedAddress);
+    vm.expectRevert("Ownable: caller is not the owner");
+    mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+  }
+
+  function testMainRegistryNotSetInFactory () public {
+    vm.startPrank(creatorAddress);
+    factory = new Factory();
+    vm.expectRevert("Main Registry not set in factory");
+    mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+  }
+
+  function testMainRegistryNotConfirmedInFactory () public {
+    vm.startPrank(creatorAddress);
+    factory = new Factory();
+    factory.setNewVaultInfo(address(mainRegistry), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+    vm.expectRevert("Main Registry not set in factory");
+    mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+  }
+
+  function testOwnerSetsFactoryWithMultipleNumeraires () public {
+    vm.startPrank(creatorAddress);
+		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    factory = new Factory();
+    factory.setNewVaultInfo(address(mainRegistry), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+    factory.confirmNewVaultInfo();
+    mainRegistry.setFactory(address(factory));
+    vm.stopPrank();
+
+		assertEq(address(factory), mainRegistry.factoryAddress());
+  }
 
 }
