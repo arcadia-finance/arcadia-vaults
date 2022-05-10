@@ -191,9 +191,9 @@ contract LiquidatorTest is DSTest {
     emit log_named_address("oracleEthToUsdArr[0]", oracleEthToUsdArr[0]);
 
     vm.startPrank(creatorAddress);
-    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stable), numeraireLabel:'USD', numeraireUnit:1}));
     uint256[] memory emptyList = new uint256[](0);
-    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stable), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 
     standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
     floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
@@ -229,8 +229,8 @@ contract LiquidatorTest is DSTest {
 
     vm.startPrank(creatorAddress);
     factory = new Factory();
-    factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule));
-    factory.setVaultVersion(1);
+    factory.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
+    factory.confirmNewVaultInfo();
     factory.setLiquidator(address(liquidator));
     liquidator.setFactory(address(factory));
     mainRegistry.setFactory(address(factory));
@@ -241,7 +241,7 @@ contract LiquidatorTest is DSTest {
     vm.stopPrank();
 
     vm.prank(vaultOwner);
-    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))));
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.UsdNumeraire);
     proxy = Vault(proxyAddr);
 
     uint256 slot = stdstore

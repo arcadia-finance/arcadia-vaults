@@ -10,20 +10,20 @@ import "./interfaces/IVaultPaperTrading.sol";
 contract FactoryPaperTrading is Factory {
   address tokenShop;
 
-  function getVaultAddress(uint256 id) external view returns(address) {
-      return allVaults[id];
+  /** 
+    @notice returns contract address of individual vaults
+    @param id The id of the Vault
+    @return vaultAddress The contract address of the individual vault
+  */
+  function getVaultAddress(uint256 id) external view returns(address vaultAddress) {
+    vaultAddress = allVaults[id];
   }
 
- function setVaultInfo(uint256, address, address, address, address, address) external view override onlyOwner {
-   revert('Not Allowed');
- }
-
-  function setVaultInfo(uint256 version, address registryAddress, address logic, address stable, address stakeContract, address interestModule, address _tokenShop) external onlyOwner {
-    vaultDetails[version].registryAddress = registryAddress;
-    vaultDetails[version].logic = logic;
-    vaultDetails[version].stable = stable;
-    vaultDetails[version].stakeContract = stakeContract;
-    vaultDetails[version].interestModule = interestModule;
+  /** 
+    @notice Function to set a new contract for the tokenshop logic
+    @param _tokenShop The new tokenshop contract
+  */
+  function setTokenShop(address _tokenShop) public onlyOwner {
     tokenShop = _tokenShop;
   }
 
@@ -31,8 +31,9 @@ contract FactoryPaperTrading is Factory {
   @notice Function used to create a Vault
   @dev This is the starting point of the Vault creation process. 
   @param salt A salt to be used to generate the hash.
+  @param numeraire An identifier (uint256) of the Numeraire
 */
-  function createVault(uint256 salt) external override returns (address vault) {
+  function createVault(uint256 salt, uint256 numeraire) external override returns (address vault) {
     bytes memory initCode = type(Proxy).creationCode;
     bytes memory byteCode = abi.encodePacked(initCode, abi.encode(vaultDetails[currentVaultVersion].logic));
 
@@ -45,7 +46,7 @@ contract FactoryPaperTrading is Factory {
 
     IVaultPaperTrading(vault).initialize(msg.sender, 
                               vaultDetails[currentVaultVersion].registryAddress, 
-                              vaultDetails[currentVaultVersion].stable, 
+                              numeraireToStable[numeraire], 
                               vaultDetails[currentVaultVersion].stakeContract, 
                               vaultDetails[currentVaultVersion].interestModule,
                               tokenShop);
