@@ -80,11 +80,13 @@ contract MainRegistry is Ownable {
   }
 
   /**
-   * @dev Sets the new Factory address
+   * @notice Sets the new Factory address
+   * @dev The factory can only be set on the Main Registry AFTER the Main registry is set in the Factory.
+   *  This ensures that the allowed Numeraires and corresponding stable contracts in both are equal.
    * @param _factoryAddress The address of the Factory
    */
   function setFactory(address _factoryAddress) external onlyOwner {
-    require(IFactory(_factoryAddress).getCurrentRegistry() == address(this), "Main Registry not known in factory");
+    require(IFactory(_factoryAddress).getCurrentRegistry() == address(this), "Main Registry not set in factory");
     factoryAddress = _factoryAddress;
 
     uint256 factoryNumeraireCounter = IFactory(_factoryAddress).numeraireCounter();
