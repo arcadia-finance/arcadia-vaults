@@ -103,11 +103,12 @@ contract CreateVaultTest is DSTest {
     interestRateModule.setBaseInterestRate(5 * 10 ** 16);
 
     vault = new VaultPaperTrading();
-    factory.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule), 0x0000000000000000000000000000000000000000);
+    factory.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
     factory.confirmNewVaultInfo();
     factory.setLiquidator(address(liquidator));
+    factory.setTokenShop(address(0));
     liquidator.setFactory(address(factory));
-    //mainRegistry.setFactory(address(factory));
+    mainRegistry.setFactory(address(factory));
 
     vm.stopPrank();
 
@@ -118,19 +119,26 @@ contract CreateVaultTest is DSTest {
 
   }
 
-  function testExample() public {
-    // vm.startPrank(creatorAddress);
-    // mainRegistry.setFactory(address(factory));
-    // vm.stopPrank();
+  function testUsdVault() public {
+    vm.prank(vaultOwner);
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.UsdNumeraire);
+    proxy = VaultPaperTrading(proxyAddr);
 
-    // vm.prank(vaultOwner);
-    // proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.UsdNumeraire);
-    // proxy = VaultPaperTrading(proxyAddr);
+    uint256 expectedValue = 1000000 * Constants.WAD;
+		uint256 actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
 
-    // uint256 expectedValue = 1000000 * Constants.WAD;
-		// uint256 actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
+    assertEq(actualValue, expectedValue);
+  }
 
-    // assertEq(actualValue, expectedValue);
+  function testEthVault() public {
+    vm.prank(vaultOwner);
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.EthNumeraire);
+    proxy = VaultPaperTrading(proxyAddr);
+
+    uint256 expectedValue = 1000000 * Constants.WAD;
+		uint256 actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
+
+    assertEq(actualValue, expectedValue);
   }
 
 }
