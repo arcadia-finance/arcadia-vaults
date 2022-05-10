@@ -5,8 +5,10 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "./../Vault.sol";
+import {FixedPointMathLib} from './../utils/FixedPointMathLib.sol';
 
 contract VaultPaperTrading is Vault {
+  using FixedPointMathLib for uint256;
 
   address public _tokenShop;
 
@@ -58,8 +60,18 @@ contract VaultPaperTrading is Vault {
 
     //Following logic added only for the paper trading competition
     //All new vaults are initiated with $1.000.000
-    IERC20(_stable).mint(address(this), 1000000000000000000000000);
-    super._depositERC20(address(this), _stable, 1000000000000000000000000);
+    address[] memory addressArr = new address[](1);
+    uint256[] memory idArr = new uint256[](1);
+    uint256[] memory amountArr = new uint256[](1);
+
+    addressArr[0] = _stable;
+    idArr[0] = 0;
+    amountArr[0] = FixedPointMathLib.WAD;
+
+    uint256 rateStableToUsd = IRegistry(_registryAddress).getTotalValue(addressArr, idArr, amountArr, 0);
+    uint256 stableAmount = FixedPointMathLib.mulDivDown(1000000, FixedPointMathLib.WAD, rateStableToUsd);
+    IERC20(_stable).mint(address(this), stableAmount);
+    super._depositERC20(address(this), _stable, stableAmount);
   }
 
   /** 
