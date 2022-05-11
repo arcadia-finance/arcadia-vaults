@@ -85,9 +85,10 @@ contract vaultTests is DSTest {
   //this is a before
   constructor() {
 
-    vm.startPrank(tokenCreatorAddress);
-
+    vm.prank(creatorAddress);
     factoryContr = new Factory();
+
+    vm.startPrank(tokenCreatorAddress);
 
     eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
     eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
@@ -200,6 +201,12 @@ contract vaultTests is DSTest {
     uint256[] memory emptyList = new uint256[](0);
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stable), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 
+    vm.prank(creatorAddress);
+    factoryContr.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
+    vm.prank(creatorAddress);
+    factoryContr.confirmNewVaultInfo();
+    mainRegistry.setFactory(address(factoryContr));
+
     standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
     floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
     floorERC1155SubRegistry = new FloorERC1155SubRegistry(address(mainRegistry), address(oracleHub));
@@ -223,6 +230,14 @@ contract vaultTests is DSTest {
     bytes32 loc = bytes32(slot);
     bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
     vm.store(address(factoryContr), loc, mockedCurrentTokenId);
+
+    // uint256 slot2 = stdstore
+    //         .target(address(vault))
+    //         .sig(vault.owner.selector)
+    //         .find();
+    // bytes32 loc2 = bytes32(slot2);
+    // bytes32 newOwner = bytes32(abi.encode(vaultOwner));
+    // vm.store(address(vault), loc2, newOwner);
 
     vm.prank(address(vault));
     stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
@@ -1071,6 +1086,65 @@ contract vaultTests is DSTest {
     vm.expectRevert("VL: Not factory");
     vault.transferOwnership(address(10));
     vm.stopPrank();
+  }
+
+  function testTransferOwnership(address to) public {
+    vm.assume(to != address(0));
+    Vault vault_m = new Vault();
+
+    uint256 slot2 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m._registryAddress.selector)
+            .find();
+    bytes32 loc2 = bytes32(slot2);
+    bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
+    vm.store(address(vault_m), loc2, newReg);
+
+    assertEq(address(0), vault_m.owner());
+    vm.prank(address(factoryContr));
+    vault_m.transferOwnership(to);
+    assertEq(to, vault_m.owner());
+
+    vault_m = new Vault();
+    vault_m.initialize(address(this), address(mainRegistry), address(stable), address(stakeContract), address(interestRateModule));
+    assertEq(address(this), vault_m.owner());
+
+    vm.prank(address(factoryContr));
+    vault_m.transferOwnership(to);
+    assertEq(to, vault_m.owner());
+  }
+
+  function testTransferOwnershipByNonOwner(address from) public {
+    vm.assume(from != address(this) && from != address(0));
+    Vault vault_m = new Vault();
+    address to = address(123456);
+
+    uint256 slot2 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m._registryAddress.selector)
+            .find();
+    bytes32 loc2 = bytes32(slot2);
+    bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
+    vm.store(address(vault_m), loc2, newReg);
+
+
+    assertEq(address(0), vault_m.owner());
+
+    vm.startPrank(from);
+    vm.expectRevert("VL: Not factory");
+    vault_m.transferOwnership(to);
+    vm.stopPrank();
+
+    assertEq(address(0), vault_m.owner());
+
+    vault_m = new Vault();
+    vault_m.initialize(address(this), address(mainRegistry), address(stable), address(stakeContract), address(interestRateModule));
+    assertEq(address(this), vault_m.owner());
+
+    vm.startPrank(from);
+    vm.expectRevert("VL: Not factory");
+    vault_m.transferOwnership(to);
+    assertEq(address(this), vault_m.owner());
   }
 
 

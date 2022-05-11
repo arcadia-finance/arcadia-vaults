@@ -77,7 +77,6 @@ contract Vault {
   //       The owner of this contract (not the derived proxies) 
   //       should not have any privilages!
   constructor() {
-    owner = msg.sender;
   }
 
     /**
