@@ -6,7 +6,7 @@ import "../../../lib/forge-std/src/stdlib.sol";
 import "../../../lib/forge-std/src/console.sol";
 import "../../../lib/forge-std/src/Vm.sol";
 
-import "./DeployContracts.sol";
+import "../../paperTradingCompetition/DeployContracts.sol";
 
 contract DeployPaperTests is DSTest {
   using stdStorage for StdStorage;

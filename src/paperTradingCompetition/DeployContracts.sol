@@ -2,23 +2,23 @@
 pragma solidity >0.8.10;
 
 
-import "../../paperTradingCompetition/FactoryPaperTrading.sol";
-import "../../Proxy.sol";
-import "../../paperTradingCompetition/VaultPaperTrading.sol";
-import "../../paperTradingCompetition/StablePaperTrading.sol";
-import "../../AssetRegistry/MainRegistry.sol";
-import "../../paperTradingCompetition/ERC20PaperTrading.sol";
-import "../../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../../paperTradingCompetition/ERC721PaperTrading.sol";
-import "../../AssetRegistry/FloorERC721SubRegistry.sol";
-import "../../InterestRateModule.sol";
-import "../../Liquidator.sol";
-import "../../OracleHub.sol";
-import "../../utils/Constants.sol";
-import "../../paperTradingCompetition/Oracles/StableOracle.sol";
-import "../../mockups/SimplifiedChainlinkOracle.sol";
-import "../../paperTradingCompetition/TokenShop.sol";
-import "../../utils/Strings.sol";
+import "./FactoryPaperTrading.sol";
+import "../Proxy.sol";
+import "./VaultPaperTrading.sol";
+import "./StablePaperTrading.sol";
+import "../AssetRegistry/MainRegistry.sol";
+import "./ERC20PaperTrading.sol";
+import "../AssetRegistry/StandardERC20SubRegistry.sol";
+import "./ERC721PaperTrading.sol";
+import "../AssetRegistry/FloorERC721SubRegistry.sol";
+import "../InterestRateModule.sol";
+import "../Liquidator.sol";
+import "../OracleHub.sol";
+import "../utils/Constants.sol";
+import "./Oracles/StableOracle.sol";
+import "../mockups/SimplifiedChainlinkOracle.sol";
+import "./TokenShop.sol";
+import "../utils/Strings.sol";
 
 contract DeployContracts  {
 
