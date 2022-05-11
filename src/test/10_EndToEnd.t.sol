@@ -608,7 +608,7 @@ contract EndToEndTest is DSTest {
 
     uint256 debtAtStart = proxy.getOpenDebt();
 
-    vm.roll(amountOfBlocksToRoll);
+    vm.roll(block.number + amountOfBlocksToRoll);
 
     uint256 actualDebt = proxy.getOpenDebt();
 
@@ -632,7 +632,7 @@ contract EndToEndTest is DSTest {
     proxy.takeCredit(amountCredit);
     vm.stopPrank();
 
-    vm.roll(10); //
+    vm.roll(block.number + 10); //
 
     vm.startPrank(vaultOwner);
     vm.expectRevert("Cannot take this amount of extra credit!");
@@ -741,7 +741,7 @@ contract EndToEndTest is DSTest {
 
     uint256 balanceBefore = stable.balanceOf(stakeContract);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
     proxy.syncDebt();
     uint256 balanceAfter = stable.balanceOf(stakeContract);
 
@@ -773,7 +773,7 @@ contract EndToEndTest is DSTest {
     vm.prank(tokenCreatorAddress);
     stable.transfer(vaultOwner, 1000 * 10**18);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
 
     uint128 openDebt = proxy.getOpenDebt();
     vm.startPrank(address(proxy));
@@ -785,7 +785,7 @@ contract EndToEndTest is DSTest {
 
     assertEq(proxy.getOpenDebt(), 0);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + uint256(blocksToRoll) * 2);
     assertEq(proxy.getOpenDebt(), 0);
   }
 
@@ -809,7 +809,7 @@ contract EndToEndTest is DSTest {
     vm.prank(address(proxy));
     stable.mint(vaultOwner, factor * amountCredit);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
 
     uint128 openDebt = proxy.getOpenDebt();
     uint256 balanceBefore = stable.balanceOf(vaultOwner);
@@ -825,7 +825,7 @@ contract EndToEndTest is DSTest {
     assertEq(balanceBefore - openDebt, balanceAfter);
     assertEq(proxy.getOpenDebt(), 0);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + uint256(blocksToRoll) * 2);
     assertEq(proxy.getOpenDebt(), 0);
   }
 
@@ -849,7 +849,7 @@ contract EndToEndTest is DSTest {
     vm.prank(address(proxy));
     stable.mint(vaultOwner, 1000 * 10**18);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
 
     uint128 openDebt = proxy.getOpenDebt();
     vm.assume(toRepay < openDebt);
@@ -863,7 +863,7 @@ contract EndToEndTest is DSTest {
 
     assertEq(proxy.getOpenDebt(), expectedDebt);
 
-    vm.roll(uint256(blocksToRoll)*2);
+    vm.roll(block.number + uint256(blocksToRoll));
     (,,,_yearlyInterestRate,,) = proxy.debt();
     base = _yearlyInterestRate + 10**18;
     exponent = uint128(uint128(blocksToRoll) * 10**18 / proxy.yearlyBlocks());

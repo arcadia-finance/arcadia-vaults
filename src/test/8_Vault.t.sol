@@ -687,7 +687,7 @@ contract vaultTests is DSTest {
     assertEq(expectedValue, actualValue);
   }
 
-  function testNotAllowWithdrawERC20fterTakingCredit (uint8 baseAmountDeposit, uint32 baseAmountCredit, uint8 baseAmountWithdraw) public {
+  function testNotAllowWithdrawERC20fterTakingCredit (uint8 baseAmountDeposit, uint24 baseAmountCredit, uint8 baseAmountWithdraw) public {
     vm.assume(baseAmountCredit > 0);
     vm.assume(baseAmountWithdraw > 0);
     vm.assume(baseAmountWithdraw < baseAmountDeposit);
@@ -981,7 +981,7 @@ contract vaultTests is DSTest {
     (,_collThres,,_yearlyInterestRate,,_numeraire) = vault.debt();
     assertTrue(_yearlyInterestRate == base - 1e18);
 
-    vm.roll(deltaBlocks);
+    vm.roll(block.number + deltaBlocks);
 
     uint128 unRealisedDebt;
 
@@ -1013,7 +1013,7 @@ contract vaultTests is DSTest {
 
     (,_collThres,,_yearlyInterestRate,,_numeraire) = vault.debt();
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
 
     uint256 base;
     uint256 exponent;
@@ -1085,6 +1085,7 @@ contract vaultTests is DSTest {
   }
 
   function testTransferOwnershipOfVaultByNonOwner(address sender) public {
+    vm.assume(sender != address(factoryContr));
     vm.startPrank(sender);
     vm.expectRevert("VL: Not factory");
     vault.transferOwnership(address(10));
