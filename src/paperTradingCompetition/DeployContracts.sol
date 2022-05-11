@@ -195,8 +195,10 @@ contract DeployContracts  {
       asset = assets[i];
       if (asset.decimals == 0) { }
       else {
-        newContr = address(new ERC20PaperTrading(asset.desc, asset.symbol, asset.decimals, address(tokenShop)));
-        assets[i].assetAddr = newContr;
+        if (asset.assetAddr == address(0)) {
+          newContr = address(new ERC20PaperTrading(asset.desc, asset.symbol, asset.decimals, address(tokenShop)));
+          assets[i].assetAddr = newContr;
+        }
        }
       
     }
@@ -223,10 +225,6 @@ contract DeployContracts  {
       asset = assets[i];
       newContr = address(new SimplifiedChainlinkOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD"))));
       assets[i].oracleAddr = newContr;
-
-      if (keccak256(bytes(asset.symbol)) == keccak256(bytes("mwETH"))) {
-        oracleEthToUsd = SimplifiedChainlinkOracle(newContr);
-      }
     }
 
     uint256[] memory emptyList = new uint256[](0);
