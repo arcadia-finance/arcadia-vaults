@@ -1070,6 +1070,7 @@ contract vaultTests is DSTest {
     vm.startPrank(sender);
     vm.expectRevert("VL: Not factory");
     vault.transferOwnership(address(10));
+    vm.stopPrank();
   }
 
 
