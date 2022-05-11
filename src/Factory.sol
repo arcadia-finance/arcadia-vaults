@@ -9,8 +9,9 @@ import "./interfaces/IVault.sol";
 import "./interfaces/IMainRegistry.sol";
 import "../lib/solmate/src/tokens/ERC721.sol";
 import "./utils/Strings.sol";
+import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
-contract Factory is ERC721 {
+contract Factory is ERC721, Ownable {
   using Strings for uint256;
 
   struct vaultVersionInfo {
@@ -32,8 +33,6 @@ contract Factory is ERC721 {
 
   string public baseURI;
 
-  address public owner;
-
   address public liquidatorAddress;
 
   uint256 public numeraireCounter;
@@ -41,14 +40,7 @@ contract Factory is ERC721 {
 
   event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 id);
 
-  modifier onlyOwner() {
-    require(msg.sender == owner, "You are not the owner");
-    _;
-  }
-
-  constructor() ERC721("Arcadia Vault", "ARCADIA") {
-    owner = msg.sender;
-  }
+  constructor() ERC721("Arcadia Vault", "ARCADIA") { }
 
   /** 
     @notice Function returns the total number of vaults

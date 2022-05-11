@@ -13,6 +13,7 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IRM.sol";
 import "./interfaces/IMainRegistry.sol";
 
+
 /** 
   * @title An Arcadia Vault used to deposit a combination of all kinds of assets
   * @author Arcadia Finance
@@ -76,14 +77,13 @@ contract Vault {
   //       The owner of this contract (not the derived proxies) 
   //       should not have any privilages!
   constructor() {
-    owner = msg.sender;
   }
 
     /**
    * @dev Throws if called by any account other than the factory adress.
    */
   modifier onlyFactory() {
-    require(msg.sender == IMainRegistry(_registryAddress).factoryAddress(), "Not factory");
+    require(msg.sender == IMainRegistry(_registryAddress).factoryAddress(), "VL: Not factory");
     _;
   }
 
@@ -92,7 +92,7 @@ contract Vault {
       Reduced to functions needed, while modified to allow
       a transfer of ownership of this vault by a transfer
       of ownership of the accompanying ERC721 Vault NFT
-      issued by the factory. Owner of Vault NFT = ower of vault
+      issued by the factory. Owner of Vault NFT = owner of vault
   ///////////////////////////////////////////////////////////////*/
 
   /**
@@ -108,7 +108,9 @@ contract Vault {
    * Can only be called by the current owner.
    */
   function transferOwnership(address newOwner) public onlyFactory {
-    require(newOwner != address(0), "Ownable: caller is not the owner");
+    if (newOwner == address(0)) {
+      revert("New owner cannot be zero address upon liquidation");
+    }
     _transferOwnership(newOwner);
   }
 

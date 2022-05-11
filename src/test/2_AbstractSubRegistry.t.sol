@@ -73,6 +73,7 @@ contract AbstractSubRegistryTest is DSTest {
 	}
 
 	function testNonOwnerAddsExistingAssetToWhitelist (address unprivilegedAddress) public {
+		vm.assume(unprivilegedAddress != creatorAddress);
 		vm.prank(creatorAddress);
 		abstractSubRegistry.setAssetInformation(address(eth));
 
@@ -103,6 +104,8 @@ contract AbstractSubRegistryTest is DSTest {
 	}
 
 	function testNonOwnerRemovesExistingAssetFromWhitelist (address unprivilegedAddress) public {
+		vm.assume(unprivilegedAddress != creatorAddress);
+		
 		vm.prank(creatorAddress);
 		abstractSubRegistry.setAssetInformation(address(eth));
 
@@ -136,6 +139,8 @@ contract AbstractSubRegistryTest is DSTest {
 	}
 
 	function testNonOwnerAddsRemovedAssetToWhitelist (address unprivilegedAddress) public {
+		vm.assume(unprivilegedAddress != creatorAddress);
+
 		vm.startPrank(creatorAddress);
 		abstractSubRegistry.setAssetInformation(address(eth));
 		abstractSubRegistry.removeFromWhiteList(address(eth));
