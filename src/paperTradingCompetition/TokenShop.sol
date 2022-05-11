@@ -25,8 +25,8 @@ import {FixedPointMathLib} from './../utils/FixedPointMathLib.sol';
 contract TokenShop is Ownable {
   using FixedPointMathLib for uint256;
 
-  address private factory;
-  address private mainRegistry;
+  address public factory;
+  address public mainRegistry;
 
   struct SwapInput {
     address[] tokensIn;

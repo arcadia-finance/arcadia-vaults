@@ -18,6 +18,7 @@ import "../../utils/Constants.sol";
 import "../../paperTradingCompetition/Oracles/StableOracle.sol";
 import "../../mockups/SimplifiedChainlinkOracle.sol";
 import "../../paperTradingCompetition/TokenShop.sol";
+import "../../utils/Strings.sol";
 
 contract DeployContracts  {
 
@@ -27,126 +28,20 @@ contract DeployContracts  {
   address public proxyAddr;
   
   OracleHub public oracleHub;
-  StableOracle public oracleStableToUsd;
   MainRegistry public mainRegistry;
   StandardERC20Registry public standardERC20Registry;
   FloorERC721SubRegistry public floorERC721Registry;
   InterestRateModule public interestRateModule;
-  StablePaperTrading public stable;
-  StableOracle public oracle;
+  StablePaperTrading public stableUsd;
+  StablePaperTrading public stableEth;
+  StableOracle public oracleStableUsdToUsd;
+  StableOracle public oracleStableEthToEth;
   Liquidator public liquidator;
   TokenShop public tokenShop;
 
   ERC20PaperTrading public weth;
-  ERC20PaperTrading public wbtc;
-  ERC20PaperTrading public usdc;
-  ERC20PaperTrading public shib;
-  ERC20PaperTrading public matic;
-  ERC20PaperTrading public cro;
-  ERC20PaperTrading public uni;
-  ERC20PaperTrading public link;
-  ERC20PaperTrading public ftt;
-  ERC20PaperTrading public ape;
-  ERC20PaperTrading public sandbox;
-  ERC20PaperTrading public mana;
-  ERC20PaperTrading public axs;
-  ERC20PaperTrading public aave;
-  ERC20PaperTrading public ftm;
-  ERC20PaperTrading public kcs;
-  ERC20PaperTrading public mkr;
-  ERC20PaperTrading public dai;
-  ERC20PaperTrading public cvx;
-  ERC20PaperTrading public crv;
-  ERC20PaperTrading public lrc;
-  ERC20PaperTrading public bat;
-  ERC20PaperTrading public amp;
-  ERC20PaperTrading public comp;
-  ERC20PaperTrading public oneinch;
-  ERC20PaperTrading public gno;
-  ERC20PaperTrading public omg;
-  ERC20PaperTrading public bnt;
-  ERC20PaperTrading public cel;
-  ERC20PaperTrading public ankr;
-  ERC20PaperTrading public fxs;
-  ERC20PaperTrading public imx;
-  ERC20PaperTrading public ens;
-  ERC20PaperTrading public sushi;
-  ERC20PaperTrading public dydx;
-  ERC20PaperTrading public celr;
-
-
-  ERC721PaperTrading public cryptopunks;
-  ERC721PaperTrading public bayc;
-  ERC721PaperTrading public mayc;
-  ERC721PaperTrading public clonex;
-  ERC721PaperTrading public loot;
-  ERC721PaperTrading public sandboxnft;
-  ERC721PaperTrading public coolcats;
-  ERC721PaperTrading public azuki;
-  ERC721PaperTrading public doodles;
-  ERC721PaperTrading public meebits;
-  ERC721PaperTrading public cyberkongz;
-  ERC721PaperTrading public bakc;
-  ERC721PaperTrading public decentraland;
-  ERC721PaperTrading public timeless;
-  ERC721PaperTrading public foundersplot;
-  ERC721PaperTrading public mfer;
-  ERC721PaperTrading public moonbirds;
 
   SimplifiedChainlinkOracle public oracleEthToUsd;
-  SimplifiedChainlinkOracle public oracleBtcToUsd;
-  SimplifiedChainlinkOracle public oracleUsdcToUsd;
-  SimplifiedChainlinkOracle public oracleShibToUsd;
-  SimplifiedChainlinkOracle public oracleMaticToUsd;
-  SimplifiedChainlinkOracle public oracleCroToUsd;
-  SimplifiedChainlinkOracle public oracleUniToUsd;
-  SimplifiedChainlinkOracle public oracleLinkToUsd;
-  SimplifiedChainlinkOracle public oracleFttToUsd;
-  SimplifiedChainlinkOracle public oracleApeToUsd;
-  SimplifiedChainlinkOracle public oracleSandboxToUsd;
-  SimplifiedChainlinkOracle public oracleManaToUsd;
-  SimplifiedChainlinkOracle public oracleAxsToUsd;
-  SimplifiedChainlinkOracle public oracleAaveToUsd;
-  SimplifiedChainlinkOracle public oracleFtmToUsd;
-  SimplifiedChainlinkOracle public oracleKcsToUsd;
-  SimplifiedChainlinkOracle public oracleMkrToUsd;
-  SimplifiedChainlinkOracle public oracleDaiToUsd;
-  SimplifiedChainlinkOracle public oracleCvxToUsd;
-  SimplifiedChainlinkOracle public oracleCrvToUsd;
-  SimplifiedChainlinkOracle public oracleLrcToUsd;
-  SimplifiedChainlinkOracle public oracleBatToUsd;
-  SimplifiedChainlinkOracle public oracleAmpToUsd;
-  SimplifiedChainlinkOracle public oracleCompToUsd;
-  SimplifiedChainlinkOracle public oracle1InchToUsd;
-  SimplifiedChainlinkOracle public oracleGnoToUsd;
-  SimplifiedChainlinkOracle public oracleOmgToUsd;
-  SimplifiedChainlinkOracle public oracleBntToUsd;
-  SimplifiedChainlinkOracle public oracleCelToUsd;
-  SimplifiedChainlinkOracle public oracleAnkrToUsd;
-  SimplifiedChainlinkOracle public oracleFxsToUsd;
-  SimplifiedChainlinkOracle public oracleImxToUsd;
-  SimplifiedChainlinkOracle public oracleEnsToUsd;
-  SimplifiedChainlinkOracle public oracleSushiToUsd;
-  SimplifiedChainlinkOracle public oracleDydxToUsd;
-  SimplifiedChainlinkOracle public oracleCelrToUsd;
-
-
-  SimplifiedChainlinkOracle public oraclePunkToUsd;
-  SimplifiedChainlinkOracle public oracleBaycToUsd;
-  SimplifiedChainlinkOracle public oracleMaycToUsd;
-  SimplifiedChainlinkOracle public oracleClonexToUsd;
-  SimplifiedChainlinkOracle public oracleLootToUsd;
-  SimplifiedChainlinkOracle public oracleSandboxnftToUsd;
-  SimplifiedChainlinkOracle public oracleCoolcatsToUsd;
-  SimplifiedChainlinkOracle public oracleAzukiToUsd;
-  SimplifiedChainlinkOracle public oracleDoodlesToUsd;
-  SimplifiedChainlinkOracle public oracleMeebitsToUsd;
-  SimplifiedChainlinkOracle public oracleCyberkongzToUsd;
-  SimplifiedChainlinkOracle public oracleBakcToUsd;
-  SimplifiedChainlinkOracle public oracleDecentralandToUsd;
-  SimplifiedChainlinkOracle public oracleTimelessToUsd;
-  SimplifiedChainlinkOracle public oracleFoundersplotToUsd;
-
 
   address private creatorAddress = address(1);
   address private tokenCreatorAddress = address(2);
@@ -170,14 +65,29 @@ contract DeployContracts  {
   //this is a before
   constructor() {
     owner = msg.sender;
+    factory = new FactoryPaperTrading();
+    factory.setBaseURI("ipfs://");
 
-    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, numeraireLabel:'USD', numeraireUnit:1}));
+    stableUsd = new StablePaperTrading("Arcadia USD Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factory));
+    stableEth = new StablePaperTrading("Arcadia ETH Stable Mock", "masETH", uint8(Constants.stableEthDecimals), 0x0000000000000000000000000000000000000000, address(factory));
+
+    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
+    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+
+    // stableUsd.setFactory(address(factory));
+    // stableEth.setFactory(address(factory));
+
+    oracleStableUsdToUsd = new StableOracle(uint8(Constants.oracleStableToUsdDecimals), "masUSD / USD");
+    oracleStableEthToEth = new StableOracle(uint8(Constants.oracleStableEthToEthUnit), "masEth / Eth");
+
+    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stableUsd), numeraireLabel:'USD', numeraireUnit:1}));
+
+    liquidator = new Liquidator(address(factory), address(mainRegistry), address(stableUsd));
+    stableUsd.setLiquidator(address(liquidator));
+    stableEth.setLiquidator(address(liquidator));
 
     tokenShop = new TokenShop(address(mainRegistry));
-
-    stable = new StablePaperTrading("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
-    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
-    stable.setLiquidator(address(liquidator));
+    weth = new ERC20PaperTrading("ETH Mock", "mETH", uint8(Constants.ethDecimals), address(tokenShop));
 
     oracleHub = new OracleHub();
 
@@ -189,24 +99,23 @@ contract DeployContracts  {
 
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
-    oracleStableToUsdArr[0] = address(oracleStableToUsd);
+    oracleStableToUsdArr[0] = address(oracleStableUsdToUsd);
 
     interestRateModule = new InterestRateModule();
     interestRateModule.setBaseInterestRate(5 * 10 ** 16);
 
     vault = new VaultPaperTrading();
-    factory = new FactoryPaperTrading();
-    factory.setVaultInfo(1, address(mainRegistry), address(vault), address(stable), stakeContract, address(interestRateModule), address(interestRateModule));
-    factory.setVaultVersion(1);
+    factory.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
+    factory.confirmNewVaultInfo();
     factory.setLiquidator(address(liquidator));
     liquidator.setFactory(address(factory));
     mainRegistry.setFactory(address(factory));
-    stable.setFactory(address(factory));
+
 
   }
 
   function createVault() public onlyOwner {
-    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))));
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), 0);
     proxy = VaultPaperTrading(proxyAddr);
   }
 
@@ -224,7 +133,7 @@ contract DeployContracts  {
 
   assetInfo[] public assets;
   function storeStructs() public onlyOwner {
-    assets.push(assetInfo({desc: "Wrapped Ether - Mock", symbol: "mwETH", decimals: uint8(Constants.ethDecimals), rate: uint128(rateEthToUsd), oracleDecimals: uint8(Constants.oracleEthToUsdDecimals), quoteAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Wrapped Ether - Mock", symbol: "mwETH", decimals: uint8(Constants.ethDecimals), rate: uint128(rateEthToUsd), oracleDecimals: uint8(Constants.oracleEthToUsdDecimals), quoteAsset: "ETH", oracleAddr: address(oracleEthToUsd), assetAddr: address(weth)}));
     
     assets.push(assetInfo({desc: "Wrapped BTC - Mock", symbol: "mwBTC", decimals: 8, rate: uint128(rateEthToUsd), oracleDecimals: 8, quoteAsset: "BTC", oracleAddr: address(0), assetAddr: address(0)}));
     assets.push(assetInfo({desc: "USD Coin - Mock", symbol: "mUSDC", decimals: 6, rate: uint128(rateEthToUsd), oracleDecimals: 8, quoteAsset: "USDC", oracleAddr: address(0), assetAddr: address(0)}));
@@ -314,11 +223,15 @@ contract DeployContracts  {
       asset = assets[i];
       newContr = address(new SimplifiedChainlinkOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD"))));
       assets[i].oracleAddr = newContr;
+
+      if (keccak256(bytes(asset.symbol)) == keccak256(bytes("mwETH"))) {
+        oracleEthToUsd = SimplifiedChainlinkOracle(newContr);
+      }
     }
 
-    oracleStableToUsd = new StableOracle(uint8(Constants.oracleStableToUsdDecimals), "STABLE / USD");
     uint256[] memory emptyList = new uint256[](0);
-    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(weth), numeraireToUsdOracle:address(oracleEthToUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(weth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stableUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+
   }
 
   function setOracleAnswers() public onlyOwner {
@@ -336,7 +249,7 @@ contract DeployContracts  {
       oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit: uint64(10**asset.oracleDecimals), baseAssetNumeraire: 0, quoteAsset: asset.quoteAsset, baseAsset: "USD", oracleAddress: asset.oracleAddr, quoteAssetAddress: asset.assetAddr, baseAssetIsNumeraire: true}));
     }
 
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit: uint64(10**18), baseAssetNumeraire: 0, quoteAsset: "STABLE", baseAsset: "USD", oracleAddress: address(oracleStableToUsd), quoteAssetAddress: address(0), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit: uint64(10**18), baseAssetNumeraire: 0, quoteAsset: "STABLE", baseAsset: "USD", oracleAddress: address(oracleStableUsdToUsd), quoteAssetAddress: address(0), baseAssetIsNumeraire: true}));
 
   }
 
@@ -355,9 +268,131 @@ contract DeployContracts  {
         }
     }
 
-    genOracleArr[0] = address(oracleStableToUsd);
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: genOracleArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stable)}), emptyList);
+    // genOracleArr[0] = address(oracleStableToUsd);
+    // standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: genOracleArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stableUsd)}), emptyList);
 
+  }
+
+  function returnAssets() public view returns (assetInfo[] memory) {
+    return assets;
+  }
+
+  function verify() public returns (bool) {
+    storeStructs();
+    deployERC20Contracts();
+    deployERC721Contracts();
+    deployOracles();
+    setOracleAnswers();
+    addOracles();
+    setAssetInformation();
+
+    require(checkAddressesInit(), "Verification: addresses not inited");
+    require(checkFactory(), "Verification: factory not set");
+    require(checkStables(), "Verification: Stables not set");
+    require(checkTokenShop(), "Verification: tokenShop not set");
+    require(checkLiquidator(), "Verification: Liquidator not set");
+    require(checkSubregs(), "Verification: Subregs not set");
+
+    return true;
+  }
+
+  function checkMainreg() public view returns (bool) {
+    require(mainRegistry.isSubRegistry(address(standardERC20Registry)), "MR: ERC20SR not set");
+    require(mainRegistry.isSubRegistry(address(floorERC721Registry)), "MR: ERC721SR not set");
+    require(mainRegistry.factoryAddress() == address(factory), "MR: fact not set");
+
+    uint64 numeraireToUsdOracleUnit;
+    uint64 numeraireUnit;
+    address assetAddress;
+    address numeraireToUsdOracle;
+    address stableAddress;
+    string memory numeraireLabel;
+
+    uint256 numCounter = mainRegistry.numeraireCounter();
+    require(numCounter > 0);
+    for (uint i; i < numCounter; ++i) {
+      (numeraireToUsdOracleUnit, numeraireUnit, assetAddress, numeraireToUsdOracle, stableAddress, numeraireLabel) = mainRegistry.numeraireToInformation(0);
+      require(numeraireToUsdOracleUnit != 0 && 
+              numeraireUnit != 0 && 
+              assetAddress != address(0) && 
+              numeraireToUsdOracle != address(0) && 
+              stableAddress != address(0) && 
+              bytes(numeraireLabel).length != 0, "MR: num 0 not set");
+    }
+
+    return true;
+  }
+
+  function checkSubregs() public view returns (bool) {
+    require(standardERC20Registry._mainRegistry() == address(mainRegistry), "ERC20SR: mainreg not set");
+    require(floorERC721Registry._mainRegistry() == address(mainRegistry), "ERC721SR: mainreg not set");
+    require(standardERC20Registry._oracleHub() == address(oracleHub), "ERC20SR: OH not set");
+    require(floorERC721Registry._oracleHub() == address(oracleHub), "ERC721SR: OH not set");
+
+    return true;
+  }
+
+  function checkLiquidator() public view returns (bool) {
+    require(liquidator.registryAddress() == address(mainRegistry), "Liq: mainreg not set");
+    require(liquidator.factoryAddress() == address(factory), "Liq: fact not set");
+    require(liquidator.stable() == address(stableUsd), "Liq: stable not set");
+
+    return true;
+  }
+
+  function checkTokenShop() public view returns (bool) {
+    require(tokenShop.mainRegistry() == address(mainRegistry), "TokenShop: mainreg not set");
+
+    return true;
+  }
+
+  function checkStables() public view returns (bool) {
+    require(stableUsd.liquidator() == address(liquidator), "StableUSD: liq not set");
+    require(stableUsd.factory() == address(factory), "StableUSD: fact not set");
+    require(stableEth.liquidator() == address(liquidator), "StableETH: liq not set");
+    require(stableEth.factory() == address(factory), "StableETH: fact not set");
+
+    return true;
+  }
+
+  function checkFactory() public view returns (bool) {
+    require(bytes(factory.baseURI()).length != 0, "FTRY: baseURI not set");
+    uint256 numCountFact = factory.numeraireCounter();
+    require(numCountFact == mainRegistry.numeraireCounter(), "FTRY: numCountFact != numCountMR");
+    require(factory.liquidatorAddress() != address(0), "FTRY: LiqAddr not set");
+    require(factory.newVaultInfoSet() == false, "FTRY: newVaultInfo still set");
+    require(factory.getCurrentRegistry() == address(mainRegistry), "FTRY: mainreg not set");
+    (, address factLogic, address factStake, address factIRM) = factory.vaultDetails(factory.currentVaultVersion());
+    require(factLogic == address(vault), "FTRY: vaultLogic not set");
+    require(factStake == address(stakeContract), "FTRY: stakeContr not set");
+    require(factIRM == address(interestRateModule), "FTRY: IRM not set");
+    for (uint256 i; i < numCountFact; ++i) {
+      require(factory.numeraireToStable(i) != address(0), string(abi.encodePacked("FTRY: numToStable not set for", Strings.toString(i))));
+    }
+
+    return true;
+  }
+
+  error AddressNotInitialised();
+  function checkAddressesInit() public view returns (bool) {
+    require(owner != address(0), "AddrCheck: owner not set");
+    require(address(factory) != address(0), "AddrCheck: factory not set");
+    require(address(vault) != address(0), "AddrCheck: vault not set");
+    require(address(oracleHub) != address(0), "AddrCheck: oracleHub not set");
+    require(address(mainRegistry) != address(0), "AddrCheck: mainRegistry not set");
+    require(address(standardERC20Registry) != address(0), "AddrCheck: standardERC20Registry not set");
+    require(address(floorERC721Registry) != address(0), "AddrCheck: floorERC721Registry not set");
+    require(address(interestRateModule) != address(0), "AddrCheck: interestRateModule not set");
+    require(address(stableUsd) != address(0), "AddrCheck: stableUsd not set");
+    require(address(stableEth) != address(0), "AddrCheck: stableEth not set");
+    require(address(oracleStableUsdToUsd) != address(0), "AddrCheck: oracleStableUsdToUsd not set");
+    require(address(oracleStableEthToEth) != address(0), "AddrCheck: oracleStableEthToEth not set");
+    require(address(liquidator) != address(0), "AddrCheck: liquidator not set");
+    require(address(tokenShop) != address(0), "AddrCheck: tokenShop not set");
+    require(address(weth) != address(0), "AddrCheck: weth not set");
+    require(address(oracleEthToUsd) != address(0), "AddrCheck: oracleEthToUsd not set");
+
+    return true;
   }
 
 }

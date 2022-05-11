@@ -45,6 +45,10 @@ contract DeployPaperTests is DSTest {
     deployer.setAssetInformation();
   }
 
+  function testVerify() public {
+    assertTrue(deployer.verify());
+  }
+
   // function testsetOracleAnswers() public {
   //   deployer.setOracleAnswers();
   // }
