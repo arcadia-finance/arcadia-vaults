@@ -12,7 +12,7 @@ import "../mockups/ERC1155SolmateMock.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../AssetRegistry/floorERC1155SubRegistry.sol";
+import "../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../OracleHub.sol";
 import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../Factory.sol";
