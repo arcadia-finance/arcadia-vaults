@@ -1066,7 +1066,11 @@ contract vaultTests is DSTest {
     assertEq(remainingCreditLocal, remainingCreditFetched);
   }
 
-
+  function testTransferOwnershipOfVaultByNonOwner(address sender) public {
+    vm.startPrank(sender);
+    vm.expectRevert("VL: Not factory");
+    vault.transferOwnership(address(10));
+  }
 
 
   function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {

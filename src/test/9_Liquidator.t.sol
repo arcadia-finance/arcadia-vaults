@@ -282,6 +282,30 @@ contract LiquidatorTest is DSTest {
     stable.approve(address(liquidator), type(uint256).max);
   }
 
+  function testTransferOwnership(address to) public {
+    Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+
+    assertEq(address(this), liquidator_m.owner());
+
+    liquidator_m.transferOwnership(to);
+    assertEq(to, liquidator_m.owner());
+  }
+
+  function testTransferOwnershipByNonOwner(address from) public {
+    vm.assume(from != address(this));
+
+    Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    address to = address(12345);
+
+    assertEq(address(this), liquidator_m.owner());
+
+    vm.startPrank(from);
+    vm.expectRevert("Ownable: caller is not the owner");
+    liquidator_m.transferOwnership(to);
+    assertEq(address(this), liquidator_m.owner());
+  }
+
+
   function testNotAllowAuctionHealthyVault(uint128 amountEth, uint128 amountCredit) public {
     uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
     vm.assume(amountEth < type(uint128).max / valueOfOneEth);

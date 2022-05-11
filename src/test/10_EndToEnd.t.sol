@@ -264,6 +264,29 @@ contract EndToEndTest is DSTest {
 
   }
 
+  function testTransferOwnershipStable(address to) public {
+    Stable stable_m = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+
+    assertEq(address(this), stable_m.owner());
+
+    stable_m.transferOwnership(to);
+    assertEq(to, stable_m.owner());
+  }
+
+  function testTransferOwnershipStableByNonOwner(address from) public {
+    vm.assume(from != address(this));
+
+    Stable stable_m = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+    address to = address(12345);
+
+    assertEq(address(this), stable_m.owner());
+
+    vm.startPrank(from);
+    vm.expectRevert("Ownable: caller is not the owner");
+    stable_m.transferOwnership(to);
+    assertEq(address(this), stable_m.owner());
+  }
+
   function testReturnUsdValueOfEth(uint128 amount) public {
     uint256 valueOfOneEth = Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals;
     uint256 expectedValue = valueOfOneEth * amount / 10 ** Constants.ethDecimals;

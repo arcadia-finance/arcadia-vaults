@@ -109,7 +109,9 @@ contract Vault {
    * Can only be called by the current owner.
    */
   function transferOwnership(address newOwner) public onlyFactory {
-    require(newOwner != address(0), "Ownable: caller is not the owner");
+    if (newOwner == address(0)) {
+      revert("New owner cannot be zero address upon liquidation");
+    }
     _transferOwnership(newOwner);
   }
 
