@@ -74,9 +74,6 @@ contract DeployContracts  {
     oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
     oracleEthToUsd.setAnswer(int256(rateEthToUsd));
 
-    // stableUsd.setFactory(address(factory));
-    // stableEth.setFactory(address(factory));
-
     oracleStableUsdToUsd = new StableOracle(uint8(Constants.oracleStableToUsdDecimals), "masUSD / USD");
     oracleStableEthToEth = new StableOracle(uint8(Constants.oracleStableEthToEthUnit), "masEth / Eth");
 
