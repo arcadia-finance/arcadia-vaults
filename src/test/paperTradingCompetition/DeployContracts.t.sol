@@ -21,11 +21,6 @@ contract DeployPaperTests is DSTest {
     deployer.storeStructs();
   }
 
-  // function setUp() public {
-  //   deployer = new DeployContracts();
-  //   deployer.storeStructs();
-  // }
-
   function test() public {
     assertTrue(address(deployer) != address(0));
   }
@@ -48,17 +43,5 @@ contract DeployPaperTests is DSTest {
   function testVerify() public {
     assertTrue(deployer.verify());
   }
-
-  // function testsetOracleAnswers() public {
-  //   deployer.setOracleAnswers();
-  // }
-
-  // function testaddOracles() public {
-  //   deployer.addOracles();
-  // }
-
-  // function testsetAssetInformation() public {
-  //   deployer.setAssetInformation();
-  // }
 
 }

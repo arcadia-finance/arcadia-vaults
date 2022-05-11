@@ -62,7 +62,6 @@ contract DeployContracts  {
     _;
   }
 
-  //this is a before
   constructor() {
     owner = msg.sender;
     factory = new FactoryPaperTrading();
@@ -115,7 +114,6 @@ contract DeployContracts  {
     proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), 0);
     proxy = VaultPaperTrading(proxyAddr);
   }
-
 
   struct assetInfo {
     string desc;
@@ -263,16 +261,35 @@ contract DeployContracts  {
         }
     }
 
-    // genOracleArr[0] = address(oracleStableToUsd);
-    // standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: genOracleArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stableUsd)}), emptyList);
+  }
 
+  function transferOwnerships() public onlyOwner {
+    factory.transfer;
+    vault;
+    proxy;
+    
+    oracleHub;
+    mainRegistry;
+    standardERC20Registry;
+    floorERC721Registry;
+    interestRateModule;
+    stableUsd;
+    stableEth;
+    oracleStableUsdToUsd;
+    oracleStableEthToEth;
+    liquidator;
+    tokenShop;
+
+    weth;
+
+    oracleEthToUsd;
   }
 
   function returnAssets() public view returns (assetInfo[] memory) {
     return assets;
   }
 
-  function verify() public returns (bool) {
+  function verify() public onlyOwner returns (bool) {
     storeStructs();
     deployERC20Contracts();
     deployERC721Contracts();
