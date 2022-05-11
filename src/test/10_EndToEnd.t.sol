@@ -265,6 +265,7 @@ contract EndToEndTest is DSTest {
   }
 
   function testTransferOwnershipStable(address to) public {
+    vm.assume(to != address(0));
     Stable stable_m = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
 
     assertEq(address(this), stable_m.owner());

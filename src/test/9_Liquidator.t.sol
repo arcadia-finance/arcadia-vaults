@@ -283,6 +283,7 @@ contract LiquidatorTest is DSTest {
   }
 
   function testTransferOwnership(address to) public {
+    vm.assume(to != address(0));
     Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
 
     assertEq(address(this), liquidator_m.owner());

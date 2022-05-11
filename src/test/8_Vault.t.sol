@@ -200,11 +200,14 @@ contract vaultTests is DSTest {
     mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stable), numeraireLabel:'USD', numeraireUnit:1}));
     uint256[] memory emptyList = new uint256[](0);
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stable), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    vm.stopPrank();
 
     vm.prank(creatorAddress);
     factoryContr.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
     vm.prank(creatorAddress);
     factoryContr.confirmNewVaultInfo();
+
+    vm.startPrank(creatorAddress);
     mainRegistry.setFactory(address(factoryContr));
 
     standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
