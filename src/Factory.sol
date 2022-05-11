@@ -243,7 +243,7 @@ contract Factory is ERC721 {
 
   /** 
     @notice Function that stores a new base URI.
-    @dev tokenURI's of Arcadia Vaults holds no value
+    @dev tokenURI's of Arcadia Vaults are not meant to be immutable
         and might be updated later to allow users to
         choose/create their own vault art,
         as such no URI freeze is added.
