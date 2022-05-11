@@ -16,7 +16,7 @@ import "../../Stable.sol";
 import "../../AssetRegistry/MainRegistry.sol";
 import "../../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../../AssetRegistry/floorERC1155SubRegistry.sol";
+import "../../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../../InterestRateModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
@@ -343,8 +343,6 @@ contract gasLiquidate_2ERC20 is DSTest {
     stable.approve(address(proxy), type(uint256).max);
     stable.approve(address(liquidator), type(uint256).max);
     vm.stopPrank();
-
-    vm.startPrank(vaultOwner);
 
     vm.startPrank(vaultOwner);
 

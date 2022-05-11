@@ -16,7 +16,7 @@ import "../Stable.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../AssetRegistry/floorERC1155SubRegistry.sol";
+import "../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../InterestRateModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
@@ -262,6 +262,30 @@ contract EndToEndTest is DSTest {
     stable.approve(address(liquidator), type(uint256).max);
     vm.stopPrank();
 
+  }
+
+  function testTransferOwnershipStable(address to) public {
+    vm.assume(to != address(0));
+    Stable stable_m = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+
+    assertEq(address(this), stable_m.owner());
+
+    stable_m.transferOwnership(to);
+    assertEq(to, stable_m.owner());
+  }
+
+  function testTransferOwnershipStableByNonOwner(address from) public {
+    vm.assume(from != address(this));
+
+    Stable stable_m = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
+    address to = address(12345);
+
+    assertEq(address(this), stable_m.owner());
+
+    vm.startPrank(from);
+    vm.expectRevert("Ownable: caller is not the owner");
+    stable_m.transferOwnership(to);
+    assertEq(address(this), stable_m.owner());
   }
 
   function testReturnUsdValueOfEth(uint128 amount) public {
@@ -584,7 +608,7 @@ contract EndToEndTest is DSTest {
 
     uint256 debtAtStart = proxy.getOpenDebt();
 
-    vm.roll(amountOfBlocksToRoll);
+    vm.roll(block.number + amountOfBlocksToRoll);
 
     uint256 actualDebt = proxy.getOpenDebt();
 
@@ -608,7 +632,7 @@ contract EndToEndTest is DSTest {
     proxy.takeCredit(amountCredit);
     vm.stopPrank();
 
-    vm.roll(10); //
+    vm.roll(block.number + 10); //
 
     vm.startPrank(vaultOwner);
     vm.expectRevert("Cannot take this amount of extra credit!");
@@ -717,7 +741,7 @@ contract EndToEndTest is DSTest {
 
     uint256 balanceBefore = stable.balanceOf(stakeContract);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
     proxy.syncDebt();
     uint256 balanceAfter = stable.balanceOf(stakeContract);
 
@@ -749,7 +773,7 @@ contract EndToEndTest is DSTest {
     vm.prank(tokenCreatorAddress);
     stable.transfer(vaultOwner, 1000 * 10**18);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
 
     uint128 openDebt = proxy.getOpenDebt();
     vm.startPrank(address(proxy));
@@ -761,7 +785,7 @@ contract EndToEndTest is DSTest {
 
     assertEq(proxy.getOpenDebt(), 0);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + uint256(blocksToRoll) * 2);
     assertEq(proxy.getOpenDebt(), 0);
   }
 
@@ -785,7 +809,7 @@ contract EndToEndTest is DSTest {
     vm.prank(address(proxy));
     stable.mint(vaultOwner, factor * amountCredit);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
 
     uint128 openDebt = proxy.getOpenDebt();
     uint256 balanceBefore = stable.balanceOf(vaultOwner);
@@ -801,7 +825,7 @@ contract EndToEndTest is DSTest {
     assertEq(balanceBefore - openDebt, balanceAfter);
     assertEq(proxy.getOpenDebt(), 0);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + uint256(blocksToRoll) * 2);
     assertEq(proxy.getOpenDebt(), 0);
   }
 
@@ -825,7 +849,7 @@ contract EndToEndTest is DSTest {
     vm.prank(address(proxy));
     stable.mint(vaultOwner, 1000 * 10**18);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
 
     uint128 openDebt = proxy.getOpenDebt();
     vm.assume(toRepay < openDebt);
@@ -839,7 +863,7 @@ contract EndToEndTest is DSTest {
 
     assertEq(proxy.getOpenDebt(), expectedDebt);
 
-    vm.roll(uint256(blocksToRoll)*2);
+    vm.roll(block.number + uint256(blocksToRoll));
     (,,,_yearlyInterestRate,,) = proxy.debt();
     base = _yearlyInterestRate + 10**18;
     exponent = uint128(uint128(blocksToRoll) * 10**18 / proxy.yearlyBlocks());

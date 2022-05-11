@@ -16,7 +16,7 @@ import "../Stable.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../AssetRegistry/floorERC1155SubRegistry.sol";
+import "../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../InterestRateModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
@@ -282,6 +282,31 @@ contract LiquidatorTest is DSTest {
     stable.approve(address(liquidator), type(uint256).max);
   }
 
+  function testTransferOwnership(address to) public {
+    vm.assume(to != address(0));
+    Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+
+    assertEq(address(this), liquidator_m.owner());
+
+    liquidator_m.transferOwnership(to);
+    assertEq(to, liquidator_m.owner());
+  }
+
+  function testTransferOwnershipByNonOwner(address from) public {
+    vm.assume(from != address(this));
+
+    Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    address to = address(12345);
+
+    assertEq(address(this), liquidator_m.owner());
+
+    vm.startPrank(from);
+    vm.expectRevert("Ownable: caller is not the owner");
+    liquidator_m.transferOwnership(to);
+    assertEq(address(this), liquidator_m.owner());
+  }
+
+
   function testNotAllowAuctionHealthyVault(uint128 amountEth, uint128 amountCredit) public {
     uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
     vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -380,7 +405,7 @@ contract LiquidatorTest is DSTest {
     (uint128 openDebt,, uint8 liqThres,,,) = liquidator.auctionInfo(address(proxy), 0);
     (uint256 vaultPriceBefore, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
     (uint256 vaultPriceAfter, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
 
     uint256 expectedPrice = (openDebt * liqThres /100)  - (blocksToRoll * (openDebt * (liqThres-100)/100) /(liquidator.hourlyBlocks() * liquidator.auctionDuration()));

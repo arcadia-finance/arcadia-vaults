@@ -142,6 +142,55 @@ contract factoryTest is DSTest {
 
   }
 
+  function testFailTransferVaultByNonOwner(address sender) public {
+    address receiver = unprivilegedAddress1;
+    address vaultOwner = address(1);
+    vm.assume(sender != address(0) && sender != vaultOwner);
+
+    vm.startPrank(vaultOwner);
+    address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+    vm.stopPrank();
+
+    //Make sure index in erc721 == vaultIndex
+    assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+
+    //Make sure vault itself is owned by sender
+    assertEq(IVault(vault).owner(), sender);
+
+    //Make sure erc721 is owned by sender
+    assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), sender);
+
+    //Transfer vault to another address
+    vm.startPrank(sender);
+    factoryContr.safeTransferFrom(vaultOwner, receiver, factoryContr.vaultIndex(vault));
+    vm.stopPrank();  
+
+  }
+
+  function testTransferOwnership(address to) public {
+    vm.assume(to != address(0));
+    Factory factoryContr_m = new Factory();
+
+    assertEq(address(this), factoryContr_m.owner());
+
+    factoryContr_m.transferOwnership(to);
+    assertEq(to, factoryContr_m.owner());
+  }
+
+  function testTransferOwnershipByNonOwner(address from) public {
+    vm.assume(from != address(this));
+
+    Factory factoryContr_m = new Factory();
+    address to = address(12345);
+
+    assertEq(address(this), factoryContr_m.owner());
+
+    vm.startPrank(from);
+    vm.expectRevert("Ownable: caller is not the owner");
+    factoryContr_m.transferOwnership(to);
+    assertEq(address(this), factoryContr_m.owner());
+  }
+
   //TODO: Odd test behavior
   function testFailTransferVaultNotOwner(address sender, address receiver) public {
     vm.assume(sender != address(0));
@@ -212,7 +261,7 @@ contract factoryTest is DSTest {
   //Test setNewVaultInfo
   function testNonOwnerSetsNewVaultInfo(address unprivilegedAddress) public {
     vm.startPrank(unprivilegedAddress);
-    vm.expectRevert("You are not the owner");
+    vm.expectRevert("Ownable: caller is not the owner");
     factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), 0x0000000000000000000000000000000000000000, address(interestContr));
     vm.stopPrank();
   }
@@ -249,6 +298,8 @@ contract factoryTest is DSTest {
   }
 
   function testOwnerSetsNewVaultWithInfoMissingNumeraireInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public {
+    vm.assume(newStable != address(0));
+    
 		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newStable, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
     assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
     assertEq(newStable, factoryContr.numeraireToStable(1));
@@ -290,7 +341,7 @@ contract factoryTest is DSTest {
   //Test confirmNewVaultInfo
   function testNonOwnerConfirmsNewVaultInfo(address unprivilegedAddress) public {
     vm.startPrank(unprivilegedAddress);
-    vm.expectRevert("You are not the owner");
+    vm.expectRevert("Ownable: caller is not the owner");
     factoryContr.confirmNewVaultInfo();
     vm.stopPrank();
   }
