@@ -168,6 +168,7 @@ contract factoryTest is DSTest {
   }
 
   function testTransferOwnership(address to) public {
+    vm.assume(to != address(0));
     Factory factoryContr_m = new Factory();
 
     assertEq(address(this), factoryContr_m.owner());
@@ -297,6 +298,8 @@ contract factoryTest is DSTest {
   }
 
   function testOwnerSetsNewVaultWithInfoMissingNumeraireInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public {
+    vm.assume(newStable != address(0));
+    
 		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newStable, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
     assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
     assertEq(newStable, factoryContr.numeraireToStable(1));

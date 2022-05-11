@@ -346,8 +346,6 @@ contract gasLiquidate_2ERC20 is DSTest {
 
     vm.startPrank(vaultOwner);
 
-    vm.startPrank(vaultOwner);
-
     s_1 = new address[](2);
     s_1[0] = address(eth);
     s_1[1] = address(link);

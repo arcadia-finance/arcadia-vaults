@@ -200,11 +200,14 @@ contract vaultTests is DSTest {
     mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stable), numeraireLabel:'USD', numeraireUnit:1}));
     uint256[] memory emptyList = new uint256[](0);
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stable), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    vm.stopPrank();
 
     vm.prank(creatorAddress);
     factoryContr.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
     vm.prank(creatorAddress);
     factoryContr.confirmNewVaultInfo();
+
+    vm.startPrank(creatorAddress);
     mainRegistry.setFactory(address(factoryContr));
 
     standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
@@ -684,7 +687,7 @@ contract vaultTests is DSTest {
     assertEq(expectedValue, actualValue);
   }
 
-  function testNotAllowWithdrawERC20fterTakingCredit (uint8 baseAmountDeposit, uint32 baseAmountCredit, uint8 baseAmountWithdraw) public {
+  function testNotAllowWithdrawERC20fterTakingCredit (uint8 baseAmountDeposit, uint24 baseAmountCredit, uint8 baseAmountWithdraw) public {
     vm.assume(baseAmountCredit > 0);
     vm.assume(baseAmountWithdraw > 0);
     vm.assume(baseAmountWithdraw < baseAmountDeposit);
@@ -978,7 +981,7 @@ contract vaultTests is DSTest {
     (,_collThres,,_yearlyInterestRate,,_numeraire) = vault.debt();
     assertTrue(_yearlyInterestRate == base - 1e18);
 
-    vm.roll(deltaBlocks);
+    vm.roll(block.number + deltaBlocks);
 
     uint128 unRealisedDebt;
 
@@ -1010,7 +1013,7 @@ contract vaultTests is DSTest {
 
     (,_collThres,,_yearlyInterestRate,,_numeraire) = vault.debt();
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
 
     uint256 base;
     uint256 exponent;
@@ -1082,6 +1085,7 @@ contract vaultTests is DSTest {
   }
 
   function testTransferOwnershipOfVaultByNonOwner(address sender) public {
+    vm.assume(sender != address(factoryContr));
     vm.startPrank(sender);
     vm.expectRevert("VL: Not factory");
     vault.transferOwnership(address(10));

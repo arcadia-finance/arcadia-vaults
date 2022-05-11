@@ -283,6 +283,7 @@ contract LiquidatorTest is DSTest {
   }
 
   function testTransferOwnership(address to) public {
+    vm.assume(to != address(0));
     Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
 
     assertEq(address(this), liquidator_m.owner());
@@ -404,7 +405,7 @@ contract LiquidatorTest is DSTest {
     (uint128 openDebt,, uint8 liqThres,,,) = liquidator.auctionInfo(address(proxy), 0);
     (uint256 vaultPriceBefore, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
-    vm.roll(blocksToRoll);
+    vm.roll(block.number + blocksToRoll);
     (uint256 vaultPriceAfter, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
 
     uint256 expectedPrice = (openDebt * liqThres /100)  - (blocksToRoll * (openDebt * (liqThres-100)/100) /(liquidator.hourlyBlocks() * liquidator.auctionDuration()));
