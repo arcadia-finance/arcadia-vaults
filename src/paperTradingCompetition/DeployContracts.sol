@@ -264,25 +264,21 @@ contract DeployContracts  {
   }
 
   function transferOwnerships() public onlyOwner {
-    factory.transfer;
-    vault;
-    proxy;
+    factory.transferOwnership(owner);
     
-    oracleHub;
-    mainRegistry;
-    standardERC20Registry;
-    floorERC721Registry;
-    interestRateModule;
-    stableUsd;
-    stableEth;
-    oracleStableUsdToUsd;
-    oracleStableEthToEth;
-    liquidator;
-    tokenShop;
+    oracleHub.transferOwnership(owner);
+    mainRegistry.transferOwnership(owner);
+    standardERC20Registry.transferOwnership(owner);
+    floorERC721Registry.transferOwnership(owner);
+    interestRateModule.transferOwnership(owner);
+    stableUsd.transferOwnership(owner);
+    stableEth.transferOwnership(owner);
+    oracleStableUsdToUsd.transferOwnership(owner);
+    oracleStableEthToEth.transferOwnership(owner);
+    liquidator.transferOwnership(owner);
+    tokenShop.transferOwnership(owner);
 
-    weth;
-
-    oracleEthToUsd;
+    oracleEthToUsd.transferOwnership(owner);
   }
 
   function returnAssets() public view returns (assetInfo[] memory) {
@@ -297,6 +293,18 @@ contract DeployContracts  {
     setOracleAnswers();
     addOracles();
     setAssetInformation();
+
+    require(checkAddressesInit(), "Verification: addresses not inited");
+    require(checkFactory(), "Verification: factory not set");
+    require(checkStables(), "Verification: Stables not set");
+    require(checkTokenShop(), "Verification: tokenShop not set");
+    require(checkLiquidator(), "Verification: Liquidator not set");
+    require(checkSubregs(), "Verification: Subregs not set");
+
+    return true;
+  }
+
+  function verifyView() public view returns (bool) {
 
     require(checkAddressesInit(), "Verification: addresses not inited");
     require(checkFactory(), "Verification: factory not set");

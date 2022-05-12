@@ -44,4 +44,14 @@ contract DeployPaperTests is DSTest {
     assertTrue(deployer.verify());
   }
 
+  function testTransferOwnership() public {
+    deployer.deployERC20Contracts();
+    deployer.deployERC721Contracts();
+    deployer.deployOracles();
+    deployer.setOracleAnswers();
+    deployer.addOracles();
+    deployer.setAssetInformation();
+    deployer.transferOwnerships();
+  }
+
 }
