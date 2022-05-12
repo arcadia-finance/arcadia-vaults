@@ -5,18 +5,15 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "./interfaces/IFactory.sol";
-
 import "./interfaces/IMainRegistry.sol";
-
 import "./interfaces/IStable.sol";
-
 import "./interfaces/IVault.sol";
+import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 
-contract Liquidator {
+contract Liquidator is Ownable {
 
   address public factoryAddress;
-  address public owner;
   uint8 public numeraireOfDebt;
   address public registryAddress;
   address public stable;
@@ -48,7 +45,6 @@ contract Liquidator {
 
   constructor(address newFactory, address newRegAddr, address stableAddr) {
     factoryAddress = newFactory;
-    owner = msg.sender;
     numeraireOfDebt = 0;
     registryAddress = newRegAddr;
     stable = stableAddr;
@@ -57,11 +53,6 @@ contract Liquidator {
 
   modifier elevated() {
     require(IFactory(factoryAddress).isVault(msg.sender), "This can only be called by a vault");
-    _;
-  }
-
-  modifier onlyOwner() {
-    require(msg.sender == owner, "You are not the owner");
     _;
   }
 

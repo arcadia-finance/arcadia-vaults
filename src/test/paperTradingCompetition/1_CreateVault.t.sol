@@ -53,7 +53,7 @@ contract CreateVaultTest is DSTest {
 
   address[] public oracleEthToUsdArr = new address[](1);
   address[] public oracleStableUsdToUsdArr = new address[](1);
-  address[] public oracleStableEthToEthArr = new address[](2);
+  address[] public oracleStableEthToUsdArr = new address[](2);
 
   //this is a before
   constructor() {
@@ -92,12 +92,12 @@ contract CreateVaultTest is DSTest {
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
     oracleStableUsdToUsdArr[0] = address(oracleStableUsdToUsd);
-    oracleStableEthToEthArr[0] = address(oracleStableEthToEth);
-    oracleStableEthToEthArr[1] = address(oracleEthToUsd);
+    oracleStableEthToUsdArr[0] = address(oracleStableEthToEth);
+    oracleStableEthToUsdArr[1] = address(oracleEthToUsd);
 
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableUsdToUsdArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stableUsd)}), emptyList);
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableEthToEthArr, assetUnit: uint64(10**Constants.stableEthDecimals), assetAddress: address(stableEth)}), emptyList);
+    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableEthToUsdArr, assetUnit: uint64(10**Constants.stableEthDecimals), assetAddress: address(stableEth)}), emptyList);
 
     interestRateModule = new InterestRateModule();
     interestRateModule.setBaseInterestRate(5 * 10 ** 16);

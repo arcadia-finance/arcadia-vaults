@@ -8,8 +8,11 @@ import "./Proxy.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IMainRegistry.sol";
 import "../lib/solmate/src/tokens/ERC721.sol";
+import "./utils/Strings.sol";
+import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
-contract Factory is ERC721 {
+contract Factory is ERC721, Ownable {
+  using Strings for uint256;
 
   struct vaultVersionInfo {
     address registryAddress;
@@ -30,8 +33,6 @@ contract Factory is ERC721 {
 
   string public baseURI;
 
-  address public owner;
-
   address public liquidatorAddress;
 
   uint256 public numeraireCounter;
@@ -39,14 +40,7 @@ contract Factory is ERC721 {
 
   event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 id);
 
-  modifier onlyOwner() {
-    require(msg.sender == owner, "You are not the owner");
-    _;
-  }
-
-  constructor() ERC721("Arcadia Vault", "ARCADIA") {
-    owner = msg.sender;
-  }
+  constructor() ERC721("Arcadia Vault", "ARCADIA") { }
 
   /** 
     @notice Function returns the total number of vaults
@@ -240,17 +234,26 @@ contract Factory is ERC721 {
   }
 
   /** 
+    @notice Function that stores a new base URI.
+    @dev tokenURI's of Arcadia Vaults are not meant to be immutable
+        and might be updated later to allow users to
+        choose/create their own vault art,
+        as such no URI freeze is added.
+    @param newBaseURI the new base URI to store
+  */
+  function setBaseURI(string calldata newBaseURI) external onlyOwner {
+    baseURI = newBaseURI;
+  }
+
+  /** 
     @notice Function that returns the token URI as defined in the erc721 standard.
-    @dev TODO: add right tokenUri data
     @param tokenId The id if the vault
     @return uri The token uri.
   */
   function tokenURI(uint256 tokenId) public view override returns (string memory uri) {
-    if (ownerOf[tokenId] == address(0)) {
-      revert("Token does not exist");
-    }
 
-    uri = "ipfs://";
+    require(ownerOf[tokenId] != address(0), "ERC721Metadata: URI query for nonexistent token");
+    return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
   }
 
   function onERC721Received(address, address, uint256, bytes calldata ) public pure returns (bytes4) {
