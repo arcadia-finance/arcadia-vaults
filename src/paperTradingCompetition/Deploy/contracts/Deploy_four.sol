@@ -29,7 +29,6 @@ contract DeployContractsFour  {
 
   function deployVaultLogic() external returns (address) {
     VaultPaperTrading vaultLog = new VaultPaperTrading();
-    vaultLog.transferOwnership(msg.sender);
     return address(vaultLog);
   }
 

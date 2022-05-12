@@ -159,7 +159,7 @@ interface IRegistryExtended is IRegistry {
 }
 
 interface IIRMExtended is IRM {
-  function setBaseInterestRate(uint256) external;
+  function setBaseInterestRate(uint64) external;
 }
 
 interface ITokenShopExtended is ITokenShop {
