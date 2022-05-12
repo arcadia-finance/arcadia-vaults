@@ -86,15 +86,24 @@ contract factoryTest is DSTest {
 
 
   function testVaultIdStartFromZero() public {
-    assertEqDecimal(factoryContr.allVaultsLength(), 0, 1);
+    assertEq(factoryContr.allVaultsLength(), 0);
   }
 
+  function testDeployVaultContractMappings(uint256 salt) public {
+    uint256 amountBefore = factoryContr.allVaultsLength();
+
+    address actualDeployed = factoryContr.createVault(salt, Constants.UsdNumeraire);
+    assertEq(amountBefore +1, factoryContr.allVaultsLength());
+    assertEq(actualDeployed, factoryContr.allVaults(factoryContr.allVaultsLength()-1));
+    assertEq(factoryContr.vaultIndex(actualDeployed), (factoryContr.allVaultsLength()-1));
+
+  }
   function testDeployNewProxyWithLogic(uint256 salt) public {
     uint256 amountBefore = factoryContr.allVaultsLength();
 
     address actualDeployed = factoryContr.createVault(salt, Constants.UsdNumeraire);
-    assertEqDecimal(amountBefore +1, factoryContr.allVaultsLength(), 1);
-    assertEqDecimal(IVaultExtra(actualDeployed).life(), 0, 1);
+    assertEq(amountBefore +1, factoryContr.allVaultsLength());
+    assertEq(IVaultExtra(actualDeployed).life(), 0);
 
     assertEq(IVaultExtra(actualDeployed).owner(), address(this));
   }
@@ -105,8 +114,8 @@ contract factoryTest is DSTest {
     vm.prank(sender);
     vm.assume(sender != address(0));
     address actualDeployed = factoryContr.createVault(salt, Constants.UsdNumeraire);
-    assertEqDecimal(amountBefore +1, factoryContr.allVaultsLength(), 1);
-    assertEqDecimal(IVaultExtra(actualDeployed).life(), 0, 1);
+    assertEq(amountBefore +1, factoryContr.allVaultsLength());
+    assertEq(IVaultExtra(actualDeployed).life(), 0);
 
     assertEq(IVaultExtra(actualDeployed).owner(), address(sender));
 
