@@ -64,6 +64,15 @@ contract DeployContracts  {
 
   constructor() {
     owner = msg.sender;
+  }
+
+  function createNewVaultThroughDeployer(address newVaultOwner) public onlyOwner {
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), 0);
+    proxy = VaultPaperTrading(proxyAddr);
+    factory.safeTransferFrom(address(this), newVaultOwner, factory.vaultIndex(address(proxy)));
+  }
+
+  function start() public onlyOwner {
     factory = new FactoryPaperTrading();
     factory.setBaseURI("ipfs://");
 
@@ -106,13 +115,6 @@ contract DeployContracts  {
     factory.setLiquidator(address(liquidator));
     liquidator.setFactory(address(factory));
     mainRegistry.setFactory(address(factory));
-
-
-  }
-
-  function createVault() public onlyOwner {
-    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), 0);
-    proxy = VaultPaperTrading(proxyAddr);
   }
 
   struct assetInfo {

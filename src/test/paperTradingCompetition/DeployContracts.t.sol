@@ -18,6 +18,7 @@ contract DeployPaperTests is DSTest {
 
   constructor() {
     deployer = new DeployContracts();
+    deployer.start();
     deployer.storeStructs();
   }
 
