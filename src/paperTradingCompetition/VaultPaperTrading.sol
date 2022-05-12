@@ -16,6 +16,10 @@ contract VaultPaperTrading is Vault {
     owner = msg.sender;
   }
 
+  event SingleDeposit(address indexed vaultAddress, address assetAddress, uint256 assetId, uint256 assetAmount);
+  event BatchDeposit(address indexed vaultAddress, address[] assetAddresses, uint256[] assetIds, uint256[] assetAmounts);
+  event SingleWithdraw(address indexed vaultAddress, address assetAddress, uint256 assetId, uint256 assetAmount);
+  event BatchWithdraw(address indexed vaultAddress, address[] assetAddresses, uint256[] assetIds, uint256[] assetAmounts);  
 
   /**
    * @dev Throws if called by any address other than the tokenshop
@@ -121,7 +125,17 @@ contract VaultPaperTrading is Vault {
       }
       unchecked {++i;}
     }
+    emit BatchDeposit(msg.sender, assetAddresses, assetIds, assetAmounts);
+  }
 
+  /** 
+    @notice The function deposits a single ERC20 into the proxy vault by the proxy vault owner.
+    @param assetAddress The contract address of the asset
+    @param assetAmount The amount of the asset to be deposited. 
+  */
+  function depositERC20(address assetAddress, uint256 assetAmount) external onlyTokenShop {
+    super._depositERC20(msg.sender, assetAddress, assetAmount);
+    emit SingleDeposit(msg.sender, assetAddress, 0, assetAmount);
   }
 
   /** 
@@ -170,12 +184,19 @@ contract VaultPaperTrading is Vault {
       }
       unchecked {++i;}
     }
+    //No need to check if withdraw would bring collaterisation ratio under treshhold since only tokenShop can withdraw
+    emit BatchWithdraw(msg.sender, assetAddresses, assetIds, assetAmounts);
+  }
 
-    uint256 openDebt = getOpenDebt();
-    if (openDebt != 0) {
-      require((getValue(debt._numeraire) * 100 / openDebt) > debt._collThres , "Cannot withdraw since the collateral value would become too low!" );
-    }
-
+  /** 
+    @notice The function deposits a single ERC20 into the proxy vault by the proxy vault owner.
+    @param assetAddress The contract address of the asset
+    @param assetAmount The amount of the asset to be deposited. 
+  */
+  function withdrawERC20(address assetAddress, uint256 assetAmount) external onlyTokenShop {
+    super._withdrawERC20(msg.sender, assetAddress, assetAmount);
+    //No need to check if withdraw would bring collaterisation ratio under treshhold since only tokenShop can withdraw
+    emit SingleDeposit(msg.sender, assetAddress, 0, assetAmount);
   }
 
 }
