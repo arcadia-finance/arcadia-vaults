@@ -245,6 +245,12 @@ contract DeployCoordinator {
   }
   
 
+  //1. start()
+  //2. deployerAssets.setAddr(addr, addr)
+  //3. deployerAssets.storeAssets()
+  //4. deployerAssets.transferAssets()
+  //5  continue here
+
   function start() public onlyOwner {
     factory = IFactoryPaperTradingExtended(deployerOne.deployFact());
     factory.setBaseURI("ipfs://");
@@ -335,7 +341,7 @@ contract DeployCoordinator {
     }
 
     uint256[] memory emptyList = new uint256[](0);
-    mainRegistry.addNumeraire(IMainRegistryExtended.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(weth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stableUsd), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    mainRegistry.addNumeraire(IMainRegistryExtended.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(weth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stableEth), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 
   }
 
@@ -354,7 +360,8 @@ contract DeployCoordinator {
       oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(10**asset.oracleDecimals), baseAssetNumeraire: 0, quoteAsset: asset.quoteAsset, baseAsset: "USD", oracleAddress: asset.oracleAddr, quoteAssetAddress: asset.assetAddr, baseAssetIsNumeraire: true}));
     }
 
-    oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(10**18), baseAssetNumeraire: 0, quoteAsset: "STABLE", baseAsset: "USD", oracleAddress: address(oracleStableUsdToUsd), quoteAssetAddress: address(0), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(Constants.oracleStableToUsdUnit), baseAssetNumeraire: 0, quoteAsset: "masUSD", baseAsset: "USD", oracleAddress: address(oracleStableUsdToUsd), quoteAssetAddress: address(stableUsd), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(Constants.oracleStableEthToEthUnit), baseAssetNumeraire: 1, quoteAsset: "masETH", baseAsset: "ETH", oracleAddress: address(oracleStableUsdToUsd), quoteAssetAddress: address(stableEth), baseAssetIsNumeraire: true}));
 
   }
 
@@ -372,6 +379,19 @@ contract DeployCoordinator {
         standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: genOracleArr, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
         }
     }
+
+    oracleEthToUsdArr[0] = address(oracleEthToUsd);
+    address[] memory oracleStableUsdToUsdArr = new address[](1);    
+    oracleStableUsdToUsdArr[0] = address(oracleStableUsdToUsd);
+
+    address[] memory oracleStableEthToUsdArr = new address[](2);
+    oracleStableEthToUsdArr[0] = address(oracleStableEthToEth);
+    oracleStableEthToUsdArr[1] = address(oracleEthToUsd);
+
+    standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(weth)}), emptyList);
+    standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: oracleStableUsdToUsdArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stableUsd)}), emptyList);
+    standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: oracleStableEthToUsdArr, assetUnit: uint64(10**Constants.stableEthDecimals), assetAddress: address(stableEth)}), emptyList);
+
 
   }
 

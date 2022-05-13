@@ -697,6 +697,12 @@ contract DeployCoordinator {
   }
   
 
+  //1. start()
+  //2. deployerAssets.setAddr(addr, addr)
+  //3. deployerAssets.storeAssets()
+  //4. deployerAssets.transferAssets()
+  //5  continue here
+
   function start() public onlyOwner {
     factory = IFactoryPaperTradingExtended(deployerOne.deployFact());
     factory.setBaseURI("ipfs://");
