@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.10;
 
-import "./Deploy_coordinator.sol";
-import "./Deploy_one.sol";
-import "./Deploy_two.sol";
-import "./Deploy_three.sol";
-import "./Deploy_four.sol";
-import "./Deploy_assets.sol";
+import "../../paperTradingCompetition/Deploy/Contracts/Deploy_coordinator.sol";
+import "../../paperTradingCompetition/Deploy/Contracts/Deploy_one.sol";
+import "../../paperTradingCompetition/Deploy/Contracts/Deploy_two.sol";
+import "../../paperTradingCompetition/Deploy/Contracts/Deploy_three.sol";
+import "../../paperTradingCompetition/Deploy/Contracts/Deploy_four.sol";
+import "../../paperTradingCompetition/Deploy/Contracts/Deploy_assets.sol";
 
-import "../../../../lib/ds-test/src/test.sol";
-import "../../../../lib/forge-std/src/stdlib.sol";
-import "../../../../lib/forge-std/src/console.sol";
-import "../../../../lib/forge-std/src/Vm.sol";
-import "../../../utils/StringHelpers.sol";
+import "../../../lib/ds-test/src/test.sol";
+import "../../../lib/forge-std/src/stdlib.sol";
+import "../../../lib/forge-std/src/console.sol";
+import "../../../lib/forge-std/src/Vm.sol";
+import "../../utils/StringHelpers.sol";
 
 interface IVaultValue {
   function getValue(uint8) external view returns (uint256);
