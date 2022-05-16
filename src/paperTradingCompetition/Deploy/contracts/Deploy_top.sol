@@ -14,6 +14,10 @@ import "../../../../lib/forge-std/src/console.sol";
 import "../../../../lib/forge-std/src/Vm.sol";
 import "../../../utils/StringHelpers.sol";
 
+interface IVaultValue {
+  function getValue(uint8) external view returns (uint256);
+}
+
 contract DeployCoordTest is DSTest {
   using stdStorage for StdStorage;
 
@@ -59,6 +63,15 @@ contract DeployCoordTest is DSTest {
     deployCoordinator.verifyView();
 
     deployCoordinator.createNewVaultThroughDeployer(address(this));
+
+
+    vm.startPrank(address(3));
+    address firstVault = IFactoryPaperTradingExtended(deployCoordinator.factory()).createVault(125498456465, 0);
+    address secondVault = IFactoryPaperTradingExtended(deployCoordinator.factory()).createVault(125498456465545885545, 1);
+    vm.stopPrank();
+
+    emit log_named_uint("vault1value", IVaultValue(firstVault).getValue(0));
+    emit log_named_uint("vault1value", IVaultValue(secondVault).getValue(1));
   }
 
   function checkOracle() public {

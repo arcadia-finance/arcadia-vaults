@@ -27,7 +27,7 @@ contract Stable is ERC20, Ownable {
       factory = _factory;
   }
 
-  function mint(address to, uint256 amount) public onlyVault {
+  function mint(address to, uint256 amount) public virtual onlyVault {
       _mint(to, amount);
   }
 

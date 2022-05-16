@@ -78,6 +78,8 @@ interface IStablePaperTradingExtended is IStable {
   function setLiquidator(address) external;
   function liquidator() external view returns (address);
   function factory() external view returns (address);
+  function setTokenShop(address) external;
+  function tokenShop() external view returns (address);
 }
 
 interface IOraclePaperTradingExtended is IChainLinkData {
@@ -274,6 +276,9 @@ contract DeployCoordinator {
 
     tokenShop = ITokenShopExtended(deployerTwo.deployTokenShop(address(mainRegistry)));
     weth = IERC20PaperTrading(deployerThree.deployERC20("ETH Mock", "mETH", uint8(Constants.ethDecimals), address(tokenShop)));
+
+    stableUsd.setTokenShop(address(tokenShop));
+    stableEth.setTokenShop(address(tokenShop));
 
     oracleHub = IOracleHubExtended(deployerThree.deployOracHub());
 
@@ -486,6 +491,8 @@ contract DeployCoordinator {
     require(stableUsd.factory() == address(factory), "StableUSD: fact not set");
     require(stableEth.liquidator() == address(liquidator), "StableETH: liq not set");
     require(stableEth.factory() == address(factory), "StableETH: fact not set");
+    require(stableUsd.tokenShop() == address(tokenShop), "StableUSD: tokensh not set");
+    require(stableEth.tokenShop() == address(tokenShop), "StableETH: tokensh not set");
 
     return true;
   }
