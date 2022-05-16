@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.10;
 
-import "../../paperTradingCompetition/Deploy/Contracts/Deploy_coordinator.sol";
-import "../../paperTradingCompetition/Deploy/Contracts/Deploy_one.sol";
-import "../../paperTradingCompetition/Deploy/Contracts/Deploy_two.sol";
-import "../../paperTradingCompetition/Deploy/Contracts/Deploy_three.sol";
-import "../../paperTradingCompetition/Deploy/Contracts/Deploy_four.sol";
-import "../../paperTradingCompetition/Deploy/Contracts/Deploy_assets.sol";
+import "../../paperTradingCompetition/Deploy/contracts/Deploy_coordinator.sol";
+import "../../paperTradingCompetition/Deploy/contracts/Deploy_one.sol";
+import "../../paperTradingCompetition/Deploy/contracts/Deploy_two.sol";
+import "../../paperTradingCompetition/Deploy/contracts/Deploy_three.sol";
+import "../../paperTradingCompetition/Deploy/contracts/Deploy_four.sol";
+import "../../paperTradingCompetition/Deploy/contracts/Deploy_assets.sol";
 
 import "../../../lib/ds-test/src/test.sol";
 import "../../../lib/forge-std/src/stdlib.sol";
