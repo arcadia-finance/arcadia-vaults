@@ -150,6 +150,7 @@ contract MainRegistryTest is DSTest {
 	}
 
 	function testNonOwnerAddsNumeraire (address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != creatorAddress);
 		vm.startPrank(unprivilegedAddress);
 		vm.expectRevert("Ownable: caller is not the owner");
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
@@ -239,6 +240,7 @@ contract MainRegistryTest is DSTest {
 	}
 
 	function testNonOwnerSetsAssetsToNonUpdatable (address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != creatorAddress);
 		vm.startPrank(unprivilegedAddress);
 		vm.expectRevert("Ownable: caller is not the owner");
 		mainRegistry.setAssetsToNonUpdatable();
@@ -919,6 +921,7 @@ contract MainRegistryTest is DSTest {
 	}
 
 	function testNonOwnerSetsCreditRatings (address unprivilegedAddress) public {
+		vm.assume(unprivilegedAddress != creatorAddress);
 		vm.startPrank(creatorAddress);
 		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 		mainRegistry.addSubRegistry(address(standardERC20Registry));
@@ -1045,6 +1048,7 @@ contract MainRegistryTest is DSTest {
 
   //Test setFactory
   function testNonOwnerSetsFactory (address unprivilegedAddress) public {
+	  vm.assume(creatorAddress != unprivilegedAddress);
     vm.startPrank(creatorAddress);
     factory = new Factory();
     factory.setNewVaultInfo(address(mainRegistry), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
