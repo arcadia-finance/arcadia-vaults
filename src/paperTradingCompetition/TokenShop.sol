@@ -48,48 +48,6 @@ contract TokenShop is Ownable {
   }
 
   /**
-   * @notice Swaps a list of input tokens for a list of output tokens
-   * @dev Function swaps n input tokens for m output tokens, tokens are withdrawn and deposited back into the vault
-   *      The exchange is mocked, instead of actually swapping tokens, it burns the incoming tokens and mints the outgoing tokens
-   *      The exchange rates are fixed (no slippage is taken into account) and live exchange rates from mainnet are used
-   *      If the input amount is bigger than the output amount, the difference is deposited in the token pegged to the numeraire.
-   * @param tokenInfoInput Struct for all input tokens, following lists need to be passed:
-   *        - The token addresses
-   *        - The ids, for tokens without id (erc20) any id can be passed
-   *        - The amounts
-   *        - The token types (0 = ERC20, 1 = ERC721, 2 = ERC1155, Any other number = failed tx)
-   * @param tokenInfoOutput For all output tokens, following lists need to be passed:
-   *        - The token addresses
-   *        - The ids, for tokens without id (erc20) any id can be passed
-   *        - The amounts
-   *        - The token types (0 = ERC20, 1 = ERC721, 2 = ERC1155, Any other number = failed tx)
-   * @param vaultId Id of the vault
-   */
-  function swapExactTokensForTokens(TokenInfo calldata tokenInfoInput, TokenInfo calldata tokenInfoOutput, uint256 vaultId) external {
-    require(msg.sender == IERC721(factory).ownerOf(vaultId), "You are not the owner");
-
-    address vault = IFactoryPaperTrading(factory).getVaultAddress(vaultId);
-    (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
-
-    uint256 totalValueIn = IMainRegistry(mainRegistry).getTotalValue(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, numeraire);
-    uint256 totalValueOut = IMainRegistry(mainRegistry).getTotalValue(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, numeraire);
-    require(totalValueIn >= totalValueOut, "Not enough funds");
-
-    IVaultPaperTrading(vault).withdraw(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, tokenInfoInput.tokenTypes);
-    _burn(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, tokenInfoInput.tokenTypes);
-    _mint(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, tokenInfoOutput.tokenTypes);
-    IVaultPaperTrading(vault).deposit(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, tokenInfoOutput.tokenTypes);
-
-    if (totalValueIn > totalValueOut) {
-      uint256 amountNumeraire = totalValueIn - totalValueOut;
-      address stable = IVaultPaperTrading(vault)._stable();
-      _mintERC20(stable, amountNumeraire);
-      IVaultPaperTrading(vault).depositERC20(stable, amountNumeraire);
-    }
-
-  }
-
-  /**
    * @notice Swaps numeraire for a list of output tokens
    * @dev Function swaps numeraire for n output tokens
    *      The exchange is mocked, instead of actually swapping tokens, it burns the incoming numeraire and mints the outgoing tokens
@@ -141,6 +99,7 @@ contract TokenShop is Ownable {
     IVaultPaperTrading(vault).withdraw(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, tokenInfoInput.tokenTypes);
     _burn(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, tokenInfoInput.tokenTypes);
     _mintERC20(stable, totalValue);
+    _approveERC20(stable, vault);
     IVaultPaperTrading(vault).depositERC20(stable, totalValue);
   }
 
