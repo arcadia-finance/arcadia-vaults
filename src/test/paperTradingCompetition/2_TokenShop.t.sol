@@ -209,6 +209,8 @@ contract TokenShopTest is DSTest {
   }
 
   function testNonOwnerSwapsNumeraireForExactTokens(address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != vaultOwner);
+    
     vm.startPrank(vaultOwner);
     proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.UsdNumeraire);
     proxy = VaultPaperTrading(proxyAddr);
@@ -317,10 +319,115 @@ contract TokenShopTest is DSTest {
     assertEq(actualValue, expectedValue);
   }
 
-  function testNonOwnerSwapsExactTokensForNumeraire() public {}
+  function testNonOwnerSwapsExactTokensForNumeraire(address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != vaultOwner);
 
-  function testOwnerSwapsExactTokensForNumeraireInsufficientFunds() public {}
+    vm.startPrank(vaultOwner);
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.EthNumeraire);
+    proxy = VaultPaperTrading(proxyAddr);
+    uint256 vaultId = factory.vaultIndex(proxyAddr);
 
-  function testOwnerSwapsExactTokensForNumeraireSucces() public {}
+    address[] memory tokenAddresses = new address[](3);
+		tokenAddresses[0] = address(link);
+		tokenAddresses[1] = address(bayc);
+    tokenAddresses[2] = address(interleave);
+
+    uint256[] memory tokenIds = new uint256[](3);
+    tokenIds[0] = 0;
+		tokenIds[1] = 0;
+		tokenIds[2] = 0;
+
+    uint256[] memory tokenAmounts = new uint256[](3);
+    tokenAmounts[0] = 10 ** Constants.linkDecimals;
+		tokenAmounts[1] = 1;
+		tokenAmounts[2] = 10;
+
+    uint256[] memory tokenTypes = new uint256[](3);
+    tokenTypes[0] = 0;
+		tokenTypes[1] = 1;
+		tokenTypes[2] = 2;
+
+    TokenShop.TokenInfo memory tokenInfo = TokenShop.TokenInfo(tokenAddresses, tokenIds, tokenAmounts, tokenTypes);
+    vm.stopPrank();
+
+    vm.prank(unprivilegedAddress);
+		vm.expectRevert("You are not the owner");
+		tokenShop.swapExactTokensForNumeraire(tokenInfo, vaultId);
+    vm.stopPrank();    
+  }
+
+  function testFailOwnerSwapsExactTokensForNumeraireInsufficientFunds(uint32 linkAmount) public {
+    vm.assume(linkAmount > 0);
+    vm.startPrank(vaultOwner);
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.EthNumeraire);
+    proxy = VaultPaperTrading(proxyAddr);
+    uint256 vaultId = factory.vaultIndex(proxyAddr);
+
+    address[] memory tokenAddresses = new address[](1);
+		tokenAddresses[0] = address(link);
+
+    uint256[] memory tokenIds = new uint256[](1);
+    tokenIds[0] = 0;
+
+    uint256[] memory tokenAmounts = new uint256[](1);
+    tokenAmounts[0] = linkAmount;
+
+    uint256[] memory tokenTypes = new uint256[](1);
+    tokenTypes[0] = 0;
+
+    TokenShop.TokenInfo memory tokenInfo = TokenShop.TokenInfo(tokenAddresses, tokenIds, tokenAmounts, tokenTypes);
+
+    //Arithmetic overflow.
+    vm.expectRevert(bytes(""));
+		tokenShop.swapExactTokensForNumeraire(tokenInfo, vaultId);
+    vm.stopPrank();
+  }
+
+  function testOwnerSwapsExactTokensForNumeraireSucces(uint32 linkAmount, uint32 interleaveAmount) public {
+    vm.startPrank(vaultOwner);
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.EthNumeraire);
+    proxy = VaultPaperTrading(proxyAddr);
+    uint256 vaultId = factory.vaultIndex(proxyAddr);
+
+    address[] memory tokenAddresses = new address[](3);
+		tokenAddresses[0] = address(link);
+		tokenAddresses[1] = address(bayc);
+    tokenAddresses[2] = address(interleave);
+
+    uint256[] memory tokenIds = new uint256[](3);
+    tokenIds[0] = 0;
+		tokenIds[1] = 0;
+		tokenIds[2] = 0;
+
+    uint256[] memory tokenAmounts = new uint256[](3);
+    tokenAmounts[0] = linkAmount;
+		tokenAmounts[1] = 1;
+		tokenAmounts[2] = interleaveAmount;
+
+    uint256[] memory tokenTypes = new uint256[](3);
+    tokenTypes[0] = 0;
+		tokenTypes[1] = 1;
+		tokenTypes[2] = 2;
+
+    TokenShop.TokenInfo memory tokenInfo = TokenShop.TokenInfo(tokenAddresses, tokenIds, tokenAmounts, tokenTypes);
+
+		uint256 linkValueInUsd = Constants.WAD * rateLinkToUsd * tokenAmounts[0] / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
+		uint256 baycValueInEth = Constants.WAD * rateWbaycToEth * tokenAmounts[1] / 10 ** Constants.oracleWbaycToEthDecimals;
+    uint256 baycValueInUsd = baycValueInEth * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals;
+    uint256 interleaveValueInEth = Constants.WAD * rateInterleaveToEth * tokenAmounts[2] / 10 ** Constants.oracleInterleaveToEthDecimals;
+    uint256 interleaveValueInUsd = interleaveValueInEth * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals;
+
+		uint256 totalValue = linkValueInUsd + baycValueInUsd + interleaveValueInUsd;
+    vm.assume(totalValue <= 1000000 * Constants.WAD);
+
+		tokenShop.swapNumeraireForExactTokens(tokenInfo, vaultId);
+
+    tokenShop.swapExactTokensForNumeraire(tokenInfo, vaultId);
+
+    uint256 expectedValue = 1000000 * Constants.WAD;
+		uint256 actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
+
+    assertEq(actualValue, expectedValue);
+  }
 
 }
