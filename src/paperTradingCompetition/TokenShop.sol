@@ -28,16 +28,11 @@ contract TokenShop is Ownable {
   address public factory;
   address public mainRegistry;
 
-  struct SwapInput {
-    address[] tokensIn;
-    uint256[] idsIn;
-    uint256[] amountsIn;
-    uint256[] assetTypesIn;
-    address[] tokensOut;
-    uint256[] idsOut;
-    uint256[] amountsOut;
-    uint256[] assetTypesOut;
-    uint256 vaultId;
+  struct TokenInfo {
+    address[] tokenAddresses;
+    uint256[] tokenIds;
+    uint256[] tokenAmounts;
+    uint256[] tokenTypes;
   }
 
   constructor (address _mainRegistry) {
@@ -52,38 +47,100 @@ contract TokenShop is Ownable {
     factory = _factory;
   }
 
-  function swapExactTokensForTokens(SwapInput calldata swapInput) external {
-    require(msg.sender == IERC721(factory).ownerOf(swapInput.vaultId), "You are not the owner");
-    address vault = IFactoryPaperTrading(factory).getVaultAddress(swapInput.vaultId);
+  /**
+   * @notice Swaps a list of input tokens for a list of output tokens
+   * @dev Function swaps n input tokens for m output tokens, tokens are withdrawn and deposited back into the vault
+   *      The exchange is mocked, instead of actually swapping tokens, it burns the incoming tokens and mints the outgoing tokens
+   *      The exchange rates are fixed (no slippage is taken into account) and live exchange rates from mainnet are used
+   *      If the input amount is bigger than the output amount, the difference is deposited in the token pegged to the numeraire.
+   * @param tokenInfoInput Struct for all input tokens, following lists need to be passed:
+   *        - The token addresses
+   *        - The ids, for tokens without id (erc20) any id can be passed
+   *        - The amounts
+   *        - The token types (0 = ERC20, 1 = ERC721, 2 = ERC1155, Any other number = failed tx)
+   * @param tokenInfoOutput For all output tokens, following lists need to be passed:
+   *        - The token addresses
+   *        - The ids, for tokens without id (erc20) any id can be passed
+   *        - The amounts
+   *        - The token types (0 = ERC20, 1 = ERC721, 2 = ERC1155, Any other number = failed tx)
+   * @param vaultId Id of the vault
+   */
+  function swapExactTokensForTokens(TokenInfo calldata tokenInfoInput, TokenInfo calldata tokenInfoOutput, uint256 vaultId) external {
+    require(msg.sender == IERC721(factory).ownerOf(vaultId), "You are not the owner");
+
+    address vault = IFactoryPaperTrading(factory).getVaultAddress(vaultId);
     (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
 
-    uint256 totalValueIn = IMainRegistry(mainRegistry).getTotalValue(swapInput.tokensIn, swapInput.idsIn, swapInput.amountsIn, numeraire);
-    uint256 totalValueOut = IMainRegistry(mainRegistry).getTotalValue(swapInput.tokensOut, swapInput.idsOut, swapInput.amountsOut, numeraire);
-    require (totalValueIn >= totalValueOut, "Not enough funds");
+    uint256 totalValueIn = IMainRegistry(mainRegistry).getTotalValue(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, numeraire);
+    uint256 totalValueOut = IMainRegistry(mainRegistry).getTotalValue(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, numeraire);
+    require(totalValueIn >= totalValueOut, "Not enough funds");
 
-    IVaultPaperTrading(vault).withdraw(swapInput.tokensIn, swapInput.idsIn, swapInput.amountsIn, swapInput.assetTypesIn);
-    _burn(swapInput.tokensIn, swapInput.idsIn, swapInput.amountsIn, swapInput.assetTypesIn);
-    _mint(swapInput.tokensOut, swapInput.idsOut, swapInput.amountsOut, swapInput.assetTypesOut);
-    IVaultPaperTrading(vault).deposit(swapInput.tokensOut, swapInput.idsOut, swapInput.amountsOut, swapInput.assetTypesOut);
+    IVaultPaperTrading(vault).withdraw(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, tokenInfoInput.tokenTypes);
+    _burn(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, tokenInfoInput.tokenTypes);
+    _mint(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, tokenInfoOutput.tokenTypes);
+    IVaultPaperTrading(vault).deposit(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, tokenInfoOutput.tokenTypes);
 
     if (totalValueIn > totalValueOut) {
       uint256 amountNumeraire = totalValueIn - totalValueOut;
       address stable = IVaultPaperTrading(vault)._stable();
       _mintERC20(stable, amountNumeraire);
-
-      address[] memory stableArr = new address[](1);
-      uint256[] memory stableIdArr = new uint256[](1);
-      uint256[] memory stableAmountArr = new uint256[](1);
-      uint256[] memory stableTypeArr = new uint256[](1);
-
-      stableArr[0] = stable;
-      stableIdArr[0] = 0; //can delete
-      stableAmountArr[0] = amountNumeraire;
-      stableTypeArr[0] = 0; //can delete
-
-      IVaultPaperTrading(vault).deposit(stableArr, stableIdArr, stableAmountArr, stableTypeArr);
+      IVaultPaperTrading(vault).depositERC20(stable, amountNumeraire);
     }
 
+  }
+
+  /**
+   * @notice Swaps numeraire for a list of output tokens
+   * @dev Function swaps numeraire for n output tokens
+   *      The exchange is mocked, instead of actually swapping tokens, it burns the incoming numeraire and mints the outgoing tokens
+   *      The exchange rates are fixed (no slippage is taken into account) and live exchange rates from mainnet are used
+   * @param tokenInfoOutput For all output tokens, following lists need to be passed:
+   *        - The token addresses
+   *        - The ids, for tokens without id (erc20) any id can be passed
+   *        - The amounts
+   *        - The token types (0 = ERC20, 1 = ERC721, 2 = ERC1155, Any other number = failed tx)
+   * @param vaultId Id of the vault
+   */
+  function swapNumeraireForExactTokens(TokenInfo calldata tokenInfoOutput, uint256 vaultId) external {
+    require(msg.sender == IERC721(factory).ownerOf(vaultId), "You are not the owner");
+
+    address vault = IFactoryPaperTrading(factory).getVaultAddress(vaultId);
+    (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
+    address stable = IVaultPaperTrading(vault)._stable();
+
+    uint256 totalValue = IMainRegistry(mainRegistry).getTotalValue(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, numeraire);
+
+    IVaultPaperTrading(vault).withdrawERC20(stable, totalValue);
+    _burnERC20(stable, totalValue);
+    _mint(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, tokenInfoOutput.tokenTypes);
+    IVaultPaperTrading(vault).deposit(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, tokenInfoOutput.tokenTypes);
+  }
+
+  /**
+   * @notice Swaps a list of input tokens for numeraire
+   * @dev Function swaps n input tokens for numeraire
+   *      The exchange is mocked, instead of actually swapping tokens, it burns the incoming numeraire and mints the outgoing tokens
+   *      The exchange rates are fixed (no slippage is taken into account) and live exchange rates from mainnet are used
+   * @param tokenInfoInput Struct for all input tokens, following lists need to be passed:
+   *        - The token addresses
+   *        - The ids, for tokens without id (erc20) any id can be passed
+   *        - The amounts
+   *        - The token types (0 = ERC20, 1 = ERC721, 2 = ERC1155, Any other number = failed tx)
+   * @param vaultId Id of the vault
+   */
+  function swapExactTokensForNumeraire(TokenInfo calldata tokenInfoInput, uint256 vaultId) external {
+    require(msg.sender == IERC721(factory).ownerOf(vaultId), "You are not the owner");
+
+    address vault = IFactoryPaperTrading(factory).getVaultAddress(vaultId);
+    (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
+    address stable = IVaultPaperTrading(vault)._stable();
+
+    uint256 totalValue = IMainRegistry(mainRegistry).getTotalValue(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, numeraire);
+
+    IVaultPaperTrading(vault).withdraw(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, tokenInfoInput.tokenTypes);
+    _burn(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, tokenInfoInput.tokenTypes);
+    _mintERC20(stable, totalValue);
+    IVaultPaperTrading(vault).depositERC20(stable, totalValue);
   }
 
   function _mint(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) internal {
