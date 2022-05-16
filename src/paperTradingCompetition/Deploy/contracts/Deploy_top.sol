@@ -12,6 +12,7 @@ import "../../../../lib/ds-test/src/test.sol";
 import "../../../../lib/forge-std/src/stdlib.sol";
 import "../../../../lib/forge-std/src/console.sol";
 import "../../../../lib/forge-std/src/Vm.sol";
+import "../../../utils/StringHelpers.sol";
 
 contract DeployCoordTest is DSTest {
   using stdStorage for StdStorage;
@@ -39,19 +40,46 @@ contract DeployCoordTest is DSTest {
 
     deployCoordinator = new DeployCoordinator(address(deployContractsOne),address(deployContractsTwo),address(deployContractsThree),address(deployContractsFour),address(deployContractsAssets));
 
+    deployCoordinator.start();
+    
+    deployContractsAssets.setAddr(address(deployCoordinator.oracleEthToUsd()), address(deployCoordinator.weth()));
+
     deployContractsAssets.storeAssets();
     deployContractsAssets.transferAssets(address(deployCoordinator));
-
-    deployCoordinator.start();
 
     deployCoordinator.deployERC20Contracts();
     deployCoordinator.deployERC721Contracts();
     deployCoordinator.deployOracles();
     deployCoordinator.setOracleAnswers();
     deployCoordinator.addOracles();
+    emit log_named_address("OracleEThToUsd", address(deployCoordinator.oracleEthToUsd()));
+    checkOracle();
     deployCoordinator.setAssetInformation();
 
     deployCoordinator.verifyView();
+
+    deployCoordinator.createNewVaultThroughDeployer(address(this));
+  }
+
+  function checkOracle() public {
+    uint256 len = deployContractsAssets.assetLength();
+    address oracleAddr_t;
+    string memory symb;
+    for (uint i; i < len; ++i) {
+      (,symb,,,,,, oracleAddr_t,) = deployCoordinator.assets(i);
+      if (StringHelpers.compareStrings(symb, "mwETH")) {
+        emit log_named_address("Orac from assets", oracleAddr_t);
+      }
+    }
+  }
+
+
+  function onERC721Received(address, address, uint256, bytes calldata ) public pure returns (bytes4) {
+    return this.onERC721Received.selector;
+  }
+
+  function onERC1155Received(address, address, uint256, uint256, bytes calldata) public pure returns (bytes4) {
+    return this.onERC1155Received.selector;
   }
 
 }

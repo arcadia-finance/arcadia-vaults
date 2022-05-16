@@ -19,6 +19,7 @@ import "../../../interfaces/ILiquidator.sol";
 
 import "../../../utils/Constants.sol";
 import "../../../utils/Strings.sol";
+import "../../../utils/StringHelpers.sol";
 
 
 interface IDeployerOne {
@@ -218,6 +219,7 @@ contract DeployCoordinator {
     uint8 oracleDecimals;
     uint128 rate;
     string quoteAsset;
+    string baseAsset;
     address oracleAddr;
     address assetAddr;
   }
@@ -281,9 +283,6 @@ contract DeployCoordinator {
     floorERC721Registry = IRegistryExtended(deployerThree.deployERC721SubReg(address(mainRegistry), address(oracleHub)));
     mainRegistry.addSubRegistry(address(floorERC721Registry));
 
-    oracleEthToUsdArr[0] = address(oracleEthToUsd);
-    oracleStableToUsdArr[0] = address(oracleStableUsdToUsd);
-
     interestRateModule = IIRMExtended(deployerFour.deployIRM());
     interestRateModule.setBaseInterestRate(5 * 10 **16);
 
@@ -336,8 +335,10 @@ contract DeployCoordinator {
     assetInfo memory asset;
     for (uint i; i < assets.length; ++i) {
       asset = assets[i];
-      newContr = deployerOne.deployOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD")));
-      assets[i].oracleAddr = newContr;
+      if (!StringHelpers.compareStrings(asset.symbol, "mwETH")) {
+        newContr = deployerOne.deployOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD")));
+        assets[i].oracleAddr = newContr;
+      }
     }
 
     uint256[] memory emptyList = new uint256[](0);
@@ -355,29 +356,52 @@ contract DeployCoordinator {
 
   function addOracles() public onlyOwner {
     assetInfo memory asset;
+    uint8 baseAssetNum;
     for (uint i; i < assets.length; ++i) {
       asset = assets[i];
-      oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(10**asset.oracleDecimals), baseAssetNumeraire: 0, quoteAsset: asset.quoteAsset, baseAsset: "USD", oracleAddress: asset.oracleAddr, quoteAssetAddress: asset.assetAddr, baseAssetIsNumeraire: true}));
+      if (StringHelpers.compareStrings(asset.baseAsset, "ETH")) {
+        baseAssetNum = 1;
+      }
+      else {
+        baseAssetNum = 0;
+      }
+      oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(10**asset.oracleDecimals), baseAssetNumeraire: baseAssetNum, quoteAsset: asset.quoteAsset, baseAsset: asset.baseAsset, oracleAddress: asset.oracleAddr, quoteAssetAddress: asset.assetAddr, baseAssetIsNumeraire: true}));
     }
 
     oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(Constants.oracleStableToUsdUnit), baseAssetNumeraire: 0, quoteAsset: "masUSD", baseAsset: "USD", oracleAddress: address(oracleStableUsdToUsd), quoteAssetAddress: address(stableUsd), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(Constants.oracleStableEthToEthUnit), baseAssetNumeraire: 1, quoteAsset: "masETH", baseAsset: "ETH", oracleAddress: address(oracleStableUsdToUsd), quoteAssetAddress: address(stableEth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(Constants.oracleStableEthToEthUnit), baseAssetNumeraire: 1, quoteAsset: "masETH", baseAsset: "ETH", oracleAddress: address(oracleStableEthToEth), quoteAssetAddress: address(stableEth), baseAssetIsNumeraire: true}));
 
   }
 
   function setAssetInformation() public onlyOwner {
     assetInfo memory asset;
     uint256[] memory emptyList = new uint256[](0);
-    address[] memory genOracleArr = new address[](1);
+    address[] memory genOracleArr1 = new address[](1);
+    address[] memory genOracleArr2 = new address[](2);
     for (uint i; i < assets.length; ++i) {
       asset = assets[i];
-      genOracleArr[0] = asset.oracleAddr;
-      if (asset.decimals == 0) {
-        floorERC721Registry.setAssetInformation(IErc721SubRegistry.AssetInformation({oracleAddresses: genOracleArr, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), emptyList);
+      if (StringHelpers.compareStrings(asset.baseAsset, "ETH")) {
+        genOracleArr2[0] = asset.oracleAddr;
+        genOracleArr2[1] = address(oracleEthToUsd);
+
+        if (asset.decimals == 0) {
+          floorERC721Registry.setAssetInformation(IErc721SubRegistry.AssetInformation({oracleAddresses: genOracleArr2, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), emptyList);
+        }
+        else {
+          standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: genOracleArr2, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
+          }
       }
       else {
-        standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: genOracleArr, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
+        genOracleArr1[0] = asset.oracleAddr;
+
+        if (asset.decimals == 0) {
+          floorERC721Registry.setAssetInformation(IErc721SubRegistry.AssetInformation({oracleAddresses: genOracleArr1, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), emptyList);
         }
+        else {
+          standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: genOracleArr1, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
+          }
+      }
+
     }
 
     oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -504,6 +528,14 @@ contract DeployCoordinator {
     require(address(oracleEthToUsd) != address(0), "AddrCheck: oracleEthToUsd not set");
 
     return true;
+  }
+
+  function onERC721Received(address, address, uint256, bytes calldata ) public pure returns (bytes4) {
+    return this.onERC721Received.selector;
+  }
+
+  function onERC1155Received(address, address, uint256, uint256, bytes calldata) public pure returns (bytes4) {
+    return this.onERC1155Received.selector;
   }
 
 }
