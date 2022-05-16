@@ -1045,6 +1045,7 @@ contract MainRegistryTest is DSTest {
 
   //Test setFactory
   function testNonOwnerSetsFactory (address unprivilegedAddress) public {
+	vm.assume(creatorAddress != unprivilegedAddress);
     vm.startPrank(creatorAddress);
     factory = new Factory();
     factory.setNewVaultInfo(address(mainRegistry), 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000);
