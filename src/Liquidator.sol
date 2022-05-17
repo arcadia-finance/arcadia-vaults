@@ -40,7 +40,7 @@ contract Liquidator is Ownable {
   }
 
   mapping (address => mapping (uint256 => auctionInformation)) public auctionInfo;
-  mapping (address => uint256) public claimableBitmap;
+  mapping (address => mapping (uint256 => uint256)) public claimableBitmap;
 
   constructor(address newFactory, address newRegAddr) {
     factoryAddress = newFactory;
@@ -156,7 +156,7 @@ contract Liquidator is Ownable {
     claimRatios memory ratios = claimRatio;
     uint256[] memory claimables = new uint256[](4);
     address[] memory claimableBy = new address[](4);
-    uint256 claimableBitmapMem = claimableBitmap[vaultAddress];
+    uint256 claimableBitmapMem = claimableBitmap[vaultAddress][life & (1 << 6)];
 
     uint256 surplus = auction.stablePaid - auction.openDebt;
 
@@ -192,7 +192,7 @@ contract Liquidator is Ownable {
       uint256 life = lives[i];
       auctionInformation memory auction = auctionInfo[vaultAddress][life];
       (claimables, claimableBy, numeraire) = claimable(auction, vaultAddress, life);
-      claimableBitmapMem = claimableBitmap[vaultAddress];
+      claimableBitmapMem = claimableBitmap[vaultAddress][life & (1 << 6)];
 
       if (msg.sender == claimableBy[0]) {
         totalClaimable[numeraire] += claimables[0];
@@ -211,7 +211,7 @@ contract Liquidator is Ownable {
         claimableBitmapMem = claimableBitmapMem | (1 << (4*life + 3));
       }
 
-      claimableBitmap[vaultAddress] = claimableBitmapMem;
+      claimableBitmap[vaultAddress][life & (1 << 6)] = claimableBitmapMem;
 
       unchecked {++i;}
     }
