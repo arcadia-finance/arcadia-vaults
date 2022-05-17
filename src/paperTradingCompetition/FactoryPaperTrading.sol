@@ -43,6 +43,7 @@ contract FactoryPaperTrading is Factory {
 
     allVaults.push(vault);
     isVault[vault] = true;
+    vaultIndex[vault] = allVaults.length - 1;
 
     IVaultPaperTrading(vault).initialize(msg.sender, 
                               vaultDetails[currentVaultVersion].registryAddress, 
@@ -53,7 +54,7 @@ contract FactoryPaperTrading is Factory {
 
 
     _mint(msg.sender, allVaults.length -1);
-    emit VaultCreated(vault, msg.sender, allVaults.length);
+    emit VaultCreated(vault, msg.sender, allVaults.length -1);
   }
 
 }
