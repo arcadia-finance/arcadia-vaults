@@ -240,7 +240,7 @@ contract TokenShopTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(unprivilegedAddress);
-    vm.expectRevert("You are not the owner");
+    vm.expectRevert("TS_SNFET: You are not the owner");
     tokenShop.swapNumeraireForExactTokens(tokenInfo, vaultId);
     vm.stopPrank();
   }
@@ -351,7 +351,7 @@ contract TokenShopTest is DSTest {
     vm.stopPrank();
 
     vm.prank(unprivilegedAddress);
-    vm.expectRevert("You are not the owner");
+    vm.expectRevert("TS_SETFN: You are not the owner");
     tokenShop.swapExactTokensForNumeraire(tokenInfo, vaultId);
     vm.stopPrank();    
   }
