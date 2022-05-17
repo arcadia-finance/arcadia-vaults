@@ -269,6 +269,7 @@ contract factoryTest is DSTest {
 
   //Test setNewVaultInfo
   function testNonOwnerSetsNewVaultInfo(address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != address(0));
     vm.startPrank(unprivilegedAddress);
     vm.expectRevert("Ownable: caller is not the owner");
     factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), 0x0000000000000000000000000000000000000000, address(interestContr));
@@ -349,6 +350,7 @@ contract factoryTest is DSTest {
 
   //Test confirmNewVaultInfo
   function testNonOwnerConfirmsNewVaultInfo(address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != address(0));
     vm.startPrank(unprivilegedAddress);
     vm.expectRevert("Ownable: caller is not the owner");
     factoryContr.confirmNewVaultInfo();
