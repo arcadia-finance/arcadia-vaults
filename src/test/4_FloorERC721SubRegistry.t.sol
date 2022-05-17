@@ -94,6 +94,7 @@ contract FloorERC721SubRegistryTest is DSTest {
   }
 
 	function testNonOwnerAddsAsset (address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != creatorAddress);
 		vm.startPrank(unprivilegedAddress);
 		vm.expectRevert("Ownable: caller is not the owner");
 		floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWbaycToEthEthToUsd, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(bayc)}), emptyList);

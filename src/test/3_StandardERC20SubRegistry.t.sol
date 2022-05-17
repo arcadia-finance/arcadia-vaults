@@ -95,6 +95,7 @@ contract StandardERC20RegistryTest is DSTest {
   }
 
 	function testNonOwnerAddsAsset (address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != creatorAddress);
 		vm.startPrank(unprivilegedAddress);
 		vm.expectRevert("Ownable: caller is not the owner");
 		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList);

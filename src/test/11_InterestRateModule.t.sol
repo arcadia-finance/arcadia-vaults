@@ -34,6 +34,7 @@ contract InterestRateModuleTest is DSTest {
 	}
 
 	function testNonOwnerSetsBaseInterestRate (address unprivilegedAddress, uint64 baseInterestRate) public {
+		vm.assume(unprivilegedAddress != creatorAddress);
 		vm.startPrank(unprivilegedAddress);
 		vm.expectRevert("Ownable: caller is not the owner");
 		interestRateModule.setBaseInterestRate(baseInterestRate);
@@ -56,6 +57,7 @@ contract InterestRateModuleTest is DSTest {
 	}
 
 	function testNonOwnerSetsCollateralInterestRates (address unprivilegedAddress, uint64 interestRate) public {
+    vm.assume(unprivilegedAddress != creatorAddress);
 		uint256[] memory creditRatings = new uint256[](2);
     creditRatings[0] = 0;
     creditRatings[1] = 1;

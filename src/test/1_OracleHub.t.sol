@@ -74,6 +74,7 @@ contract OracleHubTest is DSTest {
   }
 
   function testNonOwnerAddsOracleFail(address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != creatorAddress);
     vm.startPrank(unprivilegedAddress);
     vm.expectRevert("Ownable: caller is not the owner");
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));

@@ -82,6 +82,7 @@ contract FloorERC1155SubRegistryTest is DSTest {
   }
 
 	function testNonOwnerAddsAsset (address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != creatorAddress);
 		vm.startPrank(unprivilegedAddress);
 		vm.expectRevert("Ownable: caller is not the owner");
     floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), emptyList);

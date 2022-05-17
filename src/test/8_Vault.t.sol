@@ -782,6 +782,7 @@ contract vaultTests is DSTest {
   }
 
   function testNotAllowedToWithdrawnByNonOwner(uint8 depositAmount, uint8 withdrawalAmount, address sender) public {
+    vm.assume(sender != vaultOwner);
     vm.assume(depositAmount > withdrawalAmount);
     Assets memory assetInfo = depositEthInVault(depositAmount, vaultOwner);
 
@@ -877,6 +878,7 @@ contract vaultTests is DSTest {
   }
 
   function testTakeCreditAsNonOwner(uint8 amountEth, uint128 amountCredit) public {
+    vm.assume(unprivilegedAddress != vaultOwner);
     uint256 depositValue = Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals * amountEth;
     (,uint16 _collThres,,,,) = vault.debt();
     vm.assume(depositValue * 100 / _collThres > amountCredit);
