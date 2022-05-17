@@ -796,7 +796,7 @@ contract Vault {
     require(leftHand < rightHand, "This vault is healthy");
 
     
-    require(ILiquidator(liquidator).startAuction(address(this), life, liquidationKeeper, owner, debt._openDebt, debt._liqThres), "Failed to start auction!");
+    require(ILiquidator(liquidator).startAuction(address(this), life, liquidationKeeper, owner, debt._openDebt, debt._liqThres, debt._numeraire), "Failed to start auction!");
 
     //gas: good luck overflowing this
     unchecked {++life;}

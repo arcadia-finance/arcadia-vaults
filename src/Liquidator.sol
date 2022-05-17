@@ -22,12 +22,10 @@ contract Liquidator is Ownable {
 
   claimRatios public claimRatio;
 
-  mapping (uint8 => address) numeraireToStable;
-
   struct claimRatios {
     uint64 protocol;
     uint64 originalOwner;
-    uint64 liquidator;
+    uint64 liquidationKeeper;
     uint64 reserveFund;
   }
 
@@ -36,9 +34,8 @@ contract Liquidator is Ownable {
     uint128 startBlock;
     uint8 liqThres;
     uint8 numeraire;
-    address stableAddress;
     uint128 stablePaid;
-    address liquidator;
+    address liquidationKeeper;
     address originalOwner;
   }
 
@@ -48,7 +45,7 @@ contract Liquidator is Ownable {
   constructor(address newFactory, address newRegAddr) {
     factoryAddress = newFactory;
     registryAddress = newRegAddr;
-    claimRatio = claimRatios({protocol: 15, originalOwner: 75, liquidator: 5, reserveFund: 5});
+    claimRatio = claimRatios({protocol: 15, originalOwner: 75, liquidationKeeper: 5, reserveFund: 5});
   }
 
   modifier elevated() {
@@ -58,30 +55,23 @@ contract Liquidator is Ownable {
 
   function setFactory(address newFactory) external onlyOwner {
     factoryAddress = newFactory;
-    uint256 numeraireCounter = IFactory(factoryAddress).numeraireCounter();
-
-    for (uint8 i; i < numeraireCounter;) {
-      numeraireToStable[i] = IFactory(factoryAddress).numeraireToStable(i);
-      unchecked {++i;}
-    }
   }
 
   //function startAuction() modifier = only by vault
   //  sets time start to now()
-  //  stores the liquidator
+  //  stores the liquidationKeeper
   // 
 
-  function startAuction(address vaultAddress, uint256 life, address liquidator, address originalOwner, uint128 openDebt, uint8 liqThres, uint8 numeraire) public elevated returns (bool) {
+  function startAuction(address vaultAddress, uint256 life, address liquidationKeeper, address originalOwner, uint128 openDebt, uint8 liqThres, uint8 numeraire) public elevated returns (bool) {
 
     require(auctionInfo[vaultAddress][life].startBlock == 0, "Liquidation already ongoing");
 
     auctionInfo[vaultAddress][life].startBlock = uint128(block.number);
-    auctionInfo[vaultAddress][life].liquidator = liquidator;
+    auctionInfo[vaultAddress][life].liquidationKeeper = liquidationKeeper;
     auctionInfo[vaultAddress][life].originalOwner = originalOwner;
     auctionInfo[vaultAddress][life].openDebt = openDebt;
     auctionInfo[vaultAddress][life].liqThres = liqThres;
     auctionInfo[vaultAddress][life].numeraire = numeraire;
-    auctionInfo[vaultAddress][life].stableAddress = numeraireToStable[numeraire];
 
     return true;
   }
@@ -139,15 +129,16 @@ contract Liquidator is Ownable {
 
   function buyVault(address vaultAddress, uint256 life) public {
     // it's 3683 gas cheaper to look up the struct 6x in the mapping than to take it into memory
-    (uint256 priceOfVault,, bool forSale) = getPriceOfVault(vaultAddress, life);
+    (uint256 priceOfVault,uint8 numeraire, bool forSale) = getPriceOfVault(vaultAddress, life);
 
     require(forSale, "LQ_BV: Not for sale");
     require(auctionInfo[vaultAddress][life].stablePaid < auctionInfo[vaultAddress][life].openDebt, "LQ_BV: Debt repaid");
 
     uint256 surplus = priceOfVault - auctionInfo[vaultAddress][life].openDebt;
 
-    require(IStable(auctionInfo[vaultAddress][life].stableAddress).safeBurn(msg.sender, auctionInfo[vaultAddress][life].openDebt), "LQ_BV: Burn failed");
-    require(IStable(auctionInfo[vaultAddress][life].stableAddress).transferFrom(msg.sender, address(this), surplus), "LQ_BV: Surplus transfer failed");
+    address stable = IFactory(factoryAddress).numeraireToStable(uint256(numeraire));
+    require(IStable(stable).safeBurn(msg.sender, auctionInfo[vaultAddress][life].openDebt), "LQ_BV: Burn failed");
+    require(IStable(stable).transferFrom(msg.sender, address(this), surplus), "LQ_BV: Surplus transfer failed");
 
     auctionInfo[vaultAddress][life].stablePaid = uint128(priceOfVault);
     
@@ -171,12 +162,12 @@ contract Liquidator is Ownable {
 
     claimables[0] = claimableBitmapMem & (1 << 4*life + 0) == 0 ? surplus * ratios.protocol / 100: 0;
     claimables[1] = claimableBitmapMem & (1 << 4*life + 1) == 0 ? surplus * ratios.originalOwner / 100: 0;
-    claimables[2] = claimableBitmapMem & (1 << 4*life + 2) == 0 ? surplus * ratios.liquidator / 100: 0;
+    claimables[2] = claimableBitmapMem & (1 << 4*life + 2) == 0 ? surplus * ratios.liquidationKeeper / 100: 0;
     claimables[3] = claimableBitmapMem & (1 << 4*life + 3) == 0 ? surplus * ratios.reserveFund / 100: 0;
 
     claimableBy[0] = address(this);
     claimableBy[1] = auction.originalOwner;
-    claimableBy[2] = auction.liquidator;
+    claimableBy[2] = auction.liquidationKeeper;
     claimableBy[3] = reserveFund;
 
     return (claimables, claimableBy, auction.numeraire);
@@ -226,7 +217,7 @@ contract Liquidator is Ownable {
     }
 
     for (uint8 k; k < totalClaimable.length;) {
-      require(IStable(numeraireToStable[k]).transferFrom(address(this), msg.sender, totalClaimable[k]));
+      require(IStable(IFactory(factoryAddress).numeraireToStable(k)).transferFrom(address(this), msg.sender, totalClaimable[k]));
       unchecked {++k;}
     }
   }
