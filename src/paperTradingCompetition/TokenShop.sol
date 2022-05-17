@@ -12,7 +12,6 @@ import "./interfaces/IVaultPaperTrading.sol";
 import "./interfaces/IFactoryPaperTrading.sol";
 import "./../interfaces/IMainRegistry.sol";
 
-import {Printing} from "./../utils/Printer.sol";
 import {FixedPointMathLib} from './../utils/FixedPointMathLib.sol';
 
 /** 
@@ -60,13 +59,13 @@ contract TokenShop is Ownable {
    * @param vaultId Id of the vault
    */
   function swapNumeraireForExactTokens(TokenInfo calldata tokenInfo, uint256 vaultId) external {
-    require(msg.sender == IERC721(factory).ownerOf(vaultId), "You are not the owner");
+    require(msg.sender == IERC721(factory).ownerOf(vaultId), "TS_SNFET: You are not the owner");
 
     uint256 tokenAddressesLength = tokenInfo.tokenAddresses.length;
 
     require(tokenAddressesLength == tokenInfo.tokenIds.length &&
              tokenAddressesLength == tokenInfo.tokenAmounts.length &&
-             tokenAddressesLength == tokenInfo.tokenTypes.length, "Length mismatch");
+             tokenAddressesLength == tokenInfo.tokenTypes.length, "TS_SNFET: Length mismatch");
 
     address vault = IFactoryPaperTrading(factory).getVaultAddress(vaultId);
     (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
@@ -94,13 +93,13 @@ contract TokenShop is Ownable {
    * @param vaultId Id of the vault
    */
   function swapExactTokensForNumeraire(TokenInfo calldata tokenInfo, uint256 vaultId) external {
-    require(msg.sender == IERC721(factory).ownerOf(vaultId), "You are not the owner");
+    require(msg.sender == IERC721(factory).ownerOf(vaultId), "TS_SETFN: You are not the owner");
 
     uint256 tokenAddressesLength = tokenInfo.tokenAddresses.length;
 
     require(tokenAddressesLength == tokenInfo.tokenIds.length &&
              tokenAddressesLength == tokenInfo.tokenAmounts.length &&
-             tokenAddressesLength == tokenInfo.tokenTypes.length, "Length mismatch");
+             tokenAddressesLength == tokenInfo.tokenTypes.length, "TS_SETFN: Length mismatch");
 
     address vault = IFactoryPaperTrading(factory).getVaultAddress(vaultId);
     (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
