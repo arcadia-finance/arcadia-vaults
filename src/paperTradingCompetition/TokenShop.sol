@@ -52,27 +52,33 @@ contract TokenShop is Ownable {
    * @dev Function swaps numeraire for n output tokens
    *      The exchange is mocked, instead of actually swapping tokens, it burns the incoming numeraire and mints the outgoing tokens
    *      The exchange rates are fixed (no slippage is taken into account) and live exchange rates from mainnet are used
-   * @param tokenInfoOutput For all output tokens, following lists need to be passed:
+   * @param tokenInfo For all output tokens, following lists need to be passed:
    *        - The token addresses
    *        - The ids, for tokens without id (erc20) any id can be passed
    *        - The amounts
    *        - The token types (0 = ERC20, 1 = ERC721, 2 = ERC1155, Any other number = failed tx)
    * @param vaultId Id of the vault
    */
-  function swapNumeraireForExactTokens(TokenInfo calldata tokenInfoOutput, uint256 vaultId) external {
+  function swapNumeraireForExactTokens(TokenInfo calldata tokenInfo, uint256 vaultId) external {
     require(msg.sender == IERC721(factory).ownerOf(vaultId), "You are not the owner");
+
+    uint256 tokenAddressesLength = tokenInfo.tokenAddresses.length;
+
+    require(tokenAddressesLength == tokenInfo.tokenIds.length &&
+             tokenAddressesLength == tokenInfo.tokenAmounts.length &&
+             tokenAddressesLength == tokenInfo.tokenTypes.length, "Length mismatch");
 
     address vault = IFactoryPaperTrading(factory).getVaultAddress(vaultId);
     (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
     address stable = IVaultPaperTrading(vault)._stable();
 
-    uint256 totalValue = IMainRegistry(mainRegistry).getTotalValue(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, numeraire);
+    uint256 totalValue = IMainRegistry(mainRegistry).getTotalValue(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, numeraire);
 
     IVaultPaperTrading(vault).withdrawERC20(stable, totalValue);
     _burnERC20(stable, totalValue);
-    _mint(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, tokenInfoOutput.tokenTypes);
-    _approve(vault, tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenTypes);
-    IVaultPaperTrading(vault).deposit(tokenInfoOutput.tokenAddresses, tokenInfoOutput.tokenIds, tokenInfoOutput.tokenAmounts, tokenInfoOutput.tokenTypes);
+    _mint(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, tokenInfo.tokenTypes);
+    _approve(vault, tokenInfo.tokenAddresses, tokenInfo.tokenTypes);
+    IVaultPaperTrading(vault).deposit(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, tokenInfo.tokenTypes);
   }
 
   /**
@@ -80,37 +86,38 @@ contract TokenShop is Ownable {
    * @dev Function swaps n input tokens for numeraire
    *      The exchange is mocked, instead of actually swapping tokens, it burns the incoming numeraire and mints the outgoing tokens
    *      The exchange rates are fixed (no slippage is taken into account) and live exchange rates from mainnet are used
-   * @param tokenInfoInput Struct for all input tokens, following lists need to be passed:
+   * @param tokenInfo Struct for all input tokens, following lists need to be passed:
    *        - The token addresses
    *        - The ids, for tokens without id (erc20) any id can be passed
    *        - The amounts
    *        - The token types (0 = ERC20, 1 = ERC721, 2 = ERC1155, Any other number = failed tx)
    * @param vaultId Id of the vault
    */
-  function swapExactTokensForNumeraire(TokenInfo calldata tokenInfoInput, uint256 vaultId) external {
+  function swapExactTokensForNumeraire(TokenInfo calldata tokenInfo, uint256 vaultId) external {
     require(msg.sender == IERC721(factory).ownerOf(vaultId), "You are not the owner");
+
+    uint256 tokenAddressesLength = tokenInfo.tokenAddresses.length;
+
+    require(tokenAddressesLength == tokenInfo.tokenIds.length &&
+             tokenAddressesLength == tokenInfo.tokenAmounts.length &&
+             tokenAddressesLength == tokenInfo.tokenTypes.length, "Length mismatch");
 
     address vault = IFactoryPaperTrading(factory).getVaultAddress(vaultId);
     (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
     address stable = IVaultPaperTrading(vault)._stable();
 
-    uint256 totalValue = IMainRegistry(mainRegistry).getTotalValue(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, numeraire);
+    uint256 totalValue = IMainRegistry(mainRegistry).getTotalValue(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, numeraire);
 
-    IVaultPaperTrading(vault).withdraw(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, tokenInfoInput.tokenTypes);
-    _burn(tokenInfoInput.tokenAddresses, tokenInfoInput.tokenIds, tokenInfoInput.tokenAmounts, tokenInfoInput.tokenTypes);
+    IVaultPaperTrading(vault).withdraw(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, tokenInfo.tokenTypes);
+    _burn(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, tokenInfo.tokenTypes);
     _mintERC20(stable, totalValue);
     _approveERC20(stable, vault);
     IVaultPaperTrading(vault).depositERC20(stable, totalValue);
   }
 
   function _mint(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) internal {
-    uint256 assetAddressesLength = assetAddresses.length;
-
-    require(assetAddressesLength == assetIds.length &&
-             assetAddressesLength == assetAmounts.length &&
-             assetAddressesLength == assetTypes.length, "Length mismatch");
     
-    for (uint256 i; i < assetAddressesLength;) {
+    for (uint256 i; i < assetAddresses.length;) {
       if (assetTypes[i] == 0) {
         _mintERC20(assetAddresses[i], assetAmounts[i]);
       }
@@ -129,13 +136,8 @@ contract TokenShop is Ownable {
   }
 
   function _burn(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) internal {
-    uint256 assetAddressesLength = assetAddresses.length;
-
-    require(assetAddressesLength == assetIds.length &&
-             assetAddressesLength == assetAmounts.length &&
-             assetAddressesLength == assetTypes.length, "Length mismatch");
     
-    for (uint256 i; i < assetAddressesLength;) {
+    for (uint256 i; i < assetAddresses.length;) {
       if (assetTypes[i] == 0) {
         _burnERC20(assetAddresses[i], assetAmounts[i]);
       }
