@@ -156,7 +156,8 @@ contract Factory is ERC721, Ownable {
     
     allVaults.push(vault);
     isVault[vault] = true;
-
+    vaultIndex[vault] = allVaults.length - 1;
+    
     _mint(msg.sender, allVaults.length - 1);
     emit VaultCreated(vault, msg.sender, allVaults.length - 1);
   }

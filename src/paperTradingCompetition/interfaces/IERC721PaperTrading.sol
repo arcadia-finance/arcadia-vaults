@@ -9,4 +9,5 @@ import "./../../interfaces/IERC721.sol";
 interface IERC721PaperTrading is IERC721 {
   function mint(address to, uint256 id) external;
   function burn(uint256 id) external;
+  function setApprovalForAll(address operator, bool approved) external;
 }
