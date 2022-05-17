@@ -213,7 +213,7 @@ contract LiquidatorTest is DSTest {
 
     floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWbaycToEthEthToUsd, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(bayc)}), assetCreditRatings);
 
-    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
     vm.stopPrank();
 
     vm.startPrank(vaultOwner);
@@ -284,7 +284,7 @@ contract LiquidatorTest is DSTest {
 
   function testTransferOwnership(address to) public {
     vm.assume(to != address(0));
-    Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
 
     assertEq(address(this), liquidator_m.owner());
 
@@ -295,7 +295,7 @@ contract LiquidatorTest is DSTest {
   function testTransferOwnershipByNonOwner(address from) public {
     vm.assume(from != address(this));
 
-    Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
     address to = address(12345);
 
     assertEq(address(this), liquidator_m.owner());
@@ -371,9 +371,9 @@ contract LiquidatorTest is DSTest {
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
 
-    (,,uint8 liqThres,,,) = liquidator.auctionInfo(address(proxy), 0);
+    (,,uint8 liqThres,,,,) = liquidator.auctionInfo(address(proxy), 0);
 
-    (uint256 vaultPrice, bool forSale) = liquidator.getPriceOfVault(address(proxy), 0);
+    (uint256 vaultPrice, , bool forSale) = liquidator.getPriceOfVault(address(proxy), 0);
 
     uint256 expectedPrice = amountCredit * liqThres / 100;
     assertTrue(forSale);
@@ -402,11 +402,11 @@ contract LiquidatorTest is DSTest {
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
 
-    (uint128 openDebt,, uint8 liqThres,,,) = liquidator.auctionInfo(address(proxy), 0);
-    (uint256 vaultPriceBefore, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
+    (uint128 openDebt,, uint8 liqThres,,,,) = liquidator.auctionInfo(address(proxy), 0);
+    (uint256 vaultPriceBefore, , bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
     vm.roll(block.number + blocksToRoll);
-    (uint256 vaultPriceAfter, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
+    (uint256 vaultPriceAfter, , bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
 
     uint256 expectedPrice = (openDebt * liqThres /100)  - (blocksToRoll * (openDebt * (liqThres-100)/100) /(liquidator.hourlyBlocks() * liquidator.auctionDuration()));
 
@@ -441,7 +441,7 @@ contract LiquidatorTest is DSTest {
     factory.liquidate(address(proxy));
 
     vm.roll(blocksToRoll);
-    (, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
+    (,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
 
     assertTrue(!forSaleAfter);
 
@@ -468,7 +468,7 @@ contract LiquidatorTest is DSTest {
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
 
-    (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy), 0);
+    (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy), 0);
     vm.prank(address(proxy));
     stable.mint(auctionBuyer, priceOfVault);
 
@@ -503,7 +503,7 @@ contract LiquidatorTest is DSTest {
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
 
-    (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy), 0);
+    (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy), 0);
     vm.prank(address(proxy));
     stable.mint(auctionBuyer, priceOfVault);
 

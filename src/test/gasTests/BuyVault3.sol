@@ -289,7 +289,7 @@ contract gasBuyVault_1ERC201ERC721 is DSTest {
     floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
     floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleGenericStoreFrontToEthEthToUsd, id:1, assetAddress: address(genericStoreFront)}), assetCreditRatings);
 
-    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
     vm.stopPrank();
 
     vm.startPrank(vaultOwner);
@@ -420,7 +420,7 @@ contract gasBuyVault_1ERC201ERC721 is DSTest {
   function testBuyVaultBl2000() public {
     vm.roll(2000);
     vm.startPrank(vaultBuyer);
-    vm.expectRevert("Too much time has passed: this vault is not for sale");
+    vm.expectRevert("LQ_BV: Not for sale");
     liquidator.buyVault(address(proxy), 0);
   }
 

@@ -48,7 +48,7 @@ contract factoryTest is DSTest {
     vaultContr = new Vault();
     erc20Contr = new ERC20Mock("ERC20 Mock", "mERC20", 18);
     interestContr = new InterestRateModule();
-    liquidatorContr = new Liquidator(address(factoryContr), 0x0000000000000000000000000000000000000000, address(erc20Contr));
+    liquidatorContr = new Liquidator(address(factoryContr), 0x0000000000000000000000000000000000000000);
 		registryContr = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(erc20Contr), numeraireLabel:'USD', numeraireUnit:1}));
     
 
@@ -242,6 +242,7 @@ contract factoryTest is DSTest {
 
   //Test addNumeraire
   function testNonRegistryAddsNumeraire(address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != address(registryContr));
     vm.startPrank(unprivilegedAddress);
     vm.expectRevert("FTRY_AN: Add Numeraires via MR");
     factoryContr.addNumeraire(2, address(erc20Contr));
