@@ -202,7 +202,7 @@ contract Factory is ERC721, Ownable {
   }
 
   /** 
-    @notice Internal function used to start the liquidation of a vualt.
+    @notice Internal function used to start the liquidation of a vault.
     @dev 
     @param vault Vault that needs to get liquidated.
     @param sender The msg.sender of the liquidator. Also the 'keeper'
