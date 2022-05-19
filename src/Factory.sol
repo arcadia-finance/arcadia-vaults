@@ -169,7 +169,7 @@ contract Factory is ERC721, Ownable {
     @param to target.
     @param id of the vault that is about to be transfered.
   */
-  function safeTransferFrom(address from, address to, uint256 id) override public {
+  function safeTransferFrom(address from, address to, uint256 id) public override {
       _safeTransferFrom(from, to, id);
   }
 
@@ -180,7 +180,7 @@ contract Factory is ERC721, Ownable {
     @param to target.
     @param id of the vault that is about to be transfered.
   */
-  function transferFrom(address from, address to, uint256 id) override public {
+  function transferFrom(address from, address to, uint256 id) public override {
       _transferFrom(from, to, id);
   }
 
