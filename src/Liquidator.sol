@@ -2,12 +2,13 @@
 // All rights reserved to Arcadia Finance.
 // Any modification, publication, reproduction, commercialisation, incorporation, sharing or any other kind of use of any part of this code or derivatives thereof is not allowed.
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
 import "./interfaces/IFactory.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/IStable.sol";
 import "./interfaces/IVault.sol";
+import "./interfaces/IReserveFund.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 
@@ -16,6 +17,7 @@ contract Liquidator is Ownable {
   address public factoryAddress;
   address public registryAddress;
   address public reserveFund;
+  address public protocolTreasury;
 
   uint256 constant public hourlyBlocks = 300;
   uint256 public auctionDuration = 6; //hours
@@ -24,7 +26,6 @@ contract Liquidator is Ownable {
 
   struct claimRatios {
     uint64 protocol;
-    uint64 originalOwner;
     uint64 liquidationKeeper;
     uint64 reserveFund;
   }
@@ -45,7 +46,7 @@ contract Liquidator is Ownable {
   constructor(address newFactory, address newRegAddr) {
     factoryAddress = newFactory;
     registryAddress = newRegAddr;
-    claimRatio = claimRatios({protocol: 15, originalOwner: 75, liquidationKeeper: 5, reserveFund: 5});
+    claimRatio = claimRatios({protocol: 15, liquidationKeeper: 5, reserveFund: 5});
   }
 
   modifier elevated() {
@@ -55,6 +56,14 @@ contract Liquidator is Ownable {
 
   function setFactory(address newFactory) external onlyOwner {
     factoryAddress = newFactory;
+  }
+
+  function setProtocolTreasury(address newProtocolTreasury) external onlyOwner {
+    protocolTreasury = newProtocolTreasury;
+  }
+
+  function setReserveFund(address newReserveFund) external onlyOwner {
+    reserveFund = newReserveFund;
   }
 
   //function startAuction() modifier = only by vault
@@ -113,12 +122,8 @@ contract Liquidator is Ownable {
     uint256 surplusPrice = auctionInfo[vaultAddress][life].openDebt * (auctionInfo[vaultAddress][life].liqThres-100) / 100;
     uint256 priceDecrease = surplusPrice * (block.number - auctionInfo[vaultAddress][life].startBlock) / (hourlyBlocks * auctionDuration);
 
-    if (startPrice < priceDecrease) {
-      return (0, type(uint8).max, false);
-    }
-
     uint256 totalPrice = startPrice - priceDecrease; 
-    bool forSale = block.number - auctionInfo[vaultAddress][life].startBlock <= hourlyBlocks * auctionDuration ? true : false;
+    bool forSale = auctionInfo[vaultAddress][life].startBlock > 0 ? true : false;
     return (totalPrice, auctionInfo[vaultAddress][life].numeraire, forSale);
   }
     /** 
@@ -156,22 +161,38 @@ contract Liquidator is Ownable {
     claimRatios memory ratios = claimRatio;
     uint256[] memory claimables = new uint256[](4);
     address[] memory claimableBy = new address[](4);
-    uint256 claimableBitmapMem = claimableBitmap[vaultAddress][life & (1 << 6)];
+    uint256 claimableBitmapMem = claimableBitmap[vaultAddress][(life >> 6)];
 
-    uint256 surplus = auction.stablePaid - auction.openDebt;
+    uint256 keeperReward = auction.openDebt * ratios.liquidationKeeper / 100;
+    uint256 protocolReward = auction.openDebt * ratios.protocol / 100;
+    uint256 reserveFundReward = auction.openDebt * ratios.reserveFund / 100;
 
-    claimables[0] = claimableBitmapMem & (1 << 4*life + 0) == 0 ? surplus * ratios.protocol / 100: 0;
-    claimables[1] = claimableBitmapMem & (1 << 4*life + 1) == 0 ? surplus * ratios.originalOwner / 100: 0;
-    claimables[2] = claimableBitmapMem & (1 << 4*life + 2) == 0 ? surplus * ratios.liquidationKeeper / 100: 0;
-    claimables[3] = claimableBitmapMem & (1 << 4*life + 3) == 0 ? surplus * ratios.reserveFund / 100: 0;
+    claimables[0] = claimableBitmapMem & (1 << 4*life + 0) == 0 ? keeperReward : 0;
+    claimableBy[0] = auction.liquidationKeeper;
 
-    claimableBy[0] = address(this);
-    claimableBy[1] = auction.originalOwner;
-    claimableBy[2] = auction.liquidationKeeper;
-    claimableBy[3] = reserveFund;
+    if (auction.stablePaid < auction.openDebt || 
+        auction.stablePaid <= keeperReward + auction.openDebt)
+    {
+      return (claimables, claimableBy, auction.numeraire);
+    }
+
+    uint256 leftover = auction.stablePaid - auction.openDebt - keeperReward;
+
+    claimables[1] = claimableBitmapMem & (1 << 4*life + 1) == 0 ? (leftover >= reserveFundReward ? reserveFundReward : leftover) : 0;
+    leftover = leftover >= reserveFundReward ? leftover - reserveFundReward : 0;
+
+    claimables[2] = claimableBitmapMem & (1 << 4*life + 2) == 0 ? (leftover >= protocolReward ? protocolReward : leftover) : 0;
+    leftover = leftover >= protocolReward ? leftover - protocolReward : 0;
+
+    claimables[3] = claimableBitmapMem & (1 << 4*life + 3) == 0 ? leftover : 0;
+    
+    claimableBy[1] = reserveFund;
+    claimableBy[2] = protocolTreasury;
+    claimableBy[3] = auction.originalOwner;
 
     return (claimables, claimableBy, auction.numeraire);
   }
+
     /** 
     @notice Function a eligeble claimer can call to claim the proceeds of the vault they are entitled to.
     @dev 
@@ -192,7 +213,7 @@ contract Liquidator is Ownable {
       uint256 life = lives[i];
       auctionInformation memory auction = auctionInfo[vaultAddress][life];
       (claimables, claimableBy, numeraire) = claimable(auction, vaultAddress, life);
-      claimableBitmapMem = claimableBitmap[vaultAddress][life & (1 << 6)];
+      claimableBitmapMem = claimableBitmap[vaultAddress][(life >> 6)];
 
       if (msg.sender == claimableBy[0]) {
         totalClaimable[numeraire] += claimables[0];
@@ -211,7 +232,7 @@ contract Liquidator is Ownable {
         claimableBitmapMem = claimableBitmapMem | (1 << (4*life + 3));
       }
 
-      claimableBitmap[vaultAddress][life & (1 << 6)] = claimableBitmapMem;
+      claimableBitmap[vaultAddress][(life >> 6)] = claimableBitmapMem;
 
       unchecked {++i;}
     }

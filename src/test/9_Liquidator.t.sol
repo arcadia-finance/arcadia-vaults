@@ -188,8 +188,6 @@ contract LiquidatorTest is DSTest {
   //this is a before each
   function setUp() public {
 
-    emit log_named_address("oracleEthToUsdArr[0]", oracleEthToUsdArr[0]);
-
     vm.startPrank(creatorAddress);
     mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stable), numeraireLabel:'USD', numeraireUnit:1}));
     uint256[] memory emptyList = new uint256[](0);
@@ -519,7 +517,83 @@ contract LiquidatorTest is DSTest {
     vm.stopPrank();
   }
 
+  function testClaimSingle(uint128 amountEth) public {
+    vm.assume(amountEth > 0);
+    uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+    vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
+    depositERC20InVault(eth, amountEth, vaultOwner);
+
+    vm.startPrank(vaultOwner);
+    uint256 remainingCred = uint128(proxy.getRemainingCredit());
+    proxy.takeCredit(uint128(remainingCred));
+    vm.stopPrank();
+
+    vm.startPrank(oracleOwner);
+    oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
+    vm.stopPrank();
+
+    address protocolTreasury = address(1000);
+    address reserveFund = address(1111);
+    address liquidatorKeeper = address(1110);
+    address vaultBuyer = address(2000);
+
+    setAddresses();
+
+    vm.prank(address(1110));
+    factory.liquidate(address(proxy));
+
+    giveStable(vaultBuyer, remainingCred * 2);
+    (uint256 price,,) = liquidator.getPriceOfVault(address(proxy), 0);
+    vm.startPrank(vaultBuyer);
+    stable.approve(address(liquidator), type(uint256).max);
+    liquidator.buyVault(address(proxy), 0);
+    vm.stopPrank();
+
+    address[] memory vaultAddresses = new address[](1);
+    uint256[] memory lives = new uint256[](1);
+    vaultAddresses[0] = address(proxy);
+    lives[0] = 0;
+
+    uint256 balancePre;
+    uint256 balancePost;
+
+    Liquidator.auctionInformation memory auction;
+    auction.stablePaid = uint128(price);
+    auction.openDebt = uint128(remainingCred);
+    auction.originalOwner = vaultOwner;
+    auction.liquidationKeeper = liquidatorKeeper;
+    auction.numeraire = 0;
+
+    liquidator.claimable(auction, address(proxy), 0);
+
+    balancePre = stable.balanceOf(protocolTreasury);
+    vm.prank(protocolTreasury);
+    liquidator.claimProceeds(vaultAddresses, lives);
+    emit log_named_uint("PT - pre", balancePre);
+    emit log_named_uint("PT - post", stable.balanceOf(protocolTreasury));
+    fail();
+
+
+  }
+
+  function setAddresses() public {
+    vm.startPrank(creatorAddress);
+    liquidator.setProtocolTreasury(address(1000));
+    liquidator.setReserveFund(address(1111));
+    vm.stopPrank();
+  }
+
+  function giveStable(address addr, uint256 amount) public {
+    uint256 slot = stdstore
+            .target(address(stable))
+            .sig(stable.balanceOf.selector)
+            .with_key(addr)
+            .find();
+    bytes32 loc = bytes32(slot);
+    bytes32 newBalance = bytes32(abi.encode(amount));
+    vm.store(address(stable), loc, newBalance);
+  }
 
 
 

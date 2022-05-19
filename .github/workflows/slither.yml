@@ -1,0 +1,14 @@
+name: Slither Analysis
+# on:
+#   pull_request:
+#     branches:
+#       - main
+#       - main_paper_trading
+#       - main*
+on: [push]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: crytic/slither-action@v0.1.1
