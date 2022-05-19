@@ -71,7 +71,7 @@ contract StandardERC20Registry is SubRegistry {
    * @return assetAddress The Token address of the asset
    * @return oracleAddresses The list of addresses of the oracles to get the exchange rate of the asset in USD
    */
-  function getAssetInformation(address asset) public view returns (uint64, address, address[] memory) {
+  function getAssetInformation(address asset) external view returns (uint64, address, address[] memory) {
     return (assetToInformation[asset].assetUnit, assetToInformation[asset].assetAddress, assetToInformation[asset].oracleAddresses);
   }
 
@@ -101,10 +101,11 @@ contract StandardERC20Registry is SubRegistry {
    * @dev If the Oracle-Hub returns the rate in a numeraire different from USD, the StandardERC20Registry will return 
    *      the value of the asset in the same Numeraire. If the Oracle-Hub returns the rate in USD, the StandardERC20Registry  
    *      will return the value of the asset in USD.
+   *      Only one of the two values can be different from 0.
    * @dev Function will overflow when assetAmount * Rate * 10**(18 - assetDecimals) > MAXUINT256
    * @dev If the asset is not first added to subregistry this function will return value 0 without throwing an error.
-          However no check in StandardERC20Registry is necessary, since the check if the asset is whitelisted (and hence added to subregistry)
-          is already done in the Main-Registry.
+   *      However no check in StandardERC20Registry is necessary, since the check if the asset is whitelisted (and hence added to subregistry)
+   *      is already done in the Main-Registry.
    */
   function getValue(GetValueInput memory getValueInput) public view override returns (uint256 valueInUsd, uint256 valueInNumeraire) {
     uint256 rateInUsd;
@@ -117,7 +118,6 @@ contract StandardERC20Registry is SubRegistry {
     } else {
       valueInUsd = (getValueInput.assetAmount).mulDivDown(rateInUsd, assetToInformation[getValueInput.assetAddress].assetUnit);
     }
-    return (valueInUsd, valueInNumeraire);
   }
 
 }
