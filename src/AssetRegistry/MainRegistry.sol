@@ -305,7 +305,7 @@ contract MainRegistry is Ownable {
       //Add valueInUsd to valueInNumeraire
       valueInNumeraire = valueInNumeraire + valueInUsd.mulDivDown(numeraireToInformation[numeraire].numeraireToUsdOracleUnit, uint256(rate));
     }
-
+    return valueInNumeraire;
   }
 
   /**
