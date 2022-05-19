@@ -7,6 +7,7 @@ pragma solidity ^0.8.13;
 import "./interfaces/IFactory.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/IStable.sol";
+import "./interfaces/IERC20.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IReserveFund.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
@@ -27,7 +28,6 @@ contract Liquidator is Ownable {
   struct claimRatios {
     uint64 protocol;
     uint64 liquidationKeeper;
-    uint64 reserveFund;
   }
 
   struct auctionInformation {
@@ -46,7 +46,7 @@ contract Liquidator is Ownable {
   constructor(address newFactory, address newRegAddr) {
     factoryAddress = newFactory;
     registryAddress = newRegAddr;
-    claimRatio = claimRatios({protocol: 15, liquidationKeeper: 5, reserveFund: 5});
+    claimRatio = claimRatios({protocol: 15, liquidationKeeper: 2});
   }
 
   modifier elevated() {
@@ -157,15 +157,14 @@ contract Liquidator is Ownable {
     @param vaultAddress the vaultAddress of the vault the user want to buy.
     @param life the lifeIndex of vault, the keeper wants to claim their reward from
   */
-  function claimable(auctionInformation memory auction, address vaultAddress, uint256 life) public view returns (uint256[] memory, address[] memory, uint8) {
+  function claimable(auctionInformation memory auction, address vaultAddress, uint256 life) public view returns (uint256[] memory, address[] memory) {
     claimRatios memory ratios = claimRatio;
-    uint256[] memory claimables = new uint256[](4);
-    address[] memory claimableBy = new address[](4);
+    uint256[] memory claimables = new uint256[](3);
+    address[] memory claimableBy = new address[](3);
     uint256 claimableBitmapMem = claimableBitmap[vaultAddress][(life >> 6)];
 
     uint256 keeperReward = auction.openDebt * ratios.liquidationKeeper / 100;
     uint256 protocolReward = auction.openDebt * ratios.protocol / 100;
-    uint256 reserveFundReward = auction.openDebt * ratios.reserveFund / 100;
 
     claimables[0] = claimableBitmapMem & (1 << 4*life + 0) == 0 ? keeperReward : 0;
     claimableBy[0] = auction.liquidationKeeper;
@@ -173,24 +172,20 @@ contract Liquidator is Ownable {
     if (auction.stablePaid < auction.openDebt || 
         auction.stablePaid <= keeperReward + auction.openDebt)
     {
-      return (claimables, claimableBy, auction.numeraire);
+      return (claimables, claimableBy);
     }
 
     uint256 leftover = auction.stablePaid - auction.openDebt - keeperReward;
 
-    claimables[1] = claimableBitmapMem & (1 << 4*life + 1) == 0 ? (leftover >= reserveFundReward ? reserveFundReward : leftover) : 0;
-    leftover = leftover >= reserveFundReward ? leftover - reserveFundReward : 0;
-
-    claimables[2] = claimableBitmapMem & (1 << 4*life + 2) == 0 ? (leftover >= protocolReward ? protocolReward : leftover) : 0;
+    claimables[1] = claimableBitmapMem & (1 << 4*life + 2) == 0 ? (leftover >= protocolReward ? protocolReward : leftover) : 0;
     leftover = leftover >= protocolReward ? leftover - protocolReward : 0;
 
-    claimables[3] = claimableBitmapMem & (1 << 4*life + 3) == 0 ? leftover : 0;
+    claimables[2] = claimableBitmapMem & (1 << 4*life + 3) == 0 ? leftover : 0;
     
-    claimableBy[1] = reserveFund;
-    claimableBy[2] = protocolTreasury;
-    claimableBy[3] = auction.originalOwner;
+    claimableBy[1] = protocolTreasury;
+    claimableBy[2] = auction.originalOwner;
 
-    return (claimables, claimableBy, auction.numeraire);
+    return (claimables, claimableBy);
   }
 
     /** 
@@ -198,41 +193,34 @@ contract Liquidator is Ownable {
     @dev 
     @param vaultAddresses vaultAddresses the caller want to claim the proceeds from.
     */
-  function claimProceeds(address[] calldata vaultAddresses, uint256[] calldata lives) public {
+  function claimProceeds(address claimer, address[] calldata vaultAddresses, uint256[] calldata lives) public {
     uint256 len = vaultAddresses.length;
     require(len == lives.length, "Arrays must be of same length");
     uint256 numeraireCounter = IFactory(factoryAddress).numeraireCounter();
 
     uint256[] memory totalClaimable = new uint256[](numeraireCounter);
-    uint256[] memory totalClaimableKeeper = new uint256[](numeraireCounter);
     uint256 claimableBitmapMem;
 
     uint256[] memory claimables;
     address[] memory claimableBy;
-    uint8 numeraire;
     for (uint256 i; i < len;) {
       address vaultAddress = vaultAddresses[i];
       uint256 life = lives[i];
       auctionInformation memory auction = auctionInfo[vaultAddress][life];
-      (claimables, claimableBy, numeraire) = claimable(auction, vaultAddress, life);
+      (claimables, claimableBy) = claimable(auction, vaultAddress, life);
       claimableBitmapMem = claimableBitmap[vaultAddress][(life >> 6)];
 
-      if (msg.sender == claimableBy[0]) {
-        totalClaimableKeeper[numeraire] += claimables[0];
+      if (claimer == claimableBy[0]) {
+        totalClaimable[auction.numeraire] += claimables[0];
         claimableBitmapMem = claimableBitmapMem | (1 << (4*life + 0));
       }
-      if (msg.sender == claimableBy[1]) {
-        totalClaimable[numeraire] += claimables[1];
+      if (claimer == claimableBy[1]) {
+        totalClaimable[auction.numeraire] += claimables[1];
         claimableBitmapMem = claimableBitmapMem | (1 << (4*life + 1));
       }
-      if (msg.sender == claimableBy[2]) {
-        require(false, "claimableby2");
-        totalClaimable[numeraire] += claimables[2];
+      if (claimer == claimableBy[2]) {
+        totalClaimable[auction.numeraire] += claimables[2];
         claimableBitmapMem = claimableBitmapMem | (1 << (4*life + 2));
-      }
-      if (msg.sender == claimableBy[3]) {
-        totalClaimable[numeraire] += claimables[3];
-        claimableBitmapMem = claimableBitmapMem | (1 << (4*life + 3));
       }
 
       claimableBitmap[vaultAddress][(life >> 6)] = claimableBitmapMem;
@@ -240,23 +228,29 @@ contract Liquidator is Ownable {
       unchecked {++i;}
     }
 
+    _doTransfers(numeraireCounter, totalClaimable, claimer);
+
+  }
+
+  function _doTransfers(uint256 numeraireCounter, uint256[] memory totalClaimable, address claimer) internal {
+
     for (uint8 k; k < numeraireCounter;) {
       if (totalClaimable[k] > 0) {
-        require(false, "sendtokens");
-        require(IStable(IFactory(factoryAddress).numeraireToStable(k)).transferFrom(address(this), msg.sender, totalClaimable[k]));
-      }
-      if (totalClaimableKeeper[k] > 0) {
-        require(IReserveFund(reserveFund).withdraw(totalClaimable[k], IFactory(factoryAddress).numeraireToStable(k), msg.sender));
+        address numeraireStable = IFactory(factoryAddress).numeraireToStable(k);
+        uint256 balance = IERC20(numeraireStable).balanceOf(address(this));
+
+        if (balance >= totalClaimable[k]) {
+          require(IERC20(numeraireStable).transfer(claimer, totalClaimable[k]));
+        }
+        else {
+          require(IERC20(numeraireStable).transfer(claimer, balance));
+          require(IReserveFund(reserveFund).withdraw(totalClaimable[k] - balance, numeraireStable, claimer));
+        }
+
       }
       unchecked {++k;}
     }
   }
-
-  //function buy(assets, amounts, ids) payable
-  //  fetches price of first provided
-  //  if buy-price is >= open debt, close auction & take fees (how?)
-  //  (if all assets are bought, transfer vault)
-  //  (for purchase that ends auction, give discount?)
 
 
 }

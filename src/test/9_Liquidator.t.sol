@@ -544,6 +544,7 @@ contract LiquidatorTest is DSTest {
     factory.liquidate(address(proxy));
 
     giveStable(vaultBuyer, remainingCred * 2);
+    giveStable(reserveFund, remainingCred * 2);
     (uint256 price,,) = liquidator.getPriceOfVault(address(proxy), 0);
     vm.startPrank(vaultBuyer);
     stable.approve(address(liquidator), type(uint256).max);
@@ -569,11 +570,29 @@ contract LiquidatorTest is DSTest {
 
     balancePre = stable.balanceOf(protocolTreasury);
     vm.prank(protocolTreasury);
-    liquidator.claimProceeds(vaultAddresses, lives);
+    liquidator.claimProceeds(protocolTreasury, vaultAddresses, lives);
+
+    (uint64 protocolRatio, uint64 keeperRatio) = liquidator.claimRatio();
+
+    uint256 expectedKeeperReward = remainingCred * keeperRatio / 100;
+    uint256 expectedProtocolReward;
+    uint256 originalOwnerRecovery;
+
+    if (price - remainingCred - expectedKeeperReward > 0) {
+      if (price - remainingCred - expectedKeeperReward - expectedProtocolReward > 0) {
+        expectedProtocolReward = remainingCred * protocolRatio / 100;
+        originalOwnerRecovery = price - remainingCred - expectedKeeperReward - expectedProtocolReward;
+      } else {
+        expectedProtocolReward = price - remainingCred - expectedKeeperReward;
+        originalOwnerRecovery = 0;
+      }
+    } else {
+      expectedProtocolReward = 0;
+      originalOwnerRecovery = 0;
+    }
+
     emit log_named_uint("PT - pre", balancePre);
     emit log_named_uint("PT - post", stable.balanceOf(protocolTreasury));
-    fail();
-
 
   }
 
