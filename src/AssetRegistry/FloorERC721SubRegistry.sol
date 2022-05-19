@@ -11,7 +11,7 @@ import "./AbstractSubRegistry.sol";
   * @author Arcadia Finance
   * @notice The FloorERC721SubRegistry stores pricing logic and basic information for ERC721 tokens for which a direct price feeds exists
   *         for the floor price of the collection
-  * @dev No end-user should directly interact with the Main-registry, only the Main-registry, Oracle-Hub or the contract owner
+  * @dev No end-user should directly interact with the FloorERC721SubRegistry, only the Main-registry, Oracle-Hub or the contract owner
  */
 contract FloorERC721SubRegistry is SubRegistry {
 
@@ -29,15 +29,15 @@ contract FloorERC721SubRegistry is SubRegistry {
    * @param mainRegistry The address of the Main-registry
    * @param oracleHub The address of the Oracle-Hub 
    */
-  constructor(address mainRegistry, address oracleHub) SubRegistry(mainRegistry, oracleHub) {
-    //owner = msg.sender;
-    _mainRegistry = mainRegistry;
-    _oracleHub = oracleHub; //Not the best place to store oraclehub address in sub-registries. Redundant + lot's of tx required of oraclehub is ever changes
-  }
+  constructor(address mainRegistry, address oracleHub) SubRegistry(mainRegistry, oracleHub) {}
   
   /**
-   * @notice Add a new asset to the FloorERC721SubRegistry, or overwrite an existing one
-   * @param assetInformation A Struct with information about the asset 
+   * @notice Adds a new asset to the FloorERC721SubRegistry, or overwrites an existing asset
+   * @notice Adds a new asset to the StandardERC20Registry, or overwrites an existing asset.
+   * @param assetInformation A Struct with information about the asset
+   *                         - assetUnit: The unit of the asset, equal to 10 the power of the number of decimals of the oracle
+   *                         - assetAddress: The contract address of the asset
+   *                         - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
    * @param assetCreditRatings The List of Credit Ratings for the asset for the different Numeraires
    * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
    *      or the list must have lenth 0. If the list has length zero, the credit ratings of the asset for all numeraires is
@@ -46,7 +46,7 @@ contract FloorERC721SubRegistry is SubRegistry {
    */ 
   function setAssetInformation(AssetInformation calldata assetInformation, uint256[] calldata assetCreditRatings) external onlyOwner {
 
-    IOraclesHub(_oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+    IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
     
     address assetAddress = assetInformation.assetAddress;
     //require(!inSubRegistry[assetAddress], 'Asset already known in Sub-Registry');
@@ -56,7 +56,7 @@ contract FloorERC721SubRegistry is SubRegistry {
     }
     assetToInformation[assetAddress] = assetInformation;
     isAssetAddressWhiteListed[assetAddress] = true;
-    IMainRegistry(_mainRegistry).addAsset(assetAddress, assetCreditRatings);
+    IMainRegistry(mainRegistry).addAsset(assetAddress, assetCreditRatings);
   }
 
   /**
@@ -102,6 +102,6 @@ contract FloorERC721SubRegistry is SubRegistry {
    */
   function getValue(GetValueInput memory getValueInput) public view override returns (uint256 valueInUsd, uint256 valueInNumeraire) {
  
-    (valueInUsd, valueInNumeraire) = IOraclesHub(_oracleHub).getRate(assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.numeraire);
+    (valueInUsd, valueInNumeraire) = IOraclesHub(oracleHub).getRate(assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.numeraire);
   }
 }

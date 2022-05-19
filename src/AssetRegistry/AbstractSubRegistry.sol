@@ -12,18 +12,20 @@ import {FixedPointMathLib} from '../utils/FixedPointMathLib.sol';
 /** 
   * @title Abstract Sub-registry
   * @author Arcadia Finance
-  * @notice Sub-Registries store pricing logic and basic information for tokens that can, or could at some point, be deposited in the vaults
-  * @dev No end-user should directly interact with the Main-registry, only the Main-registry, Oracle-Hub or the contract owner
+  * @notice Sub-Registries have the pricing logic and basic information for tokens that can, or could at some point, be deposited in the vaults
+  * @dev No end-user should directly interact with Sub-Registries, only the Main-registry, Oracle-Hub or the contract owner
+  * @dev This abstract contract contains the minimal functions that each Sub-Registry should have to properly work with the Main-Registry
  */ 
 abstract contract SubRegistry is Ownable {
   using FixedPointMathLib for uint256;
   
-  address public _mainRegistry;
-  address public _oracleHub;
+  address public mainRegistry;
+  address public oracleHub;
   address[] public assetsInSubRegistry;
   mapping (address => bool) public inSubRegistry;
   mapping (address => bool) public isAssetAddressWhiteListed;
 
+  //struct with input variables necessary to avoid stack to deep error
   struct GetValueInput {
     address assetAddress;
     uint256 assetId;
@@ -32,19 +34,19 @@ abstract contract SubRegistry is Ownable {
   }
 
   /**
-   * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and of the Oracle-Hub
-   * @param mainRegistry The address of the Main-registry
-   * @param oracleHub The address of the Oracle-Hub 
+   * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and the Oracle-Hub
+   * @param _mainRegistry The address of the Main-registry
+   * @param _oracleHub The address of the Oracle-Hub
    */
-  constructor (address mainRegistry, address oracleHub) {
-    //owner = msg.sender;
-    _mainRegistry = mainRegistry;
-    _oracleHub = oracleHub; //ToDo Not the best place to store oraclehub address in sub-registries. Redundant + lot's of tx required of oraclehub is ever changes
+  constructor (address _mainRegistry, address _oracleHub) {
+    mainRegistry = _mainRegistry;
+    oracleHub = _oracleHub;
   }
 
   /**
-   * @notice Checks for a token address and the corresponding Id if it is white-listed
+   * @notice Checks for a token address and the corresponding Id, if it is white-listed
    * @return A boolean, indicating if the asset passed as input is whitelisted
+   * @dev For tokens without Id (for instance ERC20 tokens), any integer can be passed
    */
   function isWhiteListed(address, uint256) external view virtual returns (bool) {
     return false;
@@ -60,8 +62,8 @@ abstract contract SubRegistry is Ownable {
   }
 
   /**
-   * @notice Adds an asset to the white-list
-   * @param assetAddress The token address of the asset that needs to be added to the white-list
+   * @notice Adds an asset back to the white-list
+   * @param assetAddress The token address of the asset that needs to be added back to the white-list
    */
   function addToWhiteList(address assetAddress) external onlyOwner {
     require(inSubRegistry[assetAddress], 'Asset not known in Sub-Registry');
@@ -70,6 +72,13 @@ abstract contract SubRegistry is Ownable {
 
   /**
    * @notice Returns the value of a certain asset, denominated in USD or in another Numeraire
+   * @dev The value of the asset can be denominated in:
+   *      - USD.
+   *      - A given Numeraire, different from USD.
+   *      - A combination of USD and a given Numeraire, different from USD (will be very exceptional,
+   *        but theoratically possible for for instance a UNI V2 LP position of two underlying assets,
+   *        one denominated in USD and the other one in the different Numeraire).
+   * @dev All price feeds should be fetched in the Oracle-Hub
    */
   function getValue(GetValueInput memory) public view virtual returns (uint256, uint256) {
     

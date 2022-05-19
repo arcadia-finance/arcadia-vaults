@@ -28,11 +28,7 @@ contract FloorERC1155SubRegistry is SubRegistry {
    * @param mainRegistry The address of the Main-registry
    * @param oracleHub The address of the Oracle-Hub 
    */
-  constructor(address mainRegistry, address oracleHub) SubRegistry(mainRegistry, oracleHub) {
-    //owner = msg.sender;
-    _mainRegistry = mainRegistry;
-    _oracleHub = oracleHub; //Not the best place to store oraclehub address in sub-registries. Redundant + lot's of tx required of oraclehub is ever changes
-  }
+  constructor(address mainRegistry, address oracleHub) SubRegistry(mainRegistry, oracleHub) {}
 
   /**
    * @notice Add a new asset to the FloorERC721SubRegistry, or overwrite an existing one
@@ -45,7 +41,7 @@ contract FloorERC1155SubRegistry is SubRegistry {
    */ 
   function setAssetInformation(AssetInformation calldata assetInformation, uint256[] calldata assetCreditRatings) external onlyOwner {
 
-    IOraclesHub(_oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+    IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
     
     address assetAddress = assetInformation.assetAddress;
     //require(!inSubRegistry[assetAddress], 'Asset already known in Sub-Registry');
@@ -55,7 +51,7 @@ contract FloorERC1155SubRegistry is SubRegistry {
     }
     assetToInformation[assetAddress] = assetInformation;
     isAssetAddressWhiteListed[assetAddress] = true;
-    IMainRegistry(_mainRegistry).addAsset(assetAddress, assetCreditRatings);
+    IMainRegistry(mainRegistry).addAsset(assetAddress, assetCreditRatings);
   }
 
   /**
@@ -91,7 +87,7 @@ contract FloorERC1155SubRegistry is SubRegistry {
     uint256 rateInUsd;
     uint256 rateInNumeraire;
     
-    (rateInUsd, rateInNumeraire) = IOraclesHub(_oracleHub).getRate(assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.numeraire);
+    (rateInUsd, rateInNumeraire) = IOraclesHub(oracleHub).getRate(assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.numeraire);
 
     if (rateInNumeraire > 0) {
       value = getValueInput.assetAmount * rateInNumeraire;

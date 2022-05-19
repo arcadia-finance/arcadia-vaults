@@ -70,7 +70,10 @@ contract MainRegistry is Ownable {
 
   /**
    * @notice The Main Registry must always be initialised with at least one Numeraire: USD
-   * @dev If the Numeraire has no native token, numeraireDecimals should be set to 0 and assetAddress to the null address
+   * @dev If the Numeraire has no native token, numeraireDecimals should be set to 0 and assetAddress to the null address.
+   *      Tokens pegged to the native token do not count as native tokens
+   *      - USDC is not a native token for USD as Numeraire
+   *      - WETH is a native tokeken for ETH as Numeraire
    * @param _numeraireInformation A Struct with information about the Numeraire USD
    */
   constructor (NumeraireInformation memory _numeraireInformation) {
@@ -221,7 +224,7 @@ contract MainRegistry is Ownable {
   }
 
   /**
-   * @notice Add a new numeraire to the Main Registry, or overwrite an existing one
+   * @notice Add a new numeraire (a unit in which price is measured, like USD or ETH) to the Main Registry, or overwrite an existing one
    * @param numeraireInformation A Struct with information about the Numeraire
    * @param assetCreditRatings The List of the Credit Rating Categories of the numeraire, for all the different assets in the Main registry
    * @dev The list of Credit Rating Categories should or be as long as the number of assets added to the Main Registry,
