@@ -242,6 +242,8 @@ contract factoryTest is DSTest {
 
   //Test addNumeraire
   function testNonRegistryAddsNumeraire(address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != address(this));
+    vm.assume(unprivilegedAddress != address(factoryContr));
     vm.startPrank(unprivilegedAddress);
     vm.expectRevert("FTRY_AN: Add Numeraires via MR");
     factoryContr.addNumeraire(2, address(erc20Contr));
