@@ -517,10 +517,25 @@ contract LiquidatorTest is DSTest {
     vm.stopPrank();
   }
 
+
+  struct Rewards {
+    uint256 expectedKeeperReward;
+    uint256 expectedProtocolReward;
+    uint256 originalOwnerRecovery;
+  }
+
+  struct Balances {
+    uint256 keeper;
+    uint256 protocol;
+    uint256 originalOwner;
+  }
+
   function testClaimSingle(uint128 amountEth) public {
     vm.assume(amountEth > 0);
-    uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
-    vm.assume(amountEth < type(uint128).max / valueOfOneEth);
+    {
+      uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+      vm.assume(amountEth < type(uint128).max / valueOfOneEth);
+    }
 
     depositERC20InVault(eth, amountEth, vaultOwner);
 
@@ -533,20 +548,20 @@ contract LiquidatorTest is DSTest {
     oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
     vm.stopPrank();
 
-    address protocolTreasury = address(1000);
-    address reserveFund = address(1111);
-    address liquidatorKeeper = address(1110);
-    address vaultBuyer = address(2000);
+    // address protocolTreasury = address(1000);
+    // address reserveFund = address(1111);
+    // address liquidatorKeeper = address(1110);
+    // address vaultBuyer = address(2000);
 
     setAddresses();
 
     vm.prank(address(1110));
     factory.liquidate(address(proxy));
 
-    giveStable(vaultBuyer, remainingCred * 2);
-    giveStable(reserveFund, remainingCred * 2);
+    giveStable(address(2000), remainingCred * 2);
+    giveStable(address(1111), remainingCred * 2);
     (uint256 price,,) = liquidator.getPriceOfVault(address(proxy), 0);
-    vm.startPrank(vaultBuyer);
+    vm.startPrank(address(2000));
     stable.approve(address(liquidator), type(uint256).max);
     liquidator.buyVault(address(proxy), 0);
     vm.stopPrank();
@@ -556,45 +571,162 @@ contract LiquidatorTest is DSTest {
     vaultAddresses[0] = address(proxy);
     lives[0] = 0;
 
-    uint256 balancePre;
-    uint256 balancePost;
-
     Liquidator.auctionInformation memory auction;
     auction.stablePaid = uint128(price);
     auction.openDebt = uint128(remainingCred);
     auction.originalOwner = vaultOwner;
-    auction.liquidationKeeper = liquidatorKeeper;
+    auction.liquidationKeeper = address(1110);
     auction.numeraire = 0;
 
     liquidator.claimable(auction, address(proxy), 0);
 
-    balancePre = stable.balanceOf(protocolTreasury);
-    vm.prank(protocolTreasury);
-    liquidator.claimProceeds(protocolTreasury, vaultAddresses, lives);
+    Balances memory pre = getBalances(stable, vaultOwner);
 
-    (uint64 protocolRatio, uint64 keeperRatio) = liquidator.claimRatio();
+    liquidator.claimProceeds(address(1110), vaultAddresses, lives);
+    liquidator.claimProceeds(address(1000), vaultAddresses, lives);
+    liquidator.claimProceeds(vaultOwner, vaultAddresses, lives);
 
-    uint256 expectedKeeperReward = remainingCred * keeperRatio / 100;
-    uint256 expectedProtocolReward;
-    uint256 originalOwnerRecovery;
+    Rewards memory rewards = getRewards(price, remainingCred);
+    
+    Balances memory post = getBalances(stable, vaultOwner);
 
-    if (price - remainingCred - expectedKeeperReward > 0) {
-      if (price - remainingCred - expectedKeeperReward - expectedProtocolReward > 0) {
-        expectedProtocolReward = remainingCred * protocolRatio / 100;
-        originalOwnerRecovery = price - remainingCred - expectedKeeperReward - expectedProtocolReward;
-      } else {
-        expectedProtocolReward = price - remainingCred - expectedKeeperReward;
-        originalOwnerRecovery = 0;
-      }
-    } else {
-      expectedProtocolReward = 0;
-      originalOwnerRecovery = 0;
-    }
-
-    emit log_named_uint("PT - pre", balancePre);
-    emit log_named_uint("PT - post", stable.balanceOf(protocolTreasury));
+    assertEq(pre.keeper + rewards.expectedKeeperReward, post.keeper);
+    assertEq(pre.protocol + rewards.expectedProtocolReward, post.protocol);
+    assertEq(pre.originalOwner + rewards.originalOwnerRecovery, post.originalOwner);
 
   }
+
+  function testClaimMultiple(uint128[] calldata amountsEth) public {
+    vm.assume(amountsEth.length < 64);
+    setAddresses();
+
+    address[] memory vaultAddresses = new address[](amountsEth.length);
+    uint256[] memory lives = new uint256[](amountsEth.length);
+
+    uint128 amountEth;
+    uint256 remainingCred;
+    uint256 valueOfOneEth;
+    uint256 price;
+    Rewards[] memory rewards = new Rewards[](amountsEth.length);
+    Rewards memory rewardsSum;
+    giveStable(address(2000), type(uint256).max);
+    giveStable(address(1111), type(uint256).max);
+    emit log_named_uint("bal of buyer pre", stable.balanceOf(address(2000)));
+
+    for (uint i; i < amountsEth.length; ++i) {
+      amountEth = amountsEth[i];
+      vm.assume(amountEth > 0);
+      {
+        valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+        vm.assume(amountEth < type(uint128).max / valueOfOneEth);
+      }
+
+      emit log_named_address("vaultOwner", proxy.owner());
+      emit log_named_address("vaultBuyer", address(2000));
+      emit log_named_uint("loopindex", i);
+      depositERC20InVault(eth, amountEth, vaultOwner);
+
+      vm.startPrank(vaultOwner);
+      remainingCred = uint128(proxy.getRemainingCredit());
+      proxy.takeCredit(uint128(remainingCred));
+      vm.stopPrank();
+
+      vm.startPrank(oracleOwner);
+      oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
+      vm.stopPrank();
+
+      // address protocolTreasury = address(1000);
+      // address reserveFund = address(1111);
+      // address liquidatorKeeper = address(1110);
+      // address vaultBuyer = address(2000);
+
+      vm.prank(address(1110));
+      factory.liquidate(address(proxy));
+
+      
+      //giveStable(address(1111), remainingCred * 2);
+      (price,,) = liquidator.getPriceOfVault(address(proxy), i);
+      //giveStable(address(2000), price*10);
+
+      vm.startPrank(address(2000));
+      stable.approve(address(liquidator), type(uint256).max);
+      emit log_named_uint("bal of buyer", stable.balanceOf(address(2000)));
+      emit log_named_uint("priceToPay", price);
+      liquidator.buyVault(address(proxy), i);
+      vm.stopPrank();
+
+      rewards[i] = getRewards(price, remainingCred);
+      rewardsSum.expectedKeeperReward += rewards[i].expectedKeeperReward;
+      rewardsSum.expectedProtocolReward += rewards[i].expectedProtocolReward;
+      rewardsSum.originalOwnerRecovery += rewards[i].originalOwnerRecovery;
+
+      vm.prank(oracleOwner);
+      oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+
+      vaultAddresses[i] = address(proxy);
+      lives[i] = i;
+      vm.startPrank(address(2000));
+      factory.transferFrom(address(2000), vaultOwner, factory.vaultIndex(address(proxy)));
+      vm.stopPrank();
+    }
+
+
+    // Liquidator.auctionInformation memory auction;
+    // auction.stablePaid = uint128(price);
+    // auction.openDebt = uint128(remainingCred);
+    // auction.originalOwner = vaultOwner;
+    // auction.liquidationKeeper = address(1110);
+    // auction.numeraire = 0;
+
+    // liquidator.claimable(auction, address(proxy), 0);
+
+    Balances memory pre = getBalances(stable, vaultOwner);
+
+    liquidator.claimProceeds(address(1110), vaultAddresses, lives);
+    liquidator.claimProceeds(address(1000), vaultAddresses, lives);
+    liquidator.claimProceeds(vaultOwner, vaultAddresses, lives);
+
+    
+    Balances memory post = getBalances(stable, vaultOwner);
+
+    assertEq(pre.keeper + rewardsSum.expectedKeeperReward, post.keeper);
+    assertEq(pre.protocol + rewardsSum.expectedProtocolReward, post.protocol);
+    assertEq(pre.originalOwner + rewardsSum.originalOwnerRecovery, post.originalOwner);
+
+  }
+
+  function getBalances(Stable stableAddr, address _vaultOwner) public view returns (Balances memory) {
+    Balances memory bal;
+    bal.keeper = stableAddr.balanceOf(address(1110));
+    bal.protocol = stableAddr.balanceOf(address(1000));
+    bal.originalOwner = stableAddr.balanceOf(_vaultOwner);
+
+    return bal;
+  }
+
+
+  function getRewards(uint256 buyPrice, uint256 openDebt) public view returns (Rewards memory) {
+    (uint64 protocolRatio, uint64 keeperRatio) = liquidator.claimRatio();
+
+    Rewards memory rewards;
+    rewards.expectedKeeperReward = openDebt * keeperRatio / 100;
+
+    if (buyPrice > openDebt + rewards.expectedKeeperReward) {
+      if (buyPrice - openDebt - rewards.expectedKeeperReward > openDebt * protocolRatio / 100) {
+        rewards.expectedProtocolReward = openDebt * protocolRatio / 100;
+        rewards.originalOwnerRecovery = buyPrice - openDebt - rewards.expectedKeeperReward - rewards.expectedProtocolReward;
+      } else {
+        rewards.expectedProtocolReward = buyPrice - openDebt - rewards.expectedKeeperReward;
+        rewards.originalOwnerRecovery = 0;
+      }
+    } else {
+      rewards.expectedProtocolReward = 0;
+      rewards.originalOwnerRecovery = 0;
+    }
+
+    return rewards;
+  }
+
 
   function setAddresses() public {
     vm.startPrank(creatorAddress);
