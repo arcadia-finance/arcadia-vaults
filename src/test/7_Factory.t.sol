@@ -122,7 +122,7 @@ contract factoryTest is DSTest {
     emit log_address(address(1));
   }
 
-  function testTransferVault(address sender) public {
+  function testSafeTransferVault(address sender) public {
     address receiver = unprivilegedAddress1;
     vm.assume(sender != address(0));
 
@@ -141,6 +141,60 @@ contract factoryTest is DSTest {
 
     //Transfer vault to another address
     factoryContr.safeTransferFrom(sender, receiver, factoryContr.vaultIndex(vault));
+
+    //Make sure vault itself is owned by receiver
+    assertEq(IVault(vault).owner(), receiver);
+
+    //Make sure erc721 is owned by receiver
+    assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), receiver);
+    vm.stopPrank();  
+
+  }
+
+  function testFailSafeTransferVaultByNonOwner(address sender) public {
+    address receiver = unprivilegedAddress1;
+    address vaultOwner = address(1);
+    vm.assume(sender != address(0) && sender != vaultOwner);
+
+    vm.startPrank(vaultOwner);
+    address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+    vm.stopPrank();
+
+    //Make sure index in erc721 == vaultIndex
+    assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+
+    //Make sure vault itself is owned by sender
+    assertEq(IVault(vault).owner(), sender);
+
+    //Make sure erc721 is owned by sender
+    assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), sender);
+
+    //Transfer vault to another address
+    vm.startPrank(sender);
+    factoryContr.safeTransferFrom(vaultOwner, receiver, factoryContr.vaultIndex(vault));
+    vm.stopPrank();  
+
+  }
+
+  function testTransferVault(address sender) public {
+    address receiver = unprivilegedAddress1;
+    vm.assume(sender != address(0));
+
+
+    vm.startPrank(sender);
+    address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+
+    //Make sure index in erc721 == vaultIndex
+    assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+
+    //Make sure vault itself is owned by sender
+    assertEq(IVault(vault).owner(), sender);
+
+    //Make sure erc721 is owned by sender
+    assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), sender);
+
+    //Transfer vault to another address
+    factoryContr.transferFrom(sender, receiver, factoryContr.vaultIndex(vault));
 
     //Make sure vault itself is owned by receiver
     assertEq(IVault(vault).owner(), receiver);
@@ -171,7 +225,7 @@ contract factoryTest is DSTest {
 
     //Transfer vault to another address
     vm.startPrank(sender);
-    factoryContr.safeTransferFrom(vaultOwner, receiver, factoryContr.vaultIndex(vault));
+    factoryContr.transferFrom(vaultOwner, receiver, factoryContr.vaultIndex(vault));
     vm.stopPrank();  
 
   }
@@ -242,6 +296,8 @@ contract factoryTest is DSTest {
 
   //Test addNumeraire
   function testNonRegistryAddsNumeraire(address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != address(this));
+    vm.assume(unprivilegedAddress != address(factoryContr));
     vm.startPrank(unprivilegedAddress);
     vm.expectRevert("FTRY_AN: Add Numeraires via MR");
     factoryContr.addNumeraire(2, address(erc20Contr));
