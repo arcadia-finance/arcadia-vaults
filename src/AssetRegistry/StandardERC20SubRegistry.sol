@@ -34,13 +34,13 @@ contract StandardERC20Registry is SubRegistry {
   /**
    * @notice Adds a new asset to the StandardERC20Registry, or overwrites an existing asset.
    * @param assetInformation A Struct with information about the asset
-   *                         - assetUnit: The unit of the asset, equal to 10 the power of the number of decimals of the oracle
+   *                         - assetUnit: The unit of the asset, equal to 10 the power of the number of decimals of the asset
    *                         - assetAddress: The contract address of the asset
    *                         - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
-   * @param assetCreditRatings The List of Credit Ratings for the asset for the different Numeraires
+   * @param assetCreditRatings The List of Credit Ratings for the asset for the different Numeraires.
    * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
    *      or the list must have lenth 0. If the list has length zero, the credit ratings of the asset for all numeraires is
-   *      is initiated as credit rating with index 0 by default (worst credit rating)
+   *      is initiated as credit rating with index 0 by default (worst credit rating).
    * @dev The assets are added/overwritten in the Main-Registry as well.
    *      By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
    *      (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
@@ -102,7 +102,7 @@ contract StandardERC20Registry is SubRegistry {
    *      the value of the asset in the same Numeraire. If the Oracle-Hub returns the rate in USD, the StandardERC20Registry  
    *      will return the value of the asset in USD.
    *      Only one of the two values can be different from 0.
-   * @dev Function will overflow when assetAmount * Rate * 10**(18 - assetDecimals) > MAXUINT256
+   * @dev Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
    * @dev If the asset is not first added to subregistry this function will return value 0 without throwing an error.
    *      However no check in StandardERC20Registry is necessary, since the check if the asset is whitelisted (and hence added to subregistry)
    *      is already done in the Main-Registry.

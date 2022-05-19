@@ -32,8 +32,7 @@ contract FloorERC721SubRegistry is SubRegistry {
   constructor(address mainRegistry, address oracleHub) SubRegistry(mainRegistry, oracleHub) {}
   
   /**
-   * @notice Adds a new asset to the FloorERC721SubRegistry, or overwrites an existing asset
-   * @notice Adds a new asset to the StandardERC20Registry, or overwrites an existing asset.
+   * @notice Adds a new asset to the FloorERC721SubRegistry, or overwrites an existing asset.
    * @param assetInformation A Struct with information about the asset
    *                         - idRangeStart: The id of the first NFT of the collection
    *                         - idRangeEnd: The id of the last NFT of the collection
@@ -97,7 +96,7 @@ contract FloorERC721SubRegistry is SubRegistry {
    * @notice Returns the value of a certain asset, denominated in USD or in another Numeraire
    * @param getValueInput A Struct with all the information neccessary to get the value of an asset
    *                      - assetAddress: The contract address of the asset
-   *                      - assetId: The Id should be set to 0
+   *                      - assetId: The Id of the asset
    *                      - assetAmount: Since ERC721 tokens have no amount, the amount should be set to 0
    *                      - numeraire: The Numeraire (base-asset) in which the value is ideally expressed
    * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
@@ -107,7 +106,7 @@ contract FloorERC721SubRegistry is SubRegistry {
    *      will return the value of the asset in USD.
    *      Only one of the two values can be different from 0.
    * @dev If the asset is not first added to subregistry this function will return value 0 without throwing an error.
-   *      However no check in StandardERC20Registry is necessary, since the check if the asset is whitelisted (and hence added to subregistry)
+   *      However no check in FloorERC721SubRegistry is necessary, since the check if the asset is whitelisted (and hence added to subregistry)
    *      is already done in the Main-Registry.
    */
   function getValue(GetValueInput memory getValueInput) public view override returns (uint256 valueInUsd, uint256 valueInNumeraire) {
