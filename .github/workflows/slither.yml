@@ -11,4 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1.0.6
+        with:
+          version: nightly
       - uses: crytic/slither-action@v0.1.1

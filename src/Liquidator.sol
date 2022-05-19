@@ -201,8 +201,10 @@ contract Liquidator is Ownable {
   function claimProceeds(address[] calldata vaultAddresses, uint256[] calldata lives) public {
     uint256 len = vaultAddresses.length;
     require(len == lives.length, "Arrays must be of same length");
+    uint256 numeraireCounter = IFactory(factoryAddress).numeraireCounter();
 
-    uint256[] memory totalClaimable;
+    uint256[] memory totalClaimable = new uint256[](numeraireCounter);
+    uint256[] memory totalClaimableKeeper = new uint256[](numeraireCounter);
     uint256 claimableBitmapMem;
 
     uint256[] memory claimables;
@@ -216,7 +218,7 @@ contract Liquidator is Ownable {
       claimableBitmapMem = claimableBitmap[vaultAddress][(life >> 6)];
 
       if (msg.sender == claimableBy[0]) {
-        totalClaimable[numeraire] += claimables[0];
+        totalClaimableKeeper[numeraire] += claimables[0];
         claimableBitmapMem = claimableBitmapMem | (1 << (4*life + 0));
       }
       if (msg.sender == claimableBy[1]) {
@@ -224,6 +226,7 @@ contract Liquidator is Ownable {
         claimableBitmapMem = claimableBitmapMem | (1 << (4*life + 1));
       }
       if (msg.sender == claimableBy[2]) {
+        require(false, "claimableby2");
         totalClaimable[numeraire] += claimables[2];
         claimableBitmapMem = claimableBitmapMem | (1 << (4*life + 2));
       }
@@ -237,8 +240,14 @@ contract Liquidator is Ownable {
       unchecked {++i;}
     }
 
-    for (uint8 k; k < totalClaimable.length;) {
-      require(IStable(IFactory(factoryAddress).numeraireToStable(k)).transferFrom(address(this), msg.sender, totalClaimable[k]));
+    for (uint8 k; k < numeraireCounter;) {
+      if (totalClaimable[k] > 0) {
+        require(false, "sendtokens");
+        require(IStable(IFactory(factoryAddress).numeraireToStable(k)).transferFrom(address(this), msg.sender, totalClaimable[k]));
+      }
+      if (totalClaimableKeeper[k] > 0) {
+        require(IReserveFund(reserveFund).withdraw(totalClaimable[k], IFactory(factoryAddress).numeraireToStable(k), msg.sender));
+      }
       unchecked {++k;}
     }
   }
