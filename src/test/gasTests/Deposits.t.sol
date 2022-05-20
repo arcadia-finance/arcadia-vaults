@@ -283,7 +283,7 @@ contract gasDeposits is DSTest {
     floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
     floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleGenericStoreFrontToEthEthToUsd, id:1, assetAddress: address(genericStoreFront)}), assetCreditRatings);
 
-    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
     vm.stopPrank();
 
     vm.startPrank(vaultOwner);

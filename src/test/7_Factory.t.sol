@@ -48,7 +48,7 @@ contract factoryTest is DSTest {
     vaultContr = new Vault();
     erc20Contr = new ERC20Mock("ERC20 Mock", "mERC20", 18);
     interestContr = new InterestRateModule();
-    liquidatorContr = new Liquidator(address(factoryContr), 0x0000000000000000000000000000000000000000, address(erc20Contr));
+    liquidatorContr = new Liquidator(address(factoryContr), 0x0000000000000000000000000000000000000000);
 		registryContr = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(erc20Contr), numeraireLabel:'USD', numeraireUnit:1}));
     
 
@@ -240,10 +240,10 @@ contract factoryTest is DSTest {
     assertEq(to, factoryContr_m.owner());
   }
 
-  function testTransferOwnershipByNonOwner(address from) public {
-    vm.assume(from != address(this));
-
+  function testTransferOwnershipByNonOwner(address from) public {    
     Factory factoryContr_m = new Factory();
+    vm.assume(from != address(this) && from != address(factoryContr_m));
+
     address to = address(12345);
 
     assertEq(address(this), factoryContr_m.owner());
@@ -296,6 +296,7 @@ contract factoryTest is DSTest {
 
   //Test addNumeraire
   function testNonRegistryAddsNumeraire(address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != address(registryContr));
     vm.assume(unprivilegedAddress != address(this));
     vm.assume(unprivilegedAddress != address(factoryContr));
     vm.startPrank(unprivilegedAddress);
@@ -325,6 +326,8 @@ contract factoryTest is DSTest {
 
   //Test setNewVaultInfo
   function testNonOwnerSetsNewVaultInfo(address unprivilegedAddress) public {
+    vm.assume(unprivilegedAddress != address(this));
+    vm.assume(unprivilegedAddress != address(factoryContr));
     vm.assume(unprivilegedAddress != address(0));
     vm.startPrank(unprivilegedAddress);
     vm.expectRevert("Ownable: caller is not the owner");
@@ -406,7 +409,7 @@ contract factoryTest is DSTest {
 
   //Test confirmNewVaultInfo
   function testNonOwnerConfirmsNewVaultInfo(address unprivilegedAddress) public {
-    vm.assume(unprivilegedAddress != address(0));
+    vm.assume(unprivilegedAddress != address(0) && unprivilegedAddress != address(this));
     vm.startPrank(unprivilegedAddress);
     vm.expectRevert("Ownable: caller is not the owner");
     factoryContr.confirmNewVaultInfo();
