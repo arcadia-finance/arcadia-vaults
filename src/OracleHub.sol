@@ -44,7 +44,7 @@ contract OracleHub is Ownable {
   /**
    * @notice Add a new oracle to the Oracle Hub
    * @param oracleInformation A Struct with information about the Oracle:
-   *    - oracleUnit: the unit of the oracle, equal to 10 the power of the number of decimals of the oracle
+   *    - oracleUnit: the unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
    *    - baseAssetNumeraire: a unique identifier if the base asset can be used as numeraire of a vault,
    *      0 by default if the base asset cannot be used as numeraire
    *    - baseAssetIsNumeraire: boolean indicating if the base asset can be used as numeraire of a vault
@@ -85,7 +85,6 @@ contract OracleHub is Ownable {
    *      - The oracle-address must be previously added to the Oracle-Hub.
    *      - The last oracle in the series must have USD as base-asset.
    *      - The Base-asset of all oracles must be equal to the quote-asset of the next oracle (except for the last oracle in the series).
-   *      ToDo: return true if all checks pass?
    */
   function checkOracleSequence (address[] memory oracleAdresses) external view {
     uint256 oracleAdressesLength = oracleAdresses.length;

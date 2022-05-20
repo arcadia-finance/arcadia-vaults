@@ -40,7 +40,7 @@ contract FloorERC721SubRegistry is SubRegistry {
    *                         - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
    * @param assetCreditRatings The List of Credit Ratings for the asset for the different Numeraires
    * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
-   *      or the list must have lenth 0. If the list has length zero, the credit ratings of the asset for all numeraires is
+   *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all numeraires is
    *      is initiated as credit rating with index 0 by default (worst credit rating)
    * @dev The assets are added/overwritten in the Main-Registry as well.
    *      By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral

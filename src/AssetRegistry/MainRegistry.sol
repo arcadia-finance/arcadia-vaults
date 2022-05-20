@@ -157,7 +157,7 @@ contract MainRegistry is Ownable {
    * @param assetAddress The address of the asset
    * @param assetCreditRatings The List of Credit Rating Categories for the asset for the different Numeraires
    * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
-   *      or the list must have lenth 0. If the list has length zero, the credit ratings of the asset for all numeraires
+   *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all numeraires
    *      is initiated as credit rating with index 0 by default (worst credit rating).
    *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
    *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
@@ -191,7 +191,7 @@ contract MainRegistry is Ownable {
    * @param numeraires The corresponding List of Numeraires
    * @param newCreditRating The corresponding List of new Credit Ratings
    * @dev The function loops over all indexes, and changes for each index the Credit Rating Category of the combination of asset and numeraire.
-   *      In case multiple numeraires for the same assets need to be changed, the address must be repeated in the assets.
+   *      In case multiple Credit Rating Categories for the same assets need to be changed, the address must be repeated in the assets.
    *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
    *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
    *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
@@ -217,8 +217,8 @@ contract MainRegistry is Ownable {
   /**
    * @notice Add a new numeraire (a unit in which price is measured, like USD or ETH) to the Main Registry, or overwrite an existing one
    * @param numeraireInformation A Struct with information about the Numeraire
-   *                              - numeraireToUsdOracleUnit: The unit of the oracle, equal to 10 the power of the number of decimals of the oracle
-   *                              - numeraireUnit: The unit of the numeraire, equal to 10 the power of the number of decimals of the numeraire
+   *                              - numeraireToUsdOracleUnit: The unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
+   *                              - numeraireUnit: The unit of the numeraire, equal to 10 to the power of the number of decimals of the numeraire
    *                              - assetAddress: The contract address of the numeraire,
    *                              - numeraireToUsdOracle: The contract address of the price oracle of the numeraire in USD
    *                              - stableAddress: The contract address of the Arcadia issued token, pegged to the numeraire
@@ -227,9 +227,9 @@ contract MainRegistry is Ownable {
    * @dev If the Numeraire has no native token, numeraireDecimals should be set to 0 and assetAddress to the null address.
    *      Tokens pegged to the native token do not count as native tokens
    *      - USDC is not a native token for USD as Numeraire
-   *      - WETH is a native tokeken for ETH as Numeraire
+   *      - WETH is a native token for ETH as Numeraire
    * @dev The list of Credit Rating Categories should or be as long as the number of assets added to the Main Registry,
-   *      or the list must have lenth 0. If the list has length zero, the credit ratings of the numeraire for all assets
+   *      or the list must have length 0. If the list has length zero, the credit ratings of the numeraire for all assets
    *      is initiated as credit rating with index 0 by default (worst credit rating).
    *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
    *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles

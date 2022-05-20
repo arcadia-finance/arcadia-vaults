@@ -46,7 +46,7 @@ abstract contract SubRegistry is Ownable {
   /**
    * @notice Checks for a token address and the corresponding Id, if it is white-listed
    * @return A boolean, indicating if the asset passed as input is whitelisted
-   * @dev For tokens without Id (for instance ERC20 tokens), any integer can be passed
+   * @dev For tokens without Id (for instance ERC20 tokens), the Id should be set to 0
    */
   function isWhiteListed(address, uint256) external view virtual returns (bool) {
     return false;
@@ -76,7 +76,7 @@ abstract contract SubRegistry is Ownable {
    *      - USD.
    *      - A given Numeraire, different from USD.
    *      - A combination of USD and a given Numeraire, different from USD (will be very exceptional,
-   *        but theoratically possible for for instance a UNI V2 LP position of two underlying assets,
+   *        but theoratically possible for eg. a UNI V2 LP position of two underlying assets,
    *        one denominated in USD and the other one in the different Numeraire).
    * @dev All price feeds should be fetched in the Oracle-Hub
    */
