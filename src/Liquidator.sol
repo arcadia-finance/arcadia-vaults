@@ -27,6 +27,10 @@ contract Liquidator is Ownable {
 
   claimRatios public claimRatio;
 
+  /**
+    @notice The ratios in which the liquidation fee is divided
+    @dev ratio's are entered in factor 100 (= in percentage)  
+   */
   struct claimRatios {
     uint64 protocol;
     uint64 liquidationKeeper;
@@ -59,34 +63,33 @@ contract Liquidator is Ownable {
 
   /** 
     @notice Sets the factory address on the liquidator.
-    @dev    The factory is used to fetch the isVault bool in elevated().
-    @param newFactory the factory address.
+    @dev The factory is used to fetch the isVault bool in elevated().
+    @param _factory the factory address.
   */
-  function setFactory(address newFactory) external onlyOwner {
-    factoryAddress = newFactory;
+  function setFactory(address _factory) external onlyOwner {
+    factoryAddress = _factory;
   }
 
   /** 
     @notice Sets the protocol treasury address on the liquidator.
-    @dev    The protocol treasury is used to receive liquidation rewards.
-    @param newProtocolTreasury the protocol treasury.
+    @dev The protocol treasury is used to receive liquidation rewards.
+    @param _protocolTreasury the protocol treasury.
   */
-  function setProtocolTreasury(address newProtocolTreasury) external onlyOwner {
-    protocolTreasury = newProtocolTreasury;
+  function setProtocolTreasury(address _protocolTreasury) external onlyOwner {
+    protocolTreasury = _protocolTreasury;
   }
 
   /** 
     @notice Sets the reserve fund address on the liquidator.
-    @dev    The reserve fund is used to pay liquidation keepers should the liquidation surplus be insufficient.
-    @param newReserveFund the reserve fund address.
+    @dev The reserve fund is used to pay liquidation keepers should the liquidation surplus be insufficient.
+    @param _reserveFund the reserve fund address.
   */
-  function setReserveFund(address newReserveFund) external onlyOwner {
-    reserveFund = newReserveFund;
+  function setReserveFund(address _reserveFund) external onlyOwner {
+    reserveFund = _reserveFund;
   }
 
    /** 
     @notice Starts an auction of a vault. Called by the vault itself.
-    @dev 
     @param vaultAddress the vault address that undergoes the auction.
     @param life the life of the vault represents the amount of times a vault has been liquidated.
     @param liquidationKeeper the keeper who triggered the auction. Gets a reward!
@@ -112,20 +115,19 @@ contract Liquidator is Ownable {
 
    /** 
     @notice Function to check what the value of the items in the vault is.
-    @dev 
-    @param assetAddresses the vaultAddress 
-    @param assetIds the vaultAddress 
-    @param assetAmounts the vaultAddress 
+    @dev Only used for partial liquidations.
+    @param assetAddresses array of asset addresses
+    @param assetIds array of assets ids. For assets without Id's (erc20's), Id can be set to 0.
+    @param assetAmounts amounts of each asset. For assets without amounts (erc721's), amount can be set to 0.
+    @return totalValue the total value of all assets.
   */
-  function getPriceOfAssets(address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts, uint8 numeraireOfDebt) public view returns (uint256) {
-    uint256 totalValue = IMainRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, numeraireOfDebt);
-    return totalValue;
+  function getPriceOfAssets(address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts, uint8 numeraireOfDebt) public view returns (uint256 totalValue) {
+    totalValue = IMainRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, numeraireOfDebt);
   }
 
 
    /** 
     @notice Function to buy only a certain asset of a vault in the liquidation process
-    @dev 
     @param assetAddresses the vaultAddress 
     @param assetIds the vaultAddress 
     @param assetAmounts the vaultAddress 
@@ -137,7 +139,7 @@ contract Liquidator is Ownable {
 
    /** 
     @notice Function to check what the current price of the vault being auctioned of is.
-    @dev 
+    @dev Returns whether the vault is on sale or not. Always check the forSale bool!
     @param vaultAddress the vaultAddress.
     @param life the life of the vault for which the price has to be fetched.
   */
@@ -165,7 +167,7 @@ contract Liquidator is Ownable {
 
     /** 
     @notice Function a user calls to buy the vault during the auction process. This ends the auction process
-    @dev 
+    @dev Ensure the vault is for sale before calling this function.
     @param vaultAddress the vaultAddress of the vault the user want to buy.
     @param life the life of the vault for which the price has to be fetched.
   */
@@ -200,7 +202,6 @@ contract Liquidator is Ownable {
 
     /** 
     @notice Function a a user can call to check who is eligbile to claim what from an auction vault.
-    @dev 
     @param auction the auction
     @param vaultAddress the vaultAddress of the vault the user want to buy.
     @param life the lifeIndex of vault, the keeper wants to claim their reward from
