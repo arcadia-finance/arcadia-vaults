@@ -170,4 +170,25 @@ contract VaultPaperTradingTest is DSTest {
     assertEq(proxy.getOpenDebt(), amountCredit);
   }
 
+  function testRepayCredit(uint8 baseAmountTakeCredit, uint8 baseAmountRepayCredit) public {
+    vm.startPrank(vaultOwner);
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.UsdNumeraire);
+    proxy = VaultPaperTrading(proxyAddr);
+
+    uint128 amountTakeCredit = uint128(baseAmountTakeCredit * Constants.WAD);
+    (,uint16 _collThres,,,,) = proxy.debt();
+    vm.assume(1000000 * Constants.WAD * 100 / _collThres >= amountTakeCredit);
+    vm.assume(baseAmountRepayCredit <= baseAmountTakeCredit);
+    uint128 amountRepayCredit = uint128(baseAmountRepayCredit * Constants.WAD);
+
+    proxy.takeCredit(amountTakeCredit);
+    proxy.repayDebt(amountRepayCredit);
+
+    uint256 expectedValue = 1000000 * Constants.WAD + amountTakeCredit - amountRepayCredit;
+		uint256 actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
+
+    assertEq(actualValue, expectedValue);
+    assertEq(proxy.getOpenDebt(), amountTakeCredit - amountRepayCredit);
+  }
+
 }
