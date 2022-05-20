@@ -12,9 +12,12 @@ import "./interfaces/IVault.sol";
 import "./interfaces/IReserveFund.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
-import "./utils/Printer.sol";
-
-
+/** 
+  * @title The liquidator holds the execution logic and storage or all things related to liquidating Arcadia Vaults
+  * @author Arcadia Finance
+  * @notice Ensure your total value denomination remains above the liquidation threshold, or risk being liquidated!
+  * @dev contact: dev at arcadia.finance
+ */ 
 contract Liquidator is Ownable {
 
   address public factoryAddress;
@@ -204,6 +207,10 @@ contract Liquidator is Ownable {
 
     /** 
     @notice Function a a user can call to check who is eligbile to claim what from an auction vault.
+    @dev Although only 3 bits are needed per claim in claimableBitmap, we keep it per 4.
+         This saves some gas on calculations, and would only require writing a new 
+         bitmap after 65 liquidations instead of 85. We're looking forward to the first
+         vault that gets liquidated 65 times!
     @param auction the auction
     @param vaultAddress the vaultAddress of the vault the user want to buy.
     @param life the lifeIndex of vault, the keeper wants to claim their reward from
@@ -230,10 +237,10 @@ contract Liquidator is Ownable {
 
     uint256 leftover = auction.stablePaid - auction.openDebt - keeperReward;
 
-    claimables[1] = claimableBitmapMem & (1 << 4*life + 2) == 0 ? (leftover >= protocolReward ? protocolReward : leftover) : 0;
+    claimables[1] = claimableBitmapMem & (1 << 4*life + 1) == 0 ? (leftover >= protocolReward ? protocolReward : leftover) : 0;
     leftover = leftover >= protocolReward ? leftover - protocolReward : 0;
 
-    claimables[2] = claimableBitmapMem & (1 << 4*life + 3) == 0 ? leftover : 0;
+    claimables[2] = claimableBitmapMem & (1 << 4*life + 2) == 0 ? leftover : 0;
     
     claimableBy[1] = protocolTreasury;
     claimableBy[2] = auction.originalOwner;
@@ -242,8 +249,12 @@ contract Liquidator is Ownable {
 
     /** 
     @notice Function a eligeble claimer can call to claim the proceeds of the vault they are entitled to.
-    @dev vaultAddresses and lives from a combination. Claiming for combinations at vaultAddress[i] && lives[i]
-    @dev if multiple lives of the same vault address are to be claimed, the vault address must be repeated!
+    @dev vaultAddresses and lives form a combination. Claiming for combinations at vaultAddress[i] && lives[i]
+         if multiple lives of the same vault address are to be claimed, the vault address must be repeated!
+         Although only 3 bits are needed per claim in claimableBitmap, we keep it per 4.
+         This saves some gas on calculations, and would only require writing a new 
+         bitmap after 65 liquidations instead of 85. We're looking forward to the first
+         vault that gets liquidated 65 times!
     @param claimer the address for which (and to which) the claims are requested.
     @param vaultAddresses vault addresses the caller want to claim the proceeds from.
     @param lives the lives for which the caller wants to claim for.
