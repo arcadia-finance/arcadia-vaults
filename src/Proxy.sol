@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
 
-
+/** 
+  * @title Proxy
+  * @author Arcadia Finance
+ */
 contract Proxy {
 
     struct AddressSlot {
@@ -30,8 +33,8 @@ contract Proxy {
 
     /**
      * @dev Storage slot with the address of the current implementation.
-     * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1, and is
-     * validated in the constructor.
+     *      This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1, and is
+     *      validated in the constructor.
      */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
@@ -64,8 +67,7 @@ contract Proxy {
     }
     /**
      * @dev Delegates the current call to `implementation`.
-     *
-     * This function does not return to its internal call site, it will return directly to the external caller.
+     *      This function does not return to its internal call site, it will return directly to the external caller.
      */
     function _delegate(address implementation) internal virtual {
         assembly {
@@ -94,8 +96,7 @@ contract Proxy {
 
     /**
      * @dev Delegates the current call to the address returned by `_implementation()`.
-     *
-     * This function does not return to its internal call site, it will return directly to the external caller.
+     *      This function does not return to its internal call site, it will return directly to the external caller.
      */
     function _fallback() internal virtual {
         _delegate(_implementation());
@@ -103,7 +104,7 @@ contract Proxy {
 
     /**
      * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if no other
-     * function in the contract matches the call data.
+     *      function in the contract matches the call data.
      */
     fallback() external payable virtual {
         _fallback();
@@ -111,7 +112,7 @@ contract Proxy {
 
     /**
      * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if call data
-     * is empty.
+     *      is empty.
      */
     receive() external payable virtual {
         _fallback();

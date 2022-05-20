@@ -170,7 +170,7 @@ contract MainRegistry is Ownable {
    *  or the list must have lenth 0. If the list has length zero, the credit ratings of the asset for all numeraires is
    *  is initiated as credit rating with index 0 by default (worst credit rating).
    *  Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-   *  Category from 1 to 10 will be used to label groups of assets with similart risk profiles
+   *  Category from 1 to 9 will be used to label groups of assets with similart risk profiles
    *  (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
    */
   function addAsset(address assetAddress, uint256[] memory assetCreditRatings) external onlySubRegistry {
@@ -199,7 +199,7 @@ contract MainRegistry is Ownable {
    * @dev The function loops over all indexes, and changes for each index the Credit Rating Category of the combination of asset and numeraire.
    *  In case multiple numeraires for the same assets need to be changed, the address must be repeated in the assets.
    *  Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-   *  Category from 1 to 10 will be used to label groups of assets with similart risk profiles
+   *  Category from 1 to 9 will be used to label groups of assets with similart risk profiles
    *  (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
    */
   function batchSetCreditRating(address[] calldata assets, uint256[] calldata numeraires, uint256[] calldata newCreditRating) external onlyOwner {
@@ -228,10 +228,10 @@ contract MainRegistry is Ownable {
    *  or the list must have lenth 0. If the list has length zero, the credit ratings of the numeraire for all assets is
    *  is initiated as credit rating with index 0 by default (worst credit rating).
    *  Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-   *  Category from 1 to 10 will be used to label groups of assets with similart risk profiles
+   *  Category from 1 to 9 will be used to label groups of assets with similart risk profiles
    *  (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
    *  ToDo: Add tests that existing numeraire cannot be entered second time?
-   *  ToDo: check if assetCreditRating can be put in a struct
+   *  ToDo: Check if assetCreditRating can be put in a struct
    */
   function addNumeraire(NumeraireInformation calldata numeraireInformation, uint256[] calldata assetCreditRatings) external onlyOwner {
     numeraireToInformation[numeraireCounter] = numeraireInformation;
