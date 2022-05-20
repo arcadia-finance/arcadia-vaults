@@ -12,6 +12,8 @@ import "./interfaces/IVault.sol";
 import "./interfaces/IReserveFund.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
+import "./utils/Printer.sol";
+
 
 contract Liquidator is Ownable {
 
@@ -36,6 +38,7 @@ contract Liquidator is Ownable {
     uint8 liqThres;
     uint8 numeraire;
     uint128 stablePaid;
+    bool stopped;
     address liquidationKeeper;
     address originalOwner;
   }
@@ -115,15 +118,26 @@ contract Liquidator is Ownable {
     @dev 
     @param vaultAddress the vaultAddress 
   */
+
   function getPriceOfVault(address vaultAddress, uint256 life) public view returns (uint256, uint8, bool) {
-    // it's cheaper to look up the struct in the mapping than to take it into memory
-    //auctionInformation memory auction = auctionInfo[vaultAddress][life];
+    bool forSale = !auctionInfo[vaultAddress][life].stopped;
+
+    if (!forSale) {
+      return (0, 0, false);
+    }
+
     uint256 startPrice = auctionInfo[vaultAddress][life].openDebt * auctionInfo[vaultAddress][life].liqThres / 100;
     uint256 surplusPrice = auctionInfo[vaultAddress][life].openDebt * (auctionInfo[vaultAddress][life].liqThres-100) / 100;
     uint256 priceDecrease = surplusPrice * (block.number - auctionInfo[vaultAddress][life].startBlock) / (hourlyBlocks * auctionDuration);
 
-    uint256 totalPrice = startPrice - priceDecrease; 
-    bool forSale = auctionInfo[vaultAddress][life].startBlock > 0 ? true : false;
+    uint256 totalPrice;
+    if (priceDecrease > startPrice) {
+      //ヽ༼ຈʖ̯ຈ༽ﾉ
+      totalPrice = 0;
+    } else {
+      totalPrice = startPrice - priceDecrease;
+    }
+    
     return (totalPrice, auctionInfo[vaultAddress][life].numeraire, forSale);
   }
     /** 
@@ -139,13 +153,24 @@ contract Liquidator is Ownable {
     require(forSale, "LQ_BV: Not for sale");
     require(auctionInfo[vaultAddress][life].stablePaid < auctionInfo[vaultAddress][life].openDebt, "LQ_BV: Debt repaid");
 
-    uint256 surplus = priceOfVault - auctionInfo[vaultAddress][life].openDebt;
+    // todo: can be given in getPriceOfVault()
+    uint256 surplus;
+    if (priceOfVault > auctionInfo[vaultAddress][life].openDebt) {
+      surplus = priceOfVault - auctionInfo[vaultAddress][life].openDebt;
+    } else {
+      surplus = 0; //could be skipped
+    }
 
     address stable = IFactory(factoryAddress).numeraireToStable(uint256(numeraire));
-    require(IStable(stable).safeBurn(msg.sender, auctionInfo[vaultAddress][life].openDebt), "LQ_BV: Burn failed");
-    require(IStable(stable).transferFrom(msg.sender, address(this), surplus), "LQ_BV: Surplus transfer failed");
+    if (surplus != 0) {
+      require(IStable(stable).safeBurn(msg.sender, auctionInfo[vaultAddress][life].openDebt), "LQ_BV: Burn failed");
+      require(IStable(stable).transferFrom(msg.sender, address(this), surplus), "LQ_BV: Surplus transfer failed");
+    } else {
+      require(IStable(stable).safeBurn(msg.sender, priceOfVault), "LQ_BV: Burn failed");
+    }
 
     auctionInfo[vaultAddress][life].stablePaid = uint128(priceOfVault);
+    auctionInfo[vaultAddress][life].stopped = true;
     
     IFactory(factoryAddress).safeTransferFrom(address(this), msg.sender, IFactory(factoryAddress).vaultIndex(vaultAddress));
   }
