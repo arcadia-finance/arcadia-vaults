@@ -176,7 +176,7 @@ contract Liquidator is Ownable {
   */
   function buyVault(address vaultAddress, uint256 life) public {
     // it's 3683 gas cheaper to look up the struct 6x in the mapping than to take it into memory
-    (uint256 priceOfVault,uint8 numeraire, bool forSale) = getPriceOfVault(vaultAddress, life);
+    (uint256 priceOfVault, uint8 numeraire, bool forSale) = getPriceOfVault(vaultAddress, life);
 
     require(forSale, "LQ_BV: Not for sale");
 
