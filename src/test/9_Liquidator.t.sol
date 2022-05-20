@@ -417,34 +417,6 @@ contract LiquidatorTest is DSTest {
 
   }
 
-  // function testStopSaleAfterAuctionDuration(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
-  //   vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.auctionDuration());
-  //   (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-  //   vm.assume(newPrice/ liqThresProxy  < rateEthToUsd / collThresProxy);
-  //   vm.assume(amountEth > 0);
-  //   uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
-  //   vm.assume(amountEth < type(uint128).max / valueOfOneEth);
-
-  //   depositERC20InVault(eth, amountEth, vaultOwner);
-
-  //   uint128 amountCredit = uint128(proxy.getRemainingCredit());
-
-  //   vm.prank(vaultOwner);
-  //   proxy.takeCredit(amountCredit);
-
-  //   vm.prank(oracleOwner);
-  //   oracleEthToUsd.setAnswer(int256(newPrice));
-
-  //   vm.prank(liquidatorBot);
-  //   factory.liquidate(address(proxy));
-
-  //   vm.roll(blocksToRoll);
-  //   (,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
-
-  //   assertTrue(!forSaleAfter);
-
-  // }
-
   function testBuyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
     vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.auctionDuration());
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
@@ -944,9 +916,6 @@ contract LiquidatorTest is DSTest {
     bytes32 newBalance = bytes32(abi.encode(amount));
     vm.store(address(stable), loc, newBalance);
   }
-
-
-
 
   function depositERC20InVault(ERC20Mock token, uint128 amount, address sender) public returns (address[] memory assetAddresses,
                                                               uint256[] memory assetIds,
