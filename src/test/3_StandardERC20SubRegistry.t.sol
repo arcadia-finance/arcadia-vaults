@@ -106,7 +106,7 @@ contract StandardERC20RegistryTest is DSTest {
     vm.startPrank(creatorAddress);
     uint256[] memory assetCreditRatings = new uint256[](1);
     assetCreditRatings[0] = 0;
-    vm.expectRevert("Asset can have maximal 18 decimals");
+    vm.expectRevert("SSR_SAI: Maximal 18 decimals");
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**19), assetAddress: address(eth)}), assetCreditRatings);
     vm.stopPrank();
   }

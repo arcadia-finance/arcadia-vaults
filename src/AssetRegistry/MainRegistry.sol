@@ -8,21 +8,9 @@ import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../interfaces/IChainLinkData.sol";
 import "../interfaces/IOraclesHub.sol";
 import "../interfaces/IFactory.sol";
+import "../interfaces/ISubRegistry.sol";
 
 import {FixedPointMathLib} from '../utils/FixedPointMathLib.sol';
-
-interface ISubRegistry {
-  function isAssetAddressWhiteListed(address) external view returns (bool);
-  struct GetValueInput {
-    address assetAddress;
-    uint256 assetId;
-    uint256 assetAmount;
-    uint256 numeraire;
-  }
-  
-  function isWhiteListed(address, uint256) external view returns (bool);
-  function getValue(GetValueInput memory) external view returns (uint256, uint256);
-}
 
 /** 
   * @title Main Asset registry
@@ -36,15 +24,17 @@ contract MainRegistry is Ownable {
   bool public assetsUpdatable = true;
 
   uint256 public constant CREDIT_RATING_CATOGERIES = 10;
+  uint256 public numeraireCounter;
 
+  address public factoryAddress;
   address[] private subRegistries;
   address[] public assetsInMainRegistry;
 
   mapping (address => bool) public inMainRegistry;
   mapping (address => bool) public isSubRegistry;
   mapping (address => address) public assetToSubRegistry;
-
-  address public factoryAddress;
+  mapping (uint256 => NumeraireInformation) public numeraireToInformation;
+  mapping (address => mapping (uint256 => uint256)) public assetToNumeraireToCreditRating;
 
   struct NumeraireInformation {
     uint64 numeraireToUsdOracleUnit;
@@ -55,11 +45,6 @@ contract MainRegistry is Ownable {
     string numeraireLabel;
   }
 
-  uint256 public numeraireCounter;
-  mapping (uint256 => NumeraireInformation) public numeraireToInformation;
-
-  mapping (address => mapping (uint256 => uint256)) public assetToNumeraireToCreditRating;
-
   /**
    * @dev Only Sub-registries can call functions marked by this modifier.
    **/
@@ -69,9 +54,15 @@ contract MainRegistry is Ownable {
   }
 
   /**
-   * @notice The Main Registry must always be initialised with at least one Numeraire: USD
-   * @dev If the Numeraire has no native token, numeraireDecimals should be set to 0 and assetAddress to the null address
+   * @notice The Main Registry must always be initialised with the Numeraire USD
+   * @dev Since the Numeraire USD has no native token, numeraireDecimals should be set to 0 and assetAddress to the null address.
    * @param _numeraireInformation A Struct with information about the Numeraire USD
+   *                              - numeraireToUsdOracleUnit: Since there is no price oracle for usd to USD, this is 0 by default for USD
+   *                              - numeraireUnit: Since there is no native token for USD, this is 0 by default for USD
+   *                              - assetAddress: Since there is no native token for usd, this is 0 address by default for USD
+   *                              - numeraireToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
+   *                              - stableAddress: The contract address of the Arcadia issued token, pegged to the numeraire
+   *                              - numeraireLabel: The symbol of the numeraire (only used for readability purpose)
    */
   constructor (NumeraireInformation memory _numeraireInformation) {
     //Main registry must be initialised with usd
@@ -82,7 +73,7 @@ contract MainRegistry is Ownable {
   /**
    * @notice Sets the new Factory address
    * @dev The factory can only be set on the Main Registry AFTER the Main registry is set in the Factory.
-   *  This ensures that the allowed Numeraires and corresponding stable contracts in both are equal.
+   *      This ensures that the allowed Numeraires and corresponding stable contracts in both contract are equal.
    * @param _factoryAddress The address of the Factory
    */
   function setFactory(address _factoryAddress) external onlyOwner {
@@ -103,7 +94,7 @@ contract MainRegistry is Ownable {
    * @param _assetAddresses The list of token addresses that needs to be checked 
    * @param _assetIds The list of corresponding token Ids that needs to be checked
    * @dev For each token address, a corresponding id at the same index should be present,
-   *  for tokens without Id (ERC20 for instance), the Id should be set to 0
+   *      for tokens without Id (ERC20 for instance), the Id should be set to 0
    * @return A boolean, indicating of all assets passed as input are whitelisted
    */
   function batchIsWhiteListed(
@@ -111,7 +102,6 @@ contract MainRegistry is Ownable {
     uint256[] calldata _assetIds
   ) public view returns (bool) {
 
-    //Check if all ERC721 tokens are whitelisted
     uint256 addressesLength = _assetAddresses.length;
     require(addressesLength == _assetIds.length, "LENGTH_MISMATCH");
 
@@ -133,11 +123,11 @@ contract MainRegistry is Ownable {
   /**
    * @notice returns a list of all white-listed token addresses
    * @dev Function is not gas-optimsed and not intended to be called by other smart contracts
-   * @return A list of all white listed token Adresses
+   * @return whiteList A list of all white listed token Adresses
    */
-  function getWhiteList() external view returns (address[] memory) {
+  function getWhiteList() external view returns (address[] memory whiteList) {
     uint256 maxLength = assetsInMainRegistry.length;
-    address[] memory whiteList = new address[](maxLength);
+    whiteList = new address[](maxLength);
 
     uint256 counter = 0;
     for (uint256 i; i < maxLength;) {
@@ -167,11 +157,15 @@ contract MainRegistry is Ownable {
    * @param assetAddress The address of the asset
    * @param assetCreditRatings The List of Credit Rating Categories for the asset for the different Numeraires
    * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
-   *  or the list must have lenth 0. If the list has length zero, the credit ratings of the asset for all numeraires is
-   *  is initiated as credit rating with index 0 by default (worst credit rating).
-   *  Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-   *  Category from 1 to 9 will be used to label groups of assets with similart risk profiles
-   *  (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
+   *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all numeraires
+   *      is initiated as credit rating with index 0 by default (worst credit rating).
+   *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
+   *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
+   *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
+   * @dev By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
+   *      (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
+   *      This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
+   *      assets are no longer updatable.
    */
   function addAsset(address assetAddress, uint256[] memory assetCreditRatings) external onlySubRegistry {
     if (inMainRegistry[assetAddress]) {
@@ -197,10 +191,10 @@ contract MainRegistry is Ownable {
    * @param numeraires The corresponding List of Numeraires
    * @param newCreditRating The corresponding List of new Credit Ratings
    * @dev The function loops over all indexes, and changes for each index the Credit Rating Category of the combination of asset and numeraire.
-   *  In case multiple numeraires for the same assets need to be changed, the address must be repeated in the assets.
-   *  Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-   *  Category from 1 to 9 will be used to label groups of assets with similart risk profiles
-   *  (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
+   *      In case multiple Credit Rating Categories for the same assets need to be changed, the address must be repeated in the assets.
+   *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
+   *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
+   *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
    */
   function batchSetCreditRating(address[] calldata assets, uint256[] calldata numeraires, uint256[] calldata newCreditRating) external onlyOwner {
     uint256 assetsLength = assets.length;
@@ -221,17 +215,25 @@ contract MainRegistry is Ownable {
   }
 
   /**
-   * @notice Add a new numeraire to the Main Registry, or overwrite an existing one
+   * @notice Add a new numeraire (a unit in which price is measured, like USD or ETH) to the Main Registry, or overwrite an existing one
    * @param numeraireInformation A Struct with information about the Numeraire
+   *                              - numeraireToUsdOracleUnit: The unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
+   *                              - numeraireUnit: The unit of the numeraire, equal to 10 to the power of the number of decimals of the numeraire
+   *                              - assetAddress: The contract address of the numeraire,
+   *                              - numeraireToUsdOracle: The contract address of the price oracle of the numeraire in USD
+   *                              - stableAddress: The contract address of the Arcadia issued token, pegged to the numeraire
+   *                              - numeraireLabel: The symbol of the numeraire (only used for readability purpose)
    * @param assetCreditRatings The List of the Credit Rating Categories of the numeraire, for all the different assets in the Main registry
+   * @dev If the Numeraire has no native token, numeraireDecimals should be set to 0 and assetAddress to the null address.
+   *      Tokens pegged to the native token do not count as native tokens
+   *      - USDC is not a native token for USD as Numeraire
+   *      - WETH is a native token for ETH as Numeraire
    * @dev The list of Credit Rating Categories should or be as long as the number of assets added to the Main Registry,
-   *  or the list must have lenth 0. If the list has length zero, the credit ratings of the numeraire for all assets is
-   *  is initiated as credit rating with index 0 by default (worst credit rating).
-   *  Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-   *  Category from 1 to 9 will be used to label groups of assets with similart risk profiles
-   *  (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
-   *  ToDo: Add tests that existing numeraire cannot be entered second time?
-   *  ToDo: Check if assetCreditRating can be put in a struct
+   *      or the list must have length 0. If the list has length zero, the credit ratings of the numeraire for all assets
+   *      is initiated as credit rating with index 0 by default (worst credit rating).
+   *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
+   *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
+   *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
    */
   function addNumeraire(NumeraireInformation calldata numeraireInformation, uint256[] calldata assetCreditRatings) external onlyOwner {
     numeraireToInformation[numeraireCounter] = numeraireInformation;
@@ -255,12 +257,11 @@ contract MainRegistry is Ownable {
    * @param _assetAddresses The List of token addresses of the assets
    * @param _assetIds The list of corresponding token Ids that needs to be checked
    * @dev For each token address, a corresponding id at the same index should be present,
-   *  for tokens without Id (ERC20 for instance), the Id should be set to 0
+   *      for tokens without Id (ERC20 for instance), the Id should be set to 0
    * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
    * @param numeraire An identifier (uint256) of the Numeraire
    * @return valueInNumeraire The total value of the list of assets denominated in Numeraire
-   * @dev Todo: Not yet tested for Over-and underflow
-  *       ToDo: value sum unchecked. Cannot overflow on 1e18 decimals
+   * @dev ToDo: value sum unchecked. Cannot overflow on 1e18 decimals
    */
   function getTotalValue(
                         address[] calldata _assetAddresses, 
@@ -286,24 +287,25 @@ contract MainRegistry is Ownable {
       getValueInput.assetAmount = _assetAmounts[i];
 
       if (assetAddress == numeraireToInformation[numeraire].assetAddress) { //Should only be allowed if the numeraire is ETH, not for stablecoins or wrapped tokens
-        valueInNumeraire = valueInNumeraire + _assetAmounts[i].mulDivDown(FixedPointMathLib.WAD, numeraireToInformation[numeraire].numeraireUnit); //_assetAmounts must be a with 18 decimals precision
+        valueInNumeraire = valueInNumeraire + _assetAmounts[i].mulDivDown(FixedPointMathLib.WAD, numeraireToInformation[numeraire].numeraireUnit); //_assetAmounts can have a variable decimal precision -> bring to 18 decimals
       } else {
-          //Calculate value of the next asset and add it to the total value of the vault
+          //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInNumeraire can be non-zero
           (uint256 tempValueInUsd, uint256 tempValueInNumeraire) = ISubRegistry(assetToSubRegistry[assetAddress]).getValue(getValueInput);
           valueInUsd = valueInUsd + tempValueInUsd;
           valueInNumeraire = valueInNumeraire + tempValueInNumeraire;
       }
       unchecked {++i;}
     }
+
     if (numeraire == 0) { //Check if numeraire is USD
       return valueInUsd;
     } else if (valueInUsd > 0) {
       //Get the Numeraire-USD rate
       (,int256 rate,,,) = IChainLinkData(numeraireToInformation[numeraire].numeraireToUsdOracle).latestRoundData();
-      //Add valueInUsd to valueInNumeraire, to check if conversion from int to uint can always be done
+      //Add valueInUsd to valueInNumeraire
       valueInNumeraire = valueInNumeraire + valueInUsd.mulDivDown(numeraireToInformation[numeraire].numeraireToUsdOracleUnit, uint256(rate));
     }
-
+    return valueInNumeraire;
   }
 
   /**
@@ -314,8 +316,7 @@ contract MainRegistry is Ownable {
    *      for tokens without Id (ERC20 for instance), the Id should be set to 0
    * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
    * @param numeraire An identifier (uint256) of the Numeraire
-   * @return valuesPerAsset sThe list of values per assets denominated in Numeraire
-   * @dev Todo: Not yet tested for Over-and underflow
+   * @return valuesPerAsset The list of values per assets denominated in Numeraire
    */
   function getListOfValuesPerAsset(
     address[] calldata _assetAddresses, 
@@ -371,11 +372,13 @@ contract MainRegistry is Ownable {
    * @param _assetAddresses The List of token addresses of the assets
    * @param _assetIds The list of corresponding token Ids that needs to be checked
    * @dev For each token address, a corresponding id at the same index should be present,
-   *  for tokens without Id (ERC20 for instance), the Id should be set to 0
+   *      for tokens without Id (ERC20 for instance), the Id should be set to 0
    * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
    * @param numeraire An identifier (uint256) of the Numeraire
    * @return valuesPerCreditRating The list of values per Credit Rating Category denominated in Numeraire
-   * @dev Todo: Not yet tested for Over-and underflow
+   * @dev Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
+   *      Category from 1 to 10 will be used to label groups of assets with similar risk profiles
+   *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
    */
  function getListOfValuesPerCreditRating(
     address[] calldata _assetAddresses, 
