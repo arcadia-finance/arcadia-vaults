@@ -57,24 +57,46 @@ contract Liquidator is Ownable {
     _;
   }
 
+  /** 
+    @notice Sets the factory address on the liquidator.
+    @dev    The factory is used to fetch the isVault bool in elevated().
+    @param newFactory the factory address.
+  */
   function setFactory(address newFactory) external onlyOwner {
     factoryAddress = newFactory;
   }
 
+  /** 
+    @notice Sets the protocol treasury address on the liquidator.
+    @dev    The protocol treasury is used to receive liquidation rewards.
+    @param newProtocolTreasury the protocol treasury.
+  */
   function setProtocolTreasury(address newProtocolTreasury) external onlyOwner {
     protocolTreasury = newProtocolTreasury;
   }
 
+  /** 
+    @notice Sets the reserve fund address on the liquidator.
+    @dev    The reserve fund is used to pay liquidation keepers should the liquidation surplus be insufficient.
+    @param newReserveFund the reserve fund address.
+  */
   function setReserveFund(address newReserveFund) external onlyOwner {
     reserveFund = newReserveFund;
   }
 
-  //function startAuction() modifier = only by vault
-  //  sets time start to now()
-  //  stores the liquidationKeeper
-  // 
-
-  function startAuction(address vaultAddress, uint256 life, address liquidationKeeper, address originalOwner, uint128 openDebt, uint8 liqThres, uint8 numeraire) public elevated returns (bool) {
+   /** 
+    @notice Starts an auction of a vault. Called by the vault itself.
+    @dev 
+    @param vaultAddress the vault address that undergoes the auction.
+    @param life the life of the vault represents the amount of times a vault has been liquidated.
+    @param liquidationKeeper the keeper who triggered the auction. Gets a reward!
+    @param originalOwner the original owner of this vault, at `life`.
+    @param openDebt the open debt taken by `originalOwner` at `life`.
+    @param liqThres the liquidation threshold of the vault, in factor 100.
+    @param numeraire the numeraire in which the vault is denominated.
+    @return success auction has started -> true.
+  */
+  function startAuction(address vaultAddress, uint256 life, address liquidationKeeper, address originalOwner, uint128 openDebt, uint8 liqThres, uint8 numeraire) public elevated returns (bool success) {
 
     require(auctionInfo[vaultAddress][life].startBlock == 0, "Liquidation already ongoing");
 
@@ -88,8 +110,6 @@ contract Liquidator is Ownable {
     return true;
   }
 
-  //function getPrice(assets) view
-  // gets the price of assets, equals to oracle price + factor depending on time
    /** 
     @notice Function to check what the value of the items in the vault is.
     @dev 
@@ -102,23 +122,25 @@ contract Liquidator is Ownable {
     return totalValue;
   }
 
-  // gets the price of assets, equals to oracle price + factor depending on time
+
    /** 
     @notice Function to buy only a certain asset of a vault in the liquidation process
     @dev 
     @param assetAddresses the vaultAddress 
     @param assetIds the vaultAddress 
     @param assetAmounts the vaultAddress 
+    //todo
   */
   function buyPart(address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) public {
 
   }
+
    /** 
     @notice Function to check what the current price of the vault being auctioned of is.
     @dev 
-    @param vaultAddress the vaultAddress 
+    @param vaultAddress the vaultAddress.
+    @param life the life of the vault for which the price has to be fetched.
   */
-
   function getPriceOfVault(address vaultAddress, uint256 life) public view returns (uint256, uint8, bool) {
     bool forSale = !(auctionInfo[vaultAddress][life].stopped) && auctionInfo[vaultAddress][life].startBlock > 0;
 
@@ -145,6 +167,7 @@ contract Liquidator is Ownable {
     @notice Function a user calls to buy the vault during the auction process. This ends the auction process
     @dev 
     @param vaultAddress the vaultAddress of the vault the user want to buy.
+    @param life the life of the vault for which the price has to be fetched.
   */
   function buyVault(address vaultAddress, uint256 life) public {
     // it's 3683 gas cheaper to look up the struct 6x in the mapping than to take it into memory
@@ -215,8 +238,12 @@ contract Liquidator is Ownable {
 
     /** 
     @notice Function a eligeble claimer can call to claim the proceeds of the vault they are entitled to.
-    @dev 
-    @param vaultAddresses vaultAddresses the caller want to claim the proceeds from.
+    @dev vaultAddresses and lives from a combination. Claiming for combinations at vaultAddress[i] && lives[i]
+    @dev if multiple lives of the same vault address are to be claimed, the vault address must be repeated!
+    @param claimer the address for which (and to which) the claims are requested.
+    @param vaultAddresses vault addresses the caller want to claim the proceeds from.
+    @param lives the lives for which the caller wants to claim for.
+    //todo: make view function showing available addresses & lives for a claimer
     */
   function claimProceeds(address claimer, address[] calldata vaultAddresses, uint256[] calldata lives) public {
     uint256 len = vaultAddresses.length;
