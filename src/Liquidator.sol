@@ -140,12 +140,12 @@ contract Liquidator is Ownable {
     
     return (totalPrice, auctionInfo[vaultAddress][life].numeraire, forSale);
   }
+
     /** 
     @notice Function a user calls to buy the vault during the auction process. This ends the auction process
     @dev 
     @param vaultAddress the vaultAddress of the vault the user want to buy.
   */
-
   function buyVault(address vaultAddress, uint256 life) public {
     // it's 3683 gas cheaper to look up the struct 6x in the mapping than to take it into memory
     (uint256 priceOfVault,uint8 numeraire, bool forSale) = getPriceOfVault(vaultAddress, life);

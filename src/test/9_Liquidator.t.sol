@@ -369,7 +369,7 @@ contract LiquidatorTest is DSTest {
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
 
-    (,,uint8 liqThres,,,,) = liquidator.auctionInfo(address(proxy), 0);
+    (,,uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
 
     (uint256 vaultPrice, , bool forSale) = liquidator.getPriceOfVault(address(proxy), 0);
 
@@ -400,7 +400,7 @@ contract LiquidatorTest is DSTest {
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
 
-    (uint128 openDebt,, uint8 liqThres,,,,) = liquidator.auctionInfo(address(proxy), 0);
+    (uint128 openDebt,, uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
     (uint256 vaultPriceBefore, , bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
     vm.roll(block.number + blocksToRoll);
@@ -417,33 +417,33 @@ contract LiquidatorTest is DSTest {
 
   }
 
-  function testStopSaleAfterAuctionDuration(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
-    vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.auctionDuration());
-    (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    vm.assume(newPrice/ liqThresProxy  < rateEthToUsd / collThresProxy);
-    vm.assume(amountEth > 0);
-    uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
-    vm.assume(amountEth < type(uint128).max / valueOfOneEth);
+  // function testStopSaleAfterAuctionDuration(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+  //   vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.auctionDuration());
+  //   (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
+  //   vm.assume(newPrice/ liqThresProxy  < rateEthToUsd / collThresProxy);
+  //   vm.assume(amountEth > 0);
+  //   uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+  //   vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
-    depositERC20InVault(eth, amountEth, vaultOwner);
+  //   depositERC20InVault(eth, amountEth, vaultOwner);
 
-    uint128 amountCredit = uint128(proxy.getRemainingCredit());
+  //   uint128 amountCredit = uint128(proxy.getRemainingCredit());
 
-    vm.prank(vaultOwner);
-    proxy.takeCredit(amountCredit);
+  //   vm.prank(vaultOwner);
+  //   proxy.takeCredit(amountCredit);
 
-    vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice));
+  //   vm.prank(oracleOwner);
+  //   oracleEthToUsd.setAnswer(int256(newPrice));
 
-    vm.prank(liquidatorBot);
-    factory.liquidate(address(proxy));
+  //   vm.prank(liquidatorBot);
+  //   factory.liquidate(address(proxy));
 
-    vm.roll(blocksToRoll);
-    (,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
+  //   vm.roll(blocksToRoll);
+  //   (,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
 
-    assertTrue(!forSaleAfter);
+  //   assertTrue(!forSaleAfter);
 
-  }
+  // }
 
   function testBuyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
     vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.auctionDuration());
@@ -597,7 +597,7 @@ contract LiquidatorTest is DSTest {
   }
 
   function testClaimMultiple(uint128[] calldata amountsEth) public {
-    vm.assume(amountsEth.length < 64);
+    vm.assume(amountsEth.length < 10);
     setAddresses();
 
     address[] memory vaultAddresses = new address[](amountsEth.length);
@@ -643,10 +643,7 @@ contract LiquidatorTest is DSTest {
       vm.prank(address(1110));
       factory.liquidate(address(proxy));
 
-      
-      //giveStable(address(1111), remainingCred * 2);
       (price,,) = liquidator.getPriceOfVault(address(proxy), i);
-      //giveStable(address(2000), price*10);
 
       vm.startPrank(address(2000));
       stable.approve(address(liquidator), type(uint256).max);
@@ -670,16 +667,6 @@ contract LiquidatorTest is DSTest {
       vm.stopPrank();
     }
 
-
-    // Liquidator.auctionInformation memory auction;
-    // auction.stablePaid = uint128(price);
-    // auction.openDebt = uint128(remainingCred);
-    // auction.originalOwner = vaultOwner;
-    // auction.liquidationKeeper = address(1110);
-    // auction.numeraire = 0;
-
-    // liquidator.claimable(auction, address(proxy), 0);
-
     Balances memory pre = getBalances(stable, vaultOwner);
 
     liquidator.claimProceeds(address(1110), vaultAddresses, lives);
@@ -694,6 +681,208 @@ contract LiquidatorTest is DSTest {
     assertEq(pre.originalOwner + rewardsSum.originalOwnerRecovery, post.originalOwner);
 
   }
+
+  function testClaimSingleMultipleVaults(uint128 amountEth) public {
+    vm.assume(amountEth > 0);
+    {
+      uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+      vm.assume(amountEth < type(uint128).max / valueOfOneEth);
+    }
+
+    (address[] memory assetAddresses,
+     uint256[] memory assetIds,
+     uint256[] memory assetAmounts,
+     uint256[] memory assetTypes) = depositERC20InVault(eth, amountEth, vaultOwner);
+
+    vm.prank(tokenCreatorAddress);
+    eth.mint(vaultOwner, amountEth*2);
+
+    vm.startPrank(vaultOwner);
+    address proxy2 = factory.createVault(45855465656845214,0);
+    eth.approve(proxy2, type(uint256).max);
+    Vault(proxy2).deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+    vm.stopPrank();
+
+    vm.startPrank(vaultOwner);
+    uint256 remainingCred = uint128(proxy.getRemainingCredit());
+    proxy.takeCredit(uint128(remainingCred));
+    Vault(proxy2).takeCredit(uint128(remainingCred));
+    vm.stopPrank();
+
+    vm.startPrank(oracleOwner);
+    oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
+    vm.stopPrank();
+
+    // address protocolTreasury = address(1000);
+    // address reserveFund = address(1111);
+    // address liquidatorKeeper = address(1110);
+    // address vaultBuyer = address(2000);
+
+    setAddresses();
+
+    vm.startPrank(address(1110));
+    factory.liquidate(address(proxy));
+    factory.liquidate(proxy2);
+    vm.stopPrank();
+
+    giveStable(address(2000), remainingCred * 10);
+    giveStable(address(1111), remainingCred * 10);
+    (uint256 price,,) = liquidator.getPriceOfVault(address(proxy), 0);
+    vm.startPrank(address(2000));
+    stable.approve(address(liquidator), type(uint256).max);
+    liquidator.buyVault(address(proxy), 0);
+    liquidator.buyVault(address(proxy2), 0);
+    vm.stopPrank();
+
+    address[] memory vaultAddresses = new address[](2);
+    uint256[] memory lives = new uint256[](2);
+    vaultAddresses[0] = address(proxy);
+    vaultAddresses[1] = proxy2;
+    lives[0] = 0;
+    lives[1] = 0;
+
+    Balances memory pre = getBalances(stable, vaultOwner);
+
+    Liquidator.auctionInformation memory auction1;
+    Liquidator.auctionInformation memory auction2;
+
+    auction1.openDebt = uint128(remainingCred);
+    auction2.openDebt = uint128(remainingCred);
+    auction1.liquidationKeeper = address(1110);
+    auction2.liquidationKeeper = address(1110);
+    auction1.stablePaid = uint128(price);
+    auction2.stablePaid = uint128(price);
+    auction1.originalOwner = vaultOwner;
+    auction2.originalOwner = vaultOwner;
+
+    liquidator.claimable(auction1, address(proxy), 0);
+    liquidator.claimable(auction2, address(proxy2), 0);
+
+    liquidator.claimProceeds(address(1110), vaultAddresses, lives);
+    liquidator.claimProceeds(address(1000), vaultAddresses, lives);
+    liquidator.claimProceeds(vaultOwner, vaultAddresses, lives);
+
+    Rewards memory rewards = getRewards(price, remainingCred);
+    
+    Balances memory post = getBalances(stable, vaultOwner);
+
+    assertEq(pre.keeper + 2*rewards.expectedKeeperReward, post.keeper);
+    assertEq(pre.protocol + 2*rewards.expectedProtocolReward, post.protocol);
+    assertEq(pre.originalOwner + 2*rewards.originalOwnerRecovery, post.originalOwner);
+
+  }
+
+  function testClaimSingleHighLife(uint128 amountEth, uint16 newLife) public {
+    vm.assume(amountEth > 0);
+    {
+      uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+      vm.assume(amountEth < type(uint128).max / valueOfOneEth);
+    }
+
+    setLife(proxy, newLife);
+
+    depositERC20InVault(eth, amountEth, vaultOwner);
+
+    vm.startPrank(vaultOwner);
+    uint256 remainingCred = uint128(proxy.getRemainingCredit());
+    proxy.takeCredit(uint128(remainingCred));
+    vm.stopPrank();
+
+    vm.startPrank(oracleOwner);
+    oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
+    vm.stopPrank();
+
+    // address protocolTreasury = address(1000);
+    // address reserveFund = address(1111);
+    // address liquidatorKeeper = address(1110);
+    // address vaultBuyer = address(2000);
+
+    setAddresses();
+
+    vm.prank(address(1110));
+    factory.liquidate(address(proxy));
+
+    giveStable(address(2000), remainingCred * 2);
+    giveStable(address(1111), remainingCred * 2);
+    (uint256 price,,) = liquidator.getPriceOfVault(address(proxy), newLife);
+    vm.startPrank(address(2000));
+    stable.approve(address(liquidator), type(uint256).max);
+    liquidator.buyVault(address(proxy), newLife);
+    vm.stopPrank();
+
+    address[] memory vaultAddresses = new address[](1);
+    uint256[] memory lives = new uint256[](1);
+    vaultAddresses[0] = address(proxy);
+    lives[0] = newLife;
+
+    Liquidator.auctionInformation memory auction;
+    auction.stablePaid = uint128(price);
+    auction.openDebt = uint128(remainingCred);
+    auction.originalOwner = vaultOwner;
+    auction.liquidationKeeper = address(1110);
+    auction.numeraire = 0;
+
+    liquidator.claimable(auction, address(proxy), newLife);
+
+    Balances memory pre = getBalances(stable, vaultOwner);
+
+    liquidator.claimProceeds(address(1110), vaultAddresses, lives);
+    liquidator.claimProceeds(address(1000), vaultAddresses, lives);
+    liquidator.claimProceeds(vaultOwner, vaultAddresses, lives);
+
+    Rewards memory rewards = getRewards(price, remainingCred);
+    
+    Balances memory post = getBalances(stable, vaultOwner);
+
+    assertEq(pre.keeper + rewards.expectedKeeperReward, post.keeper);
+    assertEq(pre.protocol + rewards.expectedProtocolReward, post.protocol);
+    assertEq(pre.originalOwner + rewards.originalOwnerRecovery, post.originalOwner);
+
+  }
+
+  function testClaimSingleWrongLife(uint128 amountEth, uint16 newLife, uint16 lifeToBuy) public {
+    vm.assume(newLife != lifeToBuy);
+    vm.assume(amountEth > 0);
+    {
+      uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+      vm.assume(amountEth < type(uint128).max / valueOfOneEth);
+    }
+
+    setLife(proxy, newLife);
+
+    depositERC20InVault(eth, amountEth, vaultOwner);
+
+    vm.startPrank(vaultOwner);
+    uint256 remainingCred = uint128(proxy.getRemainingCredit());
+    proxy.takeCredit(uint128(remainingCred));
+    vm.stopPrank();
+
+    vm.startPrank(oracleOwner);
+    oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
+    vm.stopPrank();
+
+    // address protocolTreasury = address(1000);
+    // address reserveFund = address(1111);
+    // address liquidatorKeeper = address(1110);
+    // address vaultBuyer = address(2000);
+
+    setAddresses();
+
+    vm.prank(address(1110));
+    factory.liquidate(address(proxy));
+
+    giveStable(address(2000), remainingCred * 2);
+    giveStable(address(1111), remainingCred * 2);
+    //liquidator.getPriceOfVault(address(proxy), newLife);
+    liquidator.getPriceOfVault(address(proxy), lifeToBuy);
+    vm.startPrank(address(2000));
+    stable.approve(address(liquidator), type(uint256).max);
+    vm.expectRevert("LQ_BV: Not for sale");
+    liquidator.buyVault(address(proxy), lifeToBuy);
+    vm.stopPrank();
+
+  }
+
 
   function getBalances(Stable stableAddr, address _vaultOwner) public view returns (Balances memory) {
     Balances memory bal;
@@ -733,6 +922,16 @@ contract LiquidatorTest is DSTest {
     liquidator.setProtocolTreasury(address(1000));
     liquidator.setReserveFund(address(1111));
     vm.stopPrank();
+  }
+
+  function setLife(Vault vaultAddr, uint256 newLife) public {
+    uint256 slot = stdstore
+            .target(address(vaultAddr))
+            .sig(vaultAddr.life.selector)
+            .find();
+    bytes32 loc = bytes32(slot);
+    bytes32 newLife_b = bytes32(abi.encode(newLife));
+    vm.store(address(vaultAddr), loc, newLife_b);
   }
 
   function giveStable(address addr, uint256 amount) public {

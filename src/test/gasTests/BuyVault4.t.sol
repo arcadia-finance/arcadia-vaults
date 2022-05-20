@@ -429,8 +429,7 @@ contract gasBuyVault_2ERC202ERC721 is DSTest {
 
   function testBuyVaultBl2000() public {
     vm.roll(2000);
-    vm.startPrank(vaultBuyer);
-    vm.expectRevert("LQ_BV: Not for sale");
+    vm.prank(vaultBuyer);
     liquidator.buyVault(address(proxy), 0);
   }
 
