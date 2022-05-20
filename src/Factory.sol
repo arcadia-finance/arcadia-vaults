@@ -169,8 +169,19 @@ contract Factory is ERC721, Ownable {
     @param to target.
     @param id of the vault that is about to be transfered.
   */
-  function safeTransferFrom(address from, address to, uint256 id) override public {
+  function safeTransferFrom(address from, address to, uint256 id) public override {
       _safeTransferFrom(from, to, id);
+  }
+
+    /** 
+    @notice Function used to transfer a vault between users
+    @dev This method overwrites the safeTransferFrom function in ERC721.sol to also transfer the vault proxy contract to the new owner.
+    @param from sender.
+    @param to target.
+    @param id of the vault that is about to be transfered.
+  */
+  function transferFrom(address from, address to, uint256 id) public override {
+      _transferFrom(from, to, id);
   }
 
   /** 
@@ -183,13 +194,26 @@ contract Factory is ERC721, Ownable {
   */
   function _safeTransferFrom(address from, address to, uint256 id) internal {
     IVault(allVaults[id]).transferOwnership(to);
-    transferFrom(from, to, id);
+    super.transferFrom(from, to, id);
     require(
       to.code.length == 0 ||
         ERC721TokenReceiver(to).onERC721Received(msg.sender, from, id, "") ==
         ERC721TokenReceiver.onERC721Received.selector,
       "UNSAFE_RECIPIENT"
     );
+  }
+
+  /** 
+    @notice Internal function used to transfer a vault between users
+    @dev This function is used to transfer a vault between users.
+         Overriding to transfer ownership of linked vault.
+    @param from sender.
+    @param to target.
+    @param id of the vault that is about to be transfered.
+  */
+  function _transferFrom(address from, address to, uint256 id) internal {
+    IVault(allVaults[id]).transferOwnership(to);
+    super.transferFrom(from, to, id);
   }
 
   /** 

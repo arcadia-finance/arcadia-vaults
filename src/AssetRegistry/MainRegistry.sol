@@ -160,7 +160,7 @@ contract MainRegistry is Ownable {
    *      or the list must have lenth 0. If the list has length zero, the credit ratings of the asset for all numeraires
    *      is initiated as credit rating with index 0 by default (worst credit rating).
    *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-   *      Category from 1 to 10 will be used to label groups of assets with similar risk profiles
+   *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
    *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
    * @dev By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
    *      (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
@@ -193,7 +193,7 @@ contract MainRegistry is Ownable {
    * @dev The function loops over all indexes, and changes for each index the Credit Rating Category of the combination of asset and numeraire.
    *      In case multiple numeraires for the same assets need to be changed, the address must be repeated in the assets.
    *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-   *      Category from 1 to 10 will be used to label groups of assets with similar risk profiles
+   *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
    *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
    */
   function batchSetCreditRating(address[] calldata assets, uint256[] calldata numeraires, uint256[] calldata newCreditRating) external onlyOwner {
@@ -232,7 +232,7 @@ contract MainRegistry is Ownable {
    *      or the list must have lenth 0. If the list has length zero, the credit ratings of the numeraire for all assets
    *      is initiated as credit rating with index 0 by default (worst credit rating).
    *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-   *      Category from 1 to 10 will be used to label groups of assets with similar risk profiles
+   *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
    *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
    */
   function addNumeraire(NumeraireInformation calldata numeraireInformation, uint256[] calldata assetCreditRatings) external onlyOwner {
