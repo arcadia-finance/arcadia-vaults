@@ -291,7 +291,7 @@ contract LiquidatorTest is DSTest {
   }
 
   function testTransferOwnershipByNonOwner(address from) public {
-    vm.assume(from != address(this));
+    vm.assume(from != address(this) && from != address(factory));
 
     Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
     address to = address(12345);

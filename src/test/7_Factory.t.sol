@@ -240,10 +240,10 @@ contract factoryTest is DSTest {
     assertEq(to, factoryContr_m.owner());
   }
 
-  function testTransferOwnershipByNonOwner(address from) public {
-    vm.assume(from != address(this));
-
+  function testTransferOwnershipByNonOwner(address from) public {    
     Factory factoryContr_m = new Factory();
+    vm.assume(from != address(this) && from != address(factoryContr_m));
+
     address to = address(12345);
 
     assertEq(address(this), factoryContr_m.owner());

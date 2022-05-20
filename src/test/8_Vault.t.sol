@@ -1121,7 +1121,7 @@ contract vaultTests is DSTest {
   }
 
   function testTransferOwnershipByNonOwner(address from) public {
-    vm.assume(from != address(this) && from != address(0));
+    vm.assume(from != address(this) && from != address(0) && from != address(factoryContr));
     Vault vault_m = new Vault();
     address to = address(123456);
 
