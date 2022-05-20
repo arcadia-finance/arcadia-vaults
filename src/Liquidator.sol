@@ -120,7 +120,7 @@ contract Liquidator is Ownable {
   */
 
   function getPriceOfVault(address vaultAddress, uint256 life) public view returns (uint256, uint8, bool) {
-    bool forSale = !auctionInfo[vaultAddress][life].stopped;
+    bool forSale = !(auctionInfo[vaultAddress][life].stopped) && auctionInfo[vaultAddress][life].startBlock > 0;
 
     if (!forSale) {
       return (0, 0, false);
