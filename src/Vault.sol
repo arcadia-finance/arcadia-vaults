@@ -18,7 +18,7 @@ import "./interfaces/IMainRegistry.sol";
   * @title An Arcadia Vault used to deposit a combination of all kinds of assets
   * @author Arcadia Finance
   * @notice Users can use this vault to deposit assets (ERC20, ERC721, ERC1155, ...). 
-            The vault will denominate all the pooled assets into one numeraire.
+            The vault will denominate all the pooled assets into one numeraire (one unit of account, like usd or eth).
             An increase of value of one asset will offset a decrease in value of another asset.
             Users can take out a credit line against the single denominated value.
             Ensure your total value denomination remains above the liquidation threshold, or risk being liquidated!
@@ -61,9 +61,9 @@ contract Vault {
 
   struct debtInfo {
     uint128 _openDebt;
-    uint16 _collThres; //factor 100
-    uint8 _liqThres; //factor 100
-    uint64 _yearlyInterestRate; //factor 10**18
+    uint16 _collThres; //2 decimals precision (factor 100)
+    uint8 _liqThres; //2 decimals precision (factor 100)
+    uint64 _yearlyInterestRate; //18 decimals precision (factor 10**18)
     uint32 _lastBlock;
     uint8 _numeraire;
   }
@@ -132,10 +132,10 @@ contract Vault {
          Costly function (156k gas)
     @param _owner The tx.origin: the sender of the 'createVault' on the factory
     @param registryAddress The 'beacon' contract to which should be looked at for external logic.
-    @param stable The contract address of the stablecoin of Arcadia Finance
+    @param stable The contract address of the Arcadia Finance issued stablecoin, pegged to the Numeraire of the vault
     @param stakeContract The stake contract in which stablecoin can be staked. 
                          Used when syncing debt: interest in stable is minted to stakecontract.
-    @param irmAddress The contract address of the InterestRateModule, which calculates the going interest rate
+    @param irmAddress The contract address of the InterestRateModule, which calculates the interest rate
                       for a credit line, based on the underlying assets.
   */
   function initialize(address _owner, address registryAddress, address stable, address stakeContract, address irmAddress) external payable virtual {
@@ -152,11 +152,11 @@ contract Vault {
   }
 
   /** 
-    @notice The function used to deposit assets into the proxy vault by the proxy vault owner.
+    @notice Deposits assets into the proxy vault by the proxy vault owner.
     @dev All arrays should be of same length, each index in each array corresponding
          to the same asset that will get deposited. If multiple asset IDs of the same contract address
          are deposited, the assetAddress must be repeated in assetAddresses.
-         The ERC20 get deposited by transferFrom. ERC721 & ERC1155 using safeTransferFrom.
+         The ERC20 gets deposited by transferFrom. ERC721 & ERC1155 using safeTransferFrom.
          Can only be called by the proxy vault owner to avoid attacks where malicous actors can deposit 1 wei assets,
          increasing gas costs upon credit issuance and withrawals.
          Example inputs:
@@ -179,7 +179,6 @@ contract Vault {
     require(assetAddressesLength == assetIds.length &&
              assetAddressesLength == assetAmounts.length &&
              assetAddressesLength == assetTypes.length, "Length mismatch");
-    
 
     require(IRegistry(_registryAddress).batchIsWhiteListed(assetAddresses, assetIds), "Not all assets are whitelisted!");
 
@@ -201,23 +200,10 @@ contract Vault {
 
   }
 
-  ////////
-  function getLengths() public view returns (uint256, uint256, uint256, uint256) {
+  //Function only used for tests
+  function getLengths() external view returns (uint256, uint256, uint256, uint256) {
     return (_erc20Stored.length, _erc721Stored.length, _erc721TokenIds.length, _erc1155Stored.length);
   }
-
-  function returnLists() public view returns (address[] memory, address[] memory, uint256[] memory, address[] memory, uint256[] memory) {
-    return (_erc20Stored, _erc721Stored, _erc721TokenIds, _erc1155Stored, _erc1155TokenIds);
-  }
-
-  function getValueGas(uint8 numeraire) public view returns (uint256) {
-    return getValue(numeraire);
-  }
-
-  function viewReq(uint256 amount) public view returns (uint256) {
-    return (getValue(debt._numeraire) * 100) / (getOpenDebt() + amount);
-  }
-  ////////
 
   /** 
     @notice Internal function used to deposit ERC20 tokens.
@@ -271,7 +257,7 @@ contract Vault {
          After successful transfer, the function checks whether the combination of address & ID has already been stored.
          If not, the function pushes the new address and ID to the stored arrays.
          This may cause duplicates in the ERC1155 stored addresses array, but this is intended. 
-    @param _from TAddress the tokens should be taken from. This address must have pre-approved the proxy vault.
+    @param _from The Address the tokens should be taken from. This address must have pre-approved the proxy vault.
     @param ERC1155Address The asset address that should be transferred.
     @param id The ID of the token to be transferred.
     @param amount The amount of ERC1155 tokens to be transferred.
@@ -348,7 +334,7 @@ contract Vault {
 
     uint256 openDebt = getOpenDebt();
     if (openDebt != 0) {
-      require((getValue(debt._numeraire) * 100 / openDebt) > debt._collThres , "Cannot withdraw since the collateral value would become too low!" );
+      require((getValue(debt._numeraire) * 100 / openDebt) > debt._collThres , "Cannot withdraw since the collateral value would become too low!");
     }
 
   }
@@ -550,7 +536,7 @@ contract Vault {
   ///////////////
 
   /** 
-    @notice Calculates the yearly interest (in 1e18 decimals).
+    @notice Calculates the yearly interest (with 18 decimals precision).
     @dev Based on an array with values per credit rating (tranches) and the minimum collateral value needed for the debt taken,
          returns the yearly interest rate in a 1e18 decimal number.
     @param valuesPerCreditRating An array of values, split per credit rating.
@@ -562,7 +548,7 @@ contract Vault {
   }
 
   /** 
-    @notice Internal function: sets the yearly interest rate (in a 1e18 decimal).
+    @notice Internal function: sets the yearly interest rate (with 18 decimals precision).
     @param valuesPerCreditRating An array of values, split per credit rating.
     @param minCollValue The minimum collateral value based on the amount of open debt on the proxy vault.
   */
@@ -796,7 +782,7 @@ contract Vault {
     require(leftHand < rightHand, "This vault is healthy");
 
     
-    require(ILiquidator(liquidator).startAuction(address(this), life, liquidationKeeper, owner, debt._openDebt, debt._liqThres), "Failed to start auction!");
+    require(ILiquidator(liquidator).startAuction(address(this), life, liquidationKeeper, owner, debt._openDebt, debt._liqThres, debt._numeraire), "Failed to start auction!");
 
     //gas: good luck overflowing this
     unchecked {++life;}

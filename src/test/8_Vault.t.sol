@@ -190,7 +190,7 @@ contract vaultTests is DSTest {
 
 
     // vm.prank(creatorAddress);
-    // liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    // liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
   }
 
   //this is a before each
@@ -217,7 +217,7 @@ contract vaultTests is DSTest {
     mainRegistry.addSubRegistry(address(standardERC20Registry));
     mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
     mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
-    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stable));
+    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
     vm.stopPrank();
 
     vm.startPrank(vaultOwner);
@@ -672,7 +672,7 @@ contract vaultTests is DSTest {
 
     (,uint16 _collThres,,,,) = vault.debt();
 
-    vm.assume(amountCredit <= (valueDeposit - valueWithdraw) * 100 / _collThres);
+    vm.assume(amountCredit < (valueDeposit - valueWithdraw) * 100 / _collThres);
 
     Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
     vm.startPrank(vaultOwner);
@@ -1121,7 +1121,7 @@ contract vaultTests is DSTest {
   }
 
   function testTransferOwnershipByNonOwner(address from) public {
-    vm.assume(from != address(this) && from != address(0));
+    vm.assume(from != address(this) && from != address(0) && from != address(factoryContr));
     Vault vault_m = new Vault();
     address to = address(123456);
 

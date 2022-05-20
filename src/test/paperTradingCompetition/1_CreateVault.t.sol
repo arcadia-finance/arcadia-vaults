@@ -73,7 +73,7 @@ contract CreateVaultTest is DSTest {
     factory = new FactoryPaperTrading();
     stableUsd = new StablePaperTrading("Arcadia USD Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factory));
     stableEth = new StablePaperTrading("Arcadia ETH Stable Mock", "masETH", uint8(Constants.stableEthDecimals), 0x0000000000000000000000000000000000000000, address(factory));
-    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry), address(stableUsd));
+    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
     stableUsd.setLiquidator(address(liquidator));
     stableEth.setLiquidator(address(liquidator));
 

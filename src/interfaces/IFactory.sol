@@ -11,5 +11,6 @@ interface IFactory {
   function vaultIndex(address vaultAddress) external view returns (uint256);
   function getCurrentRegistry() view external returns (address);
   function addNumeraire(uint256 numeraire, address stable) external;
-  function numeraireCounter() external returns (uint256);
+  function numeraireCounter() external view returns (uint256);
+  function numeraireToStable(uint256) external view returns (address);
 }

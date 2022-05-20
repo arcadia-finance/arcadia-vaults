@@ -91,7 +91,7 @@ contract TokenShopTest is DSTest {
 
     mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stableUsd), numeraireLabel:'USD', numeraireUnit:1}));
     tokenShop = new TokenShop(address(mainRegistry));
-    liquidator = new Liquidator(address(factory), address(mainRegistry), address(stableUsd));
+    liquidator = new Liquidator(address(factory), address(mainRegistry));
 
     interestRateModule = new InterestRateModule();
     interestRateModule.setBaseInterestRate(5 * 10 ** 16);

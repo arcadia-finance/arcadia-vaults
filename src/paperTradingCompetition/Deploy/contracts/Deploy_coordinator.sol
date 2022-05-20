@@ -40,7 +40,7 @@ interface IDeployerTwo {
   }
 
   function deployMainReg(NumeraireInformation calldata) external returns (address);
-  function deployLiquidator(address, address, address) external returns (address);
+  function deployLiquidator(address, address) external returns (address);
   function deployTokenShop(address) external returns (address);
 }
 
@@ -156,8 +156,8 @@ interface IErc721SubRegistry {
 interface IRegistryExtended is IRegistry {
   function setAssetInformation(IErc721SubRegistry.AssetInformation calldata, uint256[] calldata) external;
   function setAssetInformation(IErc20SubRegistry.AssetInformation calldata, uint256[] calldata) external;
-  function _mainRegistry() external view returns (address);
-  function _oracleHub() external view returns (address);
+  function mainRegistry() external view returns (address);
+  function oracleHub() external view returns (address);
 
 }
 
@@ -266,7 +266,7 @@ contract DeployCoordinator {
 
     mainRegistry = IMainRegistryExtended(deployerTwo.deployMainReg(IDeployerTwo.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stableUsd), numeraireLabel:'USD', numeraireUnit:1})));
 
-    liquidator = ILiquidatorPaperTradingExtended(deployerTwo.deployLiquidator(address(factory), address(mainRegistry), address(stableUsd)));
+    liquidator = ILiquidatorPaperTradingExtended(deployerTwo.deployLiquidator(address(factory), address(mainRegistry)));
     stableUsd.setLiquidator(address(liquidator));
     stableEth.setLiquidator(address(liquidator));
 
@@ -465,10 +465,10 @@ contract DeployCoordinator {
   }
 
   function checkSubregs() public view returns (bool) {
-    require(standardERC20Registry._mainRegistry() == address(mainRegistry), "ERC20SR: mainreg not set");
-    require(floorERC721Registry._mainRegistry() == address(mainRegistry), "ERC721SR: mainreg not set");
-    require(standardERC20Registry._oracleHub() == address(oracleHub), "ERC20SR: OH not set");
-    require(floorERC721Registry._oracleHub() == address(oracleHub), "ERC721SR: OH not set");
+    require(standardERC20Registry.mainRegistry() == address(mainRegistry), "ERC20SR: mainreg not set");
+    require(floorERC721Registry.mainRegistry() == address(mainRegistry), "ERC721SR: mainreg not set");
+    require(standardERC20Registry.oracleHub() == address(oracleHub), "ERC20SR: OH not set");
+    require(floorERC721Registry.oracleHub() == address(oracleHub), "ERC721SR: OH not set");
 
     return true;
   }
@@ -476,7 +476,6 @@ contract DeployCoordinator {
   function checkLiquidator() public view returns (bool) {
     require(liquidator.registryAddress() == address(mainRegistry), "Liq: mainreg not set");
     require(liquidator.factoryAddress() == address(factory), "Liq: fact not set");
-    require(liquidator.stable() == address(stableUsd), "Liq: stable not set");
 
     return true;
   }

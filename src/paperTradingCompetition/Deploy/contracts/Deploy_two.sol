@@ -24,8 +24,8 @@ contract DeployContractsTwo  {
     return address(main);
   }
 
-  function deployLiquidator(address a, address b, address c) external returns (address) {
-    Liquidator liq = new Liquidator(a, b, c);
+  function deployLiquidator(address a, address b) external returns (address) {
+    Liquidator liq = new Liquidator(a, b);
     liq.transferOwnership(msg.sender);
     return address(liq);
   }
