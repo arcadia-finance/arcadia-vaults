@@ -142,9 +142,12 @@ contract Liquidator is Ownable {
     @dev Returns whether the vault is on sale or not. Always check the forSale bool!
     @param vaultAddress the vaultAddress.
     @param life the life of the vault for which the price has to be fetched.
+    @return totalPrice the total price for which the vault can be purchased.
+    @return numeraireOfVault the numeraire in which the vault (and totalPrice) is denominaetd.
+    @return forSale returns false when the vault is not for sale.
   */
-  function getPriceOfVault(address vaultAddress, uint256 life) public view returns (uint256, uint8, bool) {
-    bool forSale = !(auctionInfo[vaultAddress][life].stopped) && auctionInfo[vaultAddress][life].startBlock > 0;
+  function getPriceOfVault(address vaultAddress, uint256 life) public view returns (uint256 totalPrice, uint8 numeraireOfVault, bool forSale) {
+    forSale = !(auctionInfo[vaultAddress][life].stopped) && auctionInfo[vaultAddress][life].startBlock > 0;
 
     if (!forSale) {
       return (0, 0, false);
@@ -154,7 +157,7 @@ contract Liquidator is Ownable {
     uint256 surplusPrice = auctionInfo[vaultAddress][life].openDebt * (auctionInfo[vaultAddress][life].liqThres-100) / 100;
     uint256 priceDecrease = surplusPrice * (block.number - auctionInfo[vaultAddress][life].startBlock) / (hourlyBlocks * auctionDuration);
 
-    uint256 totalPrice;
+    totalPrice;
     if (priceDecrease > startPrice) {
       //ヽ༼ຈʖ̯ຈ༽ﾉ
       totalPrice = 0;
@@ -176,7 +179,6 @@ contract Liquidator is Ownable {
     (uint256 priceOfVault,uint8 numeraire, bool forSale) = getPriceOfVault(vaultAddress, life);
 
     require(forSale, "LQ_BV: Not for sale");
-    require(auctionInfo[vaultAddress][life].stablePaid < auctionInfo[vaultAddress][life].openDebt, "LQ_BV: Debt repaid");
 
     // todo: can be given in getPriceOfVault()
     uint256 surplus;
@@ -205,11 +207,13 @@ contract Liquidator is Ownable {
     @param auction the auction
     @param vaultAddress the vaultAddress of the vault the user want to buy.
     @param life the lifeIndex of vault, the keeper wants to claim their reward from
+    @return claimables The amounts claimable for a certain auction (in the numeraire of the vault).
+    @return claimableBy The user that can claim the liquidation reward or surplus.
   */
-  function claimable(auctionInformation memory auction, address vaultAddress, uint256 life) public view returns (uint256[] memory, address[] memory) {
+  function claimable(auctionInformation memory auction, address vaultAddress, uint256 life) public view returns (uint256[] memory claimables, address[] memory claimableBy) {
     claimRatios memory ratios = claimRatio;
-    uint256[] memory claimables = new uint256[](3);
-    address[] memory claimableBy = new address[](3);
+    claimables = new uint256[](3);
+    claimableBy = new address[](3);
     uint256 claimableBitmapMem = claimableBitmap[vaultAddress][(life >> 6)];
 
     uint256 keeperReward = auction.openDebt * ratios.liquidationKeeper / 100;
@@ -234,7 +238,6 @@ contract Liquidator is Ownable {
     claimableBy[1] = protocolTreasury;
     claimableBy[2] = auction.originalOwner;
 
-    return (claimables, claimableBy);
   }
 
     /** 
