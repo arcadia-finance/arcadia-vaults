@@ -75,7 +75,8 @@ contract VaultPaperTrading is Vault {
     uint256 rateStableToUsd = IRegistry(_registryAddress).getTotalValue(addressArr, idArr, amountArr, 0);
     uint256 stableAmount = FixedPointMathLib.mulDivUp(1000000 * FixedPointMathLib.WAD, FixedPointMathLib.WAD, rateStableToUsd);
     IERC20(_stable).mint(address(this), stableAmount);
-    super._depositERC20(address(this), _stable, stableAmount);
+    _depositERC20(address(this), _stable, stableAmount);
+    emit SingleDeposit(address(this), _stable, 0, stableAmount);
   }
 
   /** 
@@ -112,13 +113,13 @@ contract VaultPaperTrading is Vault {
 
     for (uint256 i; i < assetAddressesLength;) {
       if (assetTypes[i] == 0) {
-        super._depositERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
+        _depositERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
       }
       else if (assetTypes[i] == 1) {
-        super._depositERC721(msg.sender, assetAddresses[i], assetIds[i]);
+        _depositERC721(msg.sender, assetAddresses[i], assetIds[i]);
       }
       else if (assetTypes[i] == 2) {
-        super._depositERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+        _depositERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
       }
       else {
         require(false, "Unknown asset type");
@@ -134,7 +135,7 @@ contract VaultPaperTrading is Vault {
     @param assetAmount The amount of the asset to be deposited. 
   */
   function depositERC20(address assetAddress, uint256 assetAmount) external onlyTokenShop {
-    super._depositERC20(msg.sender, assetAddress, assetAmount);
+    _depositERC20(msg.sender, assetAddress, assetAmount);
     emit SingleDeposit(msg.sender, assetAddress, 0, assetAmount);
   }
 
@@ -171,13 +172,13 @@ contract VaultPaperTrading is Vault {
 
     for (uint256 i; i < assetAddressesLength;) {
       if (assetTypes[i] == 0) {
-        super._withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
+        _withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
       }
       else if (assetTypes[i] == 1) {
-        super._withdrawERC721(msg.sender, assetAddresses[i], assetIds[i]);
+        _withdrawERC721(msg.sender, assetAddresses[i], assetIds[i]);
       }
       else if (assetTypes[i] == 2) {
-        super._withdrawERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+        _withdrawERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
       }
       else {
         require(false, "Unknown asset type");
@@ -194,9 +195,82 @@ contract VaultPaperTrading is Vault {
     @param assetAmount The amount of the asset to be deposited. 
   */
   function withdrawERC20(address assetAddress, uint256 assetAmount) external onlyTokenShop {
-    super._withdrawERC20(msg.sender, assetAddress, assetAmount);
+    _withdrawERC20(msg.sender, assetAddress, assetAmount);
     //No need to check if withdraw would bring collaterisation ratio under treshhold since only tokenShop can withdraw
-    emit SingleDeposit(msg.sender, assetAddress, 0, assetAmount);
+    emit SingleWithdraw(msg.sender, assetAddress, 0, assetAmount);
+  }
+
+  /** 
+    @notice Internal function to take out credit.
+    @dev Syncs debt to cement unrealised debt. 
+         MinCollValue is calculated without unrealised debt since it is zero.
+         Gets the total value of assets per credit rating.
+         Calculates and sets the yearly interest rate based on the values per credit rating and the debt to be taken out.
+         Mints stablecoin directly in the vault.
+  */
+  function _takeCredit(
+    uint128 amount,
+    address[] memory _assetAddresses, 
+    uint256[] memory _assetIds,
+    uint256[] memory _assetAmounts
+  ) internal override {
+
+    syncDebt();
+
+    uint256 minCollValue;
+    //gas: can't overflow: uint129 * uint16 << uint256
+    unchecked {minCollValue = uint256((uint256(debt._openDebt) + amount) * debt._collThres) / 100;}
+
+    uint256[] memory valuesPerCreditRating = IRegistry(_registryAddress).getListOfValuesPerCreditRating(_assetAddresses, _assetIds, _assetAmounts, debt._numeraire);
+    uint256 vaultValue = sumElementsOfList(valuesPerCreditRating);
+
+    require(vaultValue >= minCollValue, "Cannot take this amount of extra credit!" );
+
+    _setYearlyInterestRate(valuesPerCreditRating, minCollValue);
+
+    //gas: can only overflow when total opendebt is
+    //above 340 billion billion *10**18 decimals
+    //could go unchecked as well, but might result in opendebt = 0 on overflow
+    debt._openDebt += amount;
+
+    //Following logic added only for the paper trading competition: minst stable directly in the vault
+    IERC20(_stable).mint(address(this), amount);
+    _depositERC20(address(this), _stable, amount);
+    emit SingleDeposit(address(this), _stable, 0, amount);
+  }
+
+  /** 
+    @notice Function used by owner of the proxy vault to repay any open debt.
+    @dev Amount of debt to repay in same decimals as the stablecoin decimals.
+         Amount given can be greater than open debt. Will only transfer the required
+         amount from the user's balance.
+    @param amount Amount of debt to repay.
+  */
+  function repayDebt(uint256 amount) public override onlyOwner {
+    syncDebt();
+
+    // if a user wants to pay more than their open debt
+    // we should only take the amount that's needed
+    // prevents refunds etc
+    uint256 openDebt = debt._openDebt;
+    uint256 transferAmount = openDebt > amount ? amount : openDebt;
+
+    _withdrawERC20(address(this), _stable, transferAmount);
+    emit SingleWithdraw(address(this), _stable, 0, transferAmount);
+
+    IERC20(_stable).burn(transferAmount);
+
+    //gas: transferAmount cannot be larger than debt._openDebt,
+    //which is a uint128, thus can't underflow
+    assert(openDebt >= transferAmount);
+    unchecked {debt._openDebt -= uint128(transferAmount);}
+
+    // if interest is calculated on a fixed rate, set interest to zero if opendebt is zero
+    // todo: can be removed safely?
+    if (getOpenDebt() == 0) {
+      debt._yearlyInterestRate = 0;
+    }
+
   }
 
 }

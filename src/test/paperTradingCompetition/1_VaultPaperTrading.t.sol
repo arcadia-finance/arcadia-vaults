@@ -19,8 +19,9 @@ import "../../OracleHub.sol";
 import "../../utils/Constants.sol";
 import "../../paperTradingCompetition/Oracles/StableOracle.sol";
 import "../../mockups/SimplifiedChainlinkOracle.sol";
+import "../../paperTradingCompetition/TokenShop.sol";
 
-contract CreateVaultTest is DSTest {
+contract VaultPaperTradingTest is DSTest {
   using stdStorage for StdStorage;
 
   Vm private vm = Vm(HEVM_ADDRESS);  
@@ -41,6 +42,7 @@ contract CreateVaultTest is DSTest {
   StablePaperTrading private stableUsd;
   StablePaperTrading private stableEth;
   Liquidator private liquidator;
+  TokenShop private tokenShop;
 
   address private creatorAddress = address(1);
   address private tokenCreatorAddress = address(2);
@@ -58,8 +60,36 @@ contract CreateVaultTest is DSTest {
   //this is a before
   constructor() {
 
+    vm.startPrank(creatorAddress);
+    factory = new FactoryPaperTrading();
+
+    stableUsd = new StablePaperTrading("Arcadia USD Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factory));
+    stableEth = new StablePaperTrading("Arcadia ETH Stable Mock", "masETH", uint8(Constants.stableEthDecimals), 0x0000000000000000000000000000000000000000, address(factory));
+
+    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stableUsd), numeraireLabel:'USD', numeraireUnit:1}));
+    tokenShop = new TokenShop(address(mainRegistry));
+    liquidator = new Liquidator(address(factory), address(mainRegistry));
+
+    interestRateModule = new InterestRateModule();
+    interestRateModule.setBaseInterestRate(5 * 10 ** 16);
+
+    vault = new VaultPaperTrading();
+    factory.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
+    factory.confirmNewVaultInfo();
+
+    factory.setLiquidator(address(liquidator));
+    factory.setTokenShop(address(tokenShop));
+    mainRegistry.setFactory(address(factory));
+    tokenShop.setFactory(address(factory));
+    stableUsd.setLiquidator(address(liquidator));
+    stableEth.setLiquidator(address(liquidator));
+    stableUsd.setTokenShop(address(tokenShop));
+    stableEth.setTokenShop(address(tokenShop));
+    vm.stopPrank();
+
     vm.prank(tokenCreatorAddress);
     eth = new ERC20PaperTrading("ETH Mock", "mETH", uint8(Constants.ethDecimals), 0x0000000000000000000000000000000000000000);
+    vm.stopPrank();
 
     vm.startPrank(oracleOwner);
     oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
@@ -70,14 +100,6 @@ contract CreateVaultTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(creatorAddress);
-    factory = new FactoryPaperTrading();
-    stableUsd = new StablePaperTrading("Arcadia USD Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factory));
-    stableEth = new StablePaperTrading("Arcadia ETH Stable Mock", "masETH", uint8(Constants.stableEthDecimals), 0x0000000000000000000000000000000000000000, address(factory));
-    liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
-    stableUsd.setLiquidator(address(liquidator));
-    stableEth.setLiquidator(address(liquidator));
-
-    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stableUsd), numeraireLabel:'USD', numeraireUnit:1}));
     uint256[] memory emptyList = new uint256[](0);
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stableEth), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 
@@ -99,17 +121,6 @@ contract CreateVaultTest is DSTest {
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableUsdToUsdArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stableUsd)}), emptyList);
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableEthToUsdArr, assetUnit: uint64(10**Constants.stableEthDecimals), assetAddress: address(stableEth)}), emptyList);
 
-    interestRateModule = new InterestRateModule();
-    interestRateModule.setBaseInterestRate(5 * 10 ** 16);
-
-    vault = new VaultPaperTrading();
-    factory.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
-    factory.confirmNewVaultInfo();
-    factory.setLiquidator(address(liquidator));
-    factory.setTokenShop(address(0));
-    liquidator.setFactory(address(factory));
-    mainRegistry.setFactory(address(factory));
-
     vm.stopPrank();
 
   }
@@ -119,7 +130,7 @@ contract CreateVaultTest is DSTest {
 
   }
 
-  function testUsdVault() public {
+  function testCreateUsdVault() public {
     vm.prank(vaultOwner);
     proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.UsdNumeraire);
     proxy = VaultPaperTrading(proxyAddr);
@@ -130,7 +141,7 @@ contract CreateVaultTest is DSTest {
     assertEq(actualValue, expectedValue);
   }
 
-  function testEthVault() public {
+  function testCreateEthVault() public {
     vm.prank(vaultOwner);
     proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.EthNumeraire);
     proxy = VaultPaperTrading(proxyAddr);
@@ -139,6 +150,24 @@ contract CreateVaultTest is DSTest {
 		uint256 actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
 
     assertEq(actualValue, expectedValue);
+  }
+
+  function testTakeCredit(uint8 baseAmountCredit) public {
+    vm.startPrank(vaultOwner);
+    proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)))), Constants.UsdNumeraire);
+    proxy = VaultPaperTrading(proxyAddr);
+
+    uint128 amountCredit = uint128(baseAmountCredit * Constants.WAD);
+    (,uint16 _collThres,,,,) = proxy.debt();
+    vm.assume(1000000 * Constants.WAD * 100 / _collThres >= amountCredit);
+
+    proxy.takeCredit(amountCredit);
+
+    uint256 expectedValue = 1000000 * Constants.WAD + amountCredit;
+		uint256 actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
+
+    assertEq(actualValue, expectedValue);
+    assertEq(proxy.getOpenDebt(), amountCredit);
   }
 
 }

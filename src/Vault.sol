@@ -552,7 +552,7 @@ contract Vault {
     @param valuesPerCreditRating An array of values, split per credit rating.
     @param minCollValue The minimum collateral value based on the amount of open debt on the proxy vault.
   */
-  function _setYearlyInterestRate(uint256[] memory valuesPerCreditRating, uint256 minCollValue) private {
+  function _setYearlyInterestRate(uint256[] memory valuesPerCreditRating, uint256 minCollValue) internal {
     debt._yearlyInterestRate = calculateYearlyInterestRate(valuesPerCreditRating, minCollValue);
   }
 
@@ -662,7 +662,7 @@ contract Vault {
     address[] memory _assetAddresses, 
     uint256[] memory _assetIds,
     uint256[] memory _assetAmounts
-  ) private {
+  ) internal virtual {
 
     syncDebt();
 
@@ -732,7 +732,7 @@ contract Vault {
          amount from the user's balance.
     @param amount Amount of debt to repay.
   */
-  function repayDebt(uint256 amount) public onlyOwner {
+  function repayDebt(uint256 amount) public virtual onlyOwner {
     syncDebt();
 
     // if a user wants to pay more than their open debt
