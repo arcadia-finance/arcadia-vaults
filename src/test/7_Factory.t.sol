@@ -409,7 +409,7 @@ contract factoryTest is DSTest {
 
   //Test confirmNewVaultInfo
   function testNonOwnerConfirmsNewVaultInfo(address unprivilegedAddress) public {
-    vm.assume(unprivilegedAddress != address(0));
+    vm.assume(unprivilegedAddress != address(0) && unprivilegedAddress != address(this));
     vm.startPrank(unprivilegedAddress);
     vm.expectRevert("Ownable: caller is not the owner");
     factoryContr.confirmNewVaultInfo();
