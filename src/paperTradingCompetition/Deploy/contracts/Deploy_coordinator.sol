@@ -537,6 +537,44 @@ contract DeployCoordinator {
     return true;
   }
 
+  struct returnAddrs {
+    address factory;
+    address mainRegistry;
+    address erc20subreg;
+    address erc721subreg;
+    address oracleHub;
+    address vaultlogic;
+    address liquidator;
+    address interestratemodule;
+    address stableUSD;
+    address stableETH;
+    address weth;
+    address tokenShop;
+    address oracleStableUsdToUsd;
+    address oracleStableEthToEth;
+    address oracleEthToUsd;
+    assetInfo[] assets;
+  }
+
+  function returnAllAddresses() public view returns (returnAddrs memory addrs) {
+    addrs.factory = address(factory);
+    addrs.mainRegistry = address(mainRegistry);
+    addrs.erc20subreg = address(standardERC20Registry);
+    addrs.erc721subreg = address(floorERC721Registry);
+    addrs.oracleHub = address(oracleHub);
+    addrs.vaultlogic = address(vault);
+    addrs.liquidator = address(liquidator);
+    addrs.interestratemodule = address(interestRateModule);
+    addrs.stableUSD = address(stableUsd);
+    addrs.stableETH = address(stableEth);
+    addrs.weth = address(weth);
+    addrs.tokenShop = address(tokenShop);
+    addrs.oracleStableUsdToUsd = address(oracleStableUsdToUsd);
+    addrs.oracleStableEthToEth = address(oracleStableEthToEth);
+    addrs.oracleEthToUsd = address(oracleEthToUsd);
+    addrs.assets = assets;
+  }
+
   function onERC721Received(address, address, uint256, bytes calldata ) public pure returns (bytes4) {
     return this.onERC721Received.selector;
   }
