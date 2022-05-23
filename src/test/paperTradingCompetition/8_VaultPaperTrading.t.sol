@@ -162,8 +162,20 @@ contract VaultPaperTradingInheritedTest is vaultTests {
     
   }
 
-  function testTakeCredit(uint8 baseAmountDeposit, uint8 baseAmountCredit) public override {
+  function testTakeCredit(uint8, uint8 baseAmountCredit) public override {
+    uint128 amountCredit = uint128(baseAmountCredit * Constants.WAD);
+    (,uint16 _collThres,,,,) = vault.debt();
+    vm.assume(1000000 * Constants.WAD * 100 / _collThres >= amountCredit);
 
+    vm.startPrank(vaultOwner);
+    vault.takeCredit(amountCredit);
+    vm.stopPrank();
+
+    uint256 expectedValue = 1000000 * Constants.WAD + amountCredit;
+    uint256 actualValue = vault.getValue(uint8(Constants.UsdNumeraire));
+
+    assertEq(actualValue, expectedValue);
+    assertEq(vault.getOpenDebt(), amountCredit);
   }
 
   function testWithdrawERC20fterTakingCredit (uint8 baseAmountDeposit, uint32 baseAmountCredit, uint8 baseAmountWithdraw) public override {
@@ -344,23 +356,18 @@ contract VaultPaperTradingInheritedTest is vaultTests {
     assertEq(actualValue, expectedValue);
   }
 
-  function testTakeCredit(uint8 baseAmountCredit) public {
+  function testTakeCreditInsufficientBalance(uint32 baseAmountCredit) public {
     uint128 amountCredit = uint128(baseAmountCredit * Constants.WAD);
     (,uint16 _collThres,,,,) = vault.debt();
-    vm.assume(1000000 * Constants.WAD * 100 / _collThres >= amountCredit);
+    vm.assume(1000000 * Constants.WAD * 100 / _collThres < amountCredit);
 
     vm.startPrank(vaultOwner);
+    vm.expectRevert("Cannot take this amount of extra credit!");
     vault.takeCredit(amountCredit);
     vm.stopPrank();
-
-    uint256 expectedValue = 1000000 * Constants.WAD + amountCredit;
-    uint256 actualValue = vault.getValue(uint8(Constants.UsdNumeraire));
-
-    assertEq(actualValue, expectedValue);
-    assertEq(vault.getOpenDebt(), amountCredit);
   }
 
-  function testRepayCredit(uint8 baseAmountTakeCredit, uint8 baseAmountRepayCredit) public {
+  function testRepayCredit(uint16 baseAmountTakeCredit, uint16 baseAmountRepayCredit) public {
     uint128 amountTakeCredit = uint128(baseAmountTakeCredit * Constants.WAD);
     (,uint16 _collThres,,,,) = vault.debt();
     vm.assume(1000000 * Constants.WAD * 100 / _collThres >= amountTakeCredit);
@@ -377,6 +384,22 @@ contract VaultPaperTradingInheritedTest is vaultTests {
 
     assertEq(actualValue, expectedValue);
     assertEq(vault.getOpenDebt(), amountTakeCredit - amountRepayCredit);
+  }
+
+  function testFailRepayCreditInsufficientBalance(uint32 baseAmountTakeCredit, uint32 amountOfBlocksToRoll) public {
+    uint128 amountTakeCredit = uint128(baseAmountTakeCredit * Constants.WAD);
+    (,uint16 _collThres,,,,) = vault.debt();
+    vm.assume(1000000 * Constants.WAD * 100 / _collThres >= amountTakeCredit);
+
+    vm.startPrank(vaultOwner);
+    vault.takeCredit(amountTakeCredit);
+    vm.roll(block.number + amountOfBlocksToRoll);
+    uint256 debt = vault.getOpenDebt();
+    vm.assume(debt > 1000000 * Constants.WAD);
+
+    //Arithmetic overflow.
+    vault.repayDebt(debt);
+    vm.stopPrank();
   }
 
 }
