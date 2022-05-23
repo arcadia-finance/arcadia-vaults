@@ -5,7 +5,7 @@ import "../mockups/ERC20SolmateMock.sol";
 
 contract ERC20PaperTrading is ERC20Mock {
 
-  address private tokenShop;
+  address public tokenShop;
 
   /**
    * @dev Throws if called by any address other than the tokenshop

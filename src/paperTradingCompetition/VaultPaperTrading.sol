@@ -189,7 +189,7 @@ contract VaultPaperTrading is Vault {
   }
 
   /** 
-    @notice The function deposits a single ERC20 into the proxy vault by the proxy vault owner.
+    @notice The function withdraws a single ERC20 into the proxy vault by the proxy vault owner.
     @param assetAddress The contract address of the asset
     @param assetAmount The amount of the asset to be deposited. 
   */
