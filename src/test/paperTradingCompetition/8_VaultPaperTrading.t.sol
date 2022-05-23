@@ -395,7 +395,7 @@ contract VaultPaperTradingInheritedTest is vaultTests {
     vault.takeCredit(amountTakeCredit);
     vm.roll(block.number + amountOfBlocksToRoll);
     uint256 debt = vault.getOpenDebt();
-    vm.assume(debt > 1000000 * Constants.WAD);
+    vm.assume(debt > 1000000 * Constants.WAD + amountTakeCredit);
 
     //Arithmetic overflow.
     vault.repayDebt(debt);
