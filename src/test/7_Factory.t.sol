@@ -26,17 +26,17 @@ interface IVaultExtra {
 contract factoryTest is DSTest {
   using stdStorage for StdStorage;
 
-  Vm private vm = Vm(HEVM_ADDRESS);
-  StdStorage private stdstore;
+  Vm internal vm = Vm(HEVM_ADDRESS);
+  StdStorage internal stdstore;
 
-  Factory private factoryContr;
-  Vault private vaultContr;
-  InterestRateModule private interestContr;
-  Liquidator private liquidatorContr;
-  MainRegistry private registryContr;
-  MainRegistry private registryContr2;
-  ERC20Mock private erc20Contr;
-  address private unprivilegedAddress1 = address(5);
+  Factory internal factoryContr;
+  Vault internal vaultContr;
+  InterestRateModule internal interestContr;
+  Liquidator internal liquidatorContr;
+  MainRegistry internal registryContr;
+  MainRegistry internal registryContr2;
+  ERC20Mock internal erc20Contr;
+  address internal unprivilegedAddress1 = address(5);
 
   uint256[] emptyList = new uint256[](0);
 
@@ -305,7 +305,7 @@ contract factoryTest is DSTest {
     vm.stopPrank();   
   }
 
-  function testOldRegistryAddsNumeraire(address newNumeraire) public {
+  function testOldRegistryAddsNumeraire(address newNumeraire) public virtual {
 		registryContr2 = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(erc20Contr), numeraireLabel:'USD', numeraireUnit:1}));
     factoryContr.setNewVaultInfo(address(registryContr2), address(vaultContr), 0x0000000000000000000000000000000000000000, address(interestContr));
     factoryContr.confirmNewVaultInfo();
@@ -315,7 +315,7 @@ contract factoryTest is DSTest {
 		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newNumeraire, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
   }
 
-  function testLatestRegistryAddsNumeraire(address newStable) public {
+  function testLatestRegistryAddsNumeraire(address newStable) public virtual {
     assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));	
     assertEq(address(0), factoryContr.numeraireToStable(1));	
 		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newStable, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
@@ -366,7 +366,7 @@ contract factoryTest is DSTest {
     vm.stopPrank();
   }
 
-  function testOwnerSetsNewVaultWithInfoMissingNumeraireInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public {
+  function testOwnerSetsNewVaultWithInfoMissingNumeraireInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public virtual {
     vm.assume(newStable != address(0));
     
 		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newStable, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
@@ -378,7 +378,7 @@ contract factoryTest is DSTest {
     factoryContr.setNewVaultInfo(address(registryContr2), logic, stakeContract, interestModule);
   }
 
-  function testOwnerSetsNewVaultWithIdenticalNumerairesInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public {
+  function testOwnerSetsNewVaultWithIdenticalNumerairesInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public virtual {
 		registryContr.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:newStable, numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
     assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
     assertEq(newStable, factoryContr.numeraireToStable(1));
@@ -393,7 +393,7 @@ contract factoryTest is DSTest {
     assertEq(newStable, factoryContr.numeraireToStable(1));  
   }
 
-  function testOwnerSetsNewVaultWithMoreNumerairesInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public {
+  function testOwnerSetsNewVaultWithMoreNumerairesInMainRegistry(address newStable, address logic, address stakeContract, address interestModule) public virtual {
     assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
     assertEq(address(0), factoryContr.numeraireToStable(1));
 
