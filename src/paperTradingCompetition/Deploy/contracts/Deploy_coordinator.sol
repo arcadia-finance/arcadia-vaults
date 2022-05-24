@@ -72,6 +72,7 @@ interface IFactoryPaperTradingExtended is IFactoryPaperTrading {
   function vaultDetails(uint256) external view returns (address, address, address, address);
   function numeraireToStable(uint256) external view returns (address);
   function numeraireCounter() external view returns (uint256);
+  function transferOwnership(address) external;
 }
 
 interface IStablePaperTradingExtended is IStable {
@@ -94,6 +95,8 @@ interface IOraclePaperTradingExtended is IChainLinkData {
     address oracleAddress;
     address quoteAssetAddress;
   }
+
+  function transferOwnership(address) external;
 }
 
 interface IMainRegistryExtended is IMainRegistry {
@@ -101,6 +104,7 @@ interface IMainRegistryExtended is IMainRegistry {
   function setFactory(address) external;
   function isSubRegistry(address) external view returns (bool);
   function numeraireCounter() external view returns (uint256);
+  function transferOwnership(address) external;
 
   struct NumeraireInformation {
     uint64 numeraireToUsdOracleUnit;
@@ -120,6 +124,7 @@ interface ILiquidatorPaperTradingExtended is ILiquidator {
   function registryAddress() external view returns (address);
   function factoryAddress() external view returns (address);
   function stable() external view returns (address);
+  function transferOwnership(address) external;
 }
 
 interface IOracleHubExtended is IOraclesHub {
@@ -134,6 +139,7 @@ interface IOracleHubExtended is IOraclesHub {
   }
 
   function addOracle(OracleInformation calldata) external;
+  function transferOwnership(address) external;
 }
 
 interface IErc20SubRegistry {
@@ -158,15 +164,18 @@ interface IRegistryExtended is IRegistry {
   function setAssetInformation(IErc20SubRegistry.AssetInformation calldata, uint256[] calldata) external;
   function mainRegistry() external view returns (address);
   function oracleHub() external view returns (address);
-
+  function transferOwnership(address) external;
 }
 
 interface IIRMExtended is IRM {
   function setBaseInterestRate(uint64) external;
+  function transferOwnership(address) external;
 }
 
 interface ITokenShopExtended is ITokenShop {
   function mainRegistry() external view returns (address);
+  function setFactory(address) external;
+  function transferOwnership(address) external;
 }
 
 
@@ -271,6 +280,7 @@ contract DeployCoordinator {
     stableEth.setLiquidator(address(liquidator));
 
     tokenShop = ITokenShopExtended(deployerTwo.deployTokenShop(address(mainRegistry)));
+    tokenShop.setFactory(address(factory));
     weth = IERC20PaperTrading(deployerThree.deployERC20("ETH Mock", "mETH", uint8(Constants.ethDecimals), address(tokenShop)));
 
     stableUsd.setTokenShop(address(tokenShop));
@@ -425,7 +435,21 @@ contract DeployCoordinator {
 
   }
 
-    function verifyView() public view returns (bool) {
+  function transferOwnership() public onlyOwner {
+    factory.transferOwnership(msg.sender);
+    oracleHub.transferOwnership(msg.sender);
+    mainRegistry.transferOwnership(msg.sender);
+    standardERC20Registry.transferOwnership(msg.sender);
+    floorERC721Registry.transferOwnership(msg.sender);
+    interestRateModule.transferOwnership(msg.sender);
+    oracleStableUsdToUsd.transferOwnership(msg.sender);
+    oracleStableEthToEth.transferOwnership(msg.sender);
+    liquidator.transferOwnership(msg.sender);
+    tokenShop.transferOwnership(msg.sender);
+    oracleEthToUsd.transferOwnership(msg.sender);
+  }
+
+  function verifyView() public view returns (bool) {
 
     require(checkAddressesInit(), "Verification: addresses not inited");
     require(checkFactory(), "Verification: factory not set");
@@ -535,6 +559,44 @@ contract DeployCoordinator {
     require(address(oracleEthToUsd) != address(0), "AddrCheck: oracleEthToUsd not set");
 
     return true;
+  }
+
+  struct returnAddrs {
+    address factory;
+    address mainRegistry;
+    address erc20subreg;
+    address erc721subreg;
+    address oracleHub;
+    address vaultlogic;
+    address liquidator;
+    address interestratemodule;
+    address stableUSD;
+    address stableETH;
+    address weth;
+    address tokenShop;
+    address oracleStableUsdToUsd;
+    address oracleStableEthToEth;
+    address oracleEthToUsd;
+    assetInfo[] assets;
+  }
+
+  function returnAllAddresses() public view returns (returnAddrs memory addrs) {
+    addrs.factory = address(factory);
+    addrs.mainRegistry = address(mainRegistry);
+    addrs.erc20subreg = address(standardERC20Registry);
+    addrs.erc721subreg = address(floorERC721Registry);
+    addrs.oracleHub = address(oracleHub);
+    addrs.vaultlogic = address(vault);
+    addrs.liquidator = address(liquidator);
+    addrs.interestratemodule = address(interestRateModule);
+    addrs.stableUSD = address(stableUsd);
+    addrs.stableETH = address(stableEth);
+    addrs.weth = address(weth);
+    addrs.tokenShop = address(tokenShop);
+    addrs.oracleStableUsdToUsd = address(oracleStableUsdToUsd);
+    addrs.oracleStableEthToEth = address(oracleStableEthToEth);
+    addrs.oracleEthToUsd = address(oracleEthToUsd);
+    addrs.assets = assets;
   }
 
   function onERC721Received(address, address, uint256, bytes calldata ) public pure returns (bytes4) {
