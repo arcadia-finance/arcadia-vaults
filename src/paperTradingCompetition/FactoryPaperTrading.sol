@@ -62,7 +62,10 @@ contract FactoryPaperTrading is Factory {
   }
 
   function liquidate(address vaultLiquidate, address vaultReward) external {
+    require(isVault[vaultLiquidate], "FTRY_RR: Not a vault");
+    require(isVault[vaultReward], "FTRY_RR: Not a vault");
     _liquidate(vaultLiquidate, msg.sender);
+    require(ownerOf[vaultIndex[vaultReward]] != liquidatorAddress, "FTRY_RR: Can't send rewards to liquidated vaults.");
     IVaultPaperTrading(vaultReward).receiveReward();
   }
 
