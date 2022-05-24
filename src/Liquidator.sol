@@ -102,7 +102,7 @@ contract Liquidator is Ownable {
     @param numeraire the numeraire in which the vault is denominated.
     @return success auction has started -> true.
   */
-  function startAuction(address vaultAddress, uint256 life, address liquidationKeeper, address originalOwner, uint128 openDebt, uint8 liqThres, uint8 numeraire) public elevated returns (bool success) {
+  function startAuction(address vaultAddress, uint256 life, address liquidationKeeper, address originalOwner, uint128 openDebt, uint8 liqThres, uint8 numeraire) public elevated virtual returns (bool success) {
 
     require(auctionInfo[vaultAddress][life].startBlock == 0, "Liquidation already ongoing");
 

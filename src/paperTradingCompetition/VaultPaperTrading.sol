@@ -11,6 +11,7 @@ contract VaultPaperTrading is Vault {
   using FixedPointMathLib for uint256;
 
   address public _tokenShop;
+  uint256 rewards;
 
   constructor() {
     owner = msg.sender;
@@ -63,20 +64,9 @@ contract VaultPaperTrading is Vault {
     initialized = true;
 
     //Following logic added only for the paper trading competition
-    //All new vaults are initiated with $1.000.000
-    address[] memory addressArr = new address[](1);
-    uint256[] memory idArr = new uint256[](1);
-    uint256[] memory amountArr = new uint256[](1);
-
-    addressArr[0] = _stable;
-    idArr[0] = 0;
-    amountArr[0] = FixedPointMathLib.WAD;
-
-    uint256 rateStableToUsd = IRegistry(_registryAddress).getTotalValue(addressArr, idArr, amountArr, 0);
-    uint256 stableAmount = FixedPointMathLib.mulDivUp(1000000 * FixedPointMathLib.WAD, FixedPointMathLib.WAD, rateStableToUsd);
-    IERC20(_stable).mint(address(this), stableAmount);
-    _depositERC20(address(this), _stable, stableAmount);
-    emit SingleDeposit(address(this), _stable, 0, stableAmount);
+    //All new vaults are initiated with $1.000.000 worth of Numeraire
+    uint256 UsdValue = 1000000 * FixedPointMathLib.WAD; //Can be optimised by saving as constant, to lazy now
+    _mintNumeraire(UsdValue);
   }
 
   /** 
@@ -271,6 +261,30 @@ contract VaultPaperTrading is Vault {
       debt._yearlyInterestRate = 0;
     }
 
+  }
+
+  function receiveReward() external onlyFactory {
+    require(rewards < 5, "VPT_RR: Max rewards received.");
+    unchecked {++rewards;}
+
+    uint256 UsdValue = 200000 * FixedPointMathLib.WAD; //Can be optimised by saving as constant, to lazy now
+    _mintNumeraire(UsdValue);
+  }
+
+  function _mintNumeraire(uint256 UsdValue) internal {
+    address[] memory addressArr = new address[](1);
+    uint256[] memory idArr = new uint256[](1);
+    uint256[] memory amountArr = new uint256[](1);
+
+    addressArr[0] = _stable;
+    idArr[0] = 0;
+    amountArr[0] = FixedPointMathLib.WAD;
+
+    uint256 rateStableToUsd = IRegistry(_registryAddress).getTotalValue(addressArr, idArr, amountArr, 0);
+    uint256 stableAmount = FixedPointMathLib.mulDivUp(UsdValue, FixedPointMathLib.WAD, rateStableToUsd);
+    IERC20(_stable).mint(address(this), stableAmount);
+    _depositERC20(address(this), _stable, stableAmount);
+    emit SingleDeposit(address(this), _stable, 0, stableAmount);
   }
 
 }

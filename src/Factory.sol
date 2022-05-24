@@ -221,7 +221,7 @@ contract Factory is ERC721, Ownable {
     @dev This function is called by an external user or a bbot to start the liquidation process of a vault.
     @param vault Vault that needs to get liquidated.
   */
-  function liquidate(address vault) external {
+  function liquidate(address vault) external virtual {
     _liquidate(vault, msg.sender);
   }
 

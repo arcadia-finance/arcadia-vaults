@@ -57,4 +57,13 @@ contract FactoryPaperTrading is Factory {
     emit VaultCreated(vault, msg.sender, allVaults.length -1);
   }
 
+  function liquidate(address) external pure override {
+    revert('Not Allowed');
+  }
+
+  function liquidate(address vaultLiquidate, address vaultReward) external {
+    _liquidate(vaultLiquidate, msg.sender);
+    IVaultPaperTrading(vaultReward).receiveReward();
+  }
+
 }
