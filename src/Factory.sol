@@ -235,7 +235,7 @@ contract Factory is ERC721, Ownable {
   function _liquidate(address vault, address sender) internal {
     require(IVault(vault).liquidateVault(sender, liquidatorAddress), "FTRY: Vault liquidation failed");
     // Vault version read via Ivault?
-    IVault(allVaults[vaultIndex[vault]]).transferOwnership(liquidatorAddress);
+    IVault(vault).transferOwnership(liquidatorAddress);
     _liquidateTransfer(vault);
   }
 
