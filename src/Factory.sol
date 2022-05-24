@@ -222,6 +222,7 @@ contract Factory is ERC721, Ownable {
     @param vault Vault that needs to get liquidated.
   */
   function liquidate(address vault) external {
+    require(isVault[vault], "FTRY: Not a vault");
     _liquidate(vault, msg.sender);
   }
 
