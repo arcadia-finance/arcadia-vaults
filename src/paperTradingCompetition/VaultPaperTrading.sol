@@ -272,7 +272,7 @@ contract VaultPaperTrading is Vault {
     require(rewards < 5, "VPT_RR: Max rewards received.");
     unchecked {++rewards;}
 
-    uint256 UsdValue = 20000 * FixedPointMathLib.WAD; //Can be optimised by saving as constant, to lazy now
+    uint256 UsdValue = 20000 * FixedPointMathLib.WAD; //Can be optimised by saving as constant, too lazy now
     _mintNumeraire(UsdValue);
   }
 

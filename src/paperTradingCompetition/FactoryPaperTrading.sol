@@ -63,8 +63,8 @@ contract FactoryPaperTrading is Factory {
 
   /** 
     @notice Function used by a keeper to start the liquidation of a vault.
-    @dev This function is called by an external user or a bbot to start the liquidation process of a vault.
-    @dev Keepers are inscentivated to liquidate vaults by earning a $20 000 reward in one of their
+    @dev This function is called by an external user or a bot to start the liquidation process of a vault.
+    @dev Keepers are incentivized to liquidate vaults by earning a $20 000 reward in one of their
          own vaults
     @param vaultLiquidate Vault that needs to get liquidated.
     @param vaultReward Vault that should receive the $20 000 reward.
