@@ -263,11 +263,16 @@ contract VaultPaperTrading is Vault {
 
   }
 
+  /** 
+    @notice Function to reward the vault with $20000 worth of Numeraire.
+    @dev Function can only be called by the factory, when a specific event was triggered to earn the reward.
+    @dev Each vault can receive a maximum of 5 rewards (10% of the starting capital).
+  */
   function receiveReward() external onlyFactory {
     require(rewards < 5, "VPT_RR: Max rewards received.");
     unchecked {++rewards;}
 
-    uint256 UsdValue = 200000 * FixedPointMathLib.WAD; //Can be optimised by saving as constant, to lazy now
+    uint256 UsdValue = 20000 * FixedPointMathLib.WAD; //Can be optimised by saving as constant, to lazy now
     _mintNumeraire(UsdValue);
   }
 

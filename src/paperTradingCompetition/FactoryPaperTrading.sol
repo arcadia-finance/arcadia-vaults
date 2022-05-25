@@ -61,6 +61,14 @@ contract FactoryPaperTrading is Factory {
     revert('Not Allowed');
   }
 
+  /** 
+    @notice Function used by a keeper to start the liquidation of a vault.
+    @dev This function is called by an external user or a bbot to start the liquidation process of a vault.
+    @dev Keepers are inscentivated to liquidate vaults by earning a $20 000 reward in one of their
+         own vaults
+    @param vaultLiquidate Vault that needs to get liquidated.
+    @param vaultReward Vault that should receive the $20 000 reward.
+  */
   function liquidate(address vaultLiquidate, address vaultReward) external {
     require(isVault[vaultLiquidate], "FTRY_RR: Not a vault");
     require(isVault[vaultReward], "FTRY_RR: Not a vault");
