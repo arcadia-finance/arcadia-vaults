@@ -204,14 +204,10 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
     buyEthWithLoan(vaultOwner, proxy);
 
-    assertEq(proxy.life(), 0);
-
     vm.prank(oracleOwner);
     oracleEthToUsd.setAnswer(int256(newPrice/2)); //Rounding
 
     vm.startPrank(liquidatorBot);
-    vm.expectEmit(true, true, false, false);
-    emit OwnershipTransferred(vaultOwner,address(liquidator));
     factory.liquidate(address(proxy), address(proxy2));
     vm.stopPrank();
 
@@ -275,17 +271,65 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
     buyEthWithLoan(vaultOwner, proxy);
 
-    assertEq(proxy.life(), 0);
+    vm.prank(oracleOwner);
+    oracleEthToUsd.setAnswer(int256(newPrice/2)); //Rounding
+
+    vm.startPrank(liquidatorBot);
+    vm.expectRevert("FTRY_RR: Can't send rewards to liquidated vaults.");
+    factory.liquidate(address(proxy), address(proxy));
+    vm.stopPrank();
+  }
+
+  function testReceiveReward(uint256 newPrice) public {
+    (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
+    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy);
+
+    buyEthWithLoan(vaultOwner, proxy);
 
     vm.prank(oracleOwner);
     oracleEthToUsd.setAnswer(int256(newPrice/2)); //Rounding
 
     vm.startPrank(liquidatorBot);
-    vm.expectEmit(true, true, false, false);
-    emit OwnershipTransferred(vaultOwner,address(liquidator));
-    vm.expectRevert("FTRY_RR: Can't send rewards to liquidated vaults.");
-    factory.liquidate(address(proxy), address(proxy));
+    factory.liquidate(address(proxy), address(proxy2));
     vm.stopPrank();
+
+    uint256 expectedValue = 1020000 * Constants.WAD;
+    uint256 actualValue = proxy2.getValue(uint8(Constants.UsdNumeraire));
+
+    assertEq(actualValue, expectedValue);
+  }
+
+  function testReceiveMaxFiveRewards(uint256 newPrice) public {
+    (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
+    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy);
+
+    for (uint256 i; i < 6;) {
+      vm.prank(vaultOwner);
+      proxyAddr = factory.createVault(uint256(keccak256(abi.encodeWithSignature("doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number))))+2+i, Constants.UsdNumeraire);
+      proxy = VaultPaperTrading(proxyAddr);
+
+      buyEthWithLoan(vaultOwner, proxy);
+
+      vm.prank(oracleOwner);
+      oracleEthToUsd.setAnswer(int256(newPrice/2)); //Rounding
+
+      vm.startPrank(liquidatorBot);
+      if (i == 5) {
+        vm.expectRevert("VPT_RR: Max rewards received.");
+      }
+      factory.liquidate(address(proxy), address(proxy2));
+      vm.stopPrank();
+
+      vm.prank(oracleOwner);
+      oracleEthToUsd.setAnswer(int256(rateEthToUsd)); //Rounding
+
+      unchecked {++i;}
+    }
+
+    uint256 expectedValue = 1100000 * Constants.WAD;
+    uint256 actualValue = proxy2.getValue(uint8(Constants.UsdNumeraire));
+
+    assertEq(actualValue, expectedValue);
   }
 
   function buyEthWithLoan(address owner, Vault proxyContract) public {
