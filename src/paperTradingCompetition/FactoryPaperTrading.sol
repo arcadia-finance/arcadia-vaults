@@ -57,4 +57,24 @@ contract FactoryPaperTrading is Factory {
     emit VaultCreated(vault, msg.sender, allVaults.length -1);
   }
 
+  function liquidate(address) external pure override {
+    revert('Not Allowed');
+  }
+
+  /** 
+    @notice Function used by a keeper to start the liquidation of a vault.
+    @dev This function is called by an external user or a bot to start the liquidation process of a vault.
+    @dev Keepers are incentivized to liquidate vaults by earning a $20 000 reward in one of their
+         own vaults
+    @param vaultLiquidate Vault that needs to get liquidated.
+    @param vaultReward Vault that should receive the $20 000 reward.
+  */
+  function liquidate(address vaultLiquidate, address vaultReward) external {
+    require(isVault[vaultLiquidate], "FTRY_RR: Not a vault");
+    require(isVault[vaultReward], "FTRY_RR: Not a vault");
+    _liquidate(vaultLiquidate, msg.sender);
+    require(ownerOf[vaultIndex[vaultReward]] != liquidatorAddress, "FTRY_RR: Can't send rewards to liquidated vaults.");
+    IVaultPaperTrading(vaultReward).receiveReward();
+  }
+
 }

@@ -14,4 +14,5 @@ interface IVaultPaperTrading is IVault {
   function withdrawERC20(address assetAddress, uint256 assetAmount) external;
   function deposit(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) external;
   function depositERC20(address assetAddress, uint256 assetAmount) external;
+  function receiveReward() external;
 }

@@ -217,11 +217,12 @@ contract Factory is ERC721, Ownable {
   }
 
   /** 
-    @notice Function used by a keeper to start the liquidation of a vualt.
+    @notice Function used by a keeper to start the liquidation of a vault.
     @dev This function is called by an external user or a bbot to start the liquidation process of a vault.
     @param vault Vault that needs to get liquidated.
   */
-  function liquidate(address vault) external {
+  function liquidate(address vault) external virtual {
+    require(isVault[vault], "FTRY: Not a vault");
     _liquidate(vault, msg.sender);
   }
 
@@ -234,7 +235,7 @@ contract Factory is ERC721, Ownable {
   function _liquidate(address vault, address sender) internal {
     require(IVault(vault).liquidateVault(sender, liquidatorAddress), "FTRY: Vault liquidation failed");
     // Vault version read via Ivault?
-    IVault(allVaults[vaultIndex[vault]]).transferOwnership(liquidatorAddress);
+    IVault(vault).transferOwnership(liquidatorAddress);
     _liquidateTransfer(vault);
   }
 
