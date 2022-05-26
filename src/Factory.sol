@@ -276,7 +276,7 @@ contract Factory is ERC721, Ownable {
     @param tokenId The id if the vault
     @return uri The token uri.
   */
-  function tokenURI(uint256 tokenId) public view override returns (string memory uri) {
+  function tokenURI(uint256 tokenId) public view virtual override returns (string memory uri) {
 
     require(ownerOf[tokenId] != address(0), "ERC721Metadata: URI query for nonexistent token");
     return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
