@@ -152,3 +152,34 @@ contract FactoryPaperTradingNewTest is DSTest {
   }
 
 }
+
+
+contract FactoryPapertradingMetadata is FactoryPaperTradingInheritedTest {
+  address proxy;
+  using Strings for uint256;
+  using Strings for uint8;
+  using Strings for uint128;
+
+  constructor() FactoryPaperTradingInheritedTest() {
+    proxy = factoryContr.createVault(12345, 0);
+  }
+
+  function testMetadataLifeZero() public {
+    string memory baseURI = "https://api.arcadia.finance/v1/metadata/vaults/";
+    factoryContr.setBaseURI(baseURI);
+    uint256 vaultValue = VaultPaperTrading(proxy).getValue(0);
+    uint life = VaultPaperTrading(proxy).life();
+
+    (uint128 vaultDebt,,,,,uint8 vaultNumeraire) = VaultPaperTrading(proxy).debt();
+
+    string memory actualURI = factoryContr.tokenURI(factoryContr.vaultIndex(proxy));
+    string memory expectedURI = string(abi.encodePacked(baseURI, "0", 
+                                                               "/", vaultValue.toString(), 
+                                                               "/", vaultNumeraire.toString(), 
+                                                               "/", vaultDebt.toString(), 
+                                                               "/", life.toString()));
+
+    assertTrue(keccak256(bytes(expectedURI)) == keccak256(bytes(actualURI)));
+  }
+
+}
