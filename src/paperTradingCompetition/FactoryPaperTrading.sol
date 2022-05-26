@@ -89,11 +89,14 @@ contract FactoryPaperTrading is Factory {
 
     (uint128 vaultDebt,,,,,uint8 vaultNumeraire) = IVaultPaperTrading(vaultAddr).debt();
     uint256 vaultValue = IVaultPaperTrading(vaultAddr).getValue(vaultNumeraire);
+    //return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
 
-    return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString(), 
-                                                               "/", vaultValue.toString(), 
+    // needed to prevent stack too deep
+    string memory baseId = string(abi.encodePacked(baseURI, tokenId.toString(), "/"));
+
+    return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseId, vaultValue.toString(), 
                                                                "/", vaultNumeraire.toString(), 
-                                                               "/", vaultDebt.toString(), 
+                                                               "/", vaultDebt.toString(),
                                                                "/", life.toString())) : "";
   }
 
