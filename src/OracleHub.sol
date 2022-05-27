@@ -27,6 +27,8 @@ contract OracleHub is Ownable {
     uint64 oracleUnit;
     uint8 baseAssetNumeraire;
     bool baseAssetIsNumeraire;
+    int192 minAnswer;
+    uint32 heartBeat;
     string quoteAsset;
     string baseAsset;
     address oracleAddress;
@@ -138,6 +140,9 @@ contract OracleHub is Ownable {
       oracleAddressAtIndex = oracleAdresses[i];
       (, tempRate,,updatedAt,) = IChainLinkData(oracleToOracleInformation[oracleAddressAtIndex].oracleAddress).latestRoundData();
       require(tempRate >= 0, "Negative oracle price");
+      if (block.timestamp - updatedAt > oracleToOracleInformation[oracleAddressAtIndex].heartBeat || tempRate <= oracleToOracleInformation[oracleAddressAtIndex].minAnswer * 110 / 100) {
+        // start process or give flag of invalid oracle
+      }
 
       rate = rate.mulDivDown(uint256(tempRate), oracleToOracleInformation[oracleAddressAtIndex].oracleUnit);
 
