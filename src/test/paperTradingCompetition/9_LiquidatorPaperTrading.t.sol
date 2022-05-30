@@ -267,8 +267,12 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testSendRewardToLiquidatedVault(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    //Amount Eth that is bought from credit is rounded down -> add + 1 ath RHS to make sure the vault can be liquidated
-    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy + 1);
+    //Take into account that credit taken is automatically re-deposited in the vault 
+    // -> health factor after taking maximum debt is not equal to the collaterisation treshhold,
+    //    When the vault has a current value V, you can take a debt of: V * 100 / collThres
+    //    Total value of the Vault is hence: V + V * 100 / collThres = V * (1 + 100 / collThres) = V * (collThres + 100) / collThres
+    //    Healt factor is hence: HF = Value / debt = [V * (collThres + 100) / collThres] / [V * 100 / collThres] = (collThres + 100) / 100
+    vm.assume(newPrice < rateEthToUsd * liqThresProxy / (100 + collThresProxy));
 
     buyEthWithLoan(vaultOwner, proxy);
 
@@ -283,8 +287,12 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testReceiveReward(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    //Amount Eth that is bought from credit is rounded down -> add + 1 ath RHS to make sure the vault can be liquidated
-    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy + 1);
+    //Take into account that credit taken is automatically re-deposited in the vault 
+    // -> health factor after taking maximum debt is not equal to the collaterisation treshhold,
+    //    When the vault has a current value V, you can take a debt of: V * 100 / collThres
+    //    Total value of the Vault is hence: V + V * 100 / collThres = V * (1 + 100 / collThres) = V * (collThres + 100) / collThres
+    //    Healt factor is hence: HF = Value / debt = [V * (collThres + 100) / collThres] / [V * 100 / collThres] = (collThres + 100) / 100
+    vm.assume(newPrice < rateEthToUsd * liqThresProxy / (100 + collThresProxy));
 
     buyEthWithLoan(vaultOwner, proxy);
 
@@ -303,8 +311,12 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testReceiveMaxFiveRewards(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    //Amount Eth that is bought from credit is rounded down -> add + 1 ath RHS to make sure the vault can be liquidated
-    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy + 1);
+    //Take into account that credit taken is automatically re-deposited in the vault 
+    // -> health factor after taking maximum debt is not equal to the collaterisation treshhold,
+    //    When the vault has a current value V, you can take a debt of: V * 100 / collThres
+    //    Total value of the Vault is hence: V + V * 100 / collThres = V * (1 + 100 / collThres) = V * (collThres + 100) / collThres
+    //    Healt factor is hence: HF = Value / debt = [V * (collThres + 100) / collThres] / [V * 100 / collThres] = (collThres + 100) / 100
+    vm.assume(newPrice < rateEthToUsd * liqThresProxy / (100 + collThresProxy));
 
     for (uint256 i; i < 6;) {
       vm.prank(vaultOwner);
