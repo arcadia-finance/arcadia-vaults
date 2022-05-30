@@ -13,13 +13,12 @@ contract ArcadiaOracle is Ownable {
     uint8 public decimals;
     string public description;
 
-
     uint8 private latestRoundId;
 
     // Transmission records the median answer from the transmit transaction at
     // time timestamp
     struct Transmission {
-        int256 answer; // 192 bits ought to be enough for anyone
+        int256 answer;
         uint64 timestamp;
     }
 
@@ -45,13 +44,16 @@ contract ArcadiaOracle is Ownable {
         latestRoundId = 0;
     }
 
+    /**
+   * @notice setOffchainTransmitter set the offchain transmitter to transmit new data
+   * @param _transmitter address of the transmitter
+   */
     function setOffchainTransmitter(address _transmitter) public onlyOwner {
         offchain_connectors[_transmitter] = OffchainConnector({
             isActive : true,
             role : Role.Transmitter
             }
         );
-
     }
 
     /**
@@ -62,6 +64,10 @@ contract ArcadiaOracle is Ownable {
         _;
     }
 
+    /**
+   * @notice transmit is called to post a new report to the contract
+   * @param _answer the new price data for the round
+   */
     function transmit(int256 _answer) public onlyTransmitter {
         latestRoundId++;
         transmissions[latestRoundId] = Transmission(
