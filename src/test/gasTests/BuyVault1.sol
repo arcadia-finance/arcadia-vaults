@@ -281,13 +281,13 @@ contract gasBuyVault_1ERC20 is DSTest {
     assetCreditRatings[1] = 0;
 
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), assetCreditRatings);
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**Constants.linkDecimals), assetAddress: address(link)}), assetCreditRatings);
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleSnxToEthEthToUsd, assetUnit: uint64(10**Constants.snxDecimals), assetAddress: address(snx)}), assetCreditRatings);
+    // standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**Constants.linkDecimals), assetAddress: address(link)}), assetCreditRatings);
+    // standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleSnxToEthEthToUsd, assetUnit: uint64(10**Constants.snxDecimals), assetAddress: address(snx)}), assetCreditRatings);
 
-    floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWbaycToEthEthToUsd, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(bayc)}), assetCreditRatings);
-    floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWmaycToUsdArr, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(mayc)}), assetCreditRatings);
-    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
-    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleGenericStoreFrontToEthEthToUsd, id:1, assetAddress: address(genericStoreFront)}), assetCreditRatings);
+    // floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWbaycToEthEthToUsd, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(bayc)}), assetCreditRatings);
+    // floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWmaycToUsdArr, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(mayc)}), assetCreditRatings);
+    // floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
+    // floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleGenericStoreFrontToEthEthToUsd, id:1, assetAddress: address(genericStoreFront)}), assetCreditRatings);
 
     liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
     vm.stopPrank();

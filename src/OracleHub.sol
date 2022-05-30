@@ -88,7 +88,7 @@ contract OracleHub is Ownable {
    *      - The last oracle in the series must have USD as base-asset.
    *      - The Base-asset of all oracles must be equal to the quote-asset of the next oracle (except for the last oracle in the series).
    */
-  function checkOracleSequence (address[] memory oracleAdresses) external view {
+  function checkOracleSequence(address[] memory oracleAdresses) external view {
     uint256 oracleAdressesLength = oracleAdresses.length;
     require(oracleAdressesLength <= 3, "Oracle seq. cant be longer than 3");
     for (uint256 i; i < oracleAdressesLength;) {

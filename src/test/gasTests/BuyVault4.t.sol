@@ -287,7 +287,6 @@ contract gasBuyVault_2ERC202ERC721 is DSTest {
     floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWbaycToEthEthToUsd, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(bayc)}), assetCreditRatings);
     floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWmaycToUsdArr, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(mayc)}), assetCreditRatings);
     floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleInterleaveToEthEthToUsd, id:1, assetAddress: address(interleave)}), assetCreditRatings);
-    floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses: oracleGenericStoreFrontToEthEthToUsd, id:1, assetAddress: address(genericStoreFront)}), assetCreditRatings);
 
     liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
     vm.stopPrank();

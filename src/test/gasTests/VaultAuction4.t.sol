@@ -187,6 +187,7 @@ contract gasVaultAuction_2ERC202ERC721 is DSTest {
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWbaycToEthUnit), baseAssetNumeraire: 1, quoteAsset:'WBAYC', baseAsset:'ETH', oracleAddress:address(oracleWbaycToEth), quoteAssetAddress:address(wbayc), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWmaycToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'WMAYC', baseAsset:'USD', oracleAddress:address(oracleWmaycToUsd), quoteAssetAddress:address(wmayc), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleInterleaveToEthUnit), baseAssetNumeraire: 1, quoteAsset:'INTERLEAVE', baseAsset:'ETH', oracleAddress:address(oracleInterleaveToEth), quoteAssetAddress:address(interleave), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(10**10), baseAssetNumeraire: 1, quoteAsset:'GenericStoreFront', baseAsset:'ETH', oracleAddress:address(oracleGenericStoreFrontToEth), quoteAssetAddress:address(genericStoreFront), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();
 
     vm.startPrank(tokenCreatorAddress);
