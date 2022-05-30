@@ -9,25 +9,16 @@ import "../../paperTradingCompetition/Oracles/StableOracle.sol";
 import "../../mockups/SimplifiedChainlinkOracle.sol";
 import "../../utils/Strings.sol";
 
+import "../../../lib/ds-test/src/test.sol";
+import "../../../lib/ds-test/src/script.sol";
+import "../../../lib/forge-std/src/stdlib.sol";
+import "../../../lib/forge-std/src/console.sol";
+import "../../../lib/forge-std/src/Vm.sol";
 
-import "../../interfaces/IERC20PaperTrading.sol";
-import "../../interfaces/IERC721PaperTrading.sol";
-import "../../interfaces/IERC1155PaperTrading.sol";
-import "../../interfaces/IFactoryPaperTrading.sol";
-import "../../interfaces/IVaultPaperTrading.sol";
-import "../../interfaces/ITokenShop.sol";
-import "../../../interfaces/IOraclesHub.sol";
-import "../../../interfaces/IMainRegistry.sol";
-import "../../../interfaces/IRegistry.sol";
-import "../../../interfaces/IRM.sol";
-import "../../../interfaces/IRM.sol";
-import "../../../interfaces/IStable.sol";
-import "../../../interfaces/IChainLinkData.sol";
-import "../../../interfaces/ILiquidator.sol";
 
-import "../../../utils/Constants.sol";
-import "../../../utils/Strings.sol";
-import "../../../utils/StringHelpers.sol";
+import "../../utils/Constants.sol";
+import "../../utils/Strings.sol";
+import "../../utils/StringHelpers.sol";
 
 
 interface IDeployerOne {
@@ -188,7 +179,7 @@ interface ITokenShopExtended is ITokenShop {
 }
 
 
-contract DeployCoordinator {
+contract DeployCoordinator is DSTest {
 
   IDeployerOne public deployerOne;
   IDeployerTwo public deployerTwo;
@@ -273,6 +264,7 @@ contract DeployCoordinator {
   //3  continue in order
 
   function start() public onlyOwner {
+    vm.startBroadcast();
     factory = IFactoryPaperTradingExtended(deployerOne.deployFact());
     factory.setBaseURI("ipfs://");
 
