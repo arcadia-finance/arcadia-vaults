@@ -27,46 +27,46 @@ import "./fixtures/ArcadiaOracleFixture.sol";
 contract LiquidatorTest is DSTest {
   using stdStorage for StdStorage;
 
-  Vm private vm = Vm(HEVM_ADDRESS);  
-  StdStorage private stdstore;
+  Vm internal vm = Vm(HEVM_ADDRESS);
+  StdStorage internal stdstore;
 
   Factory private factory;
-  Vault private vault;
-  Vault private proxy;
-  address private proxyAddr;
-  ERC20Mock private eth;
-  ERC20Mock private snx;
-  ERC20Mock private link;
-  ERC20Mock private safemoon;
-  ERC721Mock private bayc;
-  ERC721Mock private mayc;
-  ERC721Mock private dickButs;
-  ERC20Mock private wbayc;
-  ERC20Mock private wmayc;
-  ERC1155Mock private interleave;
-  OracleHub private oracleHub;
-  ArcadiaOracle private oracleEthToUsd;
-  ArcadiaOracle private oracleLinkToUsd;
-  ArcadiaOracle private oracleSnxToEth;
-  ArcadiaOracle private oracleWbaycToEth;
-  ArcadiaOracle private oracleWmaycToUsd;
-  ArcadiaOracle private oracleInterleaveToEth;
-  MainRegistry private mainRegistry;
-  StandardERC20Registry private standardERC20Registry;
-  FloorERC721SubRegistry private floorERC721SubRegistry;
-  FloorERC1155SubRegistry private floorERC1155SubRegistry;
-  InterestRateModule private interestRateModule;
-  Stable private stable;
-  Liquidator private liquidator;
+  Vault internal vault;
+  Vault internal proxy;
+  address internal proxyAddr;
+  ERC20Mock internal eth;
+  ERC20Mock internal snx;
+  ERC20Mock internal link;
+  ERC20Mock internal safemoon;
+  ERC721Mock internal bayc;
+  ERC721Mock internal mayc;
+  ERC721Mock internal dickButs;
+  ERC20Mock internal wbayc;
+  ERC20Mock internal wmayc;
+  ERC1155Mock internal interleave;
+  OracleHub internal oracleHub;
+  ArcadiaOracle internal oracleEthToUsd;
+  ArcadiaOracle internal oracleLinkToUsd;
+  ArcadiaOracle internal oracleSnxToEth;
+  ArcadiaOracle internal oracleWbaycToEth;
+  ArcadiaOracle internal oracleWmaycToUsd;
+  ArcadiaOracle internal oracleInterleaveToEth;
+  MainRegistry internal mainRegistry;
+  StandardERC20Registry internal standardERC20Registry;
+  FloorERC721SubRegistry internal floorERC721SubRegistry;
+  FloorERC1155SubRegistry internal floorERC1155SubRegistry;
+  InterestRateModule internal interestRateModule;
+  Stable internal stable;
+  Liquidator internal liquidator;
 
-  address private creatorAddress = address(1);
-  address private tokenCreatorAddress = address(2);
-  address private oracleOwner = address(3);
-  address private unprivilegedAddress = address(4);
-  address private stakeContract = address(5);
-  address private vaultOwner = address(6);
-  address private liquidatorBot = address(7);
-  address private auctionBuyer = address(8);
+  address internal creatorAddress = address(1);
+  address internal tokenCreatorAddress = address(2);
+  address internal oracleOwner = address(3);
+  address internal unprivilegedAddress = address(4);
+  address internal stakeContract = address(5);
+  address internal vaultOwner = address(6);
+  address internal liquidatorBot = address(7);
+  address internal auctionBuyer = address(8);
 
 
   uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
@@ -188,7 +188,7 @@ contract LiquidatorTest is DSTest {
   }
 
   //this is a before each
-  function setUp() public {
+  function setUp() public virtual {
 
     vm.startPrank(creatorAddress);
     mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stable), numeraireLabel:'USD', numeraireUnit:1}));
@@ -292,7 +292,7 @@ contract LiquidatorTest is DSTest {
     assertEq(to, liquidator_m.owner());
   }
 
-  function testTransferOwnershipByNonOwner(address from) public {
+  function testTransferOwnershipByNonOwner(address from) public virtual {
     vm.assume(from != address(this) && from != address(factory));
 
     Liquidator liquidator_m = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
@@ -307,7 +307,7 @@ contract LiquidatorTest is DSTest {
   }
 
 
-  function testNotAllowAuctionHealthyVault(uint128 amountEth, uint128 amountCredit) public {
+  function testNotAllowAuctionHealthyVault(uint128 amountEth, uint128 amountCredit) public virtual {
     uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
     vm.assume(amountEth < type(uint128).max / valueOfOneEth);
     vm.assume(valueOfOneEth * amountEth/10**Constants.ethDecimals / 150 * 100 >= amountCredit);
@@ -324,7 +324,7 @@ contract LiquidatorTest is DSTest {
     assertEq(proxy.life(), 0);
   }  
 
-  function testStartAuction(uint128 amountEth, uint256 newPrice) public {
+  function testStartAuction(uint128 amountEth, uint256 newPrice) public virtual {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
     vm.assume(newPrice/ liqThresProxy  < rateEthToUsd / collThresProxy);
     vm.assume(amountEth > 0);
@@ -351,7 +351,7 @@ contract LiquidatorTest is DSTest {
   }  
 
 
-  function testShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public {
+  function testShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public virtual {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
     vm.assume(newPrice/ liqThresProxy  < rateEthToUsd / collThresProxy);
     vm.assume(amountEth > 0);
@@ -381,7 +381,7 @@ contract LiquidatorTest is DSTest {
 
   }
 
-  function testAuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+  function testAuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public virtual {
     vm.assume(blocksToRoll < liquidator.hourlyBlocks() * liquidator.auctionDuration());
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
     vm.assume(newPrice/ liqThresProxy  < rateEthToUsd / collThresProxy);
@@ -419,7 +419,7 @@ contract LiquidatorTest is DSTest {
 
   }
 
-  function testBuyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+  function testBuyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public virtual {
     vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.auctionDuration());
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
     vm.assume(newPrice/ liqThresProxy  < rateEthToUsd / collThresProxy);
@@ -451,7 +451,7 @@ contract LiquidatorTest is DSTest {
 
   }
 
-  function testWithrawAssetsFromPurchasedVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+  function testWithrawAssetsFromPurchasedVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public virtual {
     vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.auctionDuration());
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
     vm.assume(newPrice/ liqThresProxy  < rateEthToUsd / collThresProxy);
@@ -504,7 +504,7 @@ contract LiquidatorTest is DSTest {
     uint256 originalOwner;
   }
 
-  function testClaimSingle(uint128 amountEth) public {
+  function testClaimSingle(uint128 amountEth) public virtual {
     vm.assume(amountEth > 0);
     {
       uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -570,7 +570,7 @@ contract LiquidatorTest is DSTest {
 
   }
 
-  function testClaimMultiple(uint128[] calldata amountsEth) public {
+  function testClaimMultiple(uint128[] calldata amountsEth) public virtual {
     vm.assume(amountsEth.length < 10);
     setAddresses();
 
@@ -656,7 +656,7 @@ contract LiquidatorTest is DSTest {
 
   }
 
-  function testClaimSingleMultipleVaults(uint128 amountEth) public {
+  function testClaimSingleMultipleVaults(uint128 amountEth) public virtual {
     vm.assume(amountEth > 0);
     {
       uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -746,7 +746,7 @@ contract LiquidatorTest is DSTest {
 
   }
 
-  function testClaimSingleHighLife(uint128 amountEth, uint16 newLife) public {
+  function testClaimSingleHighLife(uint128 amountEth, uint16 newLife) public virtual {
     vm.assume(amountEth > 0);
     {
       uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -814,7 +814,7 @@ contract LiquidatorTest is DSTest {
 
   }
 
-  function testClaimSingleWrongLife(uint128 amountEth, uint16 newLife, uint16 lifeToBuy) public {
+  function testClaimSingleWrongLife(uint128 amountEth, uint16 newLife, uint16 lifeToBuy) public virtual {
     vm.assume(newLife != lifeToBuy);
     vm.assume(amountEth > 0);
     {
