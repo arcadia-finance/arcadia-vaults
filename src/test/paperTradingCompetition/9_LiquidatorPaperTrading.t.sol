@@ -4,7 +4,7 @@ pragma solidity >0.8.10;
 import "./../9_Liquidator.t.sol";
 
 import "../../../lib/ds-test/src/test.sol";
-import "../../../lib/forge-std/src/stdlib.sol";
+
 import "../../../lib/forge-std/src/console.sol";
 import "../../../lib/forge-std/src/Vm.sol";
 
@@ -19,7 +19,7 @@ import "../../paperTradingCompetition/Oracles/StableOracle.sol";
 import "../../paperTradingCompetition/TokenShop.sol";
 
 contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
-  using stdStorage for StdStorage;
+
 
   FactoryPaperTrading private factory;
   StableOracle internal oracleStableUsdToUsd;

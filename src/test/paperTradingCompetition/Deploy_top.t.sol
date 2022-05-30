@@ -8,7 +8,7 @@ import "../../paperTradingCompetition/Deploy/contracts/Deploy_three.sol";
 import "../../paperTradingCompetition/Deploy/contracts/Deploy_four.sol";
 
 import "../../../lib/ds-test/src/test.sol";
-import "../../../lib/forge-std/src/stdlib.sol";
+
 import "../../../lib/forge-std/src/console.sol";
 import "../../../lib/forge-std/src/Vm.sol";
 import "../../utils/StringHelpers.sol";
@@ -25,10 +25,9 @@ interface Itest {
 }
 
 contract DeployCoordTest is DSTest {
-  using stdStorage for StdStorage;
+
 
   Vm private vm = Vm(HEVM_ADDRESS);  
-  StdStorage private stdstore;
 
   DeployCoordinator public deployCoordinator;
   DeployContractsOne public deployContractsOne;

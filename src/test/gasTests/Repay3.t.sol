@@ -2,7 +2,7 @@
 pragma solidity >0.8.10;
 
 import "../../../lib/ds-test/src/test.sol";
-import "../../../lib/forge-std/src/stdlib.sol";
+
 import "../../../lib/forge-std/src/console.sol";
 import "../../../lib/forge-std/src/Vm.sol";
 
@@ -24,10 +24,9 @@ import "../../mockups/SimplifiedChainlinkOracle.sol";
 import "../../utils/Constants.sol";
 
 contract gasRepay_1ERC201ERC721 is DSTest {
-  using stdStorage for StdStorage;
+
 
   Vm private vm = Vm(HEVM_ADDRESS);  
-  StdStorage private stdstore;
 
   Factory private factory;
   Vault private vault;
