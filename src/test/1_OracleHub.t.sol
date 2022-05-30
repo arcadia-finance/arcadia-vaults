@@ -59,7 +59,7 @@ contract OracleHubTest is DSTest {
   function testOwnerAddsOracleSucces(uint64 oracleEthToUsdUnit) public {
     vm.assume(oracleEthToUsdUnit <= 10 ** 18);
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
 
     assertTrue(oracleHub.inOracleHub(address(oracleEthToUsd)));
     vm.stopPrank();	
@@ -67,9 +67,9 @@ contract OracleHubTest is DSTest {
 
   function testOwnerOverwritesOracleFail() public {
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.expectRevert("Oracle already in oracle-hub");
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();	
   }
 
@@ -77,7 +77,7 @@ contract OracleHubTest is DSTest {
     vm.assume(unprivilegedAddress != creatorAddress);
     vm.startPrank(unprivilegedAddress);
     vm.expectRevert("Ownable: caller is not the owner");
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();	
   }
 
@@ -85,13 +85,13 @@ contract OracleHubTest is DSTest {
     vm.assume(oracleEthToUsdUnit > 10 ** 18);
     vm.startPrank(creatorAddress);
     vm.expectRevert("Oracle can have maximal 18 decimals");
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();
   }
 
   function testCheckOracleSequenceSingleOracleToUsd() public {
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();
     oraclesEthToUsd[0] = address(oracleEthToUsd);
     oracleHub.checkOracleSequence(oraclesEthToUsd);
@@ -99,8 +99,8 @@ contract OracleHubTest is DSTest {
 
   function testCheckOracleSequenceMultipleOraclesToUsd() public {
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthDecimals), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthDecimals), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();
     oraclesSnxToUsd[0] = address(oracleSnxToEth);
     oraclesSnxToUsd[1] = address(oracleEthToUsd);
@@ -115,8 +115,8 @@ contract OracleHubTest is DSTest {
 
   function testCheckOracleSequenceNonMatchingBaseAndQuoteAssets() public {
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthDecimals), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleLinkToUsdDecimals), baseAssetNumeraire: 0, quoteAsset:'LINK', baseAsset:'USD', oracleAddress:address(oracleLinkToUsd), quoteAssetAddress:address(link), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthDecimals), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleLinkToUsdDecimals), baseAssetNumeraire: 0, quoteAsset:'LINK', baseAsset:'USD', oracleAddress:address(oracleLinkToUsd), quoteAssetAddress:address(link), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 1000000}));
     vm.stopPrank();
     oraclesSnxToUsd[0] = address(oracleSnxToEth);
     oraclesSnxToUsd[1] = address(oracleLinkToUsd);
@@ -126,7 +126,7 @@ contract OracleHubTest is DSTest {
 
   function testCheckOracleSequenceLastBaseAssetNotUsd() public {
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthDecimals), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthDecimals), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
     vm.stopPrank();
     oraclesSnxToEth[0] = address(oracleSnxToEth);
     vm.expectRevert("Last oracle does not have USD as bAsset");
@@ -135,7 +135,7 @@ contract OracleHubTest is DSTest {
 
   function testCheckOracleSequenceMoreThanThreeOracles() public {
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthDecimals), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthDecimals), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
     vm.stopPrank();
     address[] memory oraclesSequence = new address[](4);
     vm.expectRevert("Oracle seq. cant be longer than 3");
@@ -152,7 +152,7 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -179,7 +179,7 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -211,8 +211,8 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));    
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));    
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -243,8 +243,8 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));    
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));    
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -275,8 +275,8 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));    
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));    
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -302,8 +302,8 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));    
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));    
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -334,8 +334,8 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));    
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));    
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -367,8 +367,8 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));    
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));    
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -402,8 +402,8 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));    
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));    
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -434,8 +434,8 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));    
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));    
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -466,8 +466,8 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));    
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));    
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
@@ -493,8 +493,8 @@ contract OracleHubTest is DSTest {
     uint64 oracleEthToUsdUnit = uint64(10 ** oracleEthToUsdDecimals);
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));    
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleSnxToEthUnit, baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 86400, minAnswer: 10000000000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:oracleEthToUsdUnit, baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));    
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);

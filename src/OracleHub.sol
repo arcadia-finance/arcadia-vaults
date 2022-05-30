@@ -140,7 +140,7 @@ contract OracleHub is Ownable {
       oracleAddressAtIndex = oracleAdresses[i];
       (, tempRate,,updatedAt,) = IChainLinkData(oracleToOracleInformation[oracleAddressAtIndex].oracleAddress).latestRoundData();
       require(tempRate >= 0, "Negative oracle price");
-      if (block.timestamp - updatedAt > oracleToOracleInformation[oracleAddressAtIndex].heartBeat || tempRate <= oracleToOracleInformation[oracleAddressAtIndex].minAnswer * 110 / 100) {
+      if (block.timestamp - updatedAt > oracleToOracleInformation[oracleAddressAtIndex].heartBeat || tempRate <= oracleToOracleInformation[oracleAddressAtIndex].minAnswer * 105 / 100) {
         // start process or give flag of invalid oracle
       }
 

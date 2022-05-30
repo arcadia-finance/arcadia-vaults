@@ -62,8 +62,8 @@ contract FloorERC1155SubRegistryTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleInterleaveToEthUnit), baseAssetNumeraire: 1, quoteAsset:'INTERLEAVE', baseAsset:'ETH', oracleAddress:address(oracleInterleaveToEth), quoteAssetAddress:address(interleave), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleInterleaveToEthUnit), baseAssetNumeraire: 1, quoteAsset:'INTERLEAVE', baseAsset:'ETH', oracleAddress:address(oracleInterleaveToEth), quoteAssetAddress:address(interleave), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();
 
     oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);

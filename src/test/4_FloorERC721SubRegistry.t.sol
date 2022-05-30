@@ -71,9 +71,9 @@ contract FloorERC721SubRegistryTest is DSTest {
     vm.stopPrank();
 
   vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWbaycToEthUnit), baseAssetNumeraire: 1, quoteAsset:'WBAYC', baseAsset:'ETH', oracleAddress:address(oracleWbaycToEth), quoteAssetAddress:address(wbayc), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWmaycToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'WMAYC', baseAsset:'USD', oracleAddress:address(oracleWmaycToUsd), quoteAssetAddress:address(wmayc), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWbaycToEthUnit), baseAssetNumeraire: 1, quoteAsset:'WBAYC', baseAsset:'ETH', oracleAddress:address(oracleWbaycToEth), quoteAssetAddress:address(wbayc), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWmaycToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'WMAYC', baseAsset:'USD', oracleAddress:address(oracleWmaycToUsd), quoteAssetAddress:address(wmayc), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();
 
     oracleWbaycToEthEthToUsd[0] = address(oracleWbaycToEth);

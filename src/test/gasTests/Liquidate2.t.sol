@@ -181,13 +181,12 @@ contract gasLiquidate_2ERC20 is DSTest {
     vm.stopPrank();
 
     vm.startPrank(creatorAddress);
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleLinkToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'LINK', baseAsset:'USD', oracleAddress:address(oracleLinkToUsd), quoteAssetAddress:address(link), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthUnit), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWbaycToEthUnit), baseAssetNumeraire: 1, quoteAsset:'WBAYC', baseAsset:'ETH', oracleAddress:address(oracleWbaycToEth), quoteAssetAddress:address(wbayc), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWmaycToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'WMAYC', baseAsset:'USD', oracleAddress:address(oracleWmaycToUsd), quoteAssetAddress:address(wmayc), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleInterleaveToEthUnit), baseAssetNumeraire: 1, quoteAsset:'INTERLEAVE', baseAsset:'ETH', oracleAddress:address(oracleInterleaveToEth), quoteAssetAddress:address(interleave), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(10**10), baseAssetNumeraire: 1, quoteAsset:'GenericStoreFront', baseAsset:'ETH', oracleAddress:address(oracleGenericStoreFrontToEth), quoteAssetAddress:address(genericStoreFront), baseAssetIsNumeraire: true}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleLinkToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'LINK', baseAsset:'USD', oracleAddress:address(oracleLinkToUsd), quoteAssetAddress:address(link), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthUnit), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWbaycToEthUnit), baseAssetNumeraire: 1, quoteAsset:'WBAYC', baseAsset:'ETH', oracleAddress:address(oracleWbaycToEth), quoteAssetAddress:address(wbayc), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWmaycToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'WMAYC', baseAsset:'USD', oracleAddress:address(oracleWmaycToUsd), quoteAssetAddress:address(wmayc), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
+    oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleInterleaveToEthUnit), baseAssetNumeraire: 1, quoteAsset:'INTERLEAVE', baseAsset:'ETH', oracleAddress:address(oracleInterleaveToEth), quoteAssetAddress:address(interleave), baseAssetIsNumeraire: true, heartBeat: 3600, minAnswer: 100000000}));
     vm.stopPrank();
 
     vm.startPrank(tokenCreatorAddress);
