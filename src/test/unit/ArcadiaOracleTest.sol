@@ -6,24 +6,23 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "../../utils/Constants.sol";
 import "../fixtures/ArcadiaOracleFixture.sol";
+import "../../../lib/ds-test/src/test.sol";
 
 
-contract OraclePaperTradingInheritedTest is ArcadiaOracleFixture {
+contract ArcadiaOracleTest is DSTest {
 
     uint8 public decimals = uint8(Constants.oracleStableToUsdDecimals);
 
     address public transmitter = address(32);
     address public nonTransmitter = address(31);
 
-
-    constructor() {
-    }
+    // FIXTURES
+    ArcadiaOracleFixture internal arcadiaOracleFixture = new ArcadiaOracleFixture(transmitter);
 
     function testTransmit() public {
-        ArcadiaOracle oracle = ArcadiaOracleFixture.initOracle(uint8(decimals), "masUSD / USD", address(812), transmitter);
-//        vm.startPrank(transmitter);
+        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(uint8(decimals), "masUSD / USD", address(812));
         int192 answerToTransmit = int192(int256(10 ** decimals));
-        ArcadiaOracleFixture.transmitOracle(oracle, answerToTransmit);
+        arcadiaOracleFixture.transmitOracle(oracle, answerToTransmit);
         int256 answerFromOracle;
         (, answerFromOracle,,,) = oracle.latestRoundData();
         assertEq(answerFromOracle, answerToTransmit);

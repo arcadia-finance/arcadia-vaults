@@ -21,9 +21,8 @@ import "../../InterestRateModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
 import "../../utils/Constants.sol";
-import "../../paperTradingCompetition/Oracles/StableOracle.sol";
-import "../../mockups/SimplifiedChainlinkOracle.sol";
 import "../../paperTradingCompetition/TokenShop.sol";
+import "../fixtures/ArcadiaOracleFixture.sol";
 
 contract TokenShopTest is DSTest {
   using stdStorage for StdStorage;
@@ -42,13 +41,13 @@ contract TokenShopTest is DSTest {
   ERC20PaperTrading private wbayc;
   ERC1155PaperTrading private interleave;
   OracleHub private oracleHub;
-  SimplifiedChainlinkOracle private oracleEthToUsd;
-  SimplifiedChainlinkOracle private oracleLinkToUsd;
-  SimplifiedChainlinkOracle private oracleSnxToEth;
-  SimplifiedChainlinkOracle private oracleWbaycToEth;
-  SimplifiedChainlinkOracle private oracleInterleaveToEth;
-  StableOracle private oracleStableUsdToUsd;
-  StableOracle private oracleStableEthToEth;
+  ArcadiaOracle private oracleEthToUsd;
+  ArcadiaOracle private oracleLinkToUsd;
+  ArcadiaOracle private oracleSnxToEth;
+  ArcadiaOracle private oracleWbaycToEth;
+  ArcadiaOracle private oracleInterleaveToEth;
+  ArcadiaOracle private oracleStableUsdToUsd;
+  ArcadiaOracle private oracleStableEthToEth;
   MainRegistry private mainRegistry;
   StandardERC20Registry private standardERC20Registry;
   FloorERC721SubRegistry private floorERC721SubRegistry;
@@ -79,6 +78,9 @@ contract TokenShopTest is DSTest {
 
   address[] public oracleStableUsdToUsdArr = new address[](1);
   address[] public oracleStableEthToUsdArr = new address[](2);
+
+  // FIXTURES
+  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
   //this is a before
   constructor() {
@@ -119,21 +121,14 @@ contract TokenShopTest is DSTest {
     interleave = new ERC1155PaperTrading("Interleave Mock", "mInterleave", address(tokenShop));
     vm.stopPrank();
 
-    vm.startPrank(oracleOwner);
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleLinkToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
-    oracleSnxToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
-    oracleWbaycToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
-    oracleInterleaveToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-    oracleLinkToUsd.setAnswer(int256(rateLinkToUsd));
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleWbaycToEth.setAnswer(int256(rateWbaycToEth));
-    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEth));
+    oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
+    oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD", rateLinkToUsd);
+    oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH", rateSnxToEth);
+    oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH", rateWbaycToEth);
+    oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH", rateInterleaveToEth);
 
-    oracleStableUsdToUsd = new StableOracle(uint8(Constants.oracleStableToUsdDecimals), "masUSD / USD");
-    oracleStableEthToEth = new StableOracle(uint8(Constants.oracleStableEthToEthUnit), "masEth / Eth");
-    vm.stopPrank();
+    oracleStableUsdToUsd = arcadiaOracleFixture.initStableOracle(uint8(Constants.oracleStableToUsdDecimals), "masUSD / USD");
+    oracleStableEthToEth = arcadiaOracleFixture.initStableOracle(uint8(Constants.oracleStableEthToEthUnit), "masEth / Eth");
 
     vm.startPrank(creatorAddress);
     uint256[] memory emptyList = new uint256[](0);
