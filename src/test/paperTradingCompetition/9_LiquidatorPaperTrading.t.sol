@@ -267,12 +267,13 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testSendRewardToLiquidatedVault(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy);
+    //Amount Eth that is bought from credit is rounded down -> add + 1 ath RHS to make sure the vault can be liquidated
+    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy + 1);
 
     buyEthWithLoan(vaultOwner, proxy);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice/2)); //Rounding
+    oracleEthToUsd.setAnswer(int256(newPrice));
 
     vm.startPrank(liquidatorBot);
     vm.expectRevert("FTRY_RR: Can't send rewards to liquidated vaults.");
@@ -282,12 +283,13 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testReceiveReward(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy);
+    //Amount Eth that is bought from credit is rounded down -> add + 1 ath RHS to make sure the vault can be liquidated
+    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy + 1);
 
     buyEthWithLoan(vaultOwner, proxy);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice/2)); //Rounding
+    oracleEthToUsd.setAnswer(int256(newPrice));
 
     vm.startPrank(liquidatorBot);
     factory.liquidate(address(proxy), address(proxy2));
@@ -301,7 +303,8 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testReceiveMaxFiveRewards(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy);
+    //Amount Eth that is bought from credit is rounded down -> add + 1 ath RHS to make sure the vault can be liquidated
+    vm.assume(newPrice < rateEthToUsd * liqThresProxy / collThresProxy + 1);
 
     for (uint256 i; i < 6;) {
       vm.prank(vaultOwner);
@@ -311,7 +314,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
       buyEthWithLoan(vaultOwner, proxy);
 
       vm.prank(oracleOwner);
-      oracleEthToUsd.setAnswer(int256(newPrice/2)); //Rounding
+      oracleEthToUsd.setAnswer(int256(newPrice));
 
       vm.startPrank(liquidatorBot);
       if (i == 5) {
@@ -321,7 +324,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
       vm.stopPrank();
 
       vm.prank(oracleOwner);
-      oracleEthToUsd.setAnswer(int256(rateEthToUsd)); //Rounding
+      oracleEthToUsd.setAnswer(int256(rateEthToUsd));
 
       unchecked {++i;}
     }
