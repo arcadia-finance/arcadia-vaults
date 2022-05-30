@@ -19,7 +19,7 @@ import "../utils/Constants.sol";
 import "../utils/StringHelpers.sol";
 import "../utils/CompareArrays.sol";
 import "../ArcadiaOracle.sol";
-import "./fixtures/ArcadiaOracleFixture.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract MainRegistryTest is DSTest {
   using stdStorage for StdStorage;

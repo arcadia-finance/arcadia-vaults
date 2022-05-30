@@ -12,7 +12,7 @@ import "../utils/Constants.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../ArcadiaOracle.sol";
-import "./fixtures/ArcadiaOracleFixture.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract StandardERC20RegistryTest is DSTest {
   using stdStorage for StdStorage;

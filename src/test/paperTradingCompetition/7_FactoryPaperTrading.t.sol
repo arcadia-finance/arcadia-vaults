@@ -13,7 +13,7 @@ import "../../paperTradingCompetition/VaultPaperTrading.sol";
 import "../../paperTradingCompetition/StablePaperTrading.sol";
 import "../../paperTradingCompetition/TokenShop.sol";
 import "../../ArcadiaOracle.sol";
-import "../fixtures/ArcadiaOracleFixture.sol";
+import "../fixtures/ArcadiaOracleFixture.f.sol";
 
 
 contract FactoryPaperTradingInheritedTest is factoryTest {

@@ -5,7 +5,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "../../utils/Constants.sol";
-import "../fixtures/ArcadiaOracleFixture.sol";
+import "../fixtures/ArcadiaOracleFixture.f.sol";
 import "../../../lib/ds-test/src/test.sol";
 
 

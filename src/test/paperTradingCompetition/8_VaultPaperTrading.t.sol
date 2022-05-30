@@ -24,7 +24,7 @@ import "../../paperTradingCompetition/TokenShop.sol";
 import "../../ArcadiaOracle.sol";
 import "../../../lib/forge-std/src/stdlib.sol";
 import "../../../lib/forge-std/src/stdlib.sol";
-import "../fixtures/ArcadiaOracleFixture.sol";
+import "../fixtures/ArcadiaOracleFixture.f.sol";
 
 contract VaultPaperTradingInheritedTest is vaultTests {
     using stdStorage for StdStorage;

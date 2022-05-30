@@ -13,7 +13,7 @@ import "../utils/Constants.sol";
 import "../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../ArcadiaOracle.sol";
-import "./fixtures/ArcadiaOracleFixture.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract FloorERC1155SubRegistryTest is DSTest {
   using stdStorage for StdStorage;

@@ -10,7 +10,7 @@ import "../mockups/ERC20SolmateMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
-import "./fixtures/ArcadiaOracleFixture.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract OracleHubTest is DSTest {
   using stdStorage for StdStorage;

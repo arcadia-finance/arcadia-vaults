@@ -22,7 +22,7 @@ import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
-import "./fixtures/ArcadiaOracleFixture.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract EndToEndTest is DSTest {
     using stdStorage for StdStorage;
