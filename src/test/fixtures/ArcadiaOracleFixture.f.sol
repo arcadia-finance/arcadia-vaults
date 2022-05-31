@@ -13,7 +13,7 @@ import "../../ArcadiaOracle.sol";
 contract ArcadiaOracleFixture is DSTest {
 
     Vm private vm = Vm(HEVM_ADDRESS);
-//    ArcadiaOracle private oracle;
+    ArcadiaOracle private oracle;
 
     uint8 public defaultDecimals = uint8(Constants.oracleStableToUsdDecimals);
 
