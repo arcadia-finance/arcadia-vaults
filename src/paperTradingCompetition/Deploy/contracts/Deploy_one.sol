@@ -38,7 +38,7 @@ contract DeployContractsOne {
         ArcadiaOracle orac = new ArcadiaOracle(a, b, c);
         orac.setOffchainTransmitter(msg.sender);
         orac.transferOwnership(msg.sender);
-    return address(orac);
+        return address(orac);
     }
 
     function deployOracleStable(uint8 a, string calldata b, address c) external returns (address) {
@@ -46,7 +46,7 @@ contract DeployContractsOne {
         orac.setOffchainTransmitter(msg.sender);
         orac.transmit(int256(10 ** a));
         orac.transferOwnership(msg.sender);
-    return address(orac);
+        return address(orac);
     }
 
 }
