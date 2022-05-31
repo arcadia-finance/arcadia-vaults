@@ -168,6 +168,7 @@ contract gasRepay_1ERC201ERC721 is DSTest {
 
     vm.prank(creatorAddress);
     oracleHub = new OracleHub();
+    vm.stopPrank();
 
 
     oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
@@ -177,14 +178,6 @@ contract gasRepay_1ERC201ERC721 is DSTest {
     oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals),  "WBAYC / USD", rateWmaycToUsd);
     oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals),  "INTERLEAVE / ETH", rateInterleaveToEth);
     oracleGenericStoreFrontToEth = arcadiaOracleFixture.initMockedOracle(uint8(10),  "GenericStoreFront / ETH", rateGenericStoreFrontToEth);
-
-    oracleEthToUsd.transmit(int256(rateEthToUsd));
-    oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-    oracleSnxToEth.transmit(int256(rateSnxToEth));
-    oracleWbaycToEth.transmit(int256(rateWbaycToEth));
-    oracleWmaycToUsd.transmit(int256(rateWmaycToUsd));
-    oracleGenericStoreFrontToEth.transmit(int256(rateGenericStoreFrontToEth));
-    vm.stopPrank();
 
     vm.startPrank(creatorAddress);
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));

@@ -137,14 +137,6 @@ contract gasDeploys is DSTest {
     oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals),  "WBAYC / USD", rateWmaycToUsd);
     oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals),  "INTERLEAVE / ETH", rateInterleaveToEth);
 
-    oracleEthToUsd.transmit(int256(rateEthToUsd));
-    oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-    oracleSnxToEth.transmit(int256(rateSnxToEth));
-    oracleWbaycToEth.transmit(int256(rateWbaycToEth));
-    oracleWmaycToUsd.transmit(int256(rateWmaycToUsd));
-    oracleInterleaveToEth.transmit(int256(rateInterleaveToEth));
-    vm.stopPrank();
-
     vm.startPrank(creatorAddress);
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleLinkToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'LINK', baseAsset:'USD', oracleAddress:address(oracleLinkToUsd), quoteAssetAddress:address(link), baseAssetIsNumeraire: true}));
