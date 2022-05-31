@@ -18,7 +18,7 @@ contract ArcadiaOracleFixture is DSTest {
     uint8 public defaultDecimals = uint8(Constants.oracleStableToUsdDecimals);
 
     address public defaultCreatorAddress = address(1);
-    address public defaultTransmitter = address(36);
+    address public defaultTransmitter;
 
     constructor(address transmitter) {
         defaultTransmitter = transmitter;
