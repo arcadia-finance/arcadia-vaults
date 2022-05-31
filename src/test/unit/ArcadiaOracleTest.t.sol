@@ -34,6 +34,20 @@ contract ArcadiaOracleTest is DSTest {
         assertEq(answerFromOracle, answerToTransmit);
     }
 
+    function testOnlyTransmitter() public {
+        // given: oracle initialized by defaultCreatorAddress
+        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(uint8(decimals), "masUSD / USD", address(812));
+
+        // when: nonTransmitter tries to transmit
+        int192 answerToTransmit = int192(int256(11 ** decimals));
+        vm.prank(nonTransmitter);
+
+        // then: nonTransmitter shouldn not be able to add new transmission
+        vm.expectRevert("Oracle: caller is not the valid transmitter");
+        oracle.transmit(answerToTransmit);
+        vm.stopPrank();
+    }
+
     function testSetNewTransmitter() public {
         // given: oracle initialized by defaultCreatorAddress
         ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(uint8(decimals), "masUSD / USD", address(812));
@@ -80,21 +94,7 @@ contract ArcadiaOracleTest is DSTest {
         // then: transmitter shouldn not be able to add new transmission
         int192 answerToTransmit = int192(int256(11 ** decimals));
         vm.prank(transmitter);
-        vm.expectRevert("Ownable: caller is not the owner");
-        oracle.transmit(answerToTransmit);
-        vm.stopPrank();
-    }
-
-    function testOnlyTransmitter() public {
-        // given: oracle initialized by defaultCreatorAddress
-        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(uint8(decimals), "masUSD / USD", address(812));
-
-        // when: nonTransmitter tries to transmit
-        int192 answerToTransmit = int192(int256(11 ** decimals));
-        vm.prank(nonTransmitter);
-
-        // then: nonTransmitter shouldn not be able to add new transmission
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("Oracle: transmitter is not active");
         oracle.transmit(answerToTransmit);
         vm.stopPrank();
     }
