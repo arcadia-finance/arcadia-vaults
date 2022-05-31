@@ -3,5 +3,7 @@ out/
 .env
 build/*
 node_modules
-node_modules
 lib/
+
+# JetBrains
+.idea

@@ -25,8 +25,8 @@ import "../../../utils/StringHelpers.sol";
 interface IDeployerOne {
   function deployFact() external returns (address);
   function deployStable(string calldata, string calldata, uint8, address, address) external returns (address);
-  function deployOracle(uint8, string calldata) external returns (address);
-  function deployOracleStable(uint8, string calldata) external returns (address);
+  function deployOracle(uint8, string calldata, address) external returns (address);
+  function deployOracleStable(uint8, string calldata, address) external returns (address);
 }
 
 interface IDeployerTwo {
@@ -85,7 +85,7 @@ interface IStablePaperTradingExtended is IStable {
 }
 
 interface IOraclePaperTradingExtended is IChainLinkData {
-  function setAnswer(int256) external;
+  function transmit(int256) external;
 
   struct OracleInformation {
     uint64 oracleUnit;
@@ -256,7 +256,7 @@ contract DeployCoordinator {
   }
   
   function setOracleAnswer(address oracleAddr, uint256 amount) external onlyOwner {
-    IOraclePaperTradingExtended(oracleAddr).setAnswer(int256(amount));
+    IOraclePaperTradingExtended(oracleAddr).transmit(int256(amount));
   }
 
   //1. start()
@@ -271,11 +271,11 @@ contract DeployCoordinator {
     stableUsd = IStablePaperTradingExtended(deployerOne.deployStable("Mocked Arcadia USD", "maUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factory)));
     stableEth = IStablePaperTradingExtended(deployerOne.deployStable("Mocked Arcadia ETH", "maETH", uint8(Constants.stableEthDecimals), 0x0000000000000000000000000000000000000000, address(factory)));
 
-    oracleEthToUsd = IOraclePaperTradingExtended(deployerOne.deployOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD"));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleEthToUsd = IOraclePaperTradingExtended(deployerOne.deployOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", address(stableEth)));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
 
-    oracleStableUsdToUsd = IOraclePaperTradingExtended(deployerOne.deployOracleStable(uint8(Constants.oracleStableToUsdDecimals), "maUSD / USD"));
-    oracleStableEthToEth = IOraclePaperTradingExtended(deployerOne.deployOracleStable(uint8(Constants.oracleStableEthToEthUnit), "maETH / ETH"));
+    oracleStableUsdToUsd = IOraclePaperTradingExtended(deployerOne.deployOracleStable(uint8(Constants.oracleStableToUsdDecimals), "maUSD / USD", address(stableUsd)));
+    oracleStableEthToEth = IOraclePaperTradingExtended(deployerOne.deployOracleStable(uint8(Constants.oracleStableEthToEthUnit), "maETH / ETH", address(stableEth)));
 
     mainRegistry = IMainRegistryExtended(deployerTwo.deployMainReg(IDeployerTwo.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stableUsd), numeraireLabel:'USD', numeraireUnit:1})));
 
@@ -356,7 +356,7 @@ contract DeployCoordinator {
     for (uint i; i < assets.length; ++i) {
       asset = assets[i];
       if (!StringHelpers.compareStrings(asset.symbol, "mwETH")) {
-        newContr = deployerOne.deployOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD")));
+        newContr = deployerOne.deployOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD")), asset.assetAddr);
         assets[i].oracleAddr = newContr;
       }
     }
@@ -370,7 +370,7 @@ contract DeployCoordinator {
     assetInfo memory asset;
     for (uint i; i < assets.length; ++i) {
       asset = assets[i];
-      IOraclePaperTradingExtended(asset.oracleAddr).setAnswer(int256(uint256(asset.rate)));
+      IOraclePaperTradingExtended(asset.oracleAddr).transmit(int256(uint256(asset.rate)));
     }
   }
 

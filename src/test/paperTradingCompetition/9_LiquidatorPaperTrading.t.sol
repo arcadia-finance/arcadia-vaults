@@ -15,15 +15,14 @@ import "../../paperTradingCompetition/ERC20PaperTrading.sol";
 import "../../paperTradingCompetition/ERC721PaperTrading.sol";
 import "../../paperTradingCompetition/ERC1155PaperTrading.sol";
 import "../../paperTradingCompetition/LiquidatorPaperTrading.sol";
-import "../../paperTradingCompetition/Oracles/StableOracle.sol";
 import "../../paperTradingCompetition/TokenShop.sol";
 
 contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
   using stdStorage for StdStorage;
 
   FactoryPaperTrading private factory;
-  StableOracle internal oracleStableUsdToUsd;
-  StableOracle internal oracleStableEthToEth;
+  ArcadiaOracle internal oracleStableUsdToUsd;
+  ArcadiaOracle internal oracleStableEthToEth;
   StablePaperTrading internal stableUsd;
   StablePaperTrading internal stableEth;
   TokenShop internal tokenShop;
@@ -70,21 +69,14 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
     interleave = new ERC1155PaperTrading("Interleave Mock", "mInterleave", address(tokenShop));
     vm.stopPrank();
 
-    vm.startPrank(oracleOwner);
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleLinkToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
-    oracleSnxToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
-    oracleWbaycToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
-    oracleInterleaveToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-    oracleLinkToUsd.setAnswer(int256(rateLinkToUsd));
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleWbaycToEth.setAnswer(int256(rateWbaycToEth));
-    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEth));
+    oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
+    oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD", rateLinkToUsd);
+    oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH", rateSnxToEth);
+    oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH", rateWbaycToEth);
+    oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH", rateInterleaveToEth);
 
-    oracleStableUsdToUsd = new StableOracle(uint8(Constants.oracleStableToUsdDecimals), "masUSD / USD");
-    oracleStableEthToEth = new StableOracle(uint8(Constants.oracleStableEthToEthUnit), "masEth / Eth");
-    vm.stopPrank();
+    oracleStableUsdToUsd = arcadiaOracleFixture.initStableOracle(uint8(Constants.oracleStableToUsdDecimals), "masUSD / USD", address(stableUsd));
+    oracleStableEthToEth = arcadiaOracleFixture.initStableOracle(uint8(Constants.oracleStableEthToEthUnit), "masEth / Eth", address(stableEth));
 
     vm.startPrank(creatorAddress);
     uint256[] memory emptyList = new uint256[](0);
@@ -187,7 +179,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
     assertEq(proxy.life(), 0);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice/2)); //Rounding
+    oracleEthToUsd.transmit(int256(newPrice/2)); //Rounding
 
     vm.startPrank(liquidatorBot);
     vm.expectEmit(true, true, false, false);
@@ -205,7 +197,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
     buyEthWithLoan(vaultOwner, proxy);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice/2)); //Rounding
+    oracleEthToUsd.transmit(int256(newPrice/2)); //Rounding
 
     vm.startPrank(liquidatorBot);
     factory.liquidate(address(proxy), address(proxy2));
@@ -267,7 +259,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testSendRewardToLiquidatedVault(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    //Take into account that credit taken is automatically re-deposited in the vault 
+    //Take into account that credit taken is automatically re-deposited in the vault
     // -> health factor after taking maximum debt is not equal to the collaterisation treshhold,
     //    When the vault has a current value V, you can take a debt of: V * 100 / collThres
     //    Total value of the Vault is hence: V + V * 100 / collThres = V * (1 + 100 / collThres) = V * (collThres + 100) / collThres
@@ -277,7 +269,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
     buyEthWithLoan(vaultOwner, proxy);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice));
+    oracleEthToUsd.transmit(int256(newPrice));
 
     vm.startPrank(liquidatorBot);
     vm.expectRevert("FTRY_RR: Can't send rewards to liquidated vaults.");
@@ -287,7 +279,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testReceiveReward(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    //Take into account that credit taken is automatically re-deposited in the vault 
+    //Take into account that credit taken is automatically re-deposited in the vault
     // -> health factor after taking maximum debt is not equal to the collaterisation treshhold,
     //    When the vault has a current value V, you can take a debt of: V * 100 / collThres
     //    Total value of the Vault is hence: V + V * 100 / collThres = V * (1 + 100 / collThres) = V * (collThres + 100) / collThres
@@ -297,7 +289,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
     buyEthWithLoan(vaultOwner, proxy);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice));
+    oracleEthToUsd.transmit(int256(newPrice));
 
     vm.startPrank(liquidatorBot);
     factory.liquidate(address(proxy), address(proxy2));
@@ -311,7 +303,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testReceiveMaxFiveRewards(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    //Take into account that credit taken is automatically re-deposited in the vault 
+    //Take into account that credit taken is automatically re-deposited in the vault
     // -> health factor after taking maximum debt is not equal to the collaterisation treshhold,
     //    When the vault has a current value V, you can take a debt of: V * 100 / collThres
     //    Total value of the Vault is hence: V + V * 100 / collThres = V * (1 + 100 / collThres) = V * (collThres + 100) / collThres
@@ -326,7 +318,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
       buyEthWithLoan(vaultOwner, proxy);
 
       vm.prank(oracleOwner);
-      oracleEthToUsd.setAnswer(int256(newPrice));
+      oracleEthToUsd.transmit(int256(newPrice));
 
       vm.startPrank(liquidatorBot);
       if (i == 5) {
@@ -336,7 +328,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
       vm.stopPrank();
 
       vm.prank(oracleOwner);
-      oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+      oracleEthToUsd.transmit(int256(rateEthToUsd));
 
       unchecked {++i;}
     }
