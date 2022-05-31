@@ -107,7 +107,7 @@ contract ArcadiaOracle is Ownable {
     )
     {
         roundId = latestRoundId;
-        require(roundId != 0, "No data present!");
+        require(roundId != 0, "Oracle: No data present!");
 
         Transmission memory transmission = transmissions[uint32(roundId)];
         return (
