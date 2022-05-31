@@ -25,9 +25,9 @@ contract ArcadiaOracle is Ownable {
     mapping(uint32 /* aggregator round ID */ => Transmission) internal transmissions;
 
     enum Role {
+        Unset, // unset
         Transmitter, // Offchain data transmissions to the oracle
-        Validator, // Offchain data validator for the setted values
-        Unset // unset
+        Validator // Offchain data validator for the setted values
     }
     struct OffchainConnector {
         Role role; // role of the connector
