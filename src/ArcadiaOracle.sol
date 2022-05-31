@@ -80,7 +80,7 @@ contract ArcadiaOracle is Ownable {
    * @param _answer the new price data for the round
    */
     function transmit(int256 _answer) public onlyTransmitter {
-        latestRoundId++;
+        unchecked {latestRoundId++;}
         transmissions[latestRoundId] = Transmission(
             _answer, uint64(block.timestamp)
         );
