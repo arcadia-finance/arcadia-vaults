@@ -49,6 +49,7 @@ contract ArcadiaOracle is Ownable {
    * @param _transmitter address of the transmitter
    */
     function setOffchainTransmitter(address _transmitter) public onlyOwner {
+        require(offchain_connectors[_transmitter].role != Role.Transmitter, "Oracle: Address is already saved as Transmitter!");
         offchain_connectors[_transmitter] = OffchainConnector({
             isActive : true,
             role : Role.Transmitter
