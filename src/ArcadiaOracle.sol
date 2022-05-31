@@ -45,7 +45,7 @@ contract ArcadiaOracle is Ownable {
     }
 
     /**
-   * @notice setOffchainTransmitter set the offchain transmitter to transmit new data
+   * @notice setOffchainTransmitter set the offchain transmitter to transmit new data, multiple transmitter is possible hwo
    * @param _transmitter address of the transmitter
    */
     function setOffchainTransmitter(address _transmitter) public onlyOwner {
@@ -109,12 +109,11 @@ contract ArcadiaOracle is Ownable {
         roundId = latestRoundId;
         require(roundId != 0, "Oracle: No data present!");
 
-        Transmission memory transmission = transmissions[uint32(roundId)];
         return (
             roundId,
-            transmission.answer,
-            transmission.timestamp,
-            transmission.timestamp,
+            transmissions[uint32(roundId)].answer,
+            transmissions[uint32(roundId)].timestamp,
+            transmissions[uint32(roundId)].timestamp,
             roundId
         );
     }
