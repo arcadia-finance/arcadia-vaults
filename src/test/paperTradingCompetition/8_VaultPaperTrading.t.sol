@@ -41,8 +41,6 @@ contract VaultPaperTradingInheritedTest is vaultTests {
 
     //this is a before
     constructor() vaultTests() {
-        // Init the fixture
-        arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
         // The rest of the initialization for the tests
         vm.startPrank(creatorAddress);
         factoryContr = new FactoryPaperTrading();
