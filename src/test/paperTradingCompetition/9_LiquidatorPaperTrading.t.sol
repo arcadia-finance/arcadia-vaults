@@ -75,9 +75,8 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
     oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH", rateWbaycToEth);
     oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH", rateInterleaveToEth);
 
-    oracleStableUsdToUsd = arcadiaOracleFixture.initStableOracle(uint8(Constants.oracleStableToUsdDecimals), "masUSD / USD", address(1));
-    oracleStableEthToEth =arcadiaOracleFixture.initStableOracle(uint8(Constants.oracleStableEthToEthUnit), "masEth / Eth", address(1));
-    vm.stopPrank();
+    oracleStableUsdToUsd = arcadiaOracleFixture.initStableOracle(uint8(Constants.oracleStableToUsdDecimals), "masUSD / USD", address(stableUsd));
+    oracleStableEthToEth = arcadiaOracleFixture.initStableOracle(uint8(Constants.oracleStableEthToEthUnit), "masEth / Eth", address(stableEth));
 
     vm.startPrank(creatorAddress);
     uint256[] memory emptyList = new uint256[](0);
@@ -260,7 +259,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testSendRewardToLiquidatedVault(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    //Take into account that credit taken is automatically re-deposited in the vault 
+    //Take into account that credit taken is automatically re-deposited in the vault
     // -> health factor after taking maximum debt is not equal to the collaterisation treshhold,
     //    When the vault has a current value V, you can take a debt of: V * 100 / collThres
     //    Total value of the Vault is hence: V + V * 100 / collThres = V * (1 + 100 / collThres) = V * (collThres + 100) / collThres
@@ -280,7 +279,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testReceiveReward(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    //Take into account that credit taken is automatically re-deposited in the vault 
+    //Take into account that credit taken is automatically re-deposited in the vault
     // -> health factor after taking maximum debt is not equal to the collaterisation treshhold,
     //    When the vault has a current value V, you can take a debt of: V * 100 / collThres
     //    Total value of the Vault is hence: V + V * 100 / collThres = V * (1 + 100 / collThres) = V * (collThres + 100) / collThres
@@ -304,7 +303,7 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
 
   function testReceiveMaxFiveRewards(uint256 newPrice) public {
     (, uint16 collThresProxy, uint8 liqThresProxy,,,) = proxy.debt();
-    //Take into account that credit taken is automatically re-deposited in the vault 
+    //Take into account that credit taken is automatically re-deposited in the vault
     // -> health factor after taking maximum debt is not equal to the collaterisation treshhold,
     //    When the vault has a current value V, you can take a debt of: V * 100 / collThres
     //    Total value of the Vault is hence: V + V * 100 / collThres = V * (1 + 100 / collThres) = V * (collThres + 100) / collThres
