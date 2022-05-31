@@ -28,6 +28,8 @@ contract ArcadiaOracleFixture is DSTest {
         vm.startPrank(defaultCreatorAddress);
         oracle = new ArcadiaOracle(uint8(decimals), description, asset_address);
         oracle.setOffchainTransmitter(defaultTransmitter);
+        vm.stopPrank();
+        vm.startPrank(defaultTransmitter);
         oracle.transmit(int256(10 ** decimals));
         vm.stopPrank();
         return oracle;
@@ -36,6 +38,8 @@ contract ArcadiaOracleFixture is DSTest {
         vm.startPrank(defaultCreatorAddress);
         oracle = new ArcadiaOracle(uint8(decimals), description, address(73));
         oracle.setOffchainTransmitter(defaultTransmitter);
+        vm.stopPrank();
+        vm.startPrank(defaultTransmitter);
         oracle.transmit(int256(10 ** decimals));
         vm.stopPrank();
         return oracle;
@@ -44,6 +48,8 @@ contract ArcadiaOracleFixture is DSTest {
         vm.startPrank(creatorAddress);
         oracle = new ArcadiaOracle(uint8(decimals), description, address(73));
         oracle.setOffchainTransmitter(defaultTransmitter);
+        vm.stopPrank();
+        vm.startPrank(defaultTransmitter);
         oracle.transmit(int256(10 ** decimals));
         vm.stopPrank();
         return oracle;
