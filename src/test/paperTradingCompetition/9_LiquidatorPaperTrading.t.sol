@@ -19,7 +19,7 @@ import "../../paperTradingCompetition/Oracles/StableOracle.sol";
 import "../../paperTradingCompetition/TokenShop.sol";
 
 contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
-
+  using stdStorage for StdStorage;
 
   FactoryPaperTrading private factory;
   StableOracle internal oracleStableUsdToUsd;

@@ -5,6 +5,7 @@ import "../../lib/ds-test/src/test.sol";
 
 import "../../lib/forge-std/src/console.sol";
 import "../../lib/forge-std/src/Vm.sol";
+import "../../lib/forge-std/src/Test.sol";
 
 import "../Factory.sol";
 import "../Proxy.sol";
@@ -23,11 +24,8 @@ interface IVaultExtra {
 }
 
 
-contract factoryTest is DSTest {
-
-
-  Vm internal vm = Vm(HEVM_ADDRESS);
-  StdStorage internal stdstore;
+contract factoryTest is Test {
+  using stdStorage for StdStorage;
 
   Factory internal factoryContr;
   Vault internal vaultContr;

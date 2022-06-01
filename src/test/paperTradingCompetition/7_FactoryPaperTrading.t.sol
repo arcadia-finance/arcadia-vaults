@@ -18,6 +18,7 @@ import "../../paperTradingCompetition/TokenShop.sol";
 
 
 contract FactoryPaperTradingInheritedTest is factoryTest {
+  using stdStorage for StdStorage;
 
   OracleHub private oracleHub;
   StandardERC20Registry private standardERC20Registry;
@@ -115,10 +116,8 @@ contract FactoryPaperTradingInheritedTest is factoryTest {
 
 }
 
-contract FactoryPaperTradingNewTest is DSTest {
-
-
-  Vm private vm = Vm(HEVM_ADDRESS);  
+contract FactoryPaperTradingNewTest is Test {
+  using stdStorage for StdStorage; 
 
   MainRegistry private mainRegistry;
   FactoryPaperTrading internal factoryContr;
@@ -158,6 +157,7 @@ contract FactoryPapertradingMetadata is FactoryPaperTradingInheritedTest {
   using Strings for uint256;
   using Strings for uint8;
   using Strings for uint128;
+  using stdStorage for StdStorage;
 
 
   constructor() FactoryPaperTradingInheritedTest() {

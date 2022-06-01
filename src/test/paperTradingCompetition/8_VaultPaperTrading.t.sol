@@ -25,7 +25,7 @@ import "../../paperTradingCompetition/Oracles/StableOracle.sol";
 import "../../paperTradingCompetition/TokenShop.sol";
 
 contract VaultPaperTradingInheritedTest is vaultTests {
-
+  using stdStorage for StdStorage;
 
   StableOracle internal oracleStableUsdToUsd;
   StableOracle internal oracleStableEthToEth;

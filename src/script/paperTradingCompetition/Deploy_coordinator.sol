@@ -157,288 +157,288 @@ contract DeployScript is DSTest, Script {
     }
   }
 
-  function deployERC20Contracts() public {
-    address newContr;
-    assetInfo memory asset;
-    for (uint i; i < assets.length; ++i) {
-      asset = assets[i];
-      if (asset.decimals == 0) { }
-      else {
-        if (asset.assetAddr == address(0)) {
-          newContr = deployerThree.deployERC20(asset.desc, asset.symbol, asset.decimals, address(tokenShop));
-          assets[i].assetAddr = newContr;
-        }
-       }
+  // function deployERC20Contracts() public {
+  //   address newContr;
+  //   assetInfo memory asset;
+  //   for (uint i; i < assets.length; ++i) {
+  //     asset = assets[i];
+  //     if (asset.decimals == 0) { }
+  //     else {
+  //       if (asset.assetAddr == address(0)) {
+  //         newContr = deployerThree.deployERC20(asset.desc, asset.symbol, asset.decimals, address(tokenShop));
+  //         assets[i].assetAddr = newContr;
+  //       }
+  //      }
       
-    }
-  }
+  //   }
+  // }
 
-  function deployERC721Contracts() public {
-    address newContr;
-    assetInfo memory asset;
-    for (uint i; i < assets.length; ++i) {
-      asset = assets[i];
-      if (asset.decimals == 0) {
-        newContr = deployerThree.deployERC721(asset.desc, asset.symbol, address(tokenShop));
-        assets[i].assetAddr = newContr;
-      }
-      else { }
+  // function deployERC721Contracts() public {
+  //   address newContr;
+  //   assetInfo memory asset;
+  //   for (uint i; i < assets.length; ++i) {
+  //     asset = assets[i];
+  //     if (asset.decimals == 0) {
+  //       newContr = deployerThree.deployERC721(asset.desc, asset.symbol, address(tokenShop));
+  //       assets[i].assetAddr = newContr;
+  //     }
+  //     else { }
       
-    }
-  }
+  //   }
+  // }
 
-  function deployOracles() public {
-    address newContr;
-    assetInfo memory asset;
-    for (uint i; i < assets.length; ++i) {
-      asset = assets[i];
-      if (!StringHelpers.compareStrings(asset.symbol, "mwETH")) {
-        newContr = deployerOne.deployOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD")));
-        assets[i].oracleAddr = newContr;
-      }
-    }
+  // function deployOracles() public {
+  //   address newContr;
+  //   assetInfo memory asset;
+  //   for (uint i; i < assets.length; ++i) {
+  //     asset = assets[i];
+  //     if (!StringHelpers.compareStrings(asset.symbol, "mwETH")) {
+  //       newContr = deployerOne.deployOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD")));
+  //       assets[i].oracleAddr = newContr;
+  //     }
+  //   }
 
-    uint256[] memory emptyList = new uint256[](0);
-    mainRegistry.addNumeraire(IMainRegistryExtended.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(weth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stableEth), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+  //   uint256[] memory emptyList = new uint256[](0);
+  //   mainRegistry.addNumeraire(IMainRegistryExtended.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(weth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stableEth), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 
-  }
+  // }
 
-  function setOracleAnswers() public {
-    assetInfo memory asset;
-    for (uint i; i < assets.length; ++i) {
-      asset = assets[i];
-      IOraclePaperTradingExtended(asset.oracleAddr).setAnswer(int256(uint256(asset.rate)));
-    }
-  }
+  // function setOracleAnswers() public {
+  //   assetInfo memory asset;
+  //   for (uint i; i < assets.length; ++i) {
+  //     asset = assets[i];
+  //     IOraclePaperTradingExtended(asset.oracleAddr).setAnswer(int256(uint256(asset.rate)));
+  //   }
+  // }
 
-  function addOracles() public {
-    assetInfo memory asset;
-    uint8 baseAssetNum;
-    for (uint i; i < assets.length; ++i) {
-      asset = assets[i];
-      if (StringHelpers.compareStrings(asset.baseAsset, "ETH")) {
-        baseAssetNum = 1;
-      }
-      else {
-        baseAssetNum = 0;
-      }
-      oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(10**asset.oracleDecimals), baseAssetNumeraire: baseAssetNum, quoteAsset: asset.quoteAsset, baseAsset: asset.baseAsset, oracleAddress: asset.oracleAddr, quoteAssetAddress: asset.assetAddr, baseAssetIsNumeraire: true}));
-    }
+  // function addOracles() public {
+  //   assetInfo memory asset;
+  //   uint8 baseAssetNum;
+  //   for (uint i; i < assets.length; ++i) {
+  //     asset = assets[i];
+  //     if (StringHelpers.compareStrings(asset.baseAsset, "ETH")) {
+  //       baseAssetNum = 1;
+  //     }
+  //     else {
+  //       baseAssetNum = 0;
+  //     }
+  //     oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(10**asset.oracleDecimals), baseAssetNumeraire: baseAssetNum, quoteAsset: asset.quoteAsset, baseAsset: asset.baseAsset, oracleAddress: asset.oracleAddr, quoteAssetAddress: asset.assetAddr, baseAssetIsNumeraire: true}));
+  //   }
 
-    oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(Constants.oracleStableToUsdUnit), baseAssetNumeraire: 0, quoteAsset: "maUSD", baseAsset: "USD", oracleAddress: address(oracleStableUsdToUsd), quoteAssetAddress: address(stableUsd), baseAssetIsNumeraire: true}));
-    oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(Constants.oracleStableEthToEthUnit), baseAssetNumeraire: 1, quoteAsset: "maETH", baseAsset: "ETH", oracleAddress: address(oracleStableEthToEth), quoteAssetAddress: address(stableEth), baseAssetIsNumeraire: true}));
+  //   oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(Constants.oracleStableToUsdUnit), baseAssetNumeraire: 0, quoteAsset: "maUSD", baseAsset: "USD", oracleAddress: address(oracleStableUsdToUsd), quoteAssetAddress: address(stableUsd), baseAssetIsNumeraire: true}));
+  //   oracleHub.addOracle(IOracleHubExtended.OracleInformation({oracleUnit: uint64(Constants.oracleStableEthToEthUnit), baseAssetNumeraire: 1, quoteAsset: "maETH", baseAsset: "ETH", oracleAddress: address(oracleStableEthToEth), quoteAssetAddress: address(stableEth), baseAssetIsNumeraire: true}));
 
-  }
+  // }
 
-  function setAssetInformation() public {
-    assetInfo memory asset;
-    uint256[] memory emptyList = new uint256[](0);
-    address[] memory genOracleArr1 = new address[](1);
-    address[] memory genOracleArr2 = new address[](2);
-    for (uint i; i < assets.length; ++i) {
-      asset = assets[i];
-      if (StringHelpers.compareStrings(asset.baseAsset, "ETH")) {
-        genOracleArr2[0] = asset.oracleAddr;
-        genOracleArr2[1] = address(oracleEthToUsd);
+  // function setAssetInformation() public {
+  //   assetInfo memory asset;
+  //   uint256[] memory emptyList = new uint256[](0);
+  //   address[] memory genOracleArr1 = new address[](1);
+  //   address[] memory genOracleArr2 = new address[](2);
+  //   for (uint i; i < assets.length; ++i) {
+  //     asset = assets[i];
+  //     if (StringHelpers.compareStrings(asset.baseAsset, "ETH")) {
+  //       genOracleArr2[0] = asset.oracleAddr;
+  //       genOracleArr2[1] = address(oracleEthToUsd);
 
-        if (asset.decimals == 0) {
-          floorERC721Registry.setAssetInformation(IErc721SubRegistry.AssetInformation({oracleAddresses: genOracleArr2, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), emptyList);
-        }
-        else {
-          standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: genOracleArr2, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
-          }
-      }
-      else {
-        genOracleArr1[0] = asset.oracleAddr;
+  //       if (asset.decimals == 0) {
+  //         floorERC721Registry.setAssetInformation(IErc721SubRegistry.AssetInformation({oracleAddresses: genOracleArr2, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), emptyList);
+  //       }
+  //       else {
+  //         standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: genOracleArr2, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
+  //         }
+  //     }
+  //     else {
+  //       genOracleArr1[0] = asset.oracleAddr;
 
-        if (asset.decimals == 0) {
-          floorERC721Registry.setAssetInformation(IErc721SubRegistry.AssetInformation({oracleAddresses: genOracleArr1, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), emptyList);
-        }
-        else {
-          standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: genOracleArr1, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
-          }
-      }
+  //       if (asset.decimals == 0) {
+  //         floorERC721Registry.setAssetInformation(IErc721SubRegistry.AssetInformation({oracleAddresses: genOracleArr1, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), emptyList);
+  //       }
+  //       else {
+  //         standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: genOracleArr1, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
+  //         }
+  //     }
 
-    }
+  //   }
 
-    oracleEthToUsdArr[0] = address(oracleEthToUsd);
-    address[] memory oracleStableUsdToUsdArr = new address[](1);    
-    oracleStableUsdToUsdArr[0] = address(oracleStableUsdToUsd);
+  //   oracleEthToUsdArr[0] = address(oracleEthToUsd);
+  //   address[] memory oracleStableUsdToUsdArr = new address[](1);    
+  //   oracleStableUsdToUsdArr[0] = address(oracleStableUsdToUsd);
 
-    address[] memory oracleStableEthToUsdArr = new address[](2);
-    oracleStableEthToUsdArr[0] = address(oracleStableEthToEth);
-    oracleStableEthToUsdArr[1] = address(oracleEthToUsd);
+  //   address[] memory oracleStableEthToUsdArr = new address[](2);
+  //   oracleStableEthToUsdArr[0] = address(oracleStableEthToEth);
+  //   oracleStableEthToUsdArr[1] = address(oracleEthToUsd);
 
-    standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(weth)}), emptyList);
-    standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: oracleStableUsdToUsdArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stableUsd)}), emptyList);
-    standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: oracleStableEthToUsdArr, assetUnit: uint64(10**Constants.stableEthDecimals), assetAddress: address(stableEth)}), emptyList);
+  //   standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(weth)}), emptyList);
+  //   standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: oracleStableUsdToUsdArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stableUsd)}), emptyList);
+  //   standardERC20Registry.setAssetInformation(IErc20SubRegistry.AssetInformation({oracleAddresses: oracleStableEthToUsdArr, assetUnit: uint64(10**Constants.stableEthDecimals), assetAddress: address(stableEth)}), emptyList);
 
 
-  }
+  // }
 
-  function transferOwnership() public {
-    factory.transferOwnership(msg.sender);
-    oracleHub.transferOwnership(msg.sender);
-    mainRegistry.transferOwnership(msg.sender);
-    standardERC20Registry.transferOwnership(msg.sender);
-    floorERC721Registry.transferOwnership(msg.sender);
-    interestRateModule.transferOwnership(msg.sender);
-    oracleStableUsdToUsd.transferOwnership(msg.sender);
-    oracleStableEthToEth.transferOwnership(msg.sender);
-    liquidator.transferOwnership(msg.sender);
-    tokenShop.transferOwnership(msg.sender);
-    oracleEthToUsd.transferOwnership(msg.sender);
-  }
+  // function transferOwnership() public {
+  //   factory.transferOwnership(msg.sender);
+  //   oracleHub.transferOwnership(msg.sender);
+  //   mainRegistry.transferOwnership(msg.sender);
+  //   standardERC20Registry.transferOwnership(msg.sender);
+  //   floorERC721Registry.transferOwnership(msg.sender);
+  //   interestRateModule.transferOwnership(msg.sender);
+  //   oracleStableUsdToUsd.transferOwnership(msg.sender);
+  //   oracleStableEthToEth.transferOwnership(msg.sender);
+  //   liquidator.transferOwnership(msg.sender);
+  //   tokenShop.transferOwnership(msg.sender);
+  //   oracleEthToUsd.transferOwnership(msg.sender);
+  // }
 
-  function verifyView() public view returns (bool) {
+  // function verifyView() public view returns (bool) {
 
-    require(checkAddressesInit(), "Verification: addresses not inited");
-    require(checkFactory(), "Verification: factory not set");
-    require(checkStables(), "Verification: Stables not set");
-    require(checkTokenShop(), "Verification: tokenShop not set");
-    require(checkLiquidator(), "Verification: Liquidator not set");
-    require(checkSubregs(), "Verification: Subregs not set");
+  //   require(checkAddressesInit(), "Verification: addresses not inited");
+  //   require(checkFactory(), "Verification: factory not set");
+  //   require(checkStables(), "Verification: Stables not set");
+  //   require(checkTokenShop(), "Verification: tokenShop not set");
+  //   require(checkLiquidator(), "Verification: Liquidator not set");
+  //   require(checkSubregs(), "Verification: Subregs not set");
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  function checkMainreg() public view returns (bool) {
-    require(mainRegistry.isSubRegistry(address(standardERC20Registry)), "MR: ERC20SR not set");
-    require(mainRegistry.isSubRegistry(address(floorERC721Registry)), "MR: ERC721SR not set");
-    require(mainRegistry.factoryAddress() == address(factory), "MR: fact not set");
+  // function checkMainreg() public view returns (bool) {
+  //   require(mainRegistry.isSubRegistry(address(standardERC20Registry)), "MR: ERC20SR not set");
+  //   require(mainRegistry.isSubRegistry(address(floorERC721Registry)), "MR: ERC721SR not set");
+  //   require(mainRegistry.factoryAddress() == address(factory), "MR: fact not set");
 
-    uint64 numeraireToUsdOracleUnit;
-    uint64 numeraireUnit;
-    address assetAddress;
-    address numeraireToUsdOracle;
-    address stableAddress;
-    string memory numeraireLabel;
+  //   uint64 numeraireToUsdOracleUnit;
+  //   uint64 numeraireUnit;
+  //   address assetAddress;
+  //   address numeraireToUsdOracle;
+  //   address stableAddress;
+  //   string memory numeraireLabel;
 
-    uint256 numCounter = mainRegistry.numeraireCounter();
-    require(numCounter > 0);
-    for (uint i; i < numCounter; ++i) {
-      (numeraireToUsdOracleUnit, numeraireUnit, assetAddress, numeraireToUsdOracle, stableAddress, numeraireLabel) = mainRegistry.numeraireToInformation(0);
-      require(numeraireToUsdOracleUnit != 0 && 
-              numeraireUnit != 0 && 
-              assetAddress != address(0) && 
-              numeraireToUsdOracle != address(0) && 
-              stableAddress != address(0) && 
-              bytes(numeraireLabel).length != 0, "MR: num 0 not set");
-    }
+  //   uint256 numCounter = mainRegistry.numeraireCounter();
+  //   require(numCounter > 0);
+  //   for (uint i; i < numCounter; ++i) {
+  //     (numeraireToUsdOracleUnit, numeraireUnit, assetAddress, numeraireToUsdOracle, stableAddress, numeraireLabel) = mainRegistry.numeraireToInformation(0);
+  //     require(numeraireToUsdOracleUnit != 0 && 
+  //             numeraireUnit != 0 && 
+  //             assetAddress != address(0) && 
+  //             numeraireToUsdOracle != address(0) && 
+  //             stableAddress != address(0) && 
+  //             bytes(numeraireLabel).length != 0, "MR: num 0 not set");
+  //   }
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  function checkSubregs() public view returns (bool) {
-    require(standardERC20Registry.mainRegistry() == address(mainRegistry), "ERC20SR: mainreg not set");
-    require(floorERC721Registry.mainRegistry() == address(mainRegistry), "ERC721SR: mainreg not set");
-    require(standardERC20Registry.oracleHub() == address(oracleHub), "ERC20SR: OH not set");
-    require(floorERC721Registry.oracleHub() == address(oracleHub), "ERC721SR: OH not set");
+  // function checkSubregs() public view returns (bool) {
+  //   require(standardERC20Registry.mainRegistry() == address(mainRegistry), "ERC20SR: mainreg not set");
+  //   require(floorERC721Registry.mainRegistry() == address(mainRegistry), "ERC721SR: mainreg not set");
+  //   require(standardERC20Registry.oracleHub() == address(oracleHub), "ERC20SR: OH not set");
+  //   require(floorERC721Registry.oracleHub() == address(oracleHub), "ERC721SR: OH not set");
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  function checkLiquidator() public view returns (bool) {
-    require(liquidator.registryAddress() == address(mainRegistry), "Liq: mainreg not set");
-    require(liquidator.factoryAddress() == address(factory), "Liq: fact not set");
+  // function checkLiquidator() public view returns (bool) {
+  //   require(liquidator.registryAddress() == address(mainRegistry), "Liq: mainreg not set");
+  //   require(liquidator.factoryAddress() == address(factory), "Liq: fact not set");
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  function checkTokenShop() public view returns (bool) {
-    require(tokenShop.mainRegistry() == address(mainRegistry), "TokenShop: mainreg not set");
+  // function checkTokenShop() public view returns (bool) {
+  //   require(tokenShop.mainRegistry() == address(mainRegistry), "TokenShop: mainreg not set");
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  function checkStables() public view returns (bool) {
-    require(stableUsd.liquidator() == address(liquidator), "StableUSD: liq not set");
-    require(stableUsd.factory() == address(factory), "StableUSD: fact not set");
-    require(stableEth.liquidator() == address(liquidator), "StableETH: liq not set");
-    require(stableEth.factory() == address(factory), "StableETH: fact not set");
-    require(stableUsd.tokenShop() == address(tokenShop), "StableUSD: tokensh not set");
-    require(stableEth.tokenShop() == address(tokenShop), "StableETH: tokensh not set");
+  // function checkStables() public view returns (bool) {
+  //   require(stableUsd.liquidator() == address(liquidator), "StableUSD: liq not set");
+  //   require(stableUsd.factory() == address(factory), "StableUSD: fact not set");
+  //   require(stableEth.liquidator() == address(liquidator), "StableETH: liq not set");
+  //   require(stableEth.factory() == address(factory), "StableETH: fact not set");
+  //   require(stableUsd.tokenShop() == address(tokenShop), "StableUSD: tokensh not set");
+  //   require(stableEth.tokenShop() == address(tokenShop), "StableETH: tokensh not set");
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  function checkFactory() public view returns (bool) {
-    require(bytes(factory.baseURI()).length != 0, "FTRY: baseURI not set");
-    uint256 numCountFact = factory.numeraireCounter();
-    require(numCountFact == mainRegistry.numeraireCounter(), "FTRY: numCountFact != numCountMR");
-    require(factory.liquidatorAddress() != address(0), "FTRY: LiqAddr not set");
-    require(factory.newVaultInfoSet() == false, "FTRY: newVaultInfo still set");
-    require(factory.getCurrentRegistry() == address(mainRegistry), "FTRY: mainreg not set");
-    (, address factLogic, address factStake, address factIRM) = factory.vaultDetails(factory.currentVaultVersion());
-    require(factLogic == address(vault), "FTRY: vaultLogic not set");
-    require(factStake == address(stakeContract), "FTRY: stakeContr not set");
-    require(factIRM == address(interestRateModule), "FTRY: IRM not set");
-    for (uint256 i; i < numCountFact; ++i) {
-      require(factory.numeraireToStable(i) != address(0), string(abi.encodePacked("FTRY: numToStable not set for", Strings.toString(i))));
-    }
+  // function checkFactory() public view returns (bool) {
+  //   require(bytes(factory.baseURI()).length != 0, "FTRY: baseURI not set");
+  //   uint256 numCountFact = factory.numeraireCounter();
+  //   require(numCountFact == mainRegistry.numeraireCounter(), "FTRY: numCountFact != numCountMR");
+  //   require(factory.liquidatorAddress() != address(0), "FTRY: LiqAddr not set");
+  //   require(factory.newVaultInfoSet() == false, "FTRY: newVaultInfo still set");
+  //   require(factory.getCurrentRegistry() == address(mainRegistry), "FTRY: mainreg not set");
+  //   (, address factLogic, address factStake, address factIRM) = factory.vaultDetails(factory.currentVaultVersion());
+  //   require(factLogic == address(vault), "FTRY: vaultLogic not set");
+  //   require(factStake == address(stakeContract), "FTRY: stakeContr not set");
+  //   require(factIRM == address(interestRateModule), "FTRY: IRM not set");
+  //   for (uint256 i; i < numCountFact; ++i) {
+  //     require(factory.numeraireToStable(i) != address(0), string(abi.encodePacked("FTRY: numToStable not set for", Strings.toString(i))));
+  //   }
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  error AddressNotInitialised();
-  function checkAddressesInit() public view returns (bool) {
-    require(owner != address(0), "AddrCheck: owner not set");
-    require(address(factory) != address(0), "AddrCheck: factory not set");
-    require(address(vault) != address(0), "AddrCheck: vault not set");
-    require(address(oracleHub) != address(0), "AddrCheck: oracleHub not set");
-    require(address(mainRegistry) != address(0), "AddrCheck: mainRegistry not set");
-    require(address(standardERC20Registry) != address(0), "AddrCheck: standardERC20Registry not set");
-    require(address(floorERC721Registry) != address(0), "AddrCheck: floorERC721Registry not set");
-    require(address(interestRateModule) != address(0), "AddrCheck: interestRateModule not set");
-    require(address(stableUsd) != address(0), "AddrCheck: stableUsd not set");
-    require(address(stableEth) != address(0), "AddrCheck: stableEth not set");
-    require(address(oracleStableUsdToUsd) != address(0), "AddrCheck: oracleStableUsdToUsd not set");
-    require(address(oracleStableEthToEth) != address(0), "AddrCheck: oracleStableEthToEth not set");
-    require(address(liquidator) != address(0), "AddrCheck: liquidator not set");
-    require(address(tokenShop) != address(0), "AddrCheck: tokenShop not set");
-    require(address(weth) != address(0), "AddrCheck: weth not set");
-    require(address(oracleEthToUsd) != address(0), "AddrCheck: oracleEthToUsd not set");
+  // error AddressNotInitialised();
+  // function checkAddressesInit() public view returns (bool) {
+  //   require(owner != address(0), "AddrCheck: owner not set");
+  //   require(address(factory) != address(0), "AddrCheck: factory not set");
+  //   require(address(vault) != address(0), "AddrCheck: vault not set");
+  //   require(address(oracleHub) != address(0), "AddrCheck: oracleHub not set");
+  //   require(address(mainRegistry) != address(0), "AddrCheck: mainRegistry not set");
+  //   require(address(standardERC20Registry) != address(0), "AddrCheck: standardERC20Registry not set");
+  //   require(address(floorERC721Registry) != address(0), "AddrCheck: floorERC721Registry not set");
+  //   require(address(interestRateModule) != address(0), "AddrCheck: interestRateModule not set");
+  //   require(address(stableUsd) != address(0), "AddrCheck: stableUsd not set");
+  //   require(address(stableEth) != address(0), "AddrCheck: stableEth not set");
+  //   require(address(oracleStableUsdToUsd) != address(0), "AddrCheck: oracleStableUsdToUsd not set");
+  //   require(address(oracleStableEthToEth) != address(0), "AddrCheck: oracleStableEthToEth not set");
+  //   require(address(liquidator) != address(0), "AddrCheck: liquidator not set");
+  //   require(address(tokenShop) != address(0), "AddrCheck: tokenShop not set");
+  //   require(address(weth) != address(0), "AddrCheck: weth not set");
+  //   require(address(oracleEthToUsd) != address(0), "AddrCheck: oracleEthToUsd not set");
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  struct returnAddrs {
-    address factory;
-    address mainRegistry;
-    address erc20subreg;
-    address erc721subreg;
-    address oracleHub;
-    address vaultlogic;
-    address liquidator;
-    address interestratemodule;
-    address stableUSD;
-    address stableETH;
-    address weth;
-    address tokenShop;
-    address oracleStableUsdToUsd;
-    address oracleStableEthToEth;
-    address oracleEthToUsd;
-    assetInfo[] assets;
-  }
+  // struct returnAddrs {
+  //   address factory;
+  //   address mainRegistry;
+  //   address erc20subreg;
+  //   address erc721subreg;
+  //   address oracleHub;
+  //   address vaultlogic;
+  //   address liquidator;
+  //   address interestratemodule;
+  //   address stableUSD;
+  //   address stableETH;
+  //   address weth;
+  //   address tokenShop;
+  //   address oracleStableUsdToUsd;
+  //   address oracleStableEthToEth;
+  //   address oracleEthToUsd;
+  //   assetInfo[] assets;
+  // }
 
-  function returnAllAddresses() public view returns (returnAddrs memory addrs) {
-    addrs.factory = address(factory);
-    addrs.mainRegistry = address(mainRegistry);
-    addrs.erc20subreg = address(standardERC20Registry);
-    addrs.erc721subreg = address(floorERC721Registry);
-    addrs.oracleHub = address(oracleHub);
-    addrs.vaultlogic = address(vault);
-    addrs.liquidator = address(liquidator);
-    addrs.interestratemodule = address(interestRateModule);
-    addrs.stableUSD = address(stableUsd);
-    addrs.stableETH = address(stableEth);
-    addrs.weth = address(weth);
-    addrs.tokenShop = address(tokenShop);
-    addrs.oracleStableUsdToUsd = address(oracleStableUsdToUsd);
-    addrs.oracleStableEthToEth = address(oracleStableEthToEth);
-    addrs.oracleEthToUsd = address(oracleEthToUsd);
-    addrs.assets = assets;
-  }
+  // function returnAllAddresses() public view returns (returnAddrs memory addrs) {
+  //   addrs.factory = address(factory);
+  //   addrs.mainRegistry = address(mainRegistry);
+  //   addrs.erc20subreg = address(standardERC20Registry);
+  //   addrs.erc721subreg = address(floorERC721Registry);
+  //   addrs.oracleHub = address(oracleHub);
+  //   addrs.vaultlogic = address(vault);
+  //   addrs.liquidator = address(liquidator);
+  //   addrs.interestratemodule = address(interestRateModule);
+  //   addrs.stableUSD = address(stableUsd);
+  //   addrs.stableETH = address(stableEth);
+  //   addrs.weth = address(weth);
+  //   addrs.tokenShop = address(tokenShop);
+  //   addrs.oracleStableUsdToUsd = address(oracleStableUsdToUsd);
+  //   addrs.oracleStableEthToEth = address(oracleStableEthToEth);
+  //   addrs.oracleEthToUsd = address(oracleEthToUsd);
+  //   addrs.assets = assets;
+  // }
 
   function onERC721Received(address, address, uint256, bytes calldata ) public pure returns (bytes4) {
     return this.onERC721Received.selector;
