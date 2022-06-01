@@ -5,5 +5,12 @@ build/*
 node_modules
 lib/
 
+# VSCode
+.vscode
+
 # JetBrains
 .idea
+
+# OS Generated
+.DS_Store
+.DS_Store?
