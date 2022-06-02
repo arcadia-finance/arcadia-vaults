@@ -16,7 +16,7 @@ contract ArcadiaOracleTest is DSTest {
     Vm internal vm = Vm(HEVM_ADDRESS);
     StdStorage internal stdstore;
 
-    uint8 public decimals = uint8(Constants.oracleStableToUsdDecimals);
+    uint8 public decimals = uint8(18);
 
     address public nonCreator = address(1);
     address public transmitter = address(32);

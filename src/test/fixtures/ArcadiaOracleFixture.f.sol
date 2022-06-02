@@ -15,7 +15,7 @@ contract ArcadiaOracleFixture is DSTest {
     Vm private vm = Vm(HEVM_ADDRESS);
 //    ArcadiaOracle private oracle;
 
-    uint8 public defaultDecimals = uint8(Constants.oracleStableToUsdDecimals);
+    uint8 public defaultDecimals = uint8(18);
 
     address public defaultCreatorAddress = address(1);
     address public defaultTransmitter;

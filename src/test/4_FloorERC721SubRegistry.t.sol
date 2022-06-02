@@ -8,11 +8,13 @@ import "../../lib/forge-std/src/Vm.sol";
 
 import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
-import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/MainRegistry.sol";
+import "../ArcadiaOracle.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
+
 
 contract FloorERC721SubRegistryTest is DSTest {
   using stdStorage for StdStorage;
@@ -28,9 +30,9 @@ contract FloorERC721SubRegistryTest is DSTest {
   ERC721Mock private mayc;
   ERC20Mock private wbayc;
   ERC20Mock private wmayc;
-  SimplifiedChainlinkOracle private oracleEthToUsd;
-  SimplifiedChainlinkOracle private oracleWbaycToEth;
-  SimplifiedChainlinkOracle private oracleWmaycToUsd;
+  ArcadiaOracle private oracleEthToUsd;
+  ArcadiaOracle private oracleWbaycToEth;
+  ArcadiaOracle private oracleWmaycToUsd;
 
   FloorERC721SubRegistry private floorERC721SubRegistry;
 
@@ -46,6 +48,9 @@ contract FloorERC721SubRegistryTest is DSTest {
   address[] public oracleWmaycToUsdArr = new address[](1);
 
   uint256[] emptyList = new uint256[](0);
+  
+  // FIXTURES
+  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
 //this is a before
   constructor () {
@@ -60,15 +65,9 @@ contract FloorERC721SubRegistryTest is DSTest {
     oracleHub = new OracleHub();
     vm.stopPrank();
 
-    vm.startPrank(oracleOwner);
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleWbaycToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
-    oracleWmaycToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WMAYC / USD");
-
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-    oracleWbaycToEth.setAnswer(int256(rateWbaycToEth));
-    oracleWmaycToUsd.setAnswer(int256(rateWmaycToUsd));
-    vm.stopPrank();
+    oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
+    oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "LINK / USD", rateWbaycToEth);
+    oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals), "SNX / ETH", rateWmaycToUsd);
 
   vm.startPrank(creatorAddress);
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));

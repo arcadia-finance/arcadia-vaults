@@ -20,8 +20,9 @@ import "../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../InterestRateModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
-import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../utils/Constants.sol";
+import "../ArcadiaOracle.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract EndToEndTest is DSTest {
   using stdStorage for StdStorage;
@@ -44,12 +45,12 @@ contract EndToEndTest is DSTest {
   ERC20Mock private wmayc;
   ERC1155Mock private interleave;
   OracleHub private oracleHub;
-  SimplifiedChainlinkOracle private oracleEthToUsd;
-  SimplifiedChainlinkOracle private oracleLinkToUsd;
-  SimplifiedChainlinkOracle private oracleSnxToEth;
-  SimplifiedChainlinkOracle private oracleWbaycToEth;
-  SimplifiedChainlinkOracle private oracleWmaycToUsd;
-  SimplifiedChainlinkOracle private oracleInterleaveToEth;
+  ArcadiaOracle private oracleEthToUsd;
+  ArcadiaOracle private oracleLinkToUsd;
+  ArcadiaOracle private oracleSnxToEth;
+  ArcadiaOracle private oracleWbaycToEth;
+  ArcadiaOracle private oracleWmaycToUsd;
+  ArcadiaOracle private oracleInterleaveToEth;
   MainRegistry private mainRegistry;
   StandardERC20Registry private standardERC20Registry;
   FloorERC721SubRegistry private floorERC721SubRegistry;
@@ -83,6 +84,9 @@ contract EndToEndTest is DSTest {
 
   // EVENTS
   event Transfer(address indexed from, address indexed to, uint256 amount);
+
+  // FIXTURES
+  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
 
   //this is a before
@@ -124,14 +128,12 @@ contract EndToEndTest is DSTest {
     vm.prank(creatorAddress);
     oracleHub = new OracleHub();
 
-    vm.startPrank(oracleOwner);
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleLinkToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
-    oracleSnxToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
-    oracleWbaycToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
-    oracleWmaycToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WMAYC / USD");
-    oracleInterleaveToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
-    vm.stopPrank();
+    oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
+    oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals),  "LINK / USD");
+    oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals),  "SNX / ETH");
+    oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals),  "WBAYC / ETH");
+    oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals),  "WBAYC / USD");
+    oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals),  "INTERLEAVE / ETH");
 
     vm.startPrank(creatorAddress);
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
@@ -241,12 +243,12 @@ contract EndToEndTest is DSTest {
     stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-    oracleLinkToUsd.setAnswer(int256(rateLinkToUsd));
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleWbaycToEth.setAnswer(int256(rateWbaycToEth));
-    oracleWmaycToUsd.setAnswer(int256(rateWmaycToUsd));
-    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
+    oracleLinkToUsd.transmit(int256(rateLinkToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleWbaycToEth.transmit(int256(rateWbaycToEth));
+    oracleWmaycToUsd.transmit(int256(rateWmaycToUsd));
+    oracleInterleaveToEth.transmit(int256(rateInterleaveToEth));
     vm.stopPrank();
 
     vm.startPrank(vaultOwner);
@@ -519,7 +521,7 @@ contract EndToEndTest is DSTest {
     vm.assume(newRateEthToUsd <= uint256(type(int256).max));
     vm.assume(newRateEthToUsd <= type(uint256).max / (10 ** 18));
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newRateEthToUsd));
+    oracleEthToUsd.transmit(int256(newRateEthToUsd));
 
     uint256 valueOfOneEth = Constants.WAD * newRateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals;
     if (valueOfOneEth != 0) {
@@ -657,7 +659,7 @@ contract EndToEndTest is DSTest {
 
     vm.prank(oracleOwner);
     uint256 newRateEthToUsd = newPrice * 10 ** Constants.oracleEthToUsdDecimals;
-    oracleEthToUsd.setAnswer(int256(newRateEthToUsd));
+    oracleEthToUsd.transmit(int256(newRateEthToUsd));
 
     uint256 newValueOfOneEth = Constants.WAD * newRateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals;
     uint256 expectedAvailableCredit = newValueOfOneEth * amountEth / 10 ** Constants.ethDecimals * 100 / _collThres - amountCredit;
