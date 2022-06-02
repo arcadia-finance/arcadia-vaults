@@ -17,4 +17,5 @@ interface IVaultPaperTrading is IVault {
   function receiveReward() external;
   function life() external view returns (uint256);
   function getValue(uint8) external view returns (uint256);
+  function setYearlyInterestRate() external;
 }

@@ -200,11 +200,6 @@ contract Vault {
 
   }
 
-  //Function only used for tests
-  function getLengths() external view returns (uint256, uint256, uint256, uint256) {
-    return (_erc20Stored.length, _erc721Stored.length, _erc721TokenIds.length, _erc1155Stored.length);
-  }
-
   /** 
     @notice Internal function used to deposit ERC20 tokens.
     @dev Used for all tokens types = 0. Note the transferFrom, not the safeTransferFrom to allow legacy ERC20s.
@@ -298,6 +293,7 @@ contract Vault {
          Example inputs:
             [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
             [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+    @dev After withdrawing assets, the interest rate is renewed
     @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
                           even if multiple assets of the same contract address are withdrawn.
     @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155. 
@@ -334,7 +330,15 @@ contract Vault {
 
     uint256 openDebt = getOpenDebt();
     if (openDebt != 0) {
-      require((getValue(debt._numeraire) * 100 / openDebt) > debt._collThres , "Cannot withdraw since the collateral value would become too low!");
+      (address[] memory _assetAddresses, uint256[] memory _assetIds, uint256[] memory _assetAmounts) = generateAssetData();
+      uint256[] memory valuesPerCreditRating = IRegistry(_registryAddress).getListOfValuesPerCreditRating(_assetAddresses, _assetIds, _assetAmounts, debt._numeraire);
+      uint256 vaultValue = sumElementsOfList(valuesPerCreditRating);
+      uint256 minCollValue;
+      //gas: can't overflow: uint129 * uint16 << uint256
+      unchecked {minCollValue = uint256(openDebt * debt._collThres) / 100;}
+      require(vaultValue > minCollValue, "Cannot withdraw since the collateral value would become too low!");
+
+      _setYearlyInterestRate(valuesPerCreditRating, minCollValue);
     }
 
   }
@@ -507,44 +511,23 @@ contract Vault {
   */
   function getValue(uint8 numeraire) public view returns (uint256 vaultValue) {
     (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) = generateAssetData();
-    vaultValue = getValueOfAssets(numeraire, assetAddresses, assetIds, assetAmounts);
-  }
-
-  /** 
-    @notice Returns the total value of the assets provided as input.
-    @dev Although mostly an internal function, it's put public such that users/... can estimate the combined value of a series of assets
-         without them having to be stored on the vault.
-    @param numeraire Numeraire to return the value in. For example, 0 (USD) or 1 (ETH).
-    @param assetAddresses A list of all asset addresses. Index in the three arrays are concerning the same asset.
-    @param assetIds  A list of all asset IDs. Can be '0' for ERC20s. Index in the three arrays are concerning the same asset.
-    @param assetAmounts A list of all amounts. Will be '1' for ERC721's. Index in the three arrays are concerning the same asset.
-    @return vaultValue Total value of the given assets, expressed in numeraire.
-  */
-  function getValueOfAssets(uint8 numeraire, address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) public view returns (uint256 vaultValue) {
-    // needs to check whether all assets are actually owned
-    // -> not be done twice since this function is called by getValue which already has that check
-    // should account for a 'must stop at value x'
-    // stop at value x should be done in lower contract
-    // extra input: stop value
-
     vaultValue = IRegistry(_registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, numeraire);
   }
 
-
-  ///////////////
-  ///////////////
-  ///////////////
-
   /** 
-    @notice Calculates the yearly interest (with 18 decimals precision).
-    @dev Based on an array with values per credit rating (tranches) and the minimum collateral value needed for the debt taken,
-         returns the yearly interest rate in a 1e18 decimal number.
-    @param valuesPerCreditRating An array of values, split per credit rating.
-    @param minCollValue The minimum collateral value based on the amount of open debt on the proxy vault.
-    @return yearlyInterestRate The yearly interest rate in a 1e18 decimal number.
+    @notice Sets the yearly interest rate of the proxy vault, in the form of a 1e18 decimal number.
+    @dev First syncs all debt to realise all unrealised debt. Fetches all the asset data and queries the
+         Registry to obtain an array of values, split up according to the credit rating of the underlying assets.
   */
-  function calculateYearlyInterestRate(uint256[] memory valuesPerCreditRating, uint256 minCollValue) public view returns (uint64 yearlyInterestRate) {
-    yearlyInterestRate = IRM(_irmAddress).getYearlyInterestRate(valuesPerCreditRating, minCollValue);
+  function setYearlyInterestRate() external virtual onlyOwner {
+    syncDebt();
+    uint256 minCollValue;
+    //gas: can't overflow: uint128 * uint16 << uint256
+    unchecked {minCollValue = uint256(debt._openDebt) * debt._collThres / 100;} 
+    (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) = generateAssetData();
+    uint256[] memory ValuesPerCreditRating = IRegistry(_registryAddress).getListOfValuesPerCreditRating(assetAddresses, assetIds, assetAmounts, debt._numeraire);
+
+    _setYearlyInterestRate(ValuesPerCreditRating, minCollValue);
   }
 
   /** 
@@ -557,30 +540,15 @@ contract Vault {
   }
 
   /** 
-    @notice Sets the yearly interest rate of the proxy vault, in the form of a 1e18 decimal number.
-    @dev First syncs all debt to realise all unrealised debt. Fetches all the asset data and queries the
-         Registry to obtain an array of values, split up according to the credit rating of the underlying assets.
+    @notice Calculates the yearly interest (with 18 decimals precision).
+    @dev Based on an array with values per credit rating (tranches) and the minimum collateral value needed for the debt taken,
+         returns the yearly interest rate in a 1e18 decimal number.
+    @param valuesPerCreditRating An array of values, split per credit rating.
+    @param minCollValue The minimum collateral value based on the amount of open debt on the proxy vault.
+    @return yearlyInterestRate The yearly interest rate in a 1e18 decimal number.
   */
-  function setYearlyInterestRate() public {
-    syncDebt();
-    uint256 minCollValue;
-    //gas: can't overflow: uint128 * uint16 << uint256
-    unchecked {minCollValue = uint256(debt._openDebt) * debt._collThres / 100;} 
-    (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) = generateAssetData();
-    uint256[] memory ValuesPerCreditRating = IRegistry(_registryAddress).getListOfValuesPerCreditRating(assetAddresses, assetIds, assetAmounts, debt._numeraire);
-
-    _setYearlyInterestRate(ValuesPerCreditRating, minCollValue);
-  }
-
-  /** 
-    @notice Can be called by the proxy vault owner to take out (additional) credit against
-            his assets stored on the proxy vault.
-    @dev amount to be provided in stablecoin decimals. 
-    @param amount The amount of credit to take out, in the form of a pegged stablecoin with 18 decimals.
-  */
-  function takeCredit(uint128 amount) public onlyOwner {
-    (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) = generateAssetData();
-    _takeCredit(amount, assetAddresses, assetIds, assetAmounts);
+  function calculateYearlyInterestRate(uint256[] memory valuesPerCreditRating, uint256 minCollValue) public view returns (uint64 yearlyInterestRate) {
+    yearlyInterestRate = IRM(_irmAddress).getYearlyInterestRate(valuesPerCreditRating, minCollValue);
   }
 
   // https://twitter.com/0x_beans/status/1502420621250105346
@@ -599,7 +567,6 @@ contract Vault {
             sum := add(sum, mload(add(add(_data, 0x20), mul(i, 0x20))))
         }
 
-        // iykyk
         unchecked {++i;}
     }
   }
@@ -647,6 +614,17 @@ contract Vault {
     if (unRealisedDebt > 0) {
       IERC20(_stable).mint(_stakeContract, unRealisedDebt);
     }
+  }
+
+  /** 
+    @notice Can be called by the proxy vault owner to take out (additional) credit against
+            his assets stored on the proxy vault.
+    @dev amount to be provided in stablecoin decimals. 
+    @param amount The amount of credit to take out, in the form of a pegged stablecoin with 18 decimals.
+  */
+  function takeCredit(uint128 amount) public onlyOwner {
+    (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) = generateAssetData();
+    _takeCredit(amount, assetAddresses, assetIds, assetAmounts);
   }
 
   /** 
@@ -751,7 +729,7 @@ contract Vault {
 
     // if interest is calculated on a fixed rate, set interest to zero if opendebt is zero
     // todo: can be removed safely?
-    if (getOpenDebt() == 0) {
+    if (debt._openDebt == 0) {
       debt._yearlyInterestRate = 0;
     }
 
@@ -799,6 +777,11 @@ contract Vault {
 
   function onERC1155Received(address, address, uint256, uint256, bytes calldata) public pure returns (bytes4) {
     return this.onERC1155Received.selector;
+  }
+
+  //Function only used for tests
+  function getLengths() external view returns (uint256, uint256, uint256, uint256) {
+    return (_erc20Stored.length, _erc721Stored.length, _erc721TokenIds.length, _erc1155Stored.length);
   }
 
 }
