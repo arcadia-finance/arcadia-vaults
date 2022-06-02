@@ -10,6 +10,6 @@ contract MyScript is Script {
 
         Contract c = new Contract();
         c.test();
-        require(c.x() == 12345);
+        require(c.x() == 12345 && 1 == 1);
     }
 }

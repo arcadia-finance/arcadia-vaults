@@ -5,8 +5,7 @@ import "../../paperTradingCompetition/FactoryPaperTrading.sol";
 import "../../Proxy.sol";
 import "../../paperTradingCompetition/StablePaperTrading.sol";
 import "../../utils/Constants.sol";
-import "../../paperTradingCompetition/Oracles/StableOracle.sol";
-import "../../mockups/SimplifiedChainlinkOracle.sol";
+import "../../ArcadiaOracle.sol";
 
 import "../../AssetRegistry/MainRegistry.sol";
 import "../../paperTradingCompetition/LiquidatorPaperTrading.sol";
@@ -47,14 +46,14 @@ contract DeployScript is DSTest, Script {
   InterestRateModule public interestRateModule;
   StablePaperTrading public stableUsd;
   StablePaperTrading public stableEth;
-  StableOracle public oracleStableUsdToUsd;
-  StableOracle public oracleStableEthToEth;
+  ArcadiaOracle public oracleStableUsdToUsd;
+  ArcadiaOracle public oracleStableEthToEth;
   LiquidatorPaperTrading public liquidator;
   TokenShop public tokenShop;
 
   ERC20PaperTrading public weth;
 
-  SimplifiedChainlinkOracle public oracleEthToUsd;
+  ArcadiaOracle public oracleEthToUsd;
 
   address private creatorAddress = address(1);
   address private tokenCreatorAddress = address(2);
@@ -93,7 +92,7 @@ contract DeployScript is DSTest, Script {
   }
   
   function setOracleAnswer(address oracleAddr, uint256 amount) external {
-    SimplifiedChainlinkOracle(oracleAddr).setAnswer(int256(amount));
+    ArcadiaOracle(oracleAddr).transmit(int256(amount));
   }
 
 
@@ -122,12 +121,6 @@ contract DeployScript is DSTest, Script {
     stableUsd = new StablePaperTrading("Mocked Arcadia USD", "maUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factory));
     stableEth = new StablePaperTrading("Mocked Arcadia ETH", "maETH", uint8(Constants.stableEthDecimals), 0x0000000000000000000000000000000000000000, address(factory));
 
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-
-    oracleStableUsdToUsd = new StableOracle(uint8(Constants.oracleStableToUsdDecimals), "maUSD / USD");
-    oracleStableEthToEth = new StableOracle(uint8(Constants.oracleStableEthToEthUnit), "maETH / ETH");
-
     mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stableUsd), numeraireLabel:'USD', numeraireUnit:1}));
 
     liquidator = new LiquidatorPaperTrading(address(factory), address(mainRegistry));
@@ -137,6 +130,21 @@ contract DeployScript is DSTest, Script {
     tokenShop = new TokenShop(address(mainRegistry));
     tokenShop.setFactory(address(factory));
     weth = new ERC20PaperTrading("Mocked Wrapped ETH", "mETH", uint8(Constants.ethDecimals), address(tokenShop));
+
+    oracleEthToUsd = new ArcadiaOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", address(weth));
+    oracleEthToUsd.setOffchainTransmitter(address(this));
+    oracleEthToUsd.setOffchainTransmitter(msg.sender);
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
+
+    oracleStableUsdToUsd = new ArcadiaOracle(uint8(Constants.oracleStableToUsdDecimals), "maUSD / USD", address(stableUsd));
+    oracleStableUsdToUsd.setOffchainTransmitter(msg.sender);
+    oracleStableUsdToUsd.setOffchainTransmitter(address(this));
+    oracleStableUsdToUsd.transmit(int256(Constants.oracleStableToUsdDecimals));
+
+    oracleStableEthToEth = new ArcadiaOracle(uint8(Constants.oracleStableEthToEthUnit), "maETH / ETH", address(stableEth));
+    oracleStableEthToEth.setOffchainTransmitter(msg.sender);
+    oracleStableEthToEth.setOffchainTransmitter(address(this));
+    oracleStableEthToEth.transmit(int256(Constants.oracleStableEthToEthUnit));
 
     stableUsd.setTokenShop(address(tokenShop));
     stableEth.setTokenShop(address(tokenShop));
@@ -212,7 +220,9 @@ contract DeployScript is DSTest, Script {
     for (uint i; i < assets.length; ++i) {
       asset = assets[i];
       if (!StringHelpers.compareStrings(asset.symbol, "mwETH")) {
-        newContr = address(new SimplifiedChainlinkOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD"))));
+        newContr = address(new ArcadiaOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD")), asset.assetAddr));
+        ArcadiaOracle(newContr).setOffchainTransmitter(address(this));
+        ArcadiaOracle(newContr).setOffchainTransmitter(msg.sender);
         assets[i].oracleAddr = newContr;
       }
     }
@@ -226,7 +236,7 @@ contract DeployScript is DSTest, Script {
     assetInfo memory asset;
     for (uint i; i < assets.length; ++i) {
       asset = assets[i];
-      SimplifiedChainlinkOracle(asset.oracleAddr).setAnswer(int256(uint256(asset.rate)));
+      ArcadiaOracle(asset.oracleAddr).transmit(int256(uint256(asset.rate)));
     }
   }
 

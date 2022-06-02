@@ -42,12 +42,12 @@ contract vaultTests is Test {
     ERC20Mock internal wmayc;
     ERC1155Mock internal interleave;
     OracleHub internal oracleHub;
-    SimplifiedChainlinkOracle internal oracleEthToUsd;
-    SimplifiedChainlinkOracle internal oracleLinkToUsd;
-    SimplifiedChainlinkOracle internal oracleSnxToEth;
-    SimplifiedChainlinkOracle internal oracleWbaycToEth;
-    SimplifiedChainlinkOracle internal oracleWmaycToUsd;
-    SimplifiedChainlinkOracle internal oracleInterleaveToEth;
+    ArcadiaOracle internal oracleEthToUsd;
+    ArcadiaOracle internal oracleLinkToUsd;
+    ArcadiaOracle internal oracleSnxToEth;
+    ArcadiaOracle internal oracleWbaycToEth;
+    ArcadiaOracle internal oracleWmaycToUsd;
+    ArcadiaOracle internal oracleInterleaveToEth;
     MainRegistry internal mainRegistry;
     StandardERC20Registry internal standardERC20Registry;
     FloorERC721SubRegistry internal floorERC721SubRegistry;

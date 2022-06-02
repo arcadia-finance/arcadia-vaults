@@ -7,14 +7,10 @@ pragma solidity >=0.4.22 <0.9.0;
 import "../../utils/Constants.sol";
 import "../fixtures/ArcadiaOracleFixture.f.sol";
 import "../../../lib/ds-test/src/test.sol";
-import "../../../lib/forge-std/src/stdlib.sol";
+import "../../../lib/forge-std/src/Test.sol";
 
-
-contract ArcadiaOracleTest is DSTest {
+contract ArcadiaOracleTest is Test {
     using stdStorage for StdStorage;
-
-    Vm internal vm = Vm(HEVM_ADDRESS);
-    StdStorage internal stdstore;
 
     uint8 public decimals = uint8(Constants.oracleStableToUsdDecimals);
 
