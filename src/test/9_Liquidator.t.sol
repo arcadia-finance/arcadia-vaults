@@ -20,8 +20,9 @@ import "../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../InterestRateModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
-import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../utils/Constants.sol";
+import "../ArcadiaOracle.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract LiquidatorTest is DSTest {
   using stdStorage for StdStorage;
@@ -44,12 +45,12 @@ contract LiquidatorTest is DSTest {
   ERC20Mock private wmayc;
   ERC1155Mock private interleave;
   OracleHub private oracleHub;
-  SimplifiedChainlinkOracle private oracleEthToUsd;
-  SimplifiedChainlinkOracle private oracleLinkToUsd;
-  SimplifiedChainlinkOracle private oracleSnxToEth;
-  SimplifiedChainlinkOracle private oracleWbaycToEth;
-  SimplifiedChainlinkOracle private oracleWmaycToUsd;
-  SimplifiedChainlinkOracle private oracleInterleaveToEth;
+  ArcadiaOracle private oracleEthToUsd;
+  ArcadiaOracle private oracleLinkToUsd;
+  ArcadiaOracle private oracleSnxToEth;
+  ArcadiaOracle private oracleWbaycToEth;
+  ArcadiaOracle private oracleWmaycToUsd;
+  ArcadiaOracle private oracleInterleaveToEth;
   MainRegistry private mainRegistry;
   StandardERC20Registry private standardERC20Registry;
   FloorERC721SubRegistry private floorERC721SubRegistry;
