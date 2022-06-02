@@ -82,8 +82,8 @@ contract vaultTests is DSTest {
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
-    // FIXTURES
-    ArcadiaOracleFixture internal arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
+  // FIXTURES
+  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
 
     //this is a before
