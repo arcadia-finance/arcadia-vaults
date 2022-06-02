@@ -7,7 +7,6 @@ import "../../lib/forge-std/src/console.sol";
 import "../../lib/forge-std/src/Vm.sol";
 
 import "../mockups/ERC20SolmateMock.sol";
-import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../AssetRegistry/AbstractSubRegistry.sol";

@@ -8,11 +8,12 @@ import "../../lib/forge-std/src/Vm.sol";
 
 import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
-import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../AssetRegistry/MainRegistry.sol";
+import "../ArcadiaOracle.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract FloorERC1155SubRegistryTest is DSTest {
 
@@ -24,8 +25,8 @@ contract FloorERC1155SubRegistryTest is DSTest {
 
   ERC20Mock private eth;
   ERC1155Mock private interleave;
-  SimplifiedChainlinkOracle private oracleEthToUsd;
-  SimplifiedChainlinkOracle private oracleInterleaveToEth;
+  ArcadiaOracle private oracleEthToUsd;
+  ArcadiaOracle private oracleInterleaveToEth;
 
   FloorERC1155SubRegistry private floorERC1155SubRegistry;
 
@@ -40,6 +41,9 @@ contract FloorERC1155SubRegistryTest is DSTest {
 
   uint256[] emptyList = new uint256[](0);
 
+  // FIXTURES
+  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
+
 //this is a before
   constructor () {
 
@@ -52,13 +56,8 @@ contract FloorERC1155SubRegistryTest is DSTest {
     oracleHub = new OracleHub();
     vm.stopPrank();
 
-    vm.startPrank(oracleOwner);
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleInterleaveToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
-
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEth));
-    vm.stopPrank();
+    oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
+    oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / USD", rateInterleaveToEth);
 
     vm.startPrank(creatorAddress);
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
@@ -197,9 +196,9 @@ contract FloorERC1155SubRegistryTest is DSTest {
     assertEq(actualValueInNumeraire, expectedValueInNumeraire);  
   }
 
-  function testreturnValueSucces (uint256 amountInterleave, uint256 rateInterleaveToEthNew) public {
-    vm.assume(rateInterleaveToEthNew <= uint256(type(int256).max));
-    vm.assume(rateInterleaveToEthNew <= type(uint256).max / Constants.WAD);
+  function testreturnValueSucces (uint256 amountInterleave, uint192 rateInterleaveToEthNew) public {
+    vm.assume(rateInterleaveToEthNew <= uint256(type(uint192).max));
+    vm.assume(rateInterleaveToEthNew <= type(uint192).max / Constants.WAD);
 
     if (rateInterleaveToEthNew == 0) {
       vm.assume(uint256(amountInterleave) <= type(uint256).max / Constants.WAD);
@@ -208,7 +207,7 @@ contract FloorERC1155SubRegistryTest is DSTest {
     }
 
     vm.startPrank(oracleOwner);
-    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEthNew));
+    oracleInterleaveToEth.transmit(int192(rateInterleaveToEthNew));
     vm.stopPrank();
 
     vm.startPrank(creatorAddress);
@@ -233,7 +232,7 @@ contract FloorERC1155SubRegistryTest is DSTest {
     vm.assume(uint256(amountInterleave) > type(uint256).max / uint256(rateInterleaveToEthNew) / Constants.WAD * 10 ** Constants.oracleInterleaveToEthDecimals);
 
     vm.startPrank(oracleOwner);
-    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEthNew));
+    oracleInterleaveToEth.transmit(int192(int256(rateInterleaveToEthNew)));
     vm.stopPrank();
 
     vm.startPrank(creatorAddress);

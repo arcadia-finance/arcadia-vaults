@@ -20,8 +20,10 @@ import "../../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../../InterestRateModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
-import "../../mockups/SimplifiedChainlinkOracle.sol";
+
 import "../../utils/Constants.sol";
+import "../../ArcadiaOracle.sol";
+import "../fixtures/ArcadiaOracleFixture.f.sol";
 
 contract gasProxyDeploy is DSTest {
 
@@ -43,12 +45,12 @@ contract gasProxyDeploy is DSTest {
   ERC20Mock private wmayc;
   ERC1155Mock private interleave;
   OracleHub private oracleHub;
-  SimplifiedChainlinkOracle private oracleEthToUsd;
-  SimplifiedChainlinkOracle private oracleLinkToUsd;
-  SimplifiedChainlinkOracle private oracleSnxToEth;
-  SimplifiedChainlinkOracle private oracleWbaycToEth;
-  SimplifiedChainlinkOracle private oracleWmaycToUsd;
-  SimplifiedChainlinkOracle private oracleInterleaveToEth;
+  ArcadiaOracle private oracleEthToUsd;
+  ArcadiaOracle private oracleLinkToUsd;
+  ArcadiaOracle private oracleSnxToEth;
+  ArcadiaOracle private oracleWbaycToEth;
+  ArcadiaOracle private oracleWmaycToUsd;
+  ArcadiaOracle private oracleInterleaveToEth;
   MainRegistry private mainRegistry;
   StandardERC20Registry private standardERC20Registry;
   FloorERC721SubRegistry private floorERC721SubRegistry;
@@ -83,6 +85,9 @@ contract gasProxyDeploy is DSTest {
 
   // EVENTS
   event Transfer(address indexed from, address indexed to, uint256 amount);
+
+  // FIXTURES
+  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
   //this is a before
   constructor() {
@@ -123,21 +128,13 @@ contract gasProxyDeploy is DSTest {
     vm.prank(creatorAddress);
     oracleHub = new OracleHub();
 
-    vm.startPrank(oracleOwner);
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleLinkToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
-    oracleSnxToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
-    oracleWbaycToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
-    oracleWmaycToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WMAYC / USD");
-    oracleInterleaveToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
 
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-    oracleLinkToUsd.setAnswer(int256(rateLinkToUsd));
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleWbaycToEth.setAnswer(int256(rateWbaycToEth));
-    oracleWmaycToUsd.setAnswer(int256(rateWmaycToUsd));
-    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEth));
-    vm.stopPrank();
+    oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
+    oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals),  "LINK / USD", rateLinkToUsd);
+    oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals),  "SNX / ETH", rateSnxToEth);
+    oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals),  "WBAYC / ETH", rateWbaycToEth);
+    oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals),  "WBAYC / USD", rateWmaycToUsd);
+    oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals),  "INTERLEAVE / ETH", rateInterleaveToEth);
 
     vm.startPrank(creatorAddress);
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
@@ -241,12 +238,12 @@ contract gasProxyDeploy is DSTest {
     proxy = Vault(proxyAddr);
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-    oracleLinkToUsd.setAnswer(int256(rateLinkToUsd));
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleWbaycToEth.setAnswer(int256(rateWbaycToEth));
-    oracleWmaycToUsd.setAnswer(int256(rateWmaycToUsd));
-    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
+    oracleLinkToUsd.transmit(int256(rateLinkToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleWbaycToEth.transmit(int256(rateWbaycToEth));
+    oracleWmaycToUsd.transmit(int256(rateWmaycToUsd));
+    oracleInterleaveToEth.transmit(int256(rateInterleaveToEth));
     vm.stopPrank();
 
     vm.roll(1); //increase block for random salt

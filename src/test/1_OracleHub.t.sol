@@ -6,9 +6,10 @@ import "../../lib/forge-std/src/console.sol";
 import "../../lib/forge-std/src/Vm.sol";
 
 import "../mockups/ERC20SolmateMock.sol";
-import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
+import "../ArcadiaOracle.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract OracleHubTest is DSTest {
 
@@ -19,9 +20,9 @@ contract OracleHubTest is DSTest {
   ERC20Mock private link;
 
   OracleHub private oracleHub;
-  SimplifiedChainlinkOracle private oracleEthToUsd;
-  SimplifiedChainlinkOracle private oracleLinkToUsd;
-  SimplifiedChainlinkOracle private oracleSnxToEth;
+  ArcadiaOracle private oracleEthToUsd;
+  ArcadiaOracle private oracleLinkToUsd;
+  ArcadiaOracle private oracleSnxToEth;
 
   address[] public oraclesEthToUsd = new address[](1);
   address[] public oraclesLinkToUsd = new address[](1);
@@ -32,6 +33,9 @@ contract OracleHubTest is DSTest {
   address private tokenCreatorAddress = address(2);
   address private oracleOwner = address(3);
 
+  // FIXTURES
+  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
+
   //this is a before
   constructor() {
     vm.startPrank(tokenCreatorAddress);
@@ -40,11 +44,9 @@ contract OracleHubTest is DSTest {
     link = new ERC20Mock("LINK Mock", "mLINK", uint8(Constants.linkDecimals));
     vm.stopPrank();
 
-    vm.startPrank(oracleOwner);
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleLinkToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
-    oracleSnxToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
-    vm.stopPrank();
+    oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
+    oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
+    oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
   }
 
   //this is a before each
@@ -153,7 +155,7 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     uint256 expectedRateInUsd = Constants.WAD * uint256(rateEthToUsd) / 10 ** (oracleEthToUsdDecimals);
@@ -180,7 +182,7 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     oraclesEthToUsd[0] = address(oracleEthToUsd);
@@ -213,8 +215,8 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     uint256 expectedRateInUsd = Constants.WAD * uint256(rateSnxToEth) / 10 ** (oracleSnxToEthDecimals) * uint256(rateEthToUsd) / 10 ** (oracleEthToUsdDecimals);
@@ -245,8 +247,8 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     oraclesSnxToUsd[0] = address(oracleSnxToEth);
@@ -277,8 +279,8 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     oraclesSnxToUsd[0] = address(oracleSnxToEth);
@@ -304,8 +306,8 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     uint256 expectedRateInUsd = Constants.WAD * uint256(rateSnxToEth) / 10 ** (oracleSnxToEthDecimals) * uint256(rateEthToUsd) / 10 ** (oracleEthToUsdDecimals);
@@ -336,8 +338,8 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     uint256 expectedRateInUsd = 0;
@@ -369,8 +371,8 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     oraclesSnxToUsd[0] = address(oracleSnxToEth);
@@ -404,8 +406,8 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     uint256 expectedRateInUsd = Constants.WAD * uint256(rateSnxToEth) / 10 ** (oracleSnxToEthDecimals) * uint256(rateEthToUsd) / 10 ** (oracleEthToUsdDecimals);
@@ -436,8 +438,8 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     oraclesSnxToUsd[0] = address(oracleSnxToEth);
@@ -468,8 +470,8 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     oraclesSnxToUsd[0] = address(oracleSnxToEth);
@@ -495,8 +497,8 @@ contract OracleHubTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
     vm.stopPrank();
 
     uint256 expectedRateInUsd = Constants.WAD * uint256(rateSnxToEth) / 10 ** (oracleSnxToEthDecimals) * uint256(rateEthToUsd) / 10 ** (oracleEthToUsdDecimals);

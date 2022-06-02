@@ -7,11 +7,12 @@ import "../../lib/forge-std/src/console.sol";
 import "../../lib/forge-std/src/Vm.sol";
 
 import "../mockups/ERC20SolmateMock.sol";
-import "../mockups/SimplifiedChainlinkOracle.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/MainRegistry.sol";
+import "../ArcadiaOracle.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract StandardERC20RegistryTest is DSTest {
 
@@ -24,9 +25,9 @@ contract StandardERC20RegistryTest is DSTest {
   ERC20Mock private eth;
   ERC20Mock private snx;
   ERC20Mock private link;
-  SimplifiedChainlinkOracle private oracleEthToUsd;
-  SimplifiedChainlinkOracle private oracleLinkToUsd;
-  SimplifiedChainlinkOracle private oracleSnxToEth;
+  ArcadiaOracle private oracleEthToUsd;
+  ArcadiaOracle private oracleLinkToUsd;
+  ArcadiaOracle private oracleSnxToEth;
 
   StandardERC20Registry private standardERC20Registry;
 
@@ -44,6 +45,9 @@ contract StandardERC20RegistryTest is DSTest {
 
   uint256[] emptyList = new uint256[](0);
 
+  // FIXTURES
+  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
+
 //this is a before
   constructor () {
 
@@ -58,15 +62,9 @@ contract StandardERC20RegistryTest is DSTest {
     oracleHub = new OracleHub();
     vm.stopPrank();
 
-    vm.startPrank(oracleOwner);
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleLinkToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
-    oracleSnxToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
-
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-    oracleLinkToUsd.setAnswer(int256(rateLinkToUsd));
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    vm.stopPrank();
+    oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
+    oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "LINK / USD", rateLinkToUsd);
+    oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals), "SNX / ETH", rateSnxToEth);
 
     vm.startPrank(creatorAddress);
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
@@ -218,7 +216,7 @@ contract StandardERC20RegistryTest is DSTest {
     }
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsdNew));
+    oracleEthToUsd.transmit(int256(rateEthToUsdNew));
     vm.stopPrank();
 
     vm.startPrank(creatorAddress);
@@ -243,7 +241,7 @@ contract StandardERC20RegistryTest is DSTest {
     vm.assume(uint256(amountEth) > type(uint256).max / uint256(rateEthToUsdNew) / Constants.WAD * 10 ** Constants.oracleEthToUsdDecimals);
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsdNew));
+    oracleEthToUsd.transmit(int256(rateEthToUsdNew));
     vm.stopPrank();
 
     vm.startPrank(creatorAddress);
