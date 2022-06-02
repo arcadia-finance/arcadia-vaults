@@ -87,6 +87,9 @@ contract LiquidatorTest is DSTest {
   event Transfer(address indexed from, address indexed to, uint256 amount);
   event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
+  // FIXTURES
+  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
+
 
   //this is a before
   constructor() {
@@ -127,14 +130,12 @@ contract LiquidatorTest is DSTest {
     vm.prank(creatorAddress);
     oracleHub = new OracleHub();
 
-    vm.startPrank(oracleOwner);
-    oracleEthToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-    oracleLinkToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
-    oracleSnxToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
-    oracleWbaycToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
-    oracleWmaycToUsd = new SimplifiedChainlinkOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WMAYC / USD");
-    oracleInterleaveToEth = new SimplifiedChainlinkOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
-    vm.stopPrank();
+    oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
+    oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
+    oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
+    oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
+    oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WMAYC / USD");
+    oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
 
     vm.startPrank(creatorAddress);
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
@@ -255,12 +256,12 @@ contract LiquidatorTest is DSTest {
     stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd));
-    oracleLinkToUsd.setAnswer(int256(rateLinkToUsd));
-    oracleSnxToEth.setAnswer(int256(rateSnxToEth));
-    oracleWbaycToEth.setAnswer(int256(rateWbaycToEth));
-    oracleWmaycToUsd.setAnswer(int256(rateWmaycToUsd));
-    oracleInterleaveToEth.setAnswer(int256(rateInterleaveToEth));
+    oracleEthToUsd.transmit(int256(rateEthToUsd));
+    oracleLinkToUsd.transmit(int256(rateLinkToUsd));
+    oracleSnxToEth.transmit(int256(rateSnxToEth));
+    oracleWbaycToEth.transmit(int256(rateWbaycToEth));
+    oracleWmaycToUsd.transmit(int256(rateWmaycToUsd));
+    oracleInterleaveToEth.transmit(int256(rateInterleaveToEth));
     vm.stopPrank();
 
     vm.startPrank(vaultOwner);
@@ -337,7 +338,7 @@ contract LiquidatorTest is DSTest {
     proxy.takeCredit(amountCredit);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice));
+    oracleEthToUsd.transmit(int256(newPrice));
 
     vm.startPrank(liquidatorBot);
     vm.expectEmit(true, true, false, false);
@@ -364,7 +365,7 @@ contract LiquidatorTest is DSTest {
     proxy.takeCredit(amountCredit);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice));
+    oracleEthToUsd.transmit(int256(newPrice));
 
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
@@ -395,7 +396,7 @@ contract LiquidatorTest is DSTest {
     proxy.takeCredit(amountCredit);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice));
+    oracleEthToUsd.transmit(int256(newPrice));
 
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
@@ -433,7 +434,7 @@ contract LiquidatorTest is DSTest {
     proxy.takeCredit(amountCredit);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice));
+    oracleEthToUsd.transmit(int256(newPrice));
 
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
@@ -468,7 +469,7 @@ contract LiquidatorTest is DSTest {
     proxy.takeCredit(amountCredit);
 
     vm.prank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(newPrice));
+    oracleEthToUsd.transmit(int256(newPrice));
 
     vm.prank(liquidatorBot);
     factory.liquidate(address(proxy));
@@ -517,7 +518,7 @@ contract LiquidatorTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
+    oracleEthToUsd.transmit(int256(rateEthToUsd/2));
     vm.stopPrank();
 
     // address protocolTreasury = address(1000);
@@ -604,7 +605,7 @@ contract LiquidatorTest is DSTest {
       vm.stopPrank();
 
       vm.startPrank(oracleOwner);
-      oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
+      oracleEthToUsd.transmit(int256(rateEthToUsd/2));
       vm.stopPrank();
 
       // address protocolTreasury = address(1000);
@@ -630,7 +631,7 @@ contract LiquidatorTest is DSTest {
       rewardsSum.originalOwnerRecovery += rewards[i].originalOwnerRecovery;
 
       vm.prank(oracleOwner);
-      oracleEthToUsd.setAnswer(int256(rateEthToUsd));
+      oracleEthToUsd.transmit(int256(rateEthToUsd));
 
       vaultAddresses[i] = address(proxy);
       lives[i] = i;
@@ -682,7 +683,7 @@ contract LiquidatorTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
+    oracleEthToUsd.transmit(int256(rateEthToUsd/2));
     vm.stopPrank();
 
     // address protocolTreasury = address(1000);
@@ -761,7 +762,7 @@ contract LiquidatorTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
+    oracleEthToUsd.transmit(int256(rateEthToUsd/2));
     vm.stopPrank();
 
     // address protocolTreasury = address(1000);
@@ -830,7 +831,7 @@ contract LiquidatorTest is DSTest {
     vm.stopPrank();
 
     vm.startPrank(oracleOwner);
-    oracleEthToUsd.setAnswer(int256(rateEthToUsd/2));
+    oracleEthToUsd.transmit(int256(rateEthToUsd/2));
     vm.stopPrank();
 
     // address protocolTreasury = address(1000);
