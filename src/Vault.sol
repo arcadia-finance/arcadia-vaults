@@ -336,7 +336,7 @@ contract Vault {
       uint256 minCollValue;
       //gas: can't overflow: uint129 * uint16 << uint256
       unchecked {minCollValue = uint256(openDebt * debt._collThres) / 100;}
-      require(vaultValue > minCollValue, "Cannot withdraw since the collateral value would become too low!");
+      require(vaultValue > minCollValue, "V_W: coll. value too low!");
 
       _setYearlyInterestRate(valuesPerCreditRating, minCollValue);
     }
