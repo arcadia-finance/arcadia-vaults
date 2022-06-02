@@ -688,7 +688,7 @@ contract EndToEndTest is DSTest {
 
         assetAmounts[0] = amountEthWithdrawal;
         vm.startPrank(vaultOwner);
-        vm.expectRevert("Cannot withdraw since the collateral value would become too low!");
+        vm.expectRevert("V_W: coll. value too low!");
         proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
