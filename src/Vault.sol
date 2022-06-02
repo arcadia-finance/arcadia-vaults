@@ -519,7 +519,7 @@ contract Vault {
     @dev First syncs all debt to realise all unrealised debt. Fetches all the asset data and queries the
          Registry to obtain an array of values, split up according to the credit rating of the underlying assets.
   */
-  function setYearlyInterestRate() public onlyOwner {
+  function setYearlyInterestRate() external virtual onlyOwner {
     syncDebt();
     uint256 minCollValue;
     //gas: can't overflow: uint128 * uint16 << uint256

@@ -78,6 +78,8 @@ contract TokenShop is Ownable {
     _mint(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, tokenInfo.tokenTypes);
     _approve(vault, tokenInfo.tokenAddresses, tokenInfo.tokenTypes);
     IVaultPaperTrading(vault).deposit(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, tokenInfo.tokenTypes);
+
+    IVaultPaperTrading(vault).setYearlyInterestRate();
   }
 
   /**
@@ -112,6 +114,8 @@ contract TokenShop is Ownable {
     _mintERC20(stable, totalValue);
     _approveERC20(stable, vault);
     IVaultPaperTrading(vault).depositERC20(stable, totalValue);
+
+    IVaultPaperTrading(vault).setYearlyInterestRate();
   }
 
   function _mint(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) internal {

@@ -191,6 +191,23 @@ contract VaultPaperTrading is Vault {
   }
 
   /** 
+    @notice Sets the yearly interest rate of the proxy vault, in the form of a 1e18 decimal number.
+    @dev First syncs all debt to realise all unrealised debt. Fetches all the asset data and queries the
+         Registry to obtain an array of values, split up according to the credit rating of the underlying assets.
+  */
+  function setYearlyInterestRate() external override {
+    require(msg.sender == _tokenShop || msg.sender == owner, "VPT_SYIR: Not Allowed");
+    syncDebt();
+    uint256 minCollValue;
+    //gas: can't overflow: uint128 * uint16 << uint256
+    unchecked {minCollValue = uint256(debt._openDebt) * debt._collThres / 100;} 
+    (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) = generateAssetData();
+    uint256[] memory ValuesPerCreditRating = IRegistry(_registryAddress).getListOfValuesPerCreditRating(assetAddresses, assetIds, assetAmounts, debt._numeraire);
+
+    _setYearlyInterestRate(ValuesPerCreditRating, minCollValue);
+  }
+
+  /** 
     @notice Internal function to take out credit.
     @dev Syncs debt to cement unrealised debt. 
          MinCollValue is calculated without unrealised debt since it is zero.
