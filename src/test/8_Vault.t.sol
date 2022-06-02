@@ -706,7 +706,7 @@ contract vaultTests is DSTest {
     vm.startPrank(vaultOwner);
     vault.takeCredit(uint128(amountCredit));
     assetInfo.assetAmounts[0] = amountWithdraw;
-    vm.expectRevert("Cannot withdraw since the collateral value would become too low!");
+    vm.expectRevert("V_W: coll. value too low!");
     vault.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
     vm.stopPrank();
   }
@@ -777,7 +777,7 @@ contract vaultTests is DSTest {
       withdrawalTypes[i] = 1;
     }
 
-    vm.expectRevert("Cannot withdraw since the collateral value would become too low!");
+    vm.expectRevert("V_W: coll. value too low!");
     vault.withdraw(withdrawalAddresses, withdrawalIds, withdrawalAmounts, withdrawalTypes);
   }
 
