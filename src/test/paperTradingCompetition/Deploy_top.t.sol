@@ -57,7 +57,7 @@ contract DeployCoordTest is DSTest {
 
     //assets.push(DeployCoordinator.assetInfo({desc: "Wrapped Ether - Mock", symbol: "mwETH", decimals: uint8(Constants.ethDecimals), rate: 300000000000, oracleDecimals: uint8(Constants.oracleEthToUsdDecimals), quoteAsset: "ETH", baseAsset: "USD", oracleAddr: oracleEthToUsd, assetAddr: weth}));
     
-   assets.push(DeployCoordinator.assetInfo({desc: "Mocked Wrapped BTC", symbol: "mwBTC", decimals: 8, rate: 2934300000000, oracleDecimals: 8, quoteAsset: "BTC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(DeployCoordinator.assetInfo({desc: "Mocked Wrapped BTC", symbol: "mwBTC", decimals: 8, rate: 2934300000000, oracleDecimals: 8, quoteAsset: "BTC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
     assets.push(DeployCoordinator.assetInfo({desc: "Mocked USD Coin", symbol: "mUSDC", decimals: 6, rate: 100000000, oracleDecimals: 8, quoteAsset: "USDC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
     assets.push(DeployCoordinator.assetInfo({desc: "Mocked SHIBA INU", symbol: "mSHIB", decimals: 18, rate: 1179, oracleDecimals: 8, quoteAsset: "SHIB", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
     assets.push(DeployCoordinator.assetInfo({desc: "Mocked Matic Token", symbol: "mMATIC", decimals: 18, rate: 6460430, oracleDecimals: 8, quoteAsset: "MATIC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));

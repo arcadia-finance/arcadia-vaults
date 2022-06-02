@@ -358,6 +358,7 @@ contract factoryTest is Test {
   }
 
   function testOwnerSetsNewVaultInfoWithDifferentStableContractInMainRegistry(address randomStable, address logic, address stakeContract, address interestModule) public {
+    vm.assume(randomStable != address(erc20Contr));
     registryContr2 = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:randomStable, numeraireLabel:'USD', numeraireUnit:1}));
     vm.expectRevert("FTRY_SNVI:No match numeraires MR");
     factoryContr.setNewVaultInfo(address(registryContr2), logic, stakeContract, interestModule);
