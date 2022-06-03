@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.10;
 
-import "../../lib/ds-test/src/test.sol";
-import "../../lib/forge-std/src/stdlib.sol";
-import "../../lib/forge-std/src/console.sol";
-import "../../lib/forge-std/src/Vm.sol";
+import "../../lib/forge-std/src/Test.sol";
 
 import "../Factory.sol";
 import "../Proxy.sol";
@@ -24,38 +21,36 @@ import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract vaultTests is DSTest {
+
+contract vaultTests is Test {
     using stdStorage for StdStorage;
 
-    Vm internal vm = Vm(HEVM_ADDRESS);
-    StdStorage internal stdstore;
-
-    Factory internal factoryContr;
+    Factory private factoryContr;
     Vault private vault;
-    ERC20Mock internal eth;
-    ERC20Mock internal snx;
-    ERC20Mock internal link;
-    ERC20Mock internal safemoon;
-    ERC721Mock internal bayc;
-    ERC721Mock internal mayc;
-    ERC721Mock internal dickButs;
-    ERC20Mock internal wbayc;
-    ERC20Mock internal wmayc;
-    ERC1155Mock internal interleave;
-    OracleHub internal oracleHub;
-    ArcadiaOracle internal oracleEthToUsd;
-    ArcadiaOracle internal oracleLinkToUsd;
-    ArcadiaOracle internal oracleSnxToEth;
-    ArcadiaOracle internal oracleWbaycToEth;
-    ArcadiaOracle internal oracleWmaycToUsd;
-    ArcadiaOracle internal oracleInterleaveToEth;
-    MainRegistry internal mainRegistry;
-    StandardERC20Registry internal standardERC20Registry;
-    FloorERC721SubRegistry internal floorERC721SubRegistry;
-    FloorERC1155SubRegistry internal floorERC1155SubRegistry;
-    InterestRateModule internal interestRateModule;
-    Stable internal stable;
-    Liquidator internal liquidator;
+    ERC20Mock private eth;
+    ERC20Mock private snx;
+    ERC20Mock private link;
+    ERC20Mock private safemoon;
+    ERC721Mock private bayc;
+    ERC721Mock private mayc;
+    ERC721Mock private dickButs;
+    ERC20Mock private wbayc;
+    ERC20Mock private wmayc;
+    ERC1155Mock private interleave;
+    OracleHub private oracleHub;
+    ArcadiaOracle private oracleEthToUsd;
+    ArcadiaOracle private oracleLinkToUsd;
+    ArcadiaOracle private oracleSnxToEth;
+    ArcadiaOracle private oracleWbaycToEth;
+    ArcadiaOracle private oracleWmaycToUsd;
+    ArcadiaOracle private oracleInterleaveToEth;
+    MainRegistry private mainRegistry;
+    StandardERC20Registry private standardERC20Registry;
+    FloorERC721SubRegistry private floorERC721SubRegistry;
+    FloorERC1155SubRegistry private floorERC1155SubRegistry;
+    InterestRateModule private interestRateModule;
+    Stable private stable;
+    Liquidator private liquidator;
 
     address internal creatorAddress = address(1);
     address internal tokenCreatorAddress = address(2);

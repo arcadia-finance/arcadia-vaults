@@ -3,7 +3,7 @@ out/
 .env
 build/*
 node_modules
-lib/
+broadcast/
 
 # JetBrains
 .idea
