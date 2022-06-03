@@ -4,6 +4,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.4.22 <0.9.0;
 
+import "../../../lib/forge-std/src/Test.sol";
+
 import "../../../lib/ds-test/src/test.sol";
 import "../../../lib/forge-std/src/Vm.sol";
 import "../../../lib/forge-std/src/Test.sol";

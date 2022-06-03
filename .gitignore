@@ -11,3 +11,7 @@ lib/
 
 # JetBrains
 .idea
+broadcast/
+
+# Vscode
+.vscode

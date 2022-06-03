@@ -2,11 +2,7 @@
 pragma solidity >0.8.10;
 
 import "./../8_Vault.t.sol";
-
-import "../../../lib/ds-test/src/test.sol";
-
-import "../../../lib/forge-std/src/console.sol";
-import "../../../lib/forge-std/src/Vm.sol";
+import "../../../lib/forge-std/src/Test.sol";
 
 import "../../Proxy.sol";
 import "../../AssetRegistry/MainRegistry.sol";
@@ -410,7 +406,6 @@ contract VaultPaperTradingInheritedTest is vaultTests {
 }
 
 contract VaultPaperTradingNewTest is Test {
-
     using stdStorage for StdStorage;
 
     FactoryPaperTrading private factory;

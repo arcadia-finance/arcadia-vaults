@@ -4,9 +4,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.4.22 <0.9.0;
 
+import "../../../lib/forge-std/src/Test.sol";
+
 import "../../utils/Constants.sol";
 import "../fixtures/ArcadiaOracleFixture.f.sol";
-import "../../../lib/ds-test/src/test.sol";
 import "../../../lib/forge-std/src/Test.sol";
 
 contract ArcadiaOracleTest is Test {

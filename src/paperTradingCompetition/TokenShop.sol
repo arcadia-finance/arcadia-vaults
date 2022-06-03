@@ -68,7 +68,7 @@ contract TokenShop is Ownable {
              tokenAddressesLength == tokenInfo.tokenTypes.length, "TS_SNFET: Length mismatch");
 
     address vault = IFactoryPaperTrading(factory).getVaultAddress(vaultId);
-    (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
+    (uint128 openDebt,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
     address stable = IVaultPaperTrading(vault)._stable();
 
     uint256 totalValue = IMainRegistry(mainRegistry).getTotalValue(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, numeraire);
@@ -78,6 +78,10 @@ contract TokenShop is Ownable {
     _mint(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, tokenInfo.tokenTypes);
     _approve(vault, tokenInfo.tokenAddresses, tokenInfo.tokenTypes);
     IVaultPaperTrading(vault).deposit(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, tokenInfo.tokenTypes);
+
+    if (openDebt != 0) {
+      IVaultPaperTrading(vault).setYearlyInterestRate();
+    }
   }
 
   /**
@@ -102,7 +106,7 @@ contract TokenShop is Ownable {
              tokenAddressesLength == tokenInfo.tokenTypes.length, "TS_SETFN: Length mismatch");
 
     address vault = IFactoryPaperTrading(factory).getVaultAddress(vaultId);
-    (,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
+    (uint128 openDebt,,,,,uint8 numeraire) = IVaultPaperTrading(vault).debt();
     address stable = IVaultPaperTrading(vault)._stable();
 
     uint256 totalValue = IMainRegistry(mainRegistry).getTotalValue(tokenInfo.tokenAddresses, tokenInfo.tokenIds, tokenInfo.tokenAmounts, numeraire);
@@ -112,6 +116,10 @@ contract TokenShop is Ownable {
     _mintERC20(stable, totalValue);
     _approveERC20(stable, vault);
     IVaultPaperTrading(vault).depositERC20(stable, totalValue);
+
+    if (openDebt != 0) {
+      IVaultPaperTrading(vault).setYearlyInterestRate();
+    }
   }
 
   function _mint(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts, uint256[] calldata assetTypes) internal {

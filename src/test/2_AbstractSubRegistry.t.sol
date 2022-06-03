@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.10;
 
-import "../../lib/ds-test/src/test.sol";
-
-import "../../lib/forge-std/src/console.sol";
-import "../../lib/forge-std/src/Vm.sol";
+import "../../lib/forge-std/src/Test.sol";
 
 import "../mockups/ERC20SolmateMock.sol";
 import "../OracleHub.sol";
@@ -25,10 +22,9 @@ contract AbstractSubRegistryForTest is SubRegistry {
   }
 
 }
-contract AbstractSubRegistryTest is DSTest {
 
-
-  Vm private vm = Vm(HEVM_ADDRESS);
+contract AbstractSubRegistryTest is Test {
+  using stdStorage for StdStorage;
 
   AbstractSubRegistryForTest internal abstractSubRegistry;
   OracleHub private oracleHub;

@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.10;
 
-import "../../../lib/ds-test/src/test.sol";
-
-import "../../../lib/forge-std/src/console.sol";
-import "../../../lib/forge-std/src/Vm.sol";
+import "../../../lib/forge-std/src/Test.sol";
 
 import "../../paperTradingCompetition/FactoryPaperTrading.sol";
 import "../../Proxy.sol";
@@ -24,10 +21,8 @@ import "../../utils/Constants.sol";
 import "../../paperTradingCompetition/TokenShop.sol";
 import "../fixtures/ArcadiaOracleFixture.f.sol";
 
-contract TokenShopTest is DSTest {
-
-
-  Vm private vm = Vm(HEVM_ADDRESS);  
+contract TokenShopTest is Test {
+  using stdStorage for StdStorage;
 
   FactoryPaperTrading private factory;
   VaultPaperTrading private vault;

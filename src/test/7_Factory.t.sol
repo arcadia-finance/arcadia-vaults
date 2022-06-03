@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.10;
 
-import "../../lib/ds-test/src/test.sol";
-
-import "../../lib/forge-std/src/console.sol";
-import "../../lib/forge-std/src/Vm.sol";
 import "../../lib/forge-std/src/Test.sol";
 
 import "../Factory.sol";
@@ -36,6 +32,7 @@ contract factoryTest is Test {
     MainRegistry internal registryContr2;
     ERC20Mock internal erc20Contr;
     address internal unprivilegedAddress1 = address(5);
+
 
     uint256[] emptyList = new uint256[](0);
 

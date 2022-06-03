@@ -8,9 +8,7 @@ import "../../paperTradingCompetition/Deploy/contracts/Deploy_three.sol";
 import "../../paperTradingCompetition/Deploy/contracts/Deploy_four.sol";
 
 import "../../../lib/ds-test/src/test.sol";
-
-import "../../../lib/forge-std/src/console.sol";
-import "../../../lib/forge-std/src/Vm.sol";
+import "../../../lib/forge-std/src/Test.sol";
 import "../../utils/StringHelpers.sol";
 
 interface IVaultValue {
@@ -24,10 +22,8 @@ interface Itest {
   function assets(uint256) external view returns (DeployCoordinator.assetInfo memory);
 }
 
-contract DeployCoordTest is DSTest {
-
-
-  Vm private vm = Vm(HEVM_ADDRESS);  
+contract DeployCoordTest is Test {
+  using stdStorage for StdStorage;
 
   DeployCoordinator public deployCoordinator;
   DeployContractsOne public deployContractsOne;

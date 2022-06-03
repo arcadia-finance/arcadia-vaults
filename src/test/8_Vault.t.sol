@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.10;
 
-import "../../lib/ds-test/src/test.sol";
-
-import "../../lib/forge-std/src/console.sol";
-import "../../lib/forge-std/src/Vm.sol";
 import "../../lib/forge-std/src/Test.sol";
 
 import "../Factory.sol";
@@ -82,8 +78,8 @@ contract vaultTests is Test {
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
-    // FIXTURES
-    ArcadiaOracleFixture internal arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
+  // FIXTURES
+  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
 
     //this is a before
@@ -701,7 +697,7 @@ contract vaultTests is Test {
         vm.startPrank(vaultOwner);
         vault.takeCredit(uint128(amountCredit));
         assetInfo.assetAmounts[0] = amountWithdraw;
-        vm.expectRevert("Cannot withdraw since the collateral value would become too low!");
+        vm.expectRevert("V_W: coll. value too low!");
         vault.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
         vm.stopPrank();
     }
@@ -774,7 +770,7 @@ contract vaultTests is Test {
             withdrawalTypes[i] = 1;
         }
 
-        vm.expectRevert("Cannot withdraw since the collateral value would become too low!");
+        vm.expectRevert("V_W: coll. value too low!");
         vault.withdraw(withdrawalAddresses, withdrawalIds, withdrawalAmounts, withdrawalTypes);
     }
 
