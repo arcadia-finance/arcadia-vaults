@@ -23,14 +23,14 @@ interface IVaultExtra {
 contract factoryTest is Test {
   using stdStorage for StdStorage;
 
-  Factory private factoryContr;
-  Vault private vaultContr;
-  InterestRateModule private interestContr;
-  Liquidator private liquidatorContr;
-  MainRegistry private registryContr;
-  MainRegistry private registryContr2;
-  ERC20Mock private erc20Contr;
-  address private unprivilegedAddress1 = address(5);
+  Factory internal factoryContr;
+  Vault internal vaultContr;
+  InterestRateModule internal interestContr;
+  Liquidator internal liquidatorContr;
+  MainRegistry internal registryContr;
+  MainRegistry internal registryContr2;
+  ERC20Mock internal erc20Contr;
+  address internal unprivilegedAddress1 = address(5);
 
   uint256[] emptyList = new uint256[](0);
 
