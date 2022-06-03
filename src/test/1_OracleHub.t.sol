@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.10;
 
-import "../../lib/ds-test/src/test.sol";
-import "../../lib/forge-std/src/stdlib.sol";
-import "../../lib/forge-std/src/console.sol";
-import "../../lib/forge-std/src/Vm.sol";
+import "../../lib/forge-std/src/Test.sol";
 
 import "../mockups/ERC20SolmateMock.sol";
 import "../OracleHub.sol";
@@ -12,11 +9,8 @@ import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract OracleHubTest is DSTest {
+contract OracleHubTest is Test {
   using stdStorage for StdStorage;
-
-  Vm private vm = Vm(HEVM_ADDRESS);
-  StdStorage private stdstore;
 
   ERC20Mock private eth;
   ERC20Mock private snx;
