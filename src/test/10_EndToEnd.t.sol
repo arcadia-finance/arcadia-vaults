@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.10;
 
-import "../../lib/ds-test/src/test.sol";
-import "../../lib/forge-std/src/stdlib.sol";
-import "../../lib/forge-std/src/console.sol";
-import "../../lib/forge-std/src/Vm.sol";
+import "../../lib/forge-std/src/Test.sol";
 
 import "../Factory.sol";
 import "../Proxy.sol";
@@ -22,13 +19,11 @@ import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
-import "./fixtures/ArcadiaOracleFixture.f.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol"; 
 
-contract EndToEndTest is DSTest {
+
+contract EndToEndTest is Test {
     using stdStorage for StdStorage;
-
-    Vm private vm = Vm(HEVM_ADDRESS);
-    StdStorage private stdstore;
 
     Factory private factory;
     Vault private vault;
@@ -88,21 +83,22 @@ contract EndToEndTest is DSTest {
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
+
     //this is a before
     constructor() {
         vm.startPrank(tokenCreatorAddress);
 
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        eth.mint(tokenCreatorAddress, 200000 * 10 ** Constants.ethDecimals);
+        eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
         snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
-        snx.mint(tokenCreatorAddress, 200000 * 10 ** Constants.snxDecimals);
+        snx.mint(tokenCreatorAddress, 200000 * 10**Constants.snxDecimals);
 
         link = new ERC20Mock("LINK Mock", "mLINK", uint8(Constants.linkDecimals));
-        link.mint(tokenCreatorAddress, 200000 * 10 ** Constants.linkDecimals);
+        link.mint(tokenCreatorAddress, 200000 * 10**Constants.linkDecimals);
 
         safemoon = new ERC20Mock("Safemoon Mock", "mSFMN", uint8(Constants.safemoonDecimals));
-        safemoon.mint(tokenCreatorAddress, 200000 * 10 ** Constants.safemoonDecimals);
+        safemoon.mint(tokenCreatorAddress, 200000 * 10**Constants.safemoonDecimals);
 
         bayc = new ERC721Mock("BAYC Mock", "mBAYC");
         bayc.mint(tokenCreatorAddress, 0);
@@ -117,7 +113,7 @@ contract EndToEndTest is DSTest {
         dickButs.mint(tokenCreatorAddress, 0);
 
         wbayc = new ERC20Mock("wBAYC Mock", "mwBAYC", uint8(Constants.wbaycDecimals));
-        wbayc.mint(tokenCreatorAddress, 100000 * 10 ** Constants.wbaycDecimals);
+        wbayc.mint(tokenCreatorAddress, 100000 * 10**Constants.wbaycDecimals);
 
         interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
         interleave.mint(tokenCreatorAddress, 1, 100000);
@@ -127,20 +123,20 @@ contract EndToEndTest is DSTest {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
-        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD", rateLinkToUsd);
-        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH", rateSnxToEth);
-        oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH", rateWbaycToEth);
-        oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WMAYC / USD", rateWmaycToUsd);
-        oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH", rateInterleaveToEth);
+        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
+        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals),  "LINK / USD");
+        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals),  "SNX / ETH");
+        oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals),  "WBAYC / ETH");
+        oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals),  "WBAYC / USD");
+        oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals),  "INTERLEAVE / ETH");
 
         vm.startPrank(creatorAddress);
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire : 0, quoteAsset : 'ETH', baseAsset : 'USD', oracleAddress : address(oracleEthToUsd), quoteAssetAddress : address(eth), baseAssetIsNumeraire : true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleLinkToUsdUnit), baseAssetNumeraire : 0, quoteAsset : 'LINK', baseAsset : 'USD', oracleAddress : address(oracleLinkToUsd), quoteAssetAddress : address(link), baseAssetIsNumeraire : true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleSnxToEthUnit), baseAssetNumeraire : 1, quoteAsset : 'SNX', baseAsset : 'ETH', oracleAddress : address(oracleSnxToEth), quoteAssetAddress : address(snx), baseAssetIsNumeraire : true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleWbaycToEthUnit), baseAssetNumeraire : 1, quoteAsset : 'WBAYC', baseAsset : 'ETH', oracleAddress : address(oracleWbaycToEth), quoteAssetAddress : address(wbayc), baseAssetIsNumeraire : true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleWmaycToUsdUnit), baseAssetNumeraire : 0, quoteAsset : 'WMAYC', baseAsset : 'USD', oracleAddress : address(oracleWmaycToUsd), quoteAssetAddress : address(wmayc), baseAssetIsNumeraire : true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleInterleaveToEthUnit), baseAssetNumeraire : 1, quoteAsset : 'INTERLEAVE', baseAsset : 'ETH', oracleAddress : address(oracleInterleaveToEth), quoteAssetAddress : address(interleave), baseAssetIsNumeraire : true}));
+        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'ETH', baseAsset:'USD', oracleAddress:address(oracleEthToUsd), quoteAssetAddress:address(eth), baseAssetIsNumeraire: true}));
+        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleLinkToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'LINK', baseAsset:'USD', oracleAddress:address(oracleLinkToUsd), quoteAssetAddress:address(link), baseAssetIsNumeraire: true}));
+        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthUnit), baseAssetNumeraire: 1, quoteAsset:'SNX', baseAsset:'ETH', oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
+        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWbaycToEthUnit), baseAssetNumeraire: 1, quoteAsset:'WBAYC', baseAsset:'ETH', oracleAddress:address(oracleWbaycToEth), quoteAssetAddress:address(wbayc), baseAssetIsNumeraire: true}));
+        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWmaycToUsdUnit), baseAssetNumeraire: 0, quoteAsset:'WMAYC', baseAsset:'USD', oracleAddress:address(oracleWmaycToUsd), quoteAssetAddress:address(wmayc), baseAssetIsNumeraire: true}));
+        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleInterleaveToEthUnit), baseAssetNumeraire: 1, quoteAsset:'INTERLEAVE', baseAsset:'ETH', oracleAddress:address(oracleInterleaveToEth), quoteAssetAddress:address(interleave), baseAssetIsNumeraire: true}));
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
@@ -189,9 +185,9 @@ contract EndToEndTest is DSTest {
         //emit log_named_address("oracleEthToUsdArr[0]", oracleEthToUsdArr[0]);
 
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit : 0, assetAddress : 0x0000000000000000000000000000000000000000, numeraireToUsdOracle : 0x0000000000000000000000000000000000000000, stableAddress : address(stable), numeraireLabel : 'USD', numeraireUnit : 1}));
+        mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stable), numeraireLabel:'USD', numeraireUnit:1}));
         uint256[] memory emptyList = new uint256[](0);
-        mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit : uint64(10 ** Constants.oracleEthToUsdDecimals), assetAddress : address(eth), numeraireToUsdOracle : address(oracleEthToUsd), stableAddress : address(stable), numeraireLabel : 'ETH', numeraireUnit : uint64(10 ** Constants.ethDecimals)}), emptyList);
+        mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stable), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
 
         standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
         floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
@@ -205,11 +201,11 @@ contract EndToEndTest is DSTest {
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
 
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleEthToUsdArr, assetUnit : uint64(10 ** Constants.ethDecimals), assetAddress : address(eth)}), assetCreditRatings);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleLinkToUsdArr, assetUnit : uint64(10 ** Constants.linkDecimals), assetAddress : address(link)}), assetCreditRatings);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleSnxToEthEthToUsd, assetUnit : uint64(10 ** Constants.snxDecimals), assetAddress : address(snx)}), assetCreditRatings);
+        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), assetCreditRatings);
+        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleLinkToUsdArr, assetUnit: uint64(10**Constants.linkDecimals), assetAddress: address(link)}), assetCreditRatings);
+        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleSnxToEthEthToUsd, assetUnit: uint64(10**Constants.snxDecimals), assetAddress: address(snx)}), assetCreditRatings);
 
-        floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses : oracleWbaycToEthEthToUsd, idRangeStart : 0, idRangeEnd : type(uint256).max, assetAddress : address(bayc)}), assetCreditRatings);
+        floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWbaycToEthEthToUsd, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(bayc)}), assetCreditRatings);
 
         liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
         vm.stopPrank();
@@ -240,6 +236,15 @@ contract EndToEndTest is DSTest {
 
         vm.prank(address(proxy));
         stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
+
+        vm.startPrank(oracleOwner);
+        oracleEthToUsd.transmit(int256(rateEthToUsd));
+        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
+        oracleSnxToEth.transmit(int256(rateSnxToEth));
+        oracleWbaycToEth.transmit(int256(rateWbaycToEth));
+        oracleWmaycToUsd.transmit(int256(rateWmaycToUsd));
+        oracleInterleaveToEth.transmit(int256(rateInterleaveToEth));
+        vm.stopPrank();
 
         vm.startPrank(vaultOwner);
         bayc.setApprovalForAll(address(proxy), true);

@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.10;
 
-import "../../lib/ds-test/src/test.sol";
-import "../../lib/forge-std/src/stdlib.sol";
-import "../../lib/forge-std/src/console.sol";
-import "../../lib/forge-std/src/Vm.sol";
+import "../../lib/forge-std/src/Test.sol";
 
 import "../Factory.sol";
 import "../Proxy.sol";
@@ -24,11 +21,9 @@ import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract vaultTests is DSTest {
-    using stdStorage for StdStorage;
 
-    Vm internal vm = Vm(HEVM_ADDRESS);
-    StdStorage internal stdstore;
+contract vaultTests is Test {
+    using stdStorage for StdStorage;
 
     Factory internal factoryContr;
     Vault private vault;

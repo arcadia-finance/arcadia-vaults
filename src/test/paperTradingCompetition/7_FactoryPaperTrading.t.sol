@@ -114,11 +114,8 @@ contract FactoryPaperTradingInheritedTest is factoryTest {
 
 }
 
-contract FactoryPaperTradingNewTest is DSTest {
+contract FactoryPaperTradingNewTest is Test {
     using stdStorage for StdStorage;
-
-    Vm private vm = Vm(HEVM_ADDRESS);
-    StdStorage private stdstore;
 
     MainRegistry private mainRegistry;
     FactoryPaperTrading internal factoryContr;

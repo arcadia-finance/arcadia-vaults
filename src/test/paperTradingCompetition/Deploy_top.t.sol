@@ -8,9 +8,7 @@ import "../../paperTradingCompetition/Deploy/contracts/Deploy_three.sol";
 import "../../paperTradingCompetition/Deploy/contracts/Deploy_four.sol";
 
 import "../../../lib/ds-test/src/test.sol";
-import "../../../lib/forge-std/src/stdlib.sol";
-import "../../../lib/forge-std/src/console.sol";
-import "../../../lib/forge-std/src/Vm.sol";
+import "../../../lib/forge-std/src/Test.sol";
 import "../../utils/StringHelpers.sol";
 
 interface IVaultValue {
@@ -24,11 +22,8 @@ interface Itest {
   function assets(uint256) external view returns (DeployCoordinator.assetInfo memory);
 }
 
-contract DeployCoordTest is DSTest {
+contract DeployCoordTest is Test {
   using stdStorage for StdStorage;
-
-  Vm private vm = Vm(HEVM_ADDRESS);  
-  StdStorage private stdstore;
 
   DeployCoordinator public deployCoordinator;
   DeployContractsOne public deployContractsOne;
@@ -58,7 +53,7 @@ contract DeployCoordTest is DSTest {
 
     //assets.push(DeployCoordinator.assetInfo({desc: "Wrapped Ether - Mock", symbol: "mwETH", decimals: uint8(Constants.ethDecimals), rate: 300000000000, oracleDecimals: uint8(Constants.oracleEthToUsdDecimals), quoteAsset: "ETH", baseAsset: "USD", oracleAddr: oracleEthToUsd, assetAddr: weth}));
     
-   assets.push(DeployCoordinator.assetInfo({desc: "Mocked Wrapped BTC", symbol: "mwBTC", decimals: 8, rate: 2934300000000, oracleDecimals: 8, quoteAsset: "BTC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(DeployCoordinator.assetInfo({desc: "Mocked Wrapped BTC", symbol: "mwBTC", decimals: 8, rate: 2934300000000, oracleDecimals: 8, quoteAsset: "BTC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
     assets.push(DeployCoordinator.assetInfo({desc: "Mocked USD Coin", symbol: "mUSDC", decimals: 6, rate: 100000000, oracleDecimals: 8, quoteAsset: "USDC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
     assets.push(DeployCoordinator.assetInfo({desc: "Mocked SHIBA INU", symbol: "mSHIB", decimals: 18, rate: 1179, oracleDecimals: 8, quoteAsset: "SHIB", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
     assets.push(DeployCoordinator.assetInfo({desc: "Mocked Matic Token", symbol: "mMATIC", decimals: 18, rate: 6460430, oracleDecimals: 8, quoteAsset: "MATIC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
