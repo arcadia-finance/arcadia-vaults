@@ -102,19 +102,18 @@ contract DeployScript is DSTest, Script {
   //   vm.stopBroadcast();
   // }
 
-  function run() public {
-    vm.startBroadcast();
-    start();
+  // function run() public {
+  //   start();
 
-    vm.stopBroadcast();
-  }
+  // }
 
   //1. start()
   //2. deployer.storeAssets()
   // [[8, 8, "2934300000000", "Mocked Wrapped BTC", "mwBTC", "BTC", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [6, 8, "100000000", "Mocked USD Coin", "mUSDC", "USDC", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "1179", "Mocked SHIBA INU", "mSHIB", "SHIB", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "6460430", "Mocked Matic Token", "mMATIC", "MATIC", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [8, 8, "1872500", "Mocked Cronos Coin", "mCRO", "CRO", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "567000000", "Mocked Uniswap", "mUNI", "UNI", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "706000000", "Mocked ChainLink Token", "mLINK", "LINK", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "2976000000", "Mocked FTX Token", "mFTT", "FTT", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "765000000", "Mocked ApeCoin", "mAPE", "APE", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [8, 8, "130000000", "Mocked The Sandbox", "mSAND", "SAND", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "103000000", "Mocked Decentraland", "mMANA", "MANA", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "2107000000", "Mocked Axie Infinity", "mAXS", "AXS", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "9992000000", "Mocked Aave", "mAAVE", "AAVE", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "4447550", "Mocked Fantom", "mFTM", "FTM", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [6, 8, "1676000000", "Mocked KuCoin Token ", "mKCS", "KCS", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "131568000000", "Mocked Maker", "mMKR", "MKR", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "100000000", "Mocked Dai", "mDAI", "DAI", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "1028000000", "Mocked Convex Finance", "mCVX", "CVX", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "128000000", "Mocked Curve DAO Token", "mCRV", "CRV", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "5711080", "Mocked Loopring", "mLRC", "LRC", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "3913420", "Mocked BAT", "mBAT", "BAT", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "13226", "Mocked Amp", "mAMP", "AMP", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "6943000000", "Mocked Compound", "mCOMP", "COMP", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "9926070", "Mocked 1INCH Token", "m1INCH", "1INCH", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "21117000000", "Mocked Gnosis", "mGNO", "GNO", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "257000000", "Mocked OMG Network", "mOMG", "OMG", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "138000000", "Mocked Bancor", "mBNT", "BNT", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [4, 8, "7629100", "Mocked Celsius Network", "mCEL", "CEL", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "392627", "Mocked Ankr Network", "mANKR", "ANKR", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "721000000", "Mocked Frax Share ", "mFXS", "FXS", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "9487620", "Mocked Immutable X", "mIMX", "IMX", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "1238000000", "Mocked Ethereum Name Service ", "mENS", "ENS", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "166000000", "Mocked SushiToken", "mSUSHI", "SUSHI", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "206000000", "Mocked Mocked dYdX", "mDYDX", "DYDX", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [18, 8, "186335", "Mocked CelerToken", "mCELR", "CEL", "USD", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "48950000000000000000", "Mocked CRYPTOPUNKS", "mC", "PUNK", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "93990000000000000000", "Mocked BoredApeYachtClub", "mBAYC", "BAYC", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "18850000000000000000", "Mocked MutantApeYachtClub", "mMAYC", "MAYC", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "14400000000000000000", "Mocked CloneX", "mCloneX", "CloneX", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "1100000000000000000", "Mocked Loot", "mLOOT", "LOOT", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "1630000000000000000", "Mocked Sandbox's LANDs", "mLAND", "LAND", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "3490000000000000000", "Mocked Cool Cats", "mCOOL", "COOL", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "12700000000000000000", "Mocked Azuki", "mAZUKI", "AZUKI", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "12690000000000000000", "Mocked Doodles", "mDOODLE", "DOODLE", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "4600000000000000000", "Mocked Meebits", "mMEEBIT", "MEEBIT", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "2760000000000000000", "Mocked CyberKongz", "mKONGZ", "KONGZ", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "7200000000000000000", "Mocked BoredApeKennelClub", "mBAKC", "BAKC", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "2000000000000000000", "Mocked Decentraland LAND", "mLAND", "LAND", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "380000000000000000", "Mocked Timeless", "mTMLS", "TMLS", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], [0, 18, "10500000000000000000", "Mocked Treeverse", "mTRV", "TRV", "ETH", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"]]
   //3  continue in order
 
-  function start() public {
+  function run() public {
+    vm.startBroadcast();
     factory = new FactoryPaperTrading();
     factory.setBaseURI("ipfs://");
 
@@ -167,8 +166,10 @@ contract DeployScript is DSTest, Script {
     factory.setTokenShop(address(tokenShop));
     liquidator.setFactory(address(factory));
     mainRegistry.setFactory(address(factory));
+    vm.stopBroadcast();
 
     storeAssets();
+
 
     deployERC20Contracts();
     deployERC721Contracts();
@@ -185,6 +186,7 @@ contract DeployScript is DSTest, Script {
   // }
 
   function deployERC20Contracts() public {
+    vm.startBroadcast();
     address newContr;
     assetInfo memory asset;
     for (uint i; i < assets.length; ++i) {
@@ -198,9 +200,11 @@ contract DeployScript is DSTest, Script {
        }
       
     }
+    vm.stopBroadcast();
   }
 
   function deployERC721Contracts() public {
+    vm.startBroadcast();
     address newContr;
     assetInfo memory asset;
     for (uint i; i < assets.length; ++i) {
@@ -212,9 +216,11 @@ contract DeployScript is DSTest, Script {
       else { }
       
     }
+    vm.stopBroadcast();
   }
 
   function deployOracles() public {
+    vm.startBroadcast();
     address newContr;
     assetInfo memory asset;
     for (uint i; i < assets.length; ++i) {
@@ -229,18 +235,23 @@ contract DeployScript is DSTest, Script {
 
     uint256[] memory emptyList = new uint256[](0);
     mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(weth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stableEth), numeraireLabel:'ETH', numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
+    vm.stopBroadcast();
 
   }
 
   function setOracleAnswers() public {
+    vm.startBroadcast();
     assetInfo memory asset;
     for (uint i; i < assets.length; ++i) {
       asset = assets[i];
       ArcadiaOracle(asset.oracleAddr).transmit(int256(uint256(asset.rate)));
     }
+    vm.stopBroadcast();
   }
 
   function addOracles() public {
+    vm.startBroadcast();
+
     assetInfo memory asset;
     uint8 baseAssetNum;
     for (uint i; i < assets.length; ++i) {
@@ -256,10 +267,13 @@ contract DeployScript is DSTest, Script {
 
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit: uint64(Constants.oracleStableToUsdUnit), baseAssetNumeraire: 0, quoteAsset: "maUSD", baseAsset: "USD", oracleAddress: address(oracleStableUsdToUsd), quoteAssetAddress: address(stableUsd), baseAssetIsNumeraire: true}));
     oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit: uint64(Constants.oracleStableEthToEthUnit), baseAssetNumeraire: 1, quoteAsset: "maETH", baseAsset: "ETH", oracleAddress: address(oracleStableEthToEth), quoteAssetAddress: address(stableEth), baseAssetIsNumeraire: true}));
+    vm.stopBroadcast();
 
   }
 
   function setAssetInformation() public {
+    vm.startBroadcast();
+
     assetInfo memory asset;
     uint256[] memory emptyList = new uint256[](0);
     address[] memory genOracleArr1 = new address[](1);
@@ -301,7 +315,7 @@ contract DeployScript is DSTest, Script {
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(weth)}), emptyList);
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableUsdToUsdArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stableUsd)}), emptyList);
     standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableEthToUsdArr, assetUnit: uint64(10**Constants.stableEthDecimals), assetAddress: address(stableEth)}), emptyList);
-
+    vm.stopBroadcast();
 
   }
 
