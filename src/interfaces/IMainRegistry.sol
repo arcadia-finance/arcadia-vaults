@@ -12,6 +12,12 @@ interface IMainRegistry {
               uint256[] calldata _assetAmounts,
               uint256 numeraire
             ) external view returns (uint256);
+  function getListOfValuesPerAsset(
+              address[] calldata _assetAddresses, 
+              uint256[] calldata _assetIds,
+              uint256[] calldata _assetAmounts,
+              uint256 numeraire
+            ) external view returns (uint256[] memory);
   function factoryAddress() external view returns (address);
   function numeraireToInformation(uint256 numeraire) external view returns (uint64, uint64, address, address, address, string memory);
 }
