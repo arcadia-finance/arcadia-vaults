@@ -4,16 +4,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.4.22 <0.9.0;
 
+import "../../../lib/forge-std/src/Test.sol";
+
 import "../../../lib/ds-test/src/test.sol";
 import "../../../lib/forge-std/src/Vm.sol";
 import "../../utils/Constants.sol";
 import "../../ArcadiaOracle.sol";
 
 
-contract ArcadiaOracleFixture is DSTest {
-
-    Vm private vm = Vm(HEVM_ADDRESS);
-//    ArcadiaOracle private oracle;
+contract ArcadiaOracleFixture is Test {
 
     uint8 public defaultDecimals = uint8(18);
 
