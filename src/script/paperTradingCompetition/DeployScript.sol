@@ -29,6 +29,7 @@ import "../../utils/Constants.sol";
 import "../../utils/Strings.sol";
 import "../../utils/StringHelpers.sol";
 
+import "./helper.sol";
 
 
 contract DeployScript is DSTest, Script {
@@ -54,6 +55,8 @@ contract DeployScript is DSTest, Script {
   ERC20PaperTrading public weth;
 
   ArcadiaOracle public oracleEthToUsd;
+
+  HelperContract public helper;
 
   address private creatorAddress = address(1);
   address private tokenCreatorAddress = address(2);
@@ -177,6 +180,24 @@ contract DeployScript is DSTest, Script {
     setOracleAnswers();
     addOracles();
     setAssetInformation();
+
+    vm.startBroadcast();
+    helper = new HelperContract();
+    helper.storeAddresses(HelperContract.HelperAddresses({
+                          factory: address(factory),
+                          vaultLogic: address(vault),
+                          mainReg: address(mainRegistry),
+                          erc20sub: address(standardERC20Registry),
+                          erc721sub: address(floorERC721Registry),
+                          oracleHub: address(oracleHub),
+                          irm: address(interestRateModule),
+                          liquidator: address(liquidator),
+                          stableUsd: address(stableUsd),
+                          stableEth: address(stableEth),
+                          weth: address(weth),
+                          tokenShop: address(tokenShop)}
+                          ));
+    vm.stopBroadcast();
 
   }
 
