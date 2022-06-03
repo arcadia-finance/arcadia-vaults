@@ -4,10 +4,7 @@ out/
 build/*
 node_modules
 node_modules
-lib/ds-test/
-lib/*
-broadcast/*
-lib/
+broadcast/
 
 # JetBrains
 .idea
