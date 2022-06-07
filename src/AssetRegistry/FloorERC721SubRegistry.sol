@@ -74,7 +74,7 @@ contract FloorERC721SubRegistry is SubRegistry {
   function getAssetInformation(address asset) external view returns (uint256, uint256, address, address[] memory) {
     return (assetToInformation[asset].idRangeStart, assetToInformation[asset].idRangeEnd, assetToInformation[asset].assetAddress, assetToInformation[asset].oracleAddresses);
   }
-
+  
   /**
    * @notice Checks for a token address and the corresponding Id if it is white-listed
    * @param assetAddress The address of the asset
