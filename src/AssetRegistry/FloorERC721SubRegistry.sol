@@ -63,6 +63,18 @@ contract FloorERC721SubRegistry is SubRegistry {
   }
 
   /**
+   * @notice Returns the information that is stored in the Sub-registry for a given asset
+   * @dev struct is not taken into memory; saves 6613 gas
+   * @param asset The Token address of the asset
+   * @return assetDecimals The number of decimals of the asset
+   * @return assetAddress The Token address of the asset
+   * @return oracleAddresses The list of addresses of the oracles to get the exchange rate of the asset in USD
+   */
+  function getAssetInformation(address asset) external view returns (uint256, uint256, address, address[] memory) {
+    return (assetToInformation[asset].idRangeStart, assetToInformation[asset].idRangeEnd, assetToInformation[asset].assetAddress, assetToInformation[asset].oracleAddresses);
+  }
+
+  /**
    * @notice Checks for a token address and the corresponding Id if it is white-listed
    * @param assetAddress The address of the asset
    * @param assetId The Id of the asset

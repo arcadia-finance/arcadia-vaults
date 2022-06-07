@@ -19,7 +19,7 @@ interface ISubReg20 {
         address assetAddress;
         address[] oracleAddresses;
     }
-    function assetToInformation(address) external view returns (AssetInformation memory);
+    function getAssetInformation(address asset) external view returns (uint64, address, address[] memory);
 }
 
 interface ISubReg721 {
@@ -29,7 +29,7 @@ interface ISubReg721 {
         address assetAddress;
         address[] oracleAddresses;
     }
-    function assetToInformation(address) external view returns (AssetInformation memory);
+    function getAssetInformation(address) external view returns (uint256, uint256, address, address[] memory);
 }
 
 interface IERC {
@@ -88,32 +88,38 @@ contract HelperContract {
         address[] memory whitelisted = IReg(helperAddresses.mainReg).getWhiteList();
         address subreg;
         assetInfo[] memory assetInfos = new assetInfo[](whitelisted.length);
-        assetInfo memory tempAssetInfo;
+        //assetInfo memory tempAssetInfo;
         address[] memory assetAddrs = new address[](1);
         uint256[] memory assetIds = new uint256[](1);
         uint256[] memory assetAmts = new uint256[](1);
 
+        uint64 tempAssetUnit;
+        address tempAssetAddress;
+        address[] memory tempOracleAddresses;
+
         for (uint256 i; i < whitelisted.length; i++) {
+            assetInfo memory tempAssetInfo;
             tempAssetInfo.assetAddr = whitelisted[i];
             subreg = IReg(helperAddresses.mainReg).assetToSubRegistry(whitelisted[i]);
 
             if (subreg == helperAddresses.erc20sub) {
-                ISubReg20.AssetInformation memory info = ISubReg20(subreg).assetToInformation(whitelisted[i]);
+                (tempAssetUnit, tempAssetAddress, tempOracleAddresses) = ISubReg20(subreg).getAssetInformation(whitelisted[i]);
                 tempAssetInfo.assetType = 0;
-                tempAssetInfo.assetUnits = info.assetUnit;
-                tempAssetInfo.oracleAddresses = info.oracleAddresses;
+                tempAssetInfo.assetUnits = tempAssetUnit;
+                tempAssetInfo.oracleAddresses = tempOracleAddresses;
                 assetAddrs[0] = whitelisted[i];
                 assetIds[0] = 0;
-                assetAmts[0] = info.assetUnit;
+                assetAmts[0] = tempAssetUnit;
 
                 tempAssetInfo.ratePerUnitUsd = IReg(helperAddresses.mainReg).getTotalValue(assetAddrs, assetIds, assetAmts, 0);
                 tempAssetInfo.ratePerUnitEth = IReg(helperAddresses.mainReg).getTotalValue(assetAddrs, assetIds, assetAmts, 1);
 
             }
             else if (subreg == helperAddresses.erc721sub) {
-                ISubReg721.AssetInformation memory info = ISubReg721(subreg).assetToInformation(whitelisted[i]);
+                //require(false, string(abi.encode(whitelisted[i])));
+                (,,,address[] memory oracleAddresses) = ISubReg721(subreg).getAssetInformation(whitelisted[i]);
                 tempAssetInfo.assetType = 1;
-                tempAssetInfo.oracleAddresses = info.oracleAddresses;
+                tempAssetInfo.oracleAddresses = oracleAddresses;
                 assetAddrs[0] = whitelisted[i];
                 assetIds[0] = 1;
                 assetAmts[0] = 1;
