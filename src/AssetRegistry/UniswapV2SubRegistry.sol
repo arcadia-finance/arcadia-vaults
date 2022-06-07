@@ -6,6 +6,7 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "./AbstractSubRegistry.sol";
 import "../interfaces/IUniswapV2Pair.sol";
+import "../interfaces/IUniswapV2Factory.sol";
 import {FixedPointMathLib} from '../utils/FixedPointMathLib.sol';
 
 /** 
@@ -19,6 +20,8 @@ contract UniswapV2SubRegistry is SubRegistry {
   using FixedPointMathLib for uint256;
 
   uint256 public constant poolUnit = 1000000000000000000; //All Uniswap V2 pair-tokens have 18 decimals
+  address public immutable uniswapV2Factory;
+
   struct AssetInformation {
     uint64 token0Unit;
     uint64 token1Unit;
@@ -31,10 +34,13 @@ contract UniswapV2SubRegistry is SubRegistry {
 
   /**
    * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and of the Oracle-Hub
-   * @param mainRegistry The address of the Main-registry
-   * @param oracleHub The address of the Oracle-Hub 
+   * @param _mainRegistry The address of the Main-registry
+   * @param _oracleHub The address of the Oracle-Hub 
+   * @param _uniswapV2Factory The factory for Uniswap V2 pairs
    */
-  constructor (address mainRegistry, address oracleHub) SubRegistry(mainRegistry, oracleHub) {}
+  constructor (address _mainRegistry, address _oracleHub, address _uniswapV2Factory) SubRegistry(_mainRegistry, _oracleHub) {
+      uniswapV2Factory = _uniswapV2Factory;
+  }
 
   /**
    * @notice Returns the value of a certain asset, denominated in a given Numeraire
@@ -47,15 +53,20 @@ contract UniswapV2SubRegistry is SubRegistry {
     address[] memory tokens = new address[](2);
     tokens[0] = assetToInformation[getValueInput.assetAddress].token0;
     tokens[1] = assetToInformation[getValueInput.assetAddress].token1;
-    uint256[] memory tokenUnits = new uint256[](2);
-    tokenUnits[0] = assetToInformation[getValueInput.assetAddress].token0Unit;
-    tokenUnits[1] = assetToInformation[getValueInput.assetAddress].token1Unit;
+    uint256[] memory tokenAmounts = new uint256[](2);
+    //To calculate the liquidity value after arbitrage, what matters is the ratio of the price of token0 compared to the price token1
+    //Hence we need to use the true price for an equal amount of tokens, we use 1 WAD (10**18) to guarantee precision
+    tokenAmounts[0] = FixedPointMathLib.WAD;
+    tokenAmounts[1] = FixedPointMathLib.WAD;
 
-    uint256[] memory tokenRates = IMainRegistry(oracleHub).getListOfValuesPerAsset(tokens, new uint256[](2), tokenUnits, getValueInput.numeraire);
+    uint256[] memory tokenRates = IMainRegistry(oracleHub).getListOfValuesPerAsset(tokens, new uint256[](2), tokenAmounts, getValueInput.numeraire);
 
-    uint256 totalSupply = IUniswapV2Pair(assetToInformation[getValueInput.assetAddress].pair).totalSupply();
-    (uint256 token0Reserve, uint256 token1Reserve, ) = IUniswapV2Pair(assetToInformation[getValueInput.assetAddress].pair).getReserves();
+    (uint256 tokenAAmount) = getLiquidityValueAfterArbitrageToPrice(assetToInformation[getValueInput.assetAddress].pair, tokenRates[0], tokenRates[1], getValueInput.assetAmount);
+    //Since Uniswap V2 uses 50/50 pools, it is sufficient to calculate the value of token 0 and multiply with 2 to get the total value of the liquidity position
+    //The token rate is 
+    valueInNumeraire = 2 * FixedPointMathLib.mulDivDown(tokenAAmount, tokenRates[0], FixedPointMathLib.WAD);
 
+    return(0, valueInNumeraire);
   }
 
     // computes the direction and magnitude of the profit-maximizing trade
@@ -65,32 +76,30 @@ contract UniswapV2SubRegistry is SubRegistry {
         uint256 reserveA,
         uint256 reserveB
     ) pure internal returns (bool aToB, uint256 amountIn) {
-        aToB = reserveA.mul(truePriceTokenB) / reserveB < truePriceTokenA;
+        aToB = reserveA.mulDivDown(truePriceTokenB, reserveB) < truePriceTokenA;
 
-        uint256 invariant = reserveA.mul(reserveB);
+        uint256 invariant = reserveA * reserveB;
 
-        uint256 leftSide = Babylonian.sqrt(
-            invariant.mul(aToB ? truePriceTokenA : truePriceTokenB).mul(1000) /
-            uint256(aToB ? truePriceTokenB : truePriceTokenA).mul(997)
+        uint256 leftSide = FixedPointMathLib.sqrt(
+            invariant * (aToB ? truePriceTokenA : truePriceTokenB) * 1000 /
+            uint256(aToB ? truePriceTokenB : truePriceTokenA) * 997
         );
-        uint256 rightSide = (aToB ? reserveA.mul(1000) : reserveB.mul(1000)) / 997;
+        uint256 rightSide = (aToB ? reserveA * 1000 : reserveB * 1000) / 997;
 
         if (leftSide < rightSide) return (false, 0);
 
         // compute the amount that must be sent to move the price to the profit-maximizing price
-        amountIn = leftSide.sub(rightSide);
+        amountIn = leftSide - rightSide;
     }
 
     // gets the reserves after an arbitrage moves the price to the profit-maximizing ratio given an externally observed true price
     function getReservesAfterArbitrage(
-        address factory,
-        address tokenA,
-        address tokenB,
+        address pair,
         uint256 truePriceTokenA,
         uint256 truePriceTokenB
     ) view internal returns (uint256 reserveA, uint256 reserveB) {
         // first get reserves before the swap
-        (reserveA, reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB);
+        (reserveA, reserveB, ) = IUniswapV2Pair(pair).getReserves();
 
         require(reserveA > 0 && reserveB > 0, 'UniswapV2ArbitrageLibrary: ZERO_PAIR_RESERVES');
 
@@ -103,11 +112,11 @@ contract UniswapV2SubRegistry is SubRegistry {
 
         // now affect the trade to the reserves
         if (aToB) {
-            uint amountOut = UniswapV2Library.getAmountOut(amountIn, reserveA, reserveB);
+            uint amountOut = getAmountOut(amountIn, reserveA, reserveB);
             reserveA += amountIn;
             reserveB -= amountOut;
         } else {
-            uint amountOut = UniswapV2Library.getAmountOut(amountIn, reserveB, reserveA);
+            uint amountOut = getAmountOut(amountIn, reserveB, reserveA);
             reserveB += amountIn;
             reserveA -= amountOut;
         }
@@ -121,59 +130,38 @@ contract UniswapV2SubRegistry is SubRegistry {
         uint256 liquidityAmount,
         bool feeOn,
         uint kLast
-    ) internal pure returns (uint256 tokenAAmount, uint256 tokenBAmount) {
+    ) internal pure returns (uint256 tokenAAmount) {
         if (feeOn && kLast > 0) {
-            uint rootK = Babylonian.sqrt(reservesA.mul(reservesB));
-            uint rootKLast = Babylonian.sqrt(kLast);
+            uint rootK = FixedPointMathLib.sqrt(reservesA * reservesB);
+            uint rootKLast = FixedPointMathLib.sqrt(kLast);
             if (rootK > rootKLast) {
-                uint numerator = totalSupply.mul(rootK.sub(rootKLast));
-                uint denominator = rootK.mul(5).add(rootKLast);
+                uint numerator = totalSupply * (rootK - rootKLast);
+                uint denominator = rootK * 5 + rootKLast;
                 uint feeLiquidity = numerator / denominator;
-                totalSupply = totalSupply.add(feeLiquidity);
+                totalSupply = totalSupply + feeLiquidity;
             }
         }
-        return (reservesA.mul(liquidityAmount) / totalSupply, reservesB.mul(liquidityAmount) / totalSupply);
-    }
-
-    // get all current parameters from the pair and compute value of a liquidity amount
-    // **note this is subject to manipulation, e.g. sandwich attacks**. prefer passing a manipulation resistant price to
-    // #getLiquidityValueAfterArbitrageToPrice
-    function getLiquidityValue(
-        address factory,
-        address tokenA,
-        address tokenB,
-        uint256 liquidityAmount
-    ) internal view returns (uint256 tokenAAmount, uint256 tokenBAmount) {
-        (uint256 reservesA, uint256 reservesB) = UniswapV2Library.getReserves(factory, tokenA, tokenB);
-        IUniswapV2Pair pair = IUniswapV2Pair(UniswapV2Library.pairFor(factory, tokenA, tokenB));
-        bool feeOn = IUniswapV2Factory(factory).feeTo() != address(0);
-        uint kLast = feeOn ? pair.kLast() : 0;
-        uint totalSupply = pair.totalSupply();
-        return computeLiquidityValue(reservesA, reservesB, totalSupply, liquidityAmount, feeOn, kLast);
+        return (reservesA * liquidityAmount / totalSupply);
     }
 
     // given two tokens, tokenA and tokenB, and their "true price", i.e. the observed ratio of value of token A to token B,
     // and a liquidity amount, returns the value of the liquidity in terms of tokenA and tokenB
     function getLiquidityValueAfterArbitrageToPrice(
-        address factory,
-        address tokenA,
-        address tokenB,
+        address pair,
         uint256 truePriceTokenA,
         uint256 truePriceTokenB,
         uint256 liquidityAmount
     ) internal view returns (
-        uint256 tokenAAmount,
-        uint256 tokenBAmount
+        uint256 tokenAAmount
     ) {
-        bool feeOn = IUniswapV2Factory(factory).feeTo() != address(0);
-        IUniswapV2Pair pair = IUniswapV2Pair(UniswapV2Library.pairFor(factory, tokenA, tokenB));
-        uint kLast = feeOn ? pair.kLast() : 0;
-        uint totalSupply = pair.totalSupply();
+        bool feeOn = IUniswapV2Factory(uniswapV2Factory).feeTo() != address(0);
+        uint kLast = feeOn ? IUniswapV2Pair(pair).kLast() : 0;
+        uint totalSupply = IUniswapV2Pair(pair).totalSupply();
 
         // this also checks that totalSupply > 0
         require(totalSupply >= liquidityAmount && liquidityAmount > 0, 'ComputeLiquidityValue: LIQUIDITY_AMOUNT');
 
-        (uint reservesA, uint reservesB) = getReservesAfterArbitrage(factory, tokenA, tokenB, truePriceTokenA, truePriceTokenB);
+        (uint reservesA, uint reservesB) = getReservesAfterArbitrage(pair, truePriceTokenA, truePriceTokenB);
 
         return computeLiquidityValue(reservesA, reservesB, totalSupply, liquidityAmount, feeOn, kLast);
     }
@@ -182,9 +170,9 @@ contract UniswapV2SubRegistry is SubRegistry {
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) internal pure returns (uint amountOut) {
         require(amountIn > 0, 'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT');
         require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
-        uint amountInWithFee = amountIn.mul(997);
-        uint numerator = amountInWithFee.mul(reserveOut);
-        uint denominator = reserveIn.mul(1000).add(amountInWithFee);
+        uint amountInWithFee = amountIn * 997;
+        uint numerator = amountInWithFee * reserveOut;
+        uint denominator = reserveIn * 1000 + amountInWithFee;
         amountOut = numerator / denominator;
     }
 
