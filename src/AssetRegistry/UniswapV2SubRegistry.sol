@@ -50,6 +50,36 @@ contract UniswapV2SubRegistry is SubRegistry {
     }
 
   /**
+   * @notice Adds a new asset to the UniswapV2SubRegistry, or overwrites an existing asset.
+   * @param assetInformation A Struct with information about the asset
+   *                         - pair: Contract address of the Uniswap V2 Liquidity pool
+   *                         - token0: Contract address of token0
+   *                         - token1: Contract address of token1
+   * @param assetCreditRatings The List of Credit Ratings for the asset for the different Numeraires.
+   * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
+   *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all numeraires is
+   *      is initiated as credit rating with index 0 by default (worst credit rating).
+   * @dev The assets are added/overwritten in the Main-Registry as well.
+   *      By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
+   *      (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
+   *      This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
+   *      assets are no longer updatable.
+   * @dev Assets can't have more than 18 decimals.
+   */
+  function setAssetInformation(AssetInformation calldata assetInformation, uint256[] calldata assetCreditRatings) external onlyOwner {
+
+    address assetAddress = assetInformation.pair;
+
+    if (!inSubRegistry[assetAddress]) {
+      inSubRegistry[assetAddress] = true;
+      assetsInSubRegistry.push(assetAddress);
+    }
+    assetToInformation[assetAddress] = assetInformation;
+    isAssetAddressWhiteListed[assetAddress] = true;
+    IMainRegistry(mainRegistry).addAsset(assetAddress, assetCreditRatings);
+  }
+
+  /**
    * @notice Returns the value of a certain asset, denominated in a given Numeraire
    * @param getValueInput A Struct with all the information neccessary to get the value of an asset
    * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
