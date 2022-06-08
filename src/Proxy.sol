@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
 
-/** 
-  * @title Proxy
-  * @author Arcadia Finance
+/**
+ * @title Proxy
+ * @author Arcadia Finance
  */
 contract Proxy {
-
     struct AddressSlot {
         address value;
     }
@@ -14,7 +13,11 @@ contract Proxy {
     /**
      * @dev Returns an `AddressSlot` with member `value` located at `slot`.
      */
-    function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
+    function getAddressSlot(bytes32 slot)
+        internal
+        pure
+        returns (AddressSlot storage r)
+    {
         assembly {
             r.slot := slot
         }
@@ -27,7 +30,9 @@ contract Proxy {
 
         uint256 size;
         // solhint-disable-next-line no-inline-assembly
-        assembly { size := extcodesize(account) }
+        assembly {
+            size := extcodesize(account)
+        }
         return size > 0;
     }
 
@@ -36,13 +41,13 @@ contract Proxy {
      *      This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1, and is
      *      validated in the constructor.
      */
-    bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+    bytes32 internal constant _IMPLEMENTATION_SLOT =
+        0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     /**
      * @dev Emitted when the implementation is upgraded.
      */
     event Upgraded(address indexed implementation);
-
 
     constructor(address _logic) payable {
         //gas: removed assert
@@ -65,6 +70,7 @@ contract Proxy {
         //require(isContract(newImplementation), "ERC1967: new implementation is not a contract");
         getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
     }
+
     /**
      * @dev Delegates the current call to `implementation`.
      *      This function does not return to its internal call site, it will return directly to the external caller.
@@ -78,7 +84,14 @@ contract Proxy {
 
             // Call the implementation.
             // out and outsize are 0 because we don't know the size yet.
-            let result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
+            let result := delegatecall(
+                gas(),
+                implementation,
+                0,
+                calldatasize(),
+                0,
+                0
+            )
 
             // Copy the returned data.
             returndatacopy(0, 0, returndatasize())
@@ -117,5 +130,4 @@ contract Proxy {
     receive() external payable virtual {
         _fallback();
     }
-
 }

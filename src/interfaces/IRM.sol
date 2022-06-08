@@ -5,5 +5,8 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 interface IRM {
-  function getYearlyInterestRate(uint256[] memory ValuesPerCreditRating, uint256 minCollValue) external view returns (uint64);
+    function getYearlyInterestRate(
+        uint256[] memory ValuesPerCreditRating,
+        uint256 minCollValue
+    ) external view returns (uint64);
 }
