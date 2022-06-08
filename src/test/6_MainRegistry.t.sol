@@ -1916,14 +1916,32 @@ contract MainRegistryTest is Test {
         );
     }
 
-	function testNonOwnerSetsCreditRatings (address unprivilegedAddress) public {
-		vm.assume(unprivilegedAddress != creatorAddress);
-		vm.startPrank(creatorAddress);
-		mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:0x0000000000000000000000000000000000000000, numeraireLabel:"ETH", numeraireUnit:uint64(10**Constants.ethDecimals)}), emptyList);
-		mainRegistry.addSubRegistry(address(standardERC20Registry));
-		mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
-		standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), emptyList
-		);
+    function testNonOwnerSetsCreditRatings(address unprivilegedAddress) public {
+        vm.assume(unprivilegedAddress != creatorAddress);
+        vm.startPrank(creatorAddress);
+        mainRegistry.addNumeraire(
+            MainRegistry.NumeraireInformation({
+                numeraireToUsdOracleUnit: uint64(
+                    10**Constants.oracleEthToUsdDecimals
+                ),
+                assetAddress: address(eth),
+                numeraireToUsdOracle: address(oracleEthToUsd),
+                stableAddress: 0x0000000000000000000000000000000000000000,
+                numeraireLabel: "ETH",
+                numeraireUnit: uint64(10**Constants.ethDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            emptyList
+        );
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
@@ -1931,8 +1949,17 @@ contract MainRegistryTest is Test {
                 assetAddress: address(link)
             }),
             emptyList
-		);floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: oracleWbaycToEthEthToUsd, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: address(bayc)}), emptyList);
-		vm.stopPrank();
+        );
+        floorERC721SubRegistry.setAssetInformation(
+            FloorERC721SubRegistry.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
+            }),
+            emptyList
+        );
+        vm.stopPrank();
 
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);

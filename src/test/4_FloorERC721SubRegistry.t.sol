@@ -128,10 +128,34 @@ contract FloorERC721SubRegistryTest is Test {
     //this is a before each
     function setUp() public {
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit : 0, assetAddress : 0x0000000000000000000000000000000000000000, numeraireToUsdOracle : 0x0000000000000000000000000000000000000000, stableAddress : 0x0000000000000000000000000000000000000000, numeraireLabel : "USD", numeraireUnit : 1}));
-        mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit : uint64(10 ** Constants.oracleEthToUsdDecimals), assetAddress : address(eth), numeraireToUsdOracle : address(oracleEthToUsd), stableAddress : 0x0000000000000000000000000000000000000000, numeraireLabel : "ETH", numeraireUnit : uint64(10 ** Constants.ethDecimals)}), emptyList);
+        mainRegistry = new MainRegistry(
+            MainRegistry.NumeraireInformation({
+                numeraireToUsdOracleUnit: 0,
+                assetAddress: 0x0000000000000000000000000000000000000000,
+                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                stableAddress: 0x0000000000000000000000000000000000000000,
+                numeraireLabel: "USD",
+                numeraireUnit: 1
+            })
+        );
+        mainRegistry.addNumeraire(
+            MainRegistry.NumeraireInformation({
+                numeraireToUsdOracleUnit: uint64(
+                    10**Constants.oracleEthToUsdDecimals
+                ),
+                assetAddress: address(eth),
+                numeraireToUsdOracle: address(oracleEthToUsd),
+                stableAddress: 0x0000000000000000000000000000000000000000,
+                numeraireLabel: "ETH",
+                numeraireUnit: uint64(10**Constants.ethDecimals)
+            }),
+            emptyList
+        );
 
-        floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
+        floorERC721SubRegistry = new FloorERC721SubRegistry(
+            address(mainRegistry),
+            address(oracleHub)
+        );
         mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
         vm.stopPrank();
     }
@@ -142,10 +166,10 @@ contract FloorERC721SubRegistryTest is Test {
         vm.expectRevert("Ownable: caller is not the owner");
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWbaycToEthEthToUsd,
-                idRangeStart : 0,
-                idRangeEnd : type(uint256).max,
-                assetAddress : address(bayc)
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
             }),
             emptyList
         );
@@ -159,10 +183,10 @@ contract FloorERC721SubRegistryTest is Test {
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWbaycToEthEthToUsd,
-                idRangeStart : 0,
-                idRangeEnd : type(uint256).max,
-                assetAddress : address(bayc)
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
             }),
             assetCreditRatings
         );
@@ -174,10 +198,10 @@ contract FloorERC721SubRegistryTest is Test {
         vm.startPrank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWbaycToEthEthToUsd,
-                idRangeStart : 0,
-                idRangeEnd : type(uint256).max,
-                assetAddress : address(bayc)
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
             }),
             emptyList
         );
@@ -193,10 +217,10 @@ contract FloorERC721SubRegistryTest is Test {
         assetCreditRatings[1] = 0;
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWbaycToEthEthToUsd,
-                idRangeStart : 0,
-                idRangeEnd : type(uint256).max,
-                assetAddress : address(bayc)
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
             }),
             assetCreditRatings
         );
@@ -209,19 +233,19 @@ contract FloorERC721SubRegistryTest is Test {
         vm.startPrank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWbaycToEthEthToUsd,
-                idRangeStart : 0,
-                idRangeEnd : type(uint256).max,
-                assetAddress : address(bayc)
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
             }),
             emptyList
         );
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWbaycToEthEthToUsd,
-                idRangeStart : 0,
-                idRangeEnd : type(uint256).max,
-                assetAddress : address(bayc)
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
             }),
             emptyList
         );
@@ -234,10 +258,10 @@ contract FloorERC721SubRegistryTest is Test {
         vm.startPrank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWbaycToEthEthToUsd,
-                idRangeStart : 0,
-                idRangeEnd : 9999,
-                assetAddress : address(bayc)
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 9999,
+                assetAddress: address(bayc)
             }),
             emptyList
         );
@@ -257,10 +281,10 @@ contract FloorERC721SubRegistryTest is Test {
         vm.startPrank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWbaycToEthEthToUsd,
-                idRangeStart : 10,
-                idRangeEnd : 999,
-                assetAddress : address(bayc)
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 10,
+                idRangeEnd: 999,
+                assetAddress: address(bayc)
             }),
             emptyList
         );
@@ -273,10 +297,10 @@ contract FloorERC721SubRegistryTest is Test {
         vm.startPrank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWbaycToEthEthToUsd,
-                idRangeStart : 0,
-                idRangeEnd : 999,
-                assetAddress : address(bayc)
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 999,
+                assetAddress: address(bayc)
             }),
             emptyList
         );
@@ -290,8 +314,13 @@ contract FloorERC721SubRegistryTest is Test {
                     Constants.oracleEthToUsdDecimals);
         uint256 expectedValueInNumeraire = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({assetAddress : address(bayc), assetId : 0, assetAmount : 1, numeraire : 0
-        });
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+            .GetValueInput({
+                assetAddress: address(bayc),
+                assetId: 0,
+                assetAmount: 1,
+                numeraire: 0
+            });
         (
             uint256 actualValueInUsd,
             uint256 actualValueInNumeraire
@@ -305,10 +334,10 @@ contract FloorERC721SubRegistryTest is Test {
         vm.startPrank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWbaycToEthEthToUsd,
-                idRangeStart : 0,
-                idRangeEnd : 999,
-                assetAddress : address(bayc)
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 999,
+                assetAddress: address(bayc)
             }),
             emptyList
         );
@@ -318,8 +347,13 @@ contract FloorERC721SubRegistryTest is Test {
         uint256 expectedValueInNumeraire = (rateWbaycToEth * Constants.WAD) /
             10**Constants.oracleWbaycToEthDecimals;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({assetAddress : address(bayc), assetId : 0, assetAmount : 1, numeraire : 1
-        });
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+            .GetValueInput({
+                assetAddress: address(bayc),
+                assetId: 0,
+                assetAmount: 1,
+                numeraire: 1
+            });
         (
             uint256 actualValueInUsd,
             uint256 actualValueInNumeraire
@@ -333,10 +367,10 @@ contract FloorERC721SubRegistryTest is Test {
         vm.startPrank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses : oracleWmaycToUsdArr,
-                idRangeStart : 0,
-                idRangeEnd : 999,
-                assetAddress : address(mayc)
+                oracleAddresses: oracleWmaycToUsdArr,
+                idRangeStart: 0,
+                idRangeEnd: 999,
+                assetAddress: address(mayc)
             }),
             emptyList
         );
@@ -346,8 +380,13 @@ contract FloorERC721SubRegistryTest is Test {
             10**Constants.oracleWmaycToUsdDecimals;
         uint256 expectedValueInNumeraire = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({assetAddress : address(mayc), assetId : 0, assetAmount : 1, numeraire : 1
-        });
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+            .GetValueInput({
+                assetAddress: address(mayc),
+                assetId: 0,
+                assetAmount: 1,
+                numeraire: 1
+            });
         (
             uint256 actualValueInUsd,
             uint256 actualValueInNumeraire

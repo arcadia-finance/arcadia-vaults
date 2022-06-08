@@ -164,7 +164,10 @@ contract Factory is ERC721, Ownable {
   @param salt A salt to be used to generate the hash.
   @param numeraire An identifier (uint256) of the Numeraire
   */
-  function createVault(uint256 salt, uint256 numeraire) external virtual returns (address vault)
+    function createVault(uint256 salt, uint256 numeraire)
+        external
+        virtual
+        returns (address vault)
     {
         require(
             numeraire <= numeraireCounter - 1,
@@ -334,7 +337,11 @@ contract Factory is ERC721, Ownable {
     @param tokenId The id if the vault
     @return uri The token uri.
   */
-  function tokenURI(uint256 tokenId) public view virtual override
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override
         returns (string memory uri)
     {
         require(

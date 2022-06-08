@@ -113,7 +113,7 @@ contract Liquidator is Ownable {
         uint128 openDebt,
         uint8 liqThres,
         uint8 numeraire
-    ) public elevated virtual returns (bool success) {
+    ) public virtual elevated returns (bool success) {
         require(
             auctionInfo[vaultAddress][life].startBlock == 0,
             "Liquidation already ongoing"
