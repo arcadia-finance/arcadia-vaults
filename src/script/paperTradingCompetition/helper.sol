@@ -1,3 +1,6 @@
+// This is a private, unpublished repository.
+// All rights reserved to Arcadia Finance.
+// Any modification, publication, reproduction, commercialisation, incorporation, sharing or any other kind of use of any part of this code or derivatives thereof is not allowed.
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
@@ -88,7 +91,6 @@ contract HelperContract {
         address[] memory whitelisted = IReg(helperAddresses.mainReg).getWhiteList();
         address subreg;
         assetInfo[] memory assetInfos = new assetInfo[](whitelisted.length);
-        //assetInfo memory tempAssetInfo;
         address[] memory assetAddrs = new address[](1);
         uint256[] memory assetIds = new uint256[](1);
         uint256[] memory assetAmts = new uint256[](1);
@@ -116,7 +118,6 @@ contract HelperContract {
 
             }
             else if (subreg == helperAddresses.erc721sub) {
-                //require(false, string(abi.encode(whitelisted[i])));
                 (,,,address[] memory oracleAddresses) = ISubReg721(subreg).getAssetInformation(whitelisted[i]);
                 tempAssetInfo.assetType = 1;
                 tempAssetInfo.oracleAddresses = oracleAddresses;
