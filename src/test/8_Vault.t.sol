@@ -21,7 +21,6 @@ import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-
 contract vaultTests is Test {
     using stdStorage for StdStorage;
 
@@ -60,12 +59,11 @@ contract vaultTests is Test {
     address internal stakeContract = address(5);
     address internal vaultOwner = address(6);
 
-
-    uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
-    uint256 rateLinkToUsd = 20 * 10 ** Constants.oracleLinkToUsdDecimals;
+    uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
+    uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
-    uint256 rateWbaycToEth = 85 * 10 ** Constants.oracleWbaycToEthDecimals;
-    uint256 rateWmaycToUsd = 50000 * 10 ** Constants.oracleWmaycToUsdDecimals;
+    uint256 rateWbaycToEth = 85 * 10**Constants.oracleWbaycToEthDecimals;
+    uint256 rateWmaycToUsd = 50000 * 10**Constants.oracleWmaycToUsdDecimals;
 
     address[] public oracleEthToUsdArr = new address[](1);
     address[] public oracleLinkToUsdArr = new address[](1);
@@ -74,13 +72,12 @@ contract vaultTests is Test {
     address[] public oracleWmaycToUsdArr = new address[](1);
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
 
-
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
-  // FIXTURES
-  ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
-
+    // FIXTURES
+    ArcadiaOracleFixture arcadiaOracleFixture =
+        new ArcadiaOracleFixture(oracleOwner);
 
     //this is a before
     constructor() {
@@ -90,16 +87,27 @@ contract vaultTests is Test {
         vm.startPrank(tokenCreatorAddress);
 
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        eth.mint(tokenCreatorAddress, 200000 * 10 ** Constants.ethDecimals);
+        eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
         snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
-        snx.mint(tokenCreatorAddress, 200000 * 10 ** Constants.snxDecimals);
+        snx.mint(tokenCreatorAddress, 200000 * 10**Constants.snxDecimals);
 
-        link = new ERC20Mock("LINK Mock", "mLINK", uint8(Constants.linkDecimals));
-        link.mint(tokenCreatorAddress, 200000 * 10 ** Constants.linkDecimals);
+        link = new ERC20Mock(
+            "LINK Mock",
+            "mLINK",
+            uint8(Constants.linkDecimals)
+        );
+        link.mint(tokenCreatorAddress, 200000 * 10**Constants.linkDecimals);
 
-        safemoon = new ERC20Mock("Safemoon Mock", "mSFMN", uint8(Constants.safemoonDecimals));
-        safemoon.mint(tokenCreatorAddress, 200000 * 10 ** Constants.safemoonDecimals);
+        safemoon = new ERC20Mock(
+            "Safemoon Mock",
+            "mSFMN",
+            uint8(Constants.safemoonDecimals)
+        );
+        safemoon.mint(
+            tokenCreatorAddress,
+            200000 * 10**Constants.safemoonDecimals
+        );
 
         bayc = new ERC721Mock("BAYC Mock", "mBAYC");
         bayc.mint(tokenCreatorAddress, 0);
@@ -113,8 +121,12 @@ contract vaultTests is Test {
         dickButs = new ERC721Mock("DickButs Mock", "mDICK");
         dickButs.mint(tokenCreatorAddress, 0);
 
-        wbayc = new ERC20Mock("wBAYC Mock", "mwBAYC", uint8(Constants.wbaycDecimals));
-        wbayc.mint(tokenCreatorAddress, 100000 * 10 ** Constants.wbaycDecimals);
+        wbayc = new ERC20Mock(
+            "wBAYC Mock",
+            "mwBAYC",
+            uint8(Constants.wbaycDecimals)
+        );
+        wbayc.mint(tokenCreatorAddress, 100000 * 10**Constants.wbaycDecimals);
 
         interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
         interleave.mint(tokenCreatorAddress, 1, 100000);
@@ -124,44 +136,139 @@ contract vaultTests is Test {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
-        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD", rateLinkToUsd);
-        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH", rateSnxToEth);
-        oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH", rateWbaycToEth);
-        oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WMAYC / USD", rateWmaycToUsd);
-        oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
+        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleEthToUsdDecimals),
+            "ETH / USD",
+            rateEthToUsd
+        );
+        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleLinkToUsdDecimals),
+            "LINK / USD",
+            rateLinkToUsd
+        );
+        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleSnxToEthDecimals),
+            "SNX / ETH",
+            rateSnxToEth
+        );
+        oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleWbaycToEthDecimals),
+            "WBAYC / ETH",
+            rateWbaycToEth
+        );
+        oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleWmaycToUsdDecimals),
+            "WMAYC / USD",
+            rateWmaycToUsd
+        );
+        oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleInterleaveToEthDecimals),
+            "INTERLEAVE / ETH"
+        );
 
         vm.startPrank(creatorAddress);
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire : 0, quoteAsset : 'ETH', baseAsset : 'USD', oracleAddress : address(oracleEthToUsd), quoteAssetAddress : address(eth), baseAssetIsNumeraire : true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleLinkToUsdUnit), baseAssetNumeraire : 0, quoteAsset : 'LINK', baseAsset : 'USD', oracleAddress : address(oracleLinkToUsd), quoteAssetAddress : address(link), baseAssetIsNumeraire : true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleSnxToEthUnit), baseAssetNumeraire : 1, quoteAsset : 'SNX', baseAsset : 'ETH', oracleAddress : address(oracleSnxToEth), quoteAssetAddress : address(snx), baseAssetIsNumeraire : true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleWbaycToEthUnit), baseAssetNumeraire : 1, quoteAsset : 'WBAYC', baseAsset : 'ETH', oracleAddress : address(oracleWbaycToEth), quoteAssetAddress : address(wbayc), baseAssetIsNumeraire : true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleWmaycToUsdUnit), baseAssetNumeraire : 0, quoteAsset : 'WMAYC', baseAsset : 'USD', oracleAddress : address(oracleWmaycToUsd), quoteAssetAddress : address(wmayc), baseAssetIsNumeraire : true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit : uint64(Constants.oracleInterleaveToEthUnit), baseAssetNumeraire : 1, quoteAsset : 'INTERLEAVE', baseAsset : 'ETH', oracleAddress : address(oracleInterleaveToEth), quoteAssetAddress : address(interleave), baseAssetIsNumeraire : true}));
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
+                baseAssetNumeraire: 0,
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
+                baseAssetNumeraire: 0,
+                quoteAsset: "LINK",
+                baseAsset: "USD",
+                oracleAddress: address(oracleLinkToUsd),
+                quoteAssetAddress: address(link),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleSnxToEthUnit),
+                baseAssetNumeraire: 1,
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
+                baseAssetNumeraire: 1,
+                quoteAsset: "WBAYC",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleWbaycToEth),
+                quoteAssetAddress: address(wbayc),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
+                baseAssetNumeraire: 0,
+                quoteAsset: "WMAYC",
+                baseAsset: "USD",
+                oracleAddress: address(oracleWmaycToUsd),
+                quoteAssetAddress: address(wmayc),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
+                baseAssetNumeraire: 1,
+                quoteAsset: "INTERLEAVE",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleInterleaveToEth),
+                quoteAssetAddress: address(interleave),
+                baseAssetIsNumeraire: true
+            })
+        );
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
-        eth.transfer(vaultOwner, 100000 * 10 ** Constants.ethDecimals);
-        link.transfer(vaultOwner, 100000 * 10 ** Constants.linkDecimals);
-        snx.transfer(vaultOwner, 100000 * 10 ** Constants.snxDecimals);
-        safemoon.transfer(vaultOwner, 100000 * 10 ** Constants.safemoonDecimals);
+        eth.transfer(vaultOwner, 100000 * 10**Constants.ethDecimals);
+        link.transfer(vaultOwner, 100000 * 10**Constants.linkDecimals);
+        snx.transfer(vaultOwner, 100000 * 10**Constants.snxDecimals);
+        safemoon.transfer(vaultOwner, 100000 * 10**Constants.safemoonDecimals);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 1);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 2);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 3);
         mayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
         dickButs.transferFrom(tokenCreatorAddress, vaultOwner, 0);
-        interleave.safeTransferFrom(tokenCreatorAddress, vaultOwner, 1, 100000, '0x0000000000000000000000000000000000000000000000000000000000000000');
-        eth.transfer(unprivilegedAddress, 1000 * 10 ** Constants.ethDecimals);
+        interleave.safeTransferFrom(
+            tokenCreatorAddress,
+            vaultOwner,
+            1,
+            100000,
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        );
+        eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
         interestRateModule = new InterestRateModule();
-        interestRateModule.setBaseInterestRate(5 * 10 ** 16);
+        interestRateModule.setBaseInterestRate(5 * 10**16);
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
-        stable = new Stable("Arcadia Stable Mock", "masUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factoryContr));
+        stable = new Stable(
+            "Arcadia Stable Mock",
+            "masUSD",
+            uint8(Constants.stableDecimals),
+            0x0000000000000000000000000000000000000000,
+            address(factoryContr)
+        );
         vm.stopPrank();
 
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -179,36 +286,72 @@ contract vaultTests is Test {
         oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
 
-
         // vm.prank(creatorAddress);
         // liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
     }
 
     //this is a before each
     function setUp() public virtual {
-
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit : 0, assetAddress : 0x0000000000000000000000000000000000000000, numeraireToUsdOracle : 0x0000000000000000000000000000000000000000, stableAddress : address(stable), numeraireLabel : 'USD', numeraireUnit : 1}));
+        mainRegistry = new MainRegistry(
+            MainRegistry.NumeraireInformation({
+                numeraireToUsdOracleUnit: 0,
+                assetAddress: 0x0000000000000000000000000000000000000000,
+                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                stableAddress: address(stable),
+                numeraireLabel: "USD",
+                numeraireUnit: 1
+            })
+        );
         uint256[] memory emptyList = new uint256[](0);
-        mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit : uint64(10 ** Constants.oracleEthToUsdDecimals), assetAddress : address(eth), numeraireToUsdOracle : address(oracleEthToUsd), stableAddress : address(stable), numeraireLabel : 'ETH', numeraireUnit : uint64(10 ** Constants.ethDecimals)}), emptyList);
+        mainRegistry.addNumeraire(
+            MainRegistry.NumeraireInformation({
+                numeraireToUsdOracleUnit: uint64(
+                    10**Constants.oracleEthToUsdDecimals
+                ),
+                assetAddress: address(eth),
+                numeraireToUsdOracle: address(oracleEthToUsd),
+                stableAddress: address(stable),
+                numeraireLabel: "ETH",
+                numeraireUnit: uint64(10**Constants.ethDecimals)
+            }),
+            emptyList
+        );
         vm.stopPrank();
 
         vm.prank(creatorAddress);
-        factoryContr.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
+        factoryContr.setNewVaultInfo(
+            address(mainRegistry),
+            address(vault),
+            stakeContract,
+            address(interestRateModule)
+        );
         vm.prank(creatorAddress);
         factoryContr.confirmNewVaultInfo();
 
         vm.startPrank(creatorAddress);
         mainRegistry.setFactory(address(factoryContr));
 
-        standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub));
-        floorERC721SubRegistry = new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
-        floorERC1155SubRegistry = new FloorERC1155SubRegistry(address(mainRegistry), address(oracleHub));
+        standardERC20Registry = new StandardERC20Registry(
+            address(mainRegistry),
+            address(oracleHub)
+        );
+        floorERC721SubRegistry = new FloorERC721SubRegistry(
+            address(mainRegistry),
+            address(oracleHub)
+        );
+        floorERC1155SubRegistry = new FloorERC1155SubRegistry(
+            address(mainRegistry),
+            address(oracleHub)
+        );
 
         mainRegistry.addSubRegistry(address(standardERC20Registry));
         mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
         mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
-        liquidator = new Liquidator(0x0000000000000000000000000000000000000000, address(mainRegistry));
+        liquidator = new Liquidator(
+            0x0000000000000000000000000000000000000000,
+            address(mainRegistry)
+        );
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
@@ -217,10 +360,10 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         uint256 slot = stdstore
-        .target(address(factoryContr))
-        .sig(factoryContr.isVault.selector)
-        .with_key(address(vault))
-        .find();
+            .target(address(factoryContr))
+            .sig(factoryContr.isVault.selector)
+            .with_key(address(vault))
+            .find();
         bytes32 loc = bytes32(slot);
         bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
         vm.store(address(factoryContr), loc, mockedCurrentTokenId);
@@ -234,14 +377,19 @@ contract vaultTests is Test {
         // vm.store(address(vault), loc2, newOwner);
 
         vm.prank(address(vault));
-        stable.mint(tokenCreatorAddress, 100000 * 10 ** Constants.stableDecimals);
-
+        stable.mint(tokenCreatorAddress, 100000 * 10**Constants.stableDecimals);
 
         vm.prank(tokenCreatorAddress);
         stable.setLiquidator(address(liquidator));
 
         vm.startPrank(vaultOwner);
-        vault.initialize(vaultOwner, address(mainRegistry), address(stable), address(stakeContract), address(interestRateModule));
+        vault.initialize(
+            vaultOwner,
+            address(mainRegistry),
+            address(stable),
+            address(stakeContract),
+            address(interestRateModule)
+        );
         bayc.setApprovalForAll(address(vault), true);
         mayc.setApprovalForAll(address(vault), true);
         dickButs.setApprovalForAll(address(vault), true);
@@ -251,21 +399,25 @@ contract vaultTests is Test {
         snx.approve(address(vault), type(uint256).max);
         safemoon.approve(address(vault), type(uint256).max);
         vm.stopPrank();
-
     }
 
     //input as uint8 to prevent too long lists as fuzz input
-    function testShouldFailIfLengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen, uint8 typesLen) public virtual {
+    function testShouldFailIfLengthOfListDoesNotMatch(
+        uint8 addrLen,
+        uint8 idLen,
+        uint8 amountLen,
+        uint8 typesLen
+    ) public virtual {
         vm.startPrank(vaultOwner);
         assertEq(vault.owner(), vaultOwner);
 
-        vm.assume((addrLen != idLen && addrLen != amountLen && addrLen != typesLen));
-
+        vm.assume(
+            (addrLen != idLen && addrLen != amountLen && addrLen != typesLen)
+        );
         address[] memory assetAddresses = new address[](addrLen);
         for (uint256 i; i < addrLen; i++) {
             assetAddresses[i] = address(uint160(i));
         }
-
 
         uint256[] memory assetIds = new uint256[](idLen);
         for (uint256 j; j < idLen; j++) {
@@ -286,7 +438,10 @@ contract vaultTests is Test {
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function testShouldFailIfERC20IsNotWhitelisted(address inputAddr) public virtual {
+    function testShouldFailIfERC20IsNotWhitelisted(address inputAddr)
+        public
+        virtual
+    {
         vm.startPrank(vaultOwner);
 
         address[] memory assetAddresses = new address[](1);
@@ -305,7 +460,10 @@ contract vaultTests is Test {
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function testShouldFailIfERC721IsNotWhitelisted(address inputAddr, uint256 id) public virtual {
+    function testShouldFailIfERC721IsNotWhitelisted(
+        address inputAddr,
+        uint256 id
+    ) public virtual {
         vm.startPrank(vaultOwner);
 
         address[] memory assetAddresses = new address[](1);
@@ -333,7 +491,14 @@ contract vaultTests is Test {
         assetCreditRatings[1] = Constants.ethCreditRatingEth;
 
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleEthToUsdArr, assetUnit : uint64(10 ** Constants.ethDecimals), assetAddress : address(eth)}), assetCreditRatings);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            assetCreditRatings
+        );
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -342,7 +507,7 @@ contract vaultTests is Test {
         assetIds[0] = 0;
 
         uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount * 10 ** Constants.ethDecimals;
+        assetAmounts[0] = amount * 10**Constants.ethDecimals;
 
         uint256[] memory assetTypes = new uint256[](1);
         assetTypes[0] = 0;
@@ -360,7 +525,14 @@ contract vaultTests is Test {
         assetCreditRatings[1] = Constants.linkCreditRatingEth;
 
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleLinkToUsdArr, assetUnit : uint64(10 ** Constants.linkDecimals), assetAddress : address(link)}), assetCreditRatings);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleLinkToUsdArr,
+                assetUnit: uint64(10**Constants.linkDecimals),
+                assetAddress: address(link)
+            }),
+            assetCreditRatings
+        );
 
         //(uint256 erc20StoredPre,,,) = vault.getLengths();
 
@@ -371,17 +543,17 @@ contract vaultTests is Test {
         assetIds[0] = 0;
 
         uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount * 10 ** Constants.linkDecimals;
+        assetAmounts[0] = amount * 10**Constants.linkDecimals;
 
         uint256[] memory assetTypes = new uint256[](1);
         assetTypes[0] = 0;
 
         vm.startPrank(vaultOwner);
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        (uint256 erc20StoredDuring,,,) = vault.getLengths();
+        (uint256 erc20StoredDuring, , , ) = vault.getLengths();
 
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        (uint256 erc20StoredAfter,,,) = vault.getLengths();
+        (uint256 erc20StoredAfter, , , ) = vault.getLengths();
 
         assertEq(erc20StoredDuring, erc20StoredAfter);
     }
@@ -392,7 +564,15 @@ contract vaultTests is Test {
         assetCreditRatings[1] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses : oracleWbaycToEthEthToUsd, idRangeStart : 0, idRangeEnd : 9999, assetAddress : address(bayc)}), assetCreditRatings);
+        floorERC721SubRegistry.setAssetInformation(
+            FloorERC721SubRegistry.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 9999,
+                assetAddress: address(bayc)
+            }),
+            assetCreditRatings
+        );
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
@@ -411,7 +591,6 @@ contract vaultTests is Test {
 
         assertEq(vault._erc721Stored(0), address(bayc));
     }
-
 
     function testMultipleERC721Deposits() public virtual {
         uint256[] memory assetCreditRatings = new uint256[](2);
@@ -419,7 +598,15 @@ contract vaultTests is Test {
         assetCreditRatings[1] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses : oracleWbaycToEthEthToUsd, idRangeStart : 0, idRangeEnd : 9999, assetAddress : address(bayc)}), assetCreditRatings);
+        floorERC721SubRegistry.setAssetInformation(
+            FloorERC721SubRegistry.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 9999,
+                assetAddress: address(bayc)
+            }),
+            assetCreditRatings
+        );
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
@@ -437,7 +624,7 @@ contract vaultTests is Test {
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
 
         assertEq(vault._erc721Stored(0), address(bayc));
-        (,uint256 erc721LengthFirst,,) = vault.getLengths();
+        (, uint256 erc721LengthFirst, , ) = vault.getLengths();
         assertEq(erc721LengthFirst, 1);
 
         assetIds[0] = 3;
@@ -445,14 +632,12 @@ contract vaultTests is Test {
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
 
         assertEq(vault._erc721Stored(1), address(bayc));
-        (,uint256 erc721LengthSecond,,) = vault.getLengths();
+        (, uint256 erc721LengthSecond, , ) = vault.getLengths();
         assertEq(erc721LengthSecond, 2);
-
 
         assertEq(vault._erc721TokenIds(0), 1);
         assertEq(vault._erc721TokenIds(1), 3);
     }
-
 
     function testSingleERC1155Deposit() public virtual {
         uint256[] memory assetCreditRatings = new uint256[](2);
@@ -460,7 +645,14 @@ contract vaultTests is Test {
         assetCreditRatings[1] = Constants.interleaveCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses : oracleInterleaveToEthEthToUsd, id : 1, assetAddress : address(interleave)}), assetCreditRatings);
+        floorERC1155SubRegistry.setAssetInformation(
+            FloorERC1155SubRegistry.AssetInformation({
+                oracleAddresses: oracleInterleaveToEthEthToUsd,
+                id: 1,
+                assetAddress: address(interleave)
+            }),
+            assetCreditRatings
+        );
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(interleave);
@@ -481,7 +673,10 @@ contract vaultTests is Test {
         assertEq(vault._erc1155TokenIds(0), 1);
     }
 
-    function testDepositERC20ERC721(uint8 erc20Amount1, uint8 erc20Amount2) public virtual {
+    function testDepositERC20ERC721(uint8 erc20Amount1, uint8 erc20Amount2)
+        public
+        virtual
+    {
         address[] memory assetAddresses = new address[](3);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(link);
@@ -493,8 +688,8 @@ contract vaultTests is Test {
         assetIds[2] = 2;
 
         uint256[] memory assetAmounts = new uint256[](3);
-        assetAmounts[0] = erc20Amount1 * 10 ** Constants.ethDecimals;
-        assetAmounts[1] = erc20Amount2 * 10 ** Constants.linkDecimals;
+        assetAmounts[0] = erc20Amount1 * 10**Constants.ethDecimals;
+        assetAmounts[1] = erc20Amount2 * 10**Constants.linkDecimals;
         assetAmounts[2] = 1;
 
         uint256[] memory assetTypes = new uint256[](3);
@@ -515,17 +710,42 @@ contract vaultTests is Test {
         assetCreditRatingsEth[0] = Constants.ethCreditRatingUsd;
         assetCreditRatingsEth[1] = Constants.ethCreditRatingEth;
 
-        floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses : oracleWbaycToEthEthToUsd, idRangeStart : 0, idRangeEnd : 9999, assetAddress : address(bayc)}), assetCreditRatingsERC721);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleLinkToUsdArr, assetUnit : uint64(10 ** Constants.linkDecimals), assetAddress : address(link)}), assetCreditRatingsLink);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleEthToUsdArr, assetUnit : uint64(10 ** Constants.ethDecimals), assetAddress : address(eth)}), assetCreditRatingsEth);
+        floorERC721SubRegistry.setAssetInformation(
+            FloorERC721SubRegistry.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 9999,
+                assetAddress: address(bayc)
+            }),
+            assetCreditRatingsERC721
+        );
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleLinkToUsdArr,
+                assetUnit: uint64(10**Constants.linkDecimals),
+                assetAddress: address(link)
+            }),
+            assetCreditRatingsLink
+        );
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            assetCreditRatingsEth
+        );
         vm.stopPrank();
 
         vm.prank(vaultOwner);
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-
-    function testDepositERC20ERC721ERC1155(uint8 erc20Amount1, uint8 erc20Amount2, uint8 erc1155Amount) public virtual {
+    function testDepositERC20ERC721ERC1155(
+        uint8 erc20Amount1,
+        uint8 erc20Amount2,
+        uint8 erc1155Amount
+    ) public virtual {
         address[] memory assetAddresses = new address[](4);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(link);
@@ -539,8 +759,8 @@ contract vaultTests is Test {
         assetIds[3] = 1;
 
         uint256[] memory assetAmounts = new uint256[](4);
-        assetAmounts[0] = erc20Amount1 * 10 ** Constants.ethDecimals;
-        assetAmounts[1] = erc20Amount2 * 10 ** Constants.linkDecimals;
+        assetAmounts[0] = erc20Amount1 * 10**Constants.ethDecimals;
+        assetAmounts[1] = erc20Amount2 * 10**Constants.linkDecimals;
         assetAmounts[2] = 1;
         assetAmounts[3] = erc1155Amount;
 
@@ -567,10 +787,39 @@ contract vaultTests is Test {
         assetCreditRatingsInterleave[0] = Constants.interleaveCreditRatingUsd;
         assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingEth;
 
-        floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses : oracleWbaycToEthEthToUsd, idRangeStart : 0, idRangeEnd : 9999, assetAddress : address(bayc)}), assetCreditRatingsERC721);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleLinkToUsdArr, assetUnit : uint64(10 ** Constants.linkDecimals), assetAddress : address(link)}), assetCreditRatingsLink);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleEthToUsdArr, assetUnit : uint64(10 ** Constants.ethDecimals), assetAddress : address(eth)}), assetCreditRatingsEth);
-        floorERC1155SubRegistry.setAssetInformation(FloorERC1155SubRegistry.AssetInformation({oracleAddresses : oracleInterleaveToEthEthToUsd, id : 1, assetAddress : address(interleave)}), assetCreditRatingsInterleave);
+        floorERC721SubRegistry.setAssetInformation(
+            FloorERC721SubRegistry.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 9999,
+                assetAddress: address(bayc)
+            }),
+            assetCreditRatingsERC721
+        );
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleLinkToUsdArr,
+                assetUnit: uint64(10**Constants.linkDecimals),
+                assetAddress: address(link)
+            }),
+            assetCreditRatingsLink
+        );
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            assetCreditRatingsEth
+        );
+        floorERC1155SubRegistry.setAssetInformation(
+            FloorERC1155SubRegistry.AssetInformation({
+                oracleAddresses: oracleInterleaveToEthEthToUsd,
+                id: 1,
+                assetAddress: address(interleave)
+            }),
+            assetCreditRatingsInterleave
+        );
         vm.stopPrank();
 
         vm.prank(vaultOwner);
@@ -588,7 +837,14 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleEthToUsdArr, assetUnit : uint64(10 ** Constants.ethDecimals), assetAddress : address(eth)}), assetCreditRatings);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            assetCreditRatings
+        );
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -597,7 +853,7 @@ contract vaultTests is Test {
         assetIds[0] = 0;
 
         uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = 10 * 10 ** Constants.ethDecimals;
+        assetAmounts[0] = 10 * 10**Constants.ethDecimals;
 
         uint256[] memory assetTypes = new uint256[](1);
         assetTypes[0] = 0;
@@ -608,9 +864,13 @@ contract vaultTests is Test {
     }
 
     function testWithdrawERC20NoDebt(uint8 baseAmountDeposit) public virtual {
-        uint256 valueAmount = Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals * baseAmountDeposit;
+        uint256 valueAmount = ((Constants.WAD * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals) * baseAmountDeposit;
 
-        Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
+        Assets memory assetInfo = depositEthInVault(
+            baseAmountDeposit,
+            vaultOwner
+        );
 
         uint256 vaultValue = vault.getValue(uint8(Constants.UsdNumeraire));
 
@@ -619,20 +879,28 @@ contract vaultTests is Test {
         vm.startPrank(vaultOwner);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(vault), vaultOwner, assetInfo.assetAmounts[0]);
-        vault.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
+        vault.withdraw(
+            assetInfo.assetAddresses,
+            assetInfo.assetIds,
+            assetInfo.assetAmounts,
+            assetInfo.assetTypes
+        );
 
         uint256 vaultValueAfter = vault.getValue(uint8(Constants.UsdNumeraire));
         assertEq(vaultValueAfter, 0);
         vm.stopPrank();
     }
 
-    function testTakeCredit(uint8 baseAmountDeposit, uint8 baseAmountCredit) public virtual {
+    function testTakeCredit(uint8 baseAmountDeposit, uint8 baseAmountCredit)
+        public
+        virtual
+    {
         uint256 amountDeposit = baseAmountDeposit * Constants.WAD;
         uint128 amountCredit = uint128(baseAmountCredit * Constants.WAD);
 
-        (,uint16 _collThres,,,,) = vault.debt();
+        (, uint16 _collThres, , , , ) = vault.debt();
 
-        vm.assume(amountDeposit * 100 / _collThres >= amountCredit);
+        vm.assume((amountDeposit * 100) / _collThres >= amountCredit);
 
         depositEthInVault(baseAmountDeposit, vaultOwner);
 
@@ -646,7 +914,6 @@ contract vaultTests is Test {
         //no blocks have passed
     }
 
-
     struct Assets {
         address[] assetAddresses;
         uint256[] assetIds;
@@ -654,22 +921,40 @@ contract vaultTests is Test {
         uint256[] assetTypes;
     }
 
-    function testWithdrawERC20fterTakingCredit(uint8 baseAmountDeposit, uint32 baseAmountCredit, uint8 baseAmountWithdraw) public virtual {
-        uint256 valueDeposit = (Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals) * baseAmountDeposit;
-        uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.stableDecimals);
-        uint256 amountWithdraw = baseAmountWithdraw * 10 ** Constants.ethDecimals;
-        uint256 valueWithdraw = (Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals) * baseAmountWithdraw;
+    function testWithdrawERC20fterTakingCredit(
+        uint8 baseAmountDeposit,
+        uint32 baseAmountCredit,
+        uint8 baseAmountWithdraw
+    ) public virtual {
+        uint256 valueDeposit = ((Constants.WAD * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals) * baseAmountDeposit;
+        uint128 amountCredit = uint128(
+            baseAmountCredit * 10**Constants.stableDecimals
+        );
+        uint256 amountWithdraw = baseAmountWithdraw * 10**Constants.ethDecimals;
+        uint256 valueWithdraw = ((Constants.WAD * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals) * baseAmountWithdraw;
         vm.assume(baseAmountWithdraw < baseAmountDeposit);
 
-        (,uint16 _collThres,,,,) = vault.debt();
+        (, uint16 _collThres, , , , ) = vault.debt();
 
-        vm.assume(amountCredit < (valueDeposit - valueWithdraw) * 100 / _collThres);
+        vm.assume(
+            amountCredit < ((valueDeposit - valueWithdraw) * 100) / _collThres
+        );
 
-        Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
+        Assets memory assetInfo = depositEthInVault(
+            baseAmountDeposit,
+            vaultOwner
+        );
         vm.startPrank(vaultOwner);
         vault.takeCredit(amountCredit);
         assetInfo.assetAmounts[0] = amountWithdraw;
-        vault.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
+        vault.withdraw(
+            assetInfo.assetAddresses,
+            assetInfo.assetIds,
+            assetInfo.assetAmounts,
+            assetInfo.assetTypes
+        );
         vm.stopPrank();
 
         uint256 actualValue = vault.getValue(uint8(Constants.UsdNumeraire));
@@ -678,49 +963,90 @@ contract vaultTests is Test {
         assertEq(expectedValue, actualValue);
     }
 
-    function testNotAllowWithdrawERC20fterTakingCredit(uint8 baseAmountDeposit, uint24 baseAmountCredit, uint8 baseAmountWithdraw) public virtual {
+    function testNotAllowWithdrawERC20fterTakingCredit(
+        uint8 baseAmountDeposit,
+        uint24 baseAmountCredit,
+        uint8 baseAmountWithdraw
+    ) public virtual {
         vm.assume(baseAmountCredit > 0);
         vm.assume(baseAmountWithdraw > 0);
         vm.assume(baseAmountWithdraw < baseAmountDeposit);
 
-        uint256 valueDeposit = (Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals) * baseAmountDeposit;
-        uint256 amountCredit = baseAmountCredit * 10 ** Constants.stableDecimals;
-        uint256 amountWithdraw = baseAmountWithdraw * 10 ** Constants.ethDecimals;
-        uint256 ValueWithdraw = (Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals) * baseAmountWithdraw;
+        uint256 valueDeposit = ((Constants.WAD * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals) * baseAmountDeposit;
+        uint256 amountCredit = baseAmountCredit * 10**Constants.stableDecimals;
+        uint256 amountWithdraw = baseAmountWithdraw * 10**Constants.ethDecimals;
+        uint256 ValueWithdraw = ((Constants.WAD * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals) * baseAmountWithdraw;
 
-        (,uint16 _collThres,,,,) = vault.debt();
+        (, uint16 _collThres, , , , ) = vault.debt();
 
-        vm.assume(amountCredit <= valueDeposit * 100 / _collThres);
-        vm.assume(amountCredit > (valueDeposit - ValueWithdraw) * 100 / _collThres);
+        vm.assume(amountCredit <= (valueDeposit * 100) / _collThres);
+        vm.assume(
+            amountCredit > ((valueDeposit - ValueWithdraw) * 100) / _collThres
+        );
 
-        Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
+        Assets memory assetInfo = depositEthInVault(
+            baseAmountDeposit,
+            vaultOwner
+        );
         vm.startPrank(vaultOwner);
         vault.takeCredit(uint128(amountCredit));
         assetInfo.assetAmounts[0] = amountWithdraw;
         vm.expectRevert("V_W: coll. value too low!");
-        vault.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
+        vault.withdraw(
+            assetInfo.assetAddresses,
+            assetInfo.assetIds,
+            assetInfo.assetAmounts,
+            assetInfo.assetTypes
+        );
         vm.stopPrank();
     }
 
-    function testWithrawERC721AfterTakingCredit(uint128[] calldata tokenIdsDeposit, uint8 baseAmountCredit) public virtual {
+    function testWithrawERC721AfterTakingCredit(
+        uint128[] calldata tokenIdsDeposit,
+        uint8 baseAmountCredit
+    ) public virtual {
         vm.assume(tokenIdsDeposit.length < 50);
         //test speed
-        uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.stableDecimals);
+        uint128 amountCredit = uint128(
+            baseAmountCredit * 10**Constants.stableDecimals
+        );
 
-        (,uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
+        (, uint256[] memory assetIds, , ) = depositBaycInVault(
+            tokenIdsDeposit,
+            vaultOwner
+        );
 
-        uint256 randomAmounts = assetIds.length > 0 ? uint256(keccak256(abi.encodeWithSignature("testWithrawERC721AfterTakingCredit(uint256[],uint8)", assetIds, baseAmountCredit))) % assetIds.length : 0;
+        uint256 randomAmounts = assetIds.length > 0
+            ? uint256(
+                keccak256(
+                    abi.encodeWithSignature(
+                        "testWithrawERC721AfterTakingCredit(uint256[],uint8)",
+                        assetIds,
+                        baseAmountCredit
+                    )
+                )
+            ) % assetIds.length
+            : 0;
 
-        (,uint16 _collThres,,,,) = vault.debt();
+        (, uint16 _collThres, , , , ) = vault.debt();
 
-        uint256 rateInUsd = Constants.WAD * rateWbaycToEth / 10 ** Constants.oracleWbaycToEthDecimals * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals;
+        uint256 rateInUsd = (((Constants.WAD * rateWbaycToEth) /
+            10**Constants.oracleWbaycToEthDecimals) * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals;
         uint256 valueOfDeposit = rateInUsd * assetIds.length;
 
-        uint256 valueOfWithdrawal = rateInUsd * randomAmounts * Constants.WAD / 10 ** Constants.oracleEthToUsdDecimals;
+        uint256 valueOfWithdrawal = (rateInUsd *
+            randomAmounts *
+            Constants.WAD) / 10**Constants.oracleEthToUsdDecimals;
 
-        vm.assume(valueOfDeposit * 100 / _collThres >= amountCredit);
+        vm.assume((valueOfDeposit * 100) / _collThres >= amountCredit);
         vm.assume(valueOfWithdrawal < valueOfDeposit);
-        vm.assume(amountCredit < (valueOfDeposit - valueOfWithdrawal) * 100 / _collThres);
+        vm.assume(
+            amountCredit <
+                ((valueOfDeposit - valueOfWithdrawal) * 100) / _collThres
+        );
 
         vm.startPrank(vaultOwner);
         vault.takeCredit(amountCredit);
@@ -729,14 +1055,19 @@ contract vaultTests is Test {
         address[] memory withdrawalAddresses = new address[](randomAmounts);
         uint256[] memory withdrawalAmounts = new uint256[](randomAmounts);
         uint256[] memory withdrawalTypes = new uint256[](randomAmounts);
-        for (uint i; i < randomAmounts; i++) {
+        for (uint256 i; i < randomAmounts; i++) {
             withdrawalIds[i] = assetIds[i];
             withdrawalAddresses[i] = address(bayc);
             withdrawalAmounts[i] = 1;
             withdrawalTypes[i] = 1;
         }
 
-        vault.withdraw(withdrawalAddresses, withdrawalIds, withdrawalAmounts, withdrawalTypes);
+        vault.withdraw(
+            withdrawalAddresses,
+            withdrawalIds,
+            withdrawalAmounts,
+            withdrawalTypes
+        );
 
         uint256 actualValue = vault.getValue(uint8(Constants.UsdNumeraire));
         uint256 expectedValue = valueOfDeposit - valueOfWithdrawal;
@@ -744,17 +1075,32 @@ contract vaultTests is Test {
         assertEq(expectedValue, actualValue);
     }
 
-    function testNotAllowERC721Withdraw(uint128[] calldata tokenIdsDeposit, uint8 amountsWithdrawn) public virtual {
+    function testNotAllowERC721Withdraw(
+        uint128[] calldata tokenIdsDeposit,
+        uint8 amountsWithdrawn
+    ) public virtual {
         vm.assume(tokenIdsDeposit.length < 50);
         //test speed
 
-        (,uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
-        vm.assume(assetIds.length >= amountsWithdrawn && assetIds.length > 1 && amountsWithdrawn > 1);
+        (, uint256[] memory assetIds, , ) = depositBaycInVault(
+            tokenIdsDeposit,
+            vaultOwner
+        );
+        vm.assume(
+            assetIds.length >= amountsWithdrawn &&
+                assetIds.length > 1 &&
+                amountsWithdrawn > 1
+        );
 
-        (,uint16 _collThres,,,,) = vault.debt();
-        uint256 rateInUsd = Constants.WAD * rateWbaycToEth / 10 ** Constants.oracleWbaycToEthDecimals * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals;
+        (, uint16 _collThres, , , , ) = vault.debt();
+        uint256 rateInUsd = (((Constants.WAD * rateWbaycToEth) /
+            10**Constants.oracleWbaycToEthDecimals) * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals;
 
-        uint128 maxAmountCredit = uint128((assetIds.length - amountsWithdrawn) * rateInUsd * 100 / _collThres);
+        uint128 maxAmountCredit = uint128(
+            ((assetIds.length - amountsWithdrawn) * rateInUsd * 100) /
+                _collThres
+        );
 
         vm.startPrank(vaultOwner);
         vault.takeCredit(maxAmountCredit + 1);
@@ -763,7 +1109,7 @@ contract vaultTests is Test {
         address[] memory withdrawalAddresses = new address[](amountsWithdrawn);
         uint256[] memory withdrawalAmounts = new uint256[](amountsWithdrawn);
         uint256[] memory withdrawalTypes = new uint256[](amountsWithdrawn);
-        for (uint i; i < amountsWithdrawn; i++) {
+        for (uint256 i; i < amountsWithdrawn; i++) {
             withdrawalIds[i] = assetIds[i];
             withdrawalAddresses[i] = address(bayc);
             withdrawalAmounts[i] = 1;
@@ -771,30 +1117,50 @@ contract vaultTests is Test {
         }
 
         vm.expectRevert("V_W: coll. value too low!");
-        vault.withdraw(withdrawalAddresses, withdrawalIds, withdrawalAmounts, withdrawalTypes);
+        vault.withdraw(
+            withdrawalAddresses,
+            withdrawalIds,
+            withdrawalAmounts,
+            withdrawalTypes
+        );
     }
 
-    function testNotAllowedToWithdrawnByNonOwner(uint8 depositAmount, uint8 withdrawalAmount, address sender) public virtual {
+    function testNotAllowedToWithdrawnByNonOwner(
+        uint8 depositAmount,
+        uint8 withdrawalAmount,
+        address sender
+    ) public virtual {
         vm.assume(sender != vaultOwner);
         vm.assume(depositAmount > withdrawalAmount);
         Assets memory assetInfo = depositEthInVault(depositAmount, vaultOwner);
 
-        assetInfo.assetAmounts[0] = withdrawalAmount * 10 ** Constants.ethDecimals;
+        assetInfo.assetAmounts[0] =
+            withdrawalAmount *
+            10**Constants.ethDecimals;
         vm.startPrank(sender);
         vm.expectRevert("You are not the owner");
-        vault.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
+        vault.withdraw(
+            assetInfo.assetAddresses,
+            assetInfo.assetIds,
+            assetInfo.assetAmounts,
+            assetInfo.assetTypes
+        );
     }
 
     function testFetchVaultValue(uint8 depositAmount) public virtual {
         depositEthInVault(depositAmount, vaultOwner);
 
-        uint256 expectedValue = Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals * depositAmount;
+        uint256 expectedValue = ((Constants.WAD * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals) * depositAmount;
         uint256 actualValue = vault.getValue(uint8(Constants.UsdNumeraire));
 
         assertEq(expectedValue, actualValue);
     }
 
-    function testGetValueGasUsage(uint8 depositAmount, uint128[] calldata tokenIds) public virtual {
+    function testGetValueGasUsage(
+        uint8 depositAmount,
+        uint128[] calldata tokenIds
+    ) public virtual {
         vm.assume(tokenIds.length <= 5);
         vm.assume(depositAmount > 0);
         depositEthInVault(depositAmount, vaultOwner);
@@ -804,7 +1170,7 @@ contract vaultTests is Test {
         uint256 gasStart = gasleft();
         vault.getValue(uint8(Constants.UsdNumeraire));
         uint256 gasAfter = gasleft();
-        emit log_int(int(gasStart - gasAfter));
+        emit log_int(int256(gasStart - gasAfter));
         assertLt(gasStart - gasAfter, 200000);
     }
 
@@ -821,62 +1187,103 @@ contract vaultTests is Test {
     function testGetRemainingCredit(uint8 amount) public virtual {
         depositEthInVault(amount, vaultOwner);
 
-        uint256 depositValue = Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals * amount;
-        (,uint16 _collThres,,,,) = vault.debt();
+        uint256 depositValue = ((Constants.WAD * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals) * amount;
+        (, uint16 _collThres, , , , ) = vault.debt();
 
-        uint256 expectedRemaining = depositValue * 100 / _collThres;
+        uint256 expectedRemaining = (depositValue * 100) / _collThres;
         assertEq(expectedRemaining, vault.getRemainingCredit());
     }
 
-    function testGetRemainingCreditAfterTopUp(uint8 amountEth, uint8 amountLink, uint128[] calldata tokenIds) public virtual {
+    function testGetRemainingCreditAfterTopUp(
+        uint8 amountEth,
+        uint8 amountLink,
+        uint128[] calldata tokenIds
+    ) public virtual {
         vm.assume(tokenIds.length < 10 && tokenIds.length > 1);
-        (,uint16 _collThres,,,,) = vault.debt();
+        (, uint16 _collThres, , , , ) = vault.debt();
 
         depositEthInVault(amountEth, vaultOwner);
-        uint256 depositValueEth = Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals * amountEth;
-        assertEq(depositValueEth * 100 / _collThres, vault.getRemainingCredit());
+        uint256 depositValueEth = ((Constants.WAD * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals) * amountEth;
+        assertEq(
+            (depositValueEth * 100) / _collThres,
+            vault.getRemainingCredit()
+        );
 
         depositLinkInVault(amountLink, vaultOwner);
-        uint256 depositValueLink = Constants.WAD * rateLinkToUsd / 10 ** Constants.oracleLinkToUsdDecimals * amountLink;
-        assertEq((depositValueEth + depositValueLink) * 100 / _collThres, vault.getRemainingCredit());
+        uint256 depositValueLink = ((Constants.WAD * rateLinkToUsd) /
+            10**Constants.oracleLinkToUsdDecimals) * amountLink;
+        assertEq(
+            ((depositValueEth + depositValueLink) * 100) / _collThres,
+            vault.getRemainingCredit()
+        );
 
-        (,uint256[] memory assetIds,,) = depositBaycInVault(tokenIds, vaultOwner);
-        uint256 depositBaycValue = Constants.WAD * rateWbaycToEth * rateEthToUsd / 10 ** (Constants.oracleEthToUsdDecimals + Constants.oracleWbaycToEthDecimals) * assetIds.length;
-        assertEq((depositValueEth + depositValueLink + depositBaycValue) * 100 / _collThres, vault.getRemainingCredit());
+        (, uint256[] memory assetIds, , ) = depositBaycInVault(
+            tokenIds,
+            vaultOwner
+        );
+        uint256 depositBaycValue = ((Constants.WAD *
+            rateWbaycToEth *
+            rateEthToUsd) /
+            10 **
+                (Constants.oracleEthToUsdDecimals +
+                    Constants.oracleWbaycToEthDecimals)) * assetIds.length;
+        assertEq(
+            ((depositValueEth + depositValueLink + depositBaycValue) * 100) /
+                _collThres,
+            vault.getRemainingCredit()
+        );
     }
 
-    function testGetRemainingCreditAfterTakingCredit(uint8 amountEth, uint128 amountCredit) public virtual {
-        uint256 depositValue = Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals * amountEth;
+    function testGetRemainingCreditAfterTakingCredit(
+        uint8 amountEth,
+        uint128 amountCredit
+    ) public virtual {
+        uint256 depositValue = ((Constants.WAD * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals) * amountEth;
 
-        (,uint16 _collThres,,,,) = vault.debt();
+        (, uint16 _collThres, , , , ) = vault.debt();
 
-        vm.assume(depositValue * 100 / _collThres > amountCredit);
+        vm.assume((depositValue * 100) / _collThres > amountCredit);
         depositEthInVault(amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
         vault.takeCredit(amountCredit);
 
         uint256 actualRemainingCredit = vault.getRemainingCredit();
-        uint256 expectedRemainingCredit = depositValue * 100 / _collThres - amountCredit;
+        uint256 expectedRemainingCredit = (depositValue * 100) /
+            _collThres -
+            amountCredit;
 
         assertEq(expectedRemainingCredit, actualRemainingCredit);
     }
 
     function testInitializeWithZeroInterest() public virtual {
-        (uint256 _openDebt,,,uint64 _yearlyInterestRate, uint32 _lastBlock,) = vault.debt();
+        (
+            uint256 _openDebt,
+            ,
+            ,
+            uint64 _yearlyInterestRate,
+            uint32 _lastBlock,
+
+        ) = vault.debt();
 
         assertEq(_openDebt, 0);
         assertEq(_yearlyInterestRate, 0);
         assertEq(_lastBlock, 0);
     }
 
-    function testTakeCreditAsNonOwner(uint8 amountEth, uint128 amountCredit) public virtual {
+    function testTakeCreditAsNonOwner(uint8 amountEth, uint128 amountCredit)
+        public
+        virtual
+    {
         vm.assume(unprivilegedAddress != vaultOwner);
-        uint256 depositValue = Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals * amountEth;
-        (,uint16 _collThres,,,,) = vault.debt();
-        vm.assume(depositValue * 100 / _collThres > amountCredit);
+        uint256 depositValue = ((Constants.WAD * rateEthToUsd) /
+            10**Constants.oracleEthToUsdDecimals) * amountEth;
+        (, uint16 _collThres, , , , ) = vault.debt();
+        vm.assume((depositValue * 100) / _collThres > amountCredit);
         depositEthInVault(amountEth, vaultOwner);
-
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("You are not the owner");
@@ -895,7 +1302,9 @@ contract vaultTests is Test {
     function testMinCollValueUnchecked() public virtual {
         //uint256 minCollValue;
         //unchecked {minCollValue = uint256(debt._openDebt) * debt._collThres / 100;}
-        assertTrue(uint256(type(uint128).max) * type(uint16).max < type(uint256).max);
+        assertTrue(
+            uint256(type(uint128).max) * type(uint16).max < type(uint256).max
+        );
     }
 
     function testCheckBaseUnchecked() public virtual {
@@ -909,42 +1318,58 @@ contract vaultTests is Test {
     //overflows from deltaBlocks = 894262060268226281981748468
     function testCheckExponentUnchecked() public virtual {
         uint256 yearlyBlocks = 2628000;
-        uint256 maxDeltaBlocks = uint256(type(uint128).max) * uint256(yearlyBlocks) / 10 ** 18;
+        uint256 maxDeltaBlocks = (uint256(type(uint128).max) *
+            uint256(yearlyBlocks)) / 10**18;
 
-        uint256 exponent256 = maxDeltaBlocks * 1e18 / yearlyBlocks;
-        uint128 exponent128 = uint128(maxDeltaBlocks * uint256(1e18) / yearlyBlocks);
+        uint256 exponent256 = (maxDeltaBlocks * 1e18) / yearlyBlocks;
+        uint128 exponent128 = uint128(
+            (maxDeltaBlocks * uint256(1e18)) / yearlyBlocks
+        );
 
         assertTrue(exponent256 == exponent128);
 
-        uint256 exponent256Overflow = ((maxDeltaBlocks + 1) * 1e18 / yearlyBlocks);
-        uint128 exponent128Overflow = uint128((maxDeltaBlocks + 1) * 1e18 / yearlyBlocks);
+        uint256 exponent256Overflow = (((maxDeltaBlocks + 1) * 1e18) /
+            yearlyBlocks);
+        uint128 exponent128Overflow = uint128(
+            ((maxDeltaBlocks + 1) * 1e18) / yearlyBlocks
+        );
 
         assertTrue(exponent256Overflow != exponent128Overflow);
-        assertTrue(exponent128Overflow == exponent256Overflow - type(uint128).max - 1);
+        assertTrue(
+            exponent128Overflow == exponent256Overflow - type(uint128).max - 1
+        );
     }
 
-    function testCheckUnrealisedDebtUnchecked(uint64 base, uint24 deltaBlocks, uint128 openDebt) public virtual {
-        vm.assume(base <= 10 * 10 ** 18);
+    function testCheckUnrealisedDebtUnchecked(
+        uint64 base,
+        uint24 deltaBlocks,
+        uint128 openDebt
+    ) public virtual {
+        vm.assume(base <= 10 * 10**18);
         //1000%
-        vm.assume(base >= 10 ** 18);
+        vm.assume(base >= 10**18);
         vm.assume(deltaBlocks <= 13140000);
         //5 year
-        vm.assume(openDebt <= type(uint128).max / (10 ** 5));
+        vm.assume(openDebt <= type(uint128).max / (10**5));
         //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
 
         uint256 yearlyBlocks = 2628000;
-        uint128 exponent = uint128((uint256(deltaBlocks)) * 1e18 / yearlyBlocks);
+        uint128 exponent = uint128(
+            ((uint256(deltaBlocks)) * 1e18) / yearlyBlocks
+        );
         vm.assume(LogExpMath.pow(base, exponent) > 0);
 
-        emit log_named_uint('logexp', LogExpMath.pow(base, exponent));
+        emit log_named_uint("logexp", LogExpMath.pow(base, exponent));
 
         //uint256 openDebt = type(uint256).max / (2^255 - 1) / 10^20;
 
-        uint256 unRealisedDebt256 = uint256(openDebt) * (LogExpMath.pow(base, exponent) - 1e18) / 1e18;
-        uint128 unRealisedDebt128 = uint128(openDebt * (LogExpMath.pow(base, exponent) - 1e18) / 1e18);
+        uint256 unRealisedDebt256 = (uint256(openDebt) *
+            (LogExpMath.pow(base, exponent) - 1e18)) / 1e18;
+        uint128 unRealisedDebt128 = uint128(
+            (openDebt * (LogExpMath.pow(base, exponent) - 1e18)) / 1e18
+        );
 
         assertEq(unRealisedDebt256, unRealisedDebt128);
-
     }
 
     /*
@@ -955,34 +1380,52 @@ contract vaultTests is Test {
         * 1000% interest rate
         * never synced any debt during 5 years
     **/
-    function testSyncDebtUnchecked(uint64 base, uint24 deltaBlocks, uint128 openDebt) public virtual {
-        vm.assume(base <= 10 * 10 ** 18);
+    function testSyncDebtUnchecked(
+        uint64 base,
+        uint24 deltaBlocks,
+        uint128 openDebt
+    ) public virtual {
+        vm.assume(base <= 10 * 10**18);
         //1000%
-        vm.assume(base >= 10 ** 18);
+        vm.assume(base >= 10**18);
         //No negative interest rate possible
         vm.assume(deltaBlocks <= 13140000);
         //5 year
-        vm.assume(openDebt <= type(uint128).max / (10 ** 5));
+        vm.assume(openDebt <= type(uint128).max / (10**5));
         //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
 
-        (,uint16 _collThres,,uint64 _yearlyInterestRate,,uint8 _numeraire) = vault.debt();
-        uint128 amountEthToDeposit = uint128(openDebt / rateEthToUsd / 10 ** 18 * 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals) * _collThres / 100);
+        (
+            ,
+            uint16 _collThres,
+            ,
+            uint64 _yearlyInterestRate,
+            ,
+            uint8 _numeraire
+        ) = vault.debt();
+        uint128 amountEthToDeposit = uint128(
+            ((openDebt / rateEthToUsd / 10**18) *
+                10**(Constants.oracleEthToUsdDecimals + Constants.ethDecimals) *
+                _collThres) / 100
+        );
 
         uint256 yearlyBlocks = 2628000;
-        uint128 exponent = uint128((uint256(deltaBlocks)) * 1e18 / yearlyBlocks);
+        uint128 exponent = uint128(
+            ((uint256(deltaBlocks)) * 1e18) / yearlyBlocks
+        );
 
         vm.prank(creatorAddress);
         interestRateModule.setBaseInterestRate(base - 1e18);
         //note this will not work anymore if any credit-rating is set!!
 
         //uint256 remainingCredit = depositEthAndTakeMaxCredit(10*10**6 * 10**18); //10m ETH
-        uint256 remainingCredit = depositEthAndTakeMaxCredit(amountEthToDeposit);
+        uint256 remainingCredit = depositEthAndTakeMaxCredit(
+            amountEthToDeposit
+        );
         //10m ETH
-
 
         uint256 _lastBlock = block.number;
 
-        (,_collThres,,_yearlyInterestRate,,_numeraire) = vault.debt();
+        (, _collThres, , _yearlyInterestRate, , _numeraire) = vault.debt();
         assertTrue(_yearlyInterestRate == base - 1e18);
 
         vm.roll(block.number + deltaBlocks);
@@ -996,14 +1439,17 @@ contract vaultTests is Test {
         debtLocal._lastBlock = uint32(_lastBlock);
         debtLocal._yearlyInterestRate = _yearlyInterestRate;
 
-        unRealisedDebt = uint128(debtLocal._openDebt * (LogExpMath.pow(base, exponent) - 1e18) / 1e18);
+        unRealisedDebt = uint128(
+            (debtLocal._openDebt * (LogExpMath.pow(base, exponent) - 1e18)) /
+                1e18
+        );
 
         debtLocal._openDebt += unRealisedDebt;
         debtLocal._lastBlock = uint32(block.number);
 
         vault.syncDebt();
 
-        (uint256 _openDebt,,,,,) = vault.debt();
+        (uint256 _openDebt, , , , , ) = vault.debt();
 
         assertEq(debtLocal._openDebt, _openDebt);
     }
@@ -1011,14 +1457,27 @@ contract vaultTests is Test {
     function testGetOpenDebtUnchecked(uint32 blocksToRoll) public virtual {
         vm.assume(blocksToRoll <= 255555555);
         //up to the year 2122
-        (,uint16 _collThres,,uint64 _yearlyInterestRate,,uint8 _numeraire) = vault.debt();
-        uint128 amountEthToDeposit = uint128(10 * 10 ** 9 * 10 ** 18 / rateEthToUsd / 10 ** 18 * 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals) * _collThres / 100);
+        (
+            ,
+            uint16 _collThres,
+            ,
+            uint64 _yearlyInterestRate,
+            ,
+            uint8 _numeraire
+        ) = vault.debt();
+        uint128 amountEthToDeposit = uint128(
+            (((10 * 10**9 * 10**18) / rateEthToUsd / 10**18) *
+                10**(Constants.oracleEthToUsdDecimals + Constants.ethDecimals) *
+                _collThres) / 100
+        );
         //equivalent to 10bn USD debt
-        uint256 remainingCredit = depositEthAndTakeMaxCredit(amountEthToDeposit);
+        uint256 remainingCredit = depositEthAndTakeMaxCredit(
+            amountEthToDeposit
+        );
         //10bn USD debt
         uint256 _lastBlock = block.number;
 
-        (,_collThres,,_yearlyInterestRate,,_numeraire) = vault.debt();
+        (, _collThres, , _yearlyInterestRate, , _numeraire) = vault.debt();
 
         vm.roll(block.number + blocksToRoll);
 
@@ -1038,44 +1497,60 @@ contract vaultTests is Test {
         base = 1e18 + debtLocal._yearlyInterestRate;
 
         //gas: only overflows when blocks.number > ~10**20
-        exponent = (block.number - debtLocal._lastBlock) * 1e18 / vault.yearlyBlocks();
+        exponent =
+            ((block.number - debtLocal._lastBlock) * 1e18) /
+            vault.yearlyBlocks();
 
         emit log_named_uint("base", base);
         emit log_named_uint("exponent", exponent);
         emit log_named_uint("logExp", LogExpMath.pow(base, exponent));
         emit log_named_uint("unRealisedDebt", unRealisedDebt);
 
-        debtLocal._openDebt = debtLocal._openDebt * LogExpMath.pow(base, exponent) / 1e18;
+        debtLocal._openDebt =
+            (debtLocal._openDebt * LogExpMath.pow(base, exponent)) /
+            1e18;
 
         vault.syncDebt();
 
         uint256 _openDebt;
-        (_openDebt,
-        _collThres,,
-        _yearlyInterestRate,
-        _lastBlock,
-        _numeraire) = vault.debt();
+        (
+            _openDebt,
+            _collThres,
+            ,
+            _yearlyInterestRate,
+            _lastBlock,
+            _numeraire
+        ) = vault.debt();
 
         assertEq(debtLocal._openDebt, _openDebt);
     }
 
-    function testRemainingCreditUnchecked(uint128 amountEth, uint8 factor) public virtual {
-        vm.assume(amountEth < 10 * 10 ** 9 * 10 ** 18);
+    function testRemainingCreditUnchecked(uint128 amountEth, uint8 factor)
+        public
+        virtual
+    {
+        vm.assume(amountEth < 10 * 10**9 * 10**18);
 
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
         assetCreditRatings[1] = Constants.ethCreditRatingEth;
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleEthToUsdArr, assetUnit : uint64(10 ** Constants.ethDecimals), assetAddress : address(eth)}), assetCreditRatings);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            assetCreditRatings
+        );
 
         depositERC20InVault(eth, amountEth, vaultOwner);
         vm.prank(vaultOwner);
-        vault.takeCredit(amountEth * 100 / 150 * factor / 255);
+        vault.takeCredit((((amountEth * 100) / 150) * factor) / 255);
 
         uint256 currentValue = vault.getValue(uint8(Constants.UsdNumeraire));
         uint256 openDebt = vault.getOpenDebt();
-        (,uint16 _collThres,,,,) = vault.debt();
-
+        (, uint16 _collThres, , , , ) = vault.debt();
 
         uint256 maxAllowedCreditLocal;
         uint256 remainingCreditLocal;
@@ -1084,14 +1559,19 @@ contract vaultTests is Test {
         maxAllowedCreditLocal = (currentValue * 100) / _collThres;
 
         //gas: explicit check is done to prevent underflow
-        remainingCreditLocal = maxAllowedCreditLocal > openDebt ? maxAllowedCreditLocal - openDebt : 0;
+        remainingCreditLocal = maxAllowedCreditLocal > openDebt
+            ? maxAllowedCreditLocal - openDebt
+            : 0;
 
         uint256 remainingCreditFetched = vault.getRemainingCredit();
 
         assertEq(remainingCreditLocal, remainingCreditFetched);
     }
 
-    function testTransferOwnershipOfVaultByNonOwner(address sender) public virtual {
+    function testTransferOwnershipOfVaultByNonOwner(address sender)
+        public
+        virtual
+    {
         vm.assume(sender != address(factoryContr));
         vm.startPrank(sender);
         vm.expectRevert("VL: Not factory");
@@ -1104,9 +1584,9 @@ contract vaultTests is Test {
         Vault vault_m = new Vault();
 
         uint256 slot2 = stdstore
-        .target(address(vault_m))
-        .sig(vault_m._registryAddress.selector)
-        .find();
+            .target(address(vault_m))
+            .sig(vault_m._registryAddress.selector)
+            .find();
         bytes32 loc2 = bytes32(slot2);
         bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
         vm.store(address(vault_m), loc2, newReg);
@@ -1117,7 +1597,13 @@ contract vaultTests is Test {
         assertEq(to, vault_m.owner());
 
         vault_m = new Vault();
-        vault_m.initialize(address(this), address(mainRegistry), address(stable), address(stakeContract), address(interestRateModule));
+        vault_m.initialize(
+            address(this),
+            address(mainRegistry),
+            address(stable),
+            address(stakeContract),
+            address(interestRateModule)
+        );
         assertEq(address(this), vault_m.owner());
 
         vm.prank(address(factoryContr));
@@ -1126,18 +1612,21 @@ contract vaultTests is Test {
     }
 
     function testTransferOwnershipByNonOwner(address from) public virtual {
-        vm.assume(from != address(this) && from != address(0) && from != address(factoryContr));
+        vm.assume(
+            from != address(this) &&
+                from != address(0) &&
+                from != address(factoryContr)
+        );
         Vault vault_m = new Vault();
         address to = address(123456);
 
         uint256 slot2 = stdstore
-        .target(address(vault_m))
-        .sig(vault_m._registryAddress.selector)
-        .find();
+            .target(address(vault_m))
+            .sig(vault_m._registryAddress.selector)
+            .find();
         bytes32 loc2 = bytes32(slot2);
         bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
         vm.store(address(vault_m), loc2, newReg);
-
 
         assertEq(address(0), vault_m.owner());
 
@@ -1149,7 +1638,13 @@ contract vaultTests is Test {
         assertEq(address(0), vault_m.owner());
 
         vault_m = new Vault();
-        vault_m.initialize(address(this), address(mainRegistry), address(stable), address(stakeContract), address(interestRateModule));
+        vault_m.initialize(
+            address(this),
+            address(mainRegistry),
+            address(stable),
+            address(stakeContract),
+            address(interestRateModule)
+        );
         assertEq(address(this), vault_m.owner());
 
         vm.startPrank(from);
@@ -1158,14 +1653,23 @@ contract vaultTests is Test {
         assertEq(address(this), vault_m.owner());
     }
 
-
-    function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
+    function depositEthAndTakeMaxCredit(uint128 amountEth)
+        public
+        returns (uint256)
+    {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
         assetCreditRatings[1] = Constants.ethCreditRatingEth;
 
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleEthToUsdArr, assetUnit : uint64(10 ** Constants.ethDecimals), assetAddress : address(eth)}), assetCreditRatings);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            assetCreditRatings
+        );
 
         emit log_named_uint("AmountInDepositandMax", amountEth);
 
@@ -1178,12 +1682,19 @@ contract vaultTests is Test {
         return remainingCredit;
     }
 
-
-    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender) public returns (address[] memory assetAddresses,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        uint256[] memory assetTypes) {
-
+    function depositERC20InVault(
+        ERC20Mock token,
+        uint128 amount,
+        address sender
+    )
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
         assetAddresses = new address[](1);
         assetAddresses[0] = address(token);
 
@@ -1204,14 +1715,23 @@ contract vaultTests is Test {
         vm.stopPrank();
     }
 
-
-    function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
+    function depositEthInVault(uint8 amount, address sender)
+        public
+        returns (Assets memory assetInfo)
+    {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
         assetCreditRatings[1] = Constants.ethCreditRatingEth;
 
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleEthToUsdArr, assetUnit : uint64(10 ** Constants.ethDecimals), assetAddress : address(eth)}), assetCreditRatings);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            assetCreditRatings
+        );
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -1220,7 +1740,7 @@ contract vaultTests is Test {
         assetIds[0] = 0;
 
         uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount * 10 ** Constants.ethDecimals;
+        assetAmounts[0] = amount * 10**Constants.ethDecimals;
 
         uint256[] memory assetTypes = new uint256[](1);
         assetTypes[0] = 0;
@@ -1229,19 +1749,36 @@ contract vaultTests is Test {
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
 
-        assetInfo = Assets({assetAddresses : assetAddresses, assetIds : assetIds, assetAmounts : assetAmounts, assetTypes : assetTypes});
+        assetInfo = Assets({
+            assetAddresses: assetAddresses,
+            assetIds: assetIds,
+            assetAmounts: assetAmounts,
+            assetTypes: assetTypes
+        });
     }
 
-    function depositLinkInVault(uint8 amount, address sender) public returns (address[] memory assetAddresses,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        uint256[] memory assetTypes) {
+    function depositLinkInVault(uint8 amount, address sender)
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.linkCreditRatingUsd;
         assetCreditRatings[1] = Constants.linkCreditRatingEth;
 
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses : oracleLinkToUsdArr, assetUnit : uint64(10 ** Constants.linkDecimals), assetAddress : address(link)}), assetCreditRatings);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleLinkToUsdArr,
+                assetUnit: uint64(10**Constants.linkDecimals),
+                assetAddress: address(link)
+            }),
+            assetCreditRatings
+        );
 
         assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
@@ -1250,7 +1787,7 @@ contract vaultTests is Test {
         assetIds[0] = 0;
 
         assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount * 10 ** Constants.linkDecimals;
+        assetAmounts[0] = amount * 10**Constants.linkDecimals;
 
         assetTypes = new uint256[](1);
         assetTypes[0] = 0;
@@ -1260,25 +1797,37 @@ contract vaultTests is Test {
         vm.stopPrank();
     }
 
-
-    function depositBaycInVault(uint128[] memory tokenIds, address sender) public returns (address[] memory assetAddresses,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        uint256[] memory assetTypes) {
+    function depositBaycInVault(uint128[] memory tokenIds, address sender)
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.baycCreditRatingUsd;
         assetCreditRatings[1] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses : oracleWbaycToEthEthToUsd, idRangeStart : 0, idRangeEnd : type(uint256).max, assetAddress : address(bayc)}), assetCreditRatings);
+        floorERC721SubRegistry.setAssetInformation(
+            FloorERC721SubRegistry.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
+            }),
+            assetCreditRatings
+        );
 
         assetAddresses = new address[](tokenIds.length);
         assetIds = new uint256[](tokenIds.length);
         assetAmounts = new uint256[](tokenIds.length);
         assetTypes = new uint256[](tokenIds.length);
 
-        uint tokenIdToWorkWith;
-        for (uint i; i < tokenIds.length; i++) {
+        uint256 tokenIdToWorkWith;
+        for (uint256 i; i < tokenIds.length; i++) {
             tokenIdToWorkWith = tokenIds[i];
             while (bayc.ownerOf(tokenIdToWorkWith) != address(0)) {
                 tokenIdToWorkWith++;

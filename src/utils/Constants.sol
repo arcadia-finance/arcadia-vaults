@@ -1,7 +1,11 @@
-// This is a private, unpublished repository.
-// All rights reserved to Arcadia Finance.
-// Any modification, publication, reproduction, commercialisation, incorporation, sharing or any other kind of use of any part of this code or derivatives thereof is not allowed.
-// SPDX-License-Identifier: UNLICENSED
+/** 
+    This is a private, unpublished repository.
+    All rights reserved to Arcadia Finance.
+    Any modification, publication, reproduction, commercialization, incorporation, 
+    sharing or any other kind of use of any part of this code or derivatives thereof is not allowed.
+    
+    SPDX-License-Identifier: UNLICENSED
+ */
 
 pragma solidity ^0.8.0;
 
@@ -47,11 +51,16 @@ library Constants {
     uint256 internal constant oracleEthToUsdUnit = 10**oracleEthToUsdDecimals;
     uint256 internal constant oracleLinkToUsdUnit = 10**oracleLinkToUsdDecimals;
     uint256 internal constant oracleSnxToEthUnit = 10**oracleSnxToEthDecimals;
-    uint256 internal constant oracleWbaycToEthUnit = 10**oracleWbaycToEthDecimals;
-    uint256 internal constant oracleWmaycToUsdUnit = 10**oracleWmaycToUsdDecimals;
-    uint256 internal constant oracleInterleaveToEthUnit = 10**oracleInterleaveToEthDecimals;
-    uint256 internal constant oracleStableToUsdUnit = 10**oracleStableToUsdDecimals;
-    uint256 internal constant oracleStableEthToEthUnit = 10**oracleStableEthToEthDecimals;
+    uint256 internal constant oracleWbaycToEthUnit =
+        10**oracleWbaycToEthDecimals;
+    uint256 internal constant oracleWmaycToUsdUnit =
+        10**oracleWmaycToUsdDecimals;
+    uint256 internal constant oracleInterleaveToEthUnit =
+        10**oracleInterleaveToEthDecimals;
+    uint256 internal constant oracleStableToUsdUnit =
+        10**oracleStableToUsdDecimals;
+    uint256 internal constant oracleStableEthToEthUnit =
+        10**oracleStableEthToEthDecimals;
 
     uint256 internal constant usdDecimals = 14;
     uint256 internal constant stableDecimals = 18;
