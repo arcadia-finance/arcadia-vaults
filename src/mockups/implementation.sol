@@ -5,12 +5,11 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 contract impl {
-
     uint256 public valuestored;
     address public initvalue;
     string public stringinput;
 
-    constructor (address inputaddr) {
+    constructor(address inputaddr) {
         initvalue = inputaddr;
     }
 
@@ -18,7 +17,6 @@ contract impl {
         valuestored = val;
         return valuestored;
     }
-
 
     function verifyOne(uint256) public view returns (bool) {
         require(valuestored == 1, "error not the value");
