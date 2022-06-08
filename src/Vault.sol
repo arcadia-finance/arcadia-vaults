@@ -235,9 +235,15 @@ contract Vault {
     @param ERC20Address The asset address that should be transferred.
     @param amount The amount of ERC20 tokens to be transferred.
   */
-  function _depositERC20(address _from, address ERC20Address, uint256 amount) internal {
-
-    require(IERC20(ERC20Address).transferFrom(_from, address(this), amount), "Transfer from failed");
+    function _depositERC20(
+        address _from,
+        address ERC20Address,
+        uint256 amount
+    ) internal {
+        require(
+            IERC20(ERC20Address).transferFrom(_from, address(this), amount),
+            "Transfer from failed"
+        );
 
         bool addrSeen;
         uint256 erc20StoredLength = _erc20Stored.length;
@@ -265,13 +271,16 @@ contract Vault {
     @param ERC721Address The asset address that should be transferred.
     @param id The ID of the token to be transferred.
   */
-  function _depositERC721(address _from, address ERC721Address, uint256 id) internal {
-    
-    IERC721(ERC721Address).transferFrom(_from, address(this), id);
-    
-    _erc721Stored.push(ERC721Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
-    _erc721TokenIds.push(id);
-  }
+    function _depositERC721(
+        address _from,
+        address ERC721Address,
+        uint256 id
+    ) internal {
+        IERC721(ERC721Address).transferFrom(_from, address(this), id);
+
+        _erc721Stored.push(ERC721Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
+        _erc721TokenIds.push(id);
+    }
 
     /**
     @notice Internal function used to deposit ERC1155 tokens.
@@ -417,9 +426,15 @@ contract Vault {
     @param ERC20Address The asset address that should be transferred.
     @param amount The amount of ERC20 tokens to be transferred.
   */
-  function _withdrawERC20(address to, address ERC20Address, uint256 amount) internal {
-
-    require(IERC20(ERC20Address).transfer(to, amount), "Transfer from failed");
+    function _withdrawERC20(
+        address to,
+        address ERC20Address,
+        uint256 amount
+    ) internal {
+        require(
+            IERC20(ERC20Address).transfer(to, amount),
+            "Transfer from failed"
+        );
 
         if (IERC20(ERC20Address).balanceOf(address(this)) == 0) {
             uint256 erc20StoredLength = _erc20Stored.length;
@@ -448,9 +463,12 @@ contract Vault {
     @param ERC721Address The asset address that should be transferred.
     @param id The ID of the token to be transferred.
   */
-  function _withdrawERC721(address to, address ERC721Address, uint256 id) internal {
-
-    uint256 tokenIdLength = _erc721TokenIds.length;
+    function _withdrawERC721(
+        address to,
+        address ERC721Address,
+        uint256 id
+    ) internal {
+        uint256 tokenIdLength = _erc721TokenIds.length;
 
         if (tokenIdLength == 1) {
             // there was only one ERC721 stored on the contract, safe to remove both lists
@@ -491,29 +509,40 @@ contract Vault {
     @param id The ID of the token to be transferred.
     @param amount The amount of ERC1155 tokens to be transferred.
   */
-  function _withdrawERC1155(address to, address ERC1155Address, uint256 id, uint256 amount) internal {
-
-    uint256 tokenIdLength = _erc1155TokenIds.length;
-    if (IERC1155(ERC1155Address).balanceOf(address(this), id) - amount == 0) {
-      if (tokenIdLength == 1) {
-        _erc1155TokenIds.pop();
-        _erc1155Stored.pop();
-      }
-      else {
-        for (uint256 i; i < tokenIdLength;) {
-          if (_erc1155TokenIds[i] == id) {
-            if (_erc1155Stored[i] == ERC1155Address) {
-            _erc1155TokenIds[i] = _erc1155TokenIds[tokenIdLength-1];
-             _erc1155TokenIds.pop();
-            _erc1155Stored[i] = _erc1155Stored[tokenIdLength-1];
-            _erc1155Stored.pop();
-            break;
+    function _withdrawERC1155(
+        address to,
+        address ERC1155Address,
+        uint256 id,
+        uint256 amount
+    ) internal {
+        uint256 tokenIdLength = _erc1155TokenIds.length;
+        if (
+            IERC1155(ERC1155Address).balanceOf(address(this), id) - amount == 0
+        ) {
+            if (tokenIdLength == 1) {
+                _erc1155TokenIds.pop();
+                _erc1155Stored.pop();
+            } else {
+                for (uint256 i; i < tokenIdLength; ) {
+                    if (_erc1155TokenIds[i] == id) {
+                        if (_erc1155Stored[i] == ERC1155Address) {
+                            _erc1155TokenIds[i] = _erc1155TokenIds[
+                                tokenIdLength - 1
+                            ];
+                            _erc1155TokenIds.pop();
+                            _erc1155Stored[i] = _erc1155Stored[
+                                tokenIdLength - 1
+                            ];
+                            _erc1155Stored.pop();
+                            break;
+                        }
+                    }
+                    unchecked {
+                        ++i;
+                    }
+                }
             }
-          }
-          unchecked {++i;}
         }
-      }
-    }
 
         IERC1155(ERC1155Address).safeTransferFrom(
             address(this),

@@ -514,7 +514,10 @@ contract LiquidatorTest is Test {
         assertEq(proxy.life(), 0);
     }
 
-    function testStartAuction(uint128 amountEth, uint256 newPrice) public virtual {
+    function testStartAuction(uint128 amountEth, uint256 newPrice)
+        public
+        virtual
+    {
         (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
@@ -541,8 +544,10 @@ contract LiquidatorTest is Test {
         assertEq(proxy.life(), 1);
     }
 
-
-  function testShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public virtual {
+    function testShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice)
+        public
+        virtual
+    {
         (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
@@ -1015,7 +1020,10 @@ contract LiquidatorTest is Test {
         );
     }
 
-    function testClaimSingleHighLife(uint128 amountEth, uint16 newLife) public virtual {
+    function testClaimSingleHighLife(uint128 amountEth, uint16 newLife)
+        public
+        virtual
+    {
         vm.assume(amountEth > 0);
         {
             uint256 valueOfOneEth = rateEthToUsd *

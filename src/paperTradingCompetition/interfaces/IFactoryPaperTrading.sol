@@ -7,5 +7,5 @@ pragma solidity >=0.4.22 <0.9.0;
 import "./../../interfaces/IFactory.sol";
 
 interface IFactoryPaperTrading is IFactory {
-  function getVaultAddress(uint256 id) external view returns(address);
+    function getVaultAddress(uint256 id) external view returns (address);
 }

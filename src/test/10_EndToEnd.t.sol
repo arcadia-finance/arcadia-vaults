@@ -21,7 +21,6 @@ import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-
 contract EndToEndTest is Test {
     using stdStorage for StdStorage;
 
@@ -61,13 +60,13 @@ contract EndToEndTest is Test {
     address private stakeContract = address(5);
     address private vaultOwner = address(6);
 
-
-    uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
-    uint256 rateLinkToUsd = 20 * 10 ** Constants.oracleLinkToUsdDecimals;
+    uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
+    uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
-    uint256 rateWbaycToEth = 85 * 10 ** Constants.oracleWbaycToEthDecimals;
-    uint256 rateWmaycToUsd = 50000 * 10 ** Constants.oracleWmaycToUsdDecimals;
-    uint256 rateInterleaveToEth = 1 * 10 ** (Constants.oracleInterleaveToEthDecimals - 2);
+    uint256 rateWbaycToEth = 85 * 10**Constants.oracleWbaycToEthDecimals;
+    uint256 rateWmaycToUsd = 50000 * 10**Constants.oracleWmaycToUsdDecimals;
+    uint256 rateInterleaveToEth =
+        1 * 10**(Constants.oracleInterleaveToEthDecimals - 2);
 
     address[] public oracleEthToUsdArr = new address[](1);
     address[] public oracleLinkToUsdArr = new address[](1);
@@ -75,7 +74,6 @@ contract EndToEndTest is Test {
     address[] public oracleWbaycToEthEthToUsd = new address[](2);
     address[] public oracleWmaycToUsdArr = new address[](1);
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
-
 
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
@@ -101,7 +99,10 @@ contract EndToEndTest is Test {
         );
         link.mint(tokenCreatorAddress, 200000 * 10**Constants.linkDecimals);
 
-        safemoon = new ERC20Mock("Safemoon Mock", "mSFMN", uint8(Constants.safemoonDecimals)
+        safemoon = new ERC20Mock(
+            "Safemoon Mock",
+            "mSFMN",
+            uint8(Constants.safemoonDecimals)
         );
         safemoon.mint(
             tokenCreatorAddress,
@@ -135,13 +136,21 @@ contract EndToEndTest is Test {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD"
+        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleEthToUsdDecimals),
+            "ETH / USD"
         );
         oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleLinkToUsdDecimals),
             "LINK / USD"
-        );oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals),  "SNX / ETH");
-        oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals),  "WBAYC / ETH"
+        );
+        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleSnxToEthDecimals),
+            "SNX / ETH"
+        );
+        oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleWbaycToEthDecimals),
+            "WBAYC / ETH"
         );
         oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleWmaycToUsdDecimals),
@@ -153,36 +162,72 @@ contract EndToEndTest is Test {
         );
 
         vm.startPrank(creatorAddress);
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleEthToUsdUnit), baseAssetNumeraire: 0, quoteAsset:"ETH",
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
+                baseAssetNumeraire: 0,
+                quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsNumeraire: true
-        })
+            })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
                 baseAssetNumeraire: 0,
                 quoteAsset: "LINK",
-                baseAsset: "USD", oracleAddress:address(oracleLinkToUsd), quoteAssetAddress:address(link), baseAssetIsNumeraire: true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleSnxToEthUnit), baseAssetNumeraire: 1, quoteAsset:"SNX",
-                baseAsset: "ETH", oracleAddress:address(oracleSnxToEth), quoteAssetAddress:address(snx), baseAssetIsNumeraire: true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleWbaycToEthUnit), baseAssetNumeraire: 1, quoteAsset:"WBAYC",
+                baseAsset: "USD",
+                oracleAddress: address(oracleLinkToUsd),
+                quoteAssetAddress: address(link),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleSnxToEthUnit),
+                baseAssetNumeraire: 1,
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
+                baseAssetNumeraire: 1,
+                quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
                 baseAssetIsNumeraire: true
-        })
+            })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
                 baseAssetNumeraire: 0,
                 quoteAsset: "WMAYC",
-                baseAsset: "USD", oracleAddress:address(oracleWmaycToUsd), quoteAssetAddress:address(wmayc), baseAssetIsNumeraire: true}));
-        oracleHub.addOracle(OracleHub.OracleInformation({oracleUnit:uint64(Constants.oracleInterleaveToEthUnit), baseAssetNumeraire: 1, quoteAsset:"INTERLEAVE",
-                baseAsset: "ETH", oracleAddress:address(oracleInterleaveToEth), quoteAssetAddress:address(interleave), baseAssetIsNumeraire: true}));
+                baseAsset: "USD",
+                oracleAddress: address(oracleWmaycToUsd),
+                quoteAssetAddress: address(wmayc),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
+                baseAssetNumeraire: 1,
+                quoteAsset: "INTERLEAVE",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleInterleaveToEth),
+                quoteAssetAddress: address(interleave),
+                baseAssetIsNumeraire: true
+            })
+        );
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
@@ -239,21 +284,37 @@ contract EndToEndTest is Test {
 
     //this is a before each
     function setUp() public {
-
         //emit log_named_address("oracleEthToUsdArr[0]", oracleEthToUsdArr[0]);
 
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stable), numeraireLabel:"USD",
+        mainRegistry = new MainRegistry(
+            MainRegistry.NumeraireInformation({
+                numeraireToUsdOracleUnit: 0,
+                assetAddress: 0x0000000000000000000000000000000000000000,
+                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                stableAddress: address(stable),
+                numeraireLabel: "USD",
                 numeraireUnit: 1
-        })
-        );uint256[] memory emptyList = new uint256[](0);
-        mainRegistry.addNumeraire(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:uint64(10**Constants.oracleEthToUsdDecimals), assetAddress:address(eth), numeraireToUsdOracle:address(oracleEthToUsd), stableAddress:address(stable), numeraireLabel:"ETH",
+            })
+        );
+        uint256[] memory emptyList = new uint256[](0);
+        mainRegistry.addNumeraire(
+            MainRegistry.NumeraireInformation({
+                numeraireToUsdOracleUnit: uint64(
+                    10**Constants.oracleEthToUsdDecimals
+                ),
+                assetAddress: address(eth),
+                numeraireToUsdOracle: address(oracleEthToUsd),
+                stableAddress: address(stable),
+                numeraireLabel: "ETH",
                 numeraireUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
 
-        standardERC20Registry = new StandardERC20Registry(address(mainRegistry), address(oracleHub)
+        standardERC20Registry = new StandardERC20Registry(
+            address(mainRegistry),
+            address(oracleHub)
         );
         floorERC721SubRegistry = new FloorERC721SubRegistry(
             address(mainRegistry),
@@ -272,7 +333,13 @@ contract EndToEndTest is Test {
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
 
-        standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(eth)}), assetCreditRatings
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            assetCreditRatings
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
@@ -372,7 +439,6 @@ contract EndToEndTest is Test {
         stable.approve(address(proxy), type(uint256).max);
         stable.approve(address(liquidator), type(uint256).max);
         vm.stopPrank();
-
     }
 
     function testTransferOwnershipStable(address to) public {
@@ -497,9 +563,11 @@ contract EndToEndTest is Test {
         assertEq(actualValue, expectedValue);
     }
 
-    function testReturnEthvalueOfInterleave(uint256 tokenId, uint256 amount) public
-        {
-        uint256 valueOfOneIL = (Constants.WAD * rateInterleaveToEth) / 10 ** Constants.oracleInterleaveToEthDecimals;
+    function testReturnEthvalueOfInterleave(uint256 tokenId, uint256 amount)
+        public
+    {
+        uint256 valueOfOneIL = (Constants.WAD * rateInterleaveToEth) /
+            10**Constants.oracleInterleaveToEthDecimals;
         vm.assume(amount > 0);
         vm.assume(valueOfOneIL < type(uint256).max / amount);
         uint256 expectedValue = valueOfOneIL * amount;
@@ -511,9 +579,9 @@ contract EndToEndTest is Test {
         vm.prank(creatorAddress);
         floorERC1155SubRegistry.setAssetInformation(
             FloorERC1155SubRegistry.AssetInformation({
-                oracleAddresses : oracleInterleaveToEthEthToUsd,
-                id : tokenId,
-                assetAddress : address(interleave)
+                oracleAddresses: oracleInterleaveToEthEthToUsd,
+                id: tokenId,
+                assetAddress: address(interleave)
             }),
             assetCreditRatingsInterleave
         );
@@ -567,10 +635,15 @@ contract EndToEndTest is Test {
         assertEq(actualValue, expectedValue);
     }
 
-    function testReturnUsdValueEthSnx(uint128 amountSnx, uint128 amountEth) public
-        {
-        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) / 10 ** (Constants.oracleSnxToEthDecimals + Constants.oracleEthToUsdDecimals);
-        uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) / 10 ** Constants.snxDecimals;
+    function testReturnUsdValueEthSnx(uint128 amountSnx, uint128 amountEth)
+        public
+    {
+        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
+            10 **
+                (Constants.oracleSnxToEthDecimals +
+                    Constants.oracleEthToUsdDecimals);
+        uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
+            10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx, vaultOwner);
         uint256 actualValueSnx = proxy.getValue(uint8(Constants.UsdNumeraire));
         assertEq(actualValueSnx, expectedValueSnx);
@@ -629,12 +702,18 @@ contract EndToEndTest is Test {
         actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
         assertEq(actualValue, expectedValueEth + expectedValueLink);
 
-        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) / 10 ** (Constants.oracleSnxToEthDecimals + Constants.oracleEthToUsdDecimals);
-        uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) / 10 ** Constants.snxDecimals;
+        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
+            10 **
+                (Constants.oracleSnxToEthDecimals +
+                    Constants.oracleEthToUsdDecimals);
+        uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
+            10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx, vaultOwner);
         actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
-        assertEq(actualValue, expectedValueEth + expectedValueLink + expectedValueSnx
-    );
+        assertEq(
+            actualValue,
+            expectedValueEth + expectedValueLink + expectedValueSnx
+        );
     }
 
     function testReturnUsdValueSnxEthSnx(
@@ -660,16 +739,22 @@ contract EndToEndTest is Test {
         actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
         assertEq(actualValue, expectedValueSnx1 + expectedValueEth);
 
-        uint256 expectedValueSnx2 = (valueOfOneSnx * amountSnx2) / 10 ** Constants.snxDecimals;
+        uint256 expectedValueSnx2 = (valueOfOneSnx * amountSnx2) /
+            10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx2, vaultOwner);
         actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
-        assertEq(actualValue, expectedValueSnx1 + expectedValueEth + expectedValueSnx2
-    );
+        assertEq(
+            actualValue,
+            expectedValueSnx1 + expectedValueEth + expectedValueSnx2
+        );
     }
 
-    function testReturnEthValueEthEth(uint128 amountEth1, uint128 amountEth2) public
-        {uint256 valueOfOneEth = Constants.WAD;
-        uint256 expectedValueEth1 = (valueOfOneEth * amountEth1) / 10 ** Constants.ethDecimals;
+    function testReturnEthValueEthEth(uint128 amountEth1, uint128 amountEth2)
+        public
+    {
+        uint256 valueOfOneEth = Constants.WAD;
+        uint256 expectedValueEth1 = (valueOfOneEth * amountEth1) /
+            10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth1, vaultOwner);
         uint256 actualValue = proxy.getValue(uint8(Constants.EthNumeraire));
         assertEq(actualValue, expectedValueEth1);
@@ -681,9 +766,12 @@ contract EndToEndTest is Test {
         assertEq(actualValue, expectedValueEth1 + expectedValueEth2);
     }
 
-    function testReturnEthValueEthLink(uint128 amountEth, uint128 amountLink) public
-        {uint256 valueOfOneEth = Constants.WAD;
-        uint256 expectedValueEth = (valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals;
+    function testReturnEthValueEthLink(uint128 amountEth, uint128 amountLink)
+        public
+    {
+        uint256 valueOfOneEth = Constants.WAD;
+        uint256 expectedValueEth = (valueOfOneEth * amountEth) /
+            10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
         uint256 actualValue = proxy.getValue(uint8(Constants.EthNumeraire));
         assertEq(actualValue, expectedValueEth);
@@ -793,7 +881,6 @@ contract EndToEndTest is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
-
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
             10**Constants.ethDecimals) * 100) / _collThres;
         vm.assume(amountCredit > maxCredit);
@@ -806,12 +893,19 @@ contract EndToEndTest is Test {
         assertEq(stable.balanceOf(vaultOwner), 0);
     }
 
-    function testIncreaseOfDebtPerBlock(uint128 amountEth, uint128 amountCredit, uint32 amountOfBlocksToRoll) public {
-        (,,,uint64 _yearlyInterestRate,,) = proxy.debt();
+    function testIncreaseOfDebtPerBlock(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint32 amountOfBlocksToRoll
+    ) public {
+        (, , , uint64 _yearlyInterestRate, , ) = proxy.debt();
         uint128 base = 1e18 + 5e16;
         //1 + r expressed as 18 decimals fixed point number
-        uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) / uint128(proxy.yearlyBlocks());
-        vm.assume(amountCredit < type(uint128).max / LogExpMath.pow(base, exponent));
+        uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) /
+            uint128(proxy.yearlyBlocks());
+        vm.assume(
+            amountCredit < type(uint128).max / LogExpMath.pow(base, exponent)
+        );
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
@@ -842,22 +936,27 @@ contract EndToEndTest is Test {
             (debtAtStart *
                 (
                     LogExpMath.pow(
-                        _yearlyInterestRate + 10 ** 18,
-                        (uint256(amountOfBlocksToRoll) * 10 ** 18) /
+                        _yearlyInterestRate + 10**18,
+                        (uint256(amountOfBlocksToRoll) * 10**18) /
                             proxy.yearlyBlocks()
                     )
-                )) / 10 ** 18
+                )) / 10**18
         );
 
         assertEq(actualDebt, expectedDebt);
     }
 
-    function testNotAllowCreditAfterLargeUnrealizedDebt(uint128 amountEth) public
-        {(, uint16 _collThres,,,,) = proxy.debt();
+    function testNotAllowCreditAfterLargeUnrealizedDebt(uint128 amountEth)
+        public
+    {
+        (, uint16 _collThres, , , , ) = proxy.debt();
         vm.assume(uint256(amountEth) * _collThres < type(uint128).max);
         //prevent overflow in takecredit with absurd values
         vm.assume(amountEth > 1e15);
-        uint128 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals);
+        uint128 valueOfOneEth = uint128(
+            (Constants.WAD * rateEthToUsd) /
+                10**Constants.oracleEthToUsdDecimals
+        );
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint128 amountCredit = uint128(
@@ -880,12 +979,19 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testAllowAdditionalCreditAfterPriceIncrease(uint128 amountEth, uint128 amountCredit, uint16 newPrice) public {
-        vm.assume(newPrice * 10 ** Constants.oracleEthToUsdDecimals > rateEthToUsd
-        );(, uint16 _collThres,,,,) = proxy.debt();
+    function testAllowAdditionalCreditAfterPriceIncrease(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint16 newPrice
+    ) public {
+        vm.assume(
+            newPrice * 10**Constants.oracleEthToUsdDecimals > rateEthToUsd
+        );
+        (, uint16 _collThres, , , , ) = proxy.debt();
         vm.assume(amountEth < type(uint128).max / _collThres);
         //prevent overflow in takecredit with absurd values
-        uint256 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) /
+        uint256 valueOfOneEth = uint128(
+            (Constants.WAD * rateEthToUsd) /
                 10**Constants.oracleEthToUsdDecimals
         );
 
@@ -931,10 +1037,12 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         emit log_named_uint("valueOfOneEth", valueOfOneEth);
 
-        (address[] memory assetAddresses,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        uint256[] memory assetTypes) = depositERC20InVault(eth, amountEth, vaultOwner);
+        (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        ) = depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint128 amountCredit = uint128(proxy.getRemainingCredit() - 1);
 
@@ -963,10 +1071,12 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         emit log_named_uint("valueOfOneEth", valueOfOneEth);
 
-        (address[] memory assetAddresses,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        uint256[] memory assetTypes) = depositERC20InVault(eth, amountEth, vaultOwner);
+        (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        ) = depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.assume(
             proxy.getRemainingCredit() >
@@ -1015,22 +1125,25 @@ contract EndToEndTest is Test {
         proxy.syncDebt();
         uint256 balanceAfter = stable.balanceOf(stakeContract);
 
-        uint128 base = _yearlyInterestRate + 10 ** 18;
+        uint128 base = _yearlyInterestRate + 10**18;
         uint128 exponent = uint128(
-            (uint128(blocksToRoll) * 10 ** 18) / proxy.yearlyBlocks()
+            (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()
         );
         uint128 expectedDebt = uint128(
-            (amountCredit * (LogExpMath.pow(base, exponent))) / 10 ** 18
+            (amountCredit * (LogExpMath.pow(base, exponent))) / 10**18
         );
         uint128 unrealisedDebt = expectedDebt - amountCredit;
 
         assertEq(unrealisedDebt, balanceAfter - balanceBefore);
     }
 
-
-    function testRepayExactDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll) public {
+    function testRepayExactDebt(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint16 blocksToRoll
+    ) public {
         vm.assume(amountEth > 0);
-        (, uint16 _collThres,,,,) = proxy.debt();
+        (, uint16 _collThres, , , , ) = proxy.debt();
         vm.assume(amountEth < type(uint128).max / _collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -1047,7 +1160,7 @@ contract EndToEndTest is Test {
         proxy.takeCredit(amountCredit);
 
         vm.prank(tokenCreatorAddress);
-        stable.transfer(vaultOwner, 1000 * 10 ** 18);
+        stable.transfer(vaultOwner, 1000 * 10**18);
 
         vm.roll(block.number + blocksToRoll);
 
@@ -1142,7 +1255,7 @@ contract EndToEndTest is Test {
         proxy.takeCredit(amountCredit);
 
         vm.prank(address(proxy));
-        stable.mint(vaultOwner, 1000 * 10 ** 18);
+        stable.mint(vaultOwner, 1000 * 10**18);
 
         vm.roll(block.number + blocksToRoll);
 
@@ -1152,24 +1265,24 @@ contract EndToEndTest is Test {
         vm.prank(vaultOwner);
         proxy.repayDebt(toRepay);
         (, , , uint64 _yearlyInterestRate, , ) = proxy.debt();
-        uint128 base = _yearlyInterestRate + 10 ** 18;
+        uint128 base = _yearlyInterestRate + 10**18;
         uint128 exponent = uint128(
-            (uint128(blocksToRoll) * 10 ** 18) / proxy.yearlyBlocks()
+            (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()
         );
         uint128 expectedDebt = uint128(
-            (amountCredit * (LogExpMath.pow(base, exponent))) / 10 ** 18
+            (amountCredit * (LogExpMath.pow(base, exponent))) / 10**18
         ) - toRepay;
 
         assertEq(proxy.getOpenDebt(), expectedDebt);
 
         vm.roll(block.number + uint256(blocksToRoll));
         (, , , _yearlyInterestRate, , ) = proxy.debt();
-        base = _yearlyInterestRate + 10 ** 18;
+        base = _yearlyInterestRate + 10**18;
         exponent = uint128(
-            (uint128(blocksToRoll) * 10 ** 18) / proxy.yearlyBlocks()
+            (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()
         );
         expectedDebt = uint128(
-            (expectedDebt * (LogExpMath.pow(base, exponent))) / 10 ** 18
+            (expectedDebt * (LogExpMath.pow(base, exponent))) / 10**18
         );
 
         assertEq(proxy.getOpenDebt(), expectedDebt);
@@ -1190,14 +1303,24 @@ contract EndToEndTest is Test {
             }
 
             // iykyk
-        unchecked {++i;
+            unchecked {
+                ++i;
+            }
         }
-    }}
+    }
 
-    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender) public returns (address[] memory assetAddresses,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        uint256[] memory assetTypes)
+    function depositERC20InVault(
+        ERC20Mock token,
+        uint128 amount,
+        address sender
+    )
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
     {
         assetAddresses = new address[](1);
         assetAddresses[0] = address(token);
@@ -1219,10 +1342,19 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function depositERC721InVault(ERC721Mock token, uint128[] memory tokenIds, address sender) public returns (address[] memory assetAddresses,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        uint256[] memory assetTypes) {
+    function depositERC721InVault(
+        ERC721Mock token,
+        uint128[] memory tokenIds,
+        address sender
+    )
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
         assetAddresses = new address[](tokenIds.length);
         assetIds = new uint256[](tokenIds.length);
         assetAmounts = new uint256[](tokenIds.length);
@@ -1247,11 +1379,19 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function depositERC1155InVault(ERC1155Mock token, uint256 tokenId, uint256 amount, address sender)
-    public returns (address[] memory assetAddresses,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        uint256[] memory assetTypes)
+    function depositERC1155InVault(
+        ERC1155Mock token,
+        uint256 tokenId,
+        uint256 amount,
+        address sender
+    )
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
     {
         assetAddresses = new address[](1);
         assetIds = new uint256[](1);
@@ -1263,7 +1403,6 @@ contract EndToEndTest is Test {
         assetIds[0] = tokenId;
         assetAmounts[0] = amount;
         assetTypes[0] = 2;
-
 
         vm.startPrank(sender);
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
