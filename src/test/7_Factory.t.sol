@@ -15,7 +15,7 @@ import "../Liquidator.sol";
 import "../utils/Constants.sol";
 
 interface IVaultExtra {
-    function life() external viewreturns (uint256);
+    function life() external view returns (uint256);
 
 
 
