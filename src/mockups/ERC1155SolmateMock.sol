@@ -6,12 +6,11 @@ import "../utils/Strings.sol";
 import "../../lib/solmate/src/tokens/ERC1155.sol";
 
 contract ERC1155Mock is ERC1155 {
-
     using Strings for uint256;
 
     string baseURI;
     address owner;
-    mapping (uint256 => string) _uri;
+    mapping(uint256 => string) _uri;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "You are not the owner");
@@ -27,7 +26,11 @@ contract ERC1155Mock is ERC1155 {
         symbol = _symbol;
     }
 
-    function mint(address to, uint256 id, uint256 amount) public {
+    function mint(
+        address to,
+        uint256 id,
+        uint256 amount
+    ) public {
         _mint(to, id, amount, "");
     }
 
@@ -46,17 +49,15 @@ contract ERC1155Mock is ERC1155 {
         baseURI = newBaseUri;
     }
 
-
-
     /**
      * @dev Returns the URI of a token given its ID
      * @param id ID of the token to query
      * @return uri of the token or an empty string if it does not exist
      */
     function uri(uint256 id) public view override returns (string memory) {
-        return bytes(_uri[id]).length > 0 ?
-                _uri[id]
+        return
+            bytes(_uri[id]).length > 0
+                ? _uri[id]
                 : string(abi.encodePacked(baseURI, id.toString()));
     }
-
 }

@@ -20,7 +20,6 @@ contract ERC721Mock is ERC721 {
         owner = msg.sender;
     }
 
-
     function mint(address to, uint256 id) public {
         _mint(to, id);
     }
@@ -29,15 +28,20 @@ contract ERC721Mock is ERC721 {
         baseURI = newBaseUri;
     }
 
-    function tokenURI(uint256 tokenId) public view override returns (string memory)
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override
+        returns (string memory)
     {
         require(
             ownerOf[tokenId] != address(0),
             "ERC721Metadata: URI query for nonexistent token"
         );
         string memory currentBaseURI = baseURI;
-        return bytes(currentBaseURI).length > 0
-            ? string(abi.encodePacked(currentBaseURI, tokenId.toString()))
-            : "";
+        return
+            bytes(currentBaseURI).length > 0
+                ? string(abi.encodePacked(currentBaseURI, tokenId.toString()))
+                : "";
     }
 }
