@@ -6,6 +6,7 @@ import "../../paperTradingCompetition/Deploy/contracts/Deploy_one.sol";
 import "../../paperTradingCompetition/Deploy/contracts/Deploy_two.sol";
 import "../../paperTradingCompetition/Deploy/contracts/Deploy_three.sol";
 import "../../paperTradingCompetition/Deploy/contracts/Deploy_four.sol";
+import "src/script/paperTradingCompetition/helper.sol";
 
 import "../../../lib/ds-test/src/test.sol";
 import "../../../lib/forge-std/src/Test.sol";
@@ -42,7 +43,8 @@ contract DeployCoordTest is Test {
 
     DeployCoordinator.assetInfo[] public assets;
 
-    constructor() {}
+    HelperContract public helper;
+    constructor() { }
 
     function testDeployAll() public {
         deployContractsOne = new DeployContractsOne();
@@ -767,24 +769,33 @@ contract DeployCoordTest is Test {
             Itest(address(deployCoordinator)).tokenShop()
         );
 
+        emit log_named_address("tokenShopVault", Itest(firstVault)._tokenShop());
+        emit log_named_address("tokenShop", Itest(address(deployCoordinator)).tokenShop());
+
         vm.startPrank(address(3));
         address tokenShop = Itest(address(deployCoordinator)).tokenShop();
-        Itest(tokenShop).swapNumeraireForExactTokens(
-            DeployCoordTest.TokenInfo({
-                tokenAddresses: tokenAddresses_l,
-                tokenIds: tokenIds_l,
-                tokenAmounts: tokenAmounts_l,
-                tokenTypes: tokenTypes_l
-            }),
-            IFactoryPaperTradingExtended(deployCoordinator.factory())
-                .vaultIndex(firstVault)
-        );
+        Itest(tokenShop).swapNumeraireForExactTokens(DeployCoordTest.TokenInfo({tokenAddresses: tokenAddresses_l, tokenIds: tokenIds_l, tokenAmounts: tokenAmounts_l, tokenTypes: tokenTypes_l}), IFactoryPaperTradingExtended(deployCoordinator.factory()).vaultIndex(firstVault));
         vm.stopPrank();
         emit log_named_uint("vault1value", IVaultValue(firstVault).getValue(0));
-        emit log_named_uint(
-            "vault1value",
-            IVaultValue(secondVault).getValue(1)
-        );
+        emit log_named_uint("vault1value", IVaultValue(secondVault).getValue(1));
+
+
+        helper = new HelperContract();
+        helper.storeAddresses(HelperContract.HelperAddresses({
+                              factory: address(deployCoordinator.factory()),
+                              vaultLogic: address(deployCoordinator.vault()),
+                              mainReg: address(deployCoordinator.mainRegistry()),
+                              erc20sub: address(deployCoordinator.standardERC20Registry()),
+                              erc721sub: address(deployCoordinator.floorERC721Registry()),
+                              oracleHub: address(deployCoordinator.oracleHub()),
+                              irm: address(deployCoordinator.interestRateModule()),
+                              liquidator: address(deployCoordinator.liquidator()),
+                              stableUsd: address(deployCoordinator.stableUsd()),
+                              stableEth: address(deployCoordinator.stableEth()),
+                              weth: address(deployCoordinator.weth()),
+                              tokenShop: address(deployCoordinator.tokenShop())}
+                              ));
+        helper.getAllPrices();
     }
 
     struct TokenInfo {

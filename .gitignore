@@ -3,10 +3,12 @@ out/
 .env
 build/*
 node_modules
+node_modules
 broadcast/
 
 # JetBrains
 .idea
+broadcast/
 
 # Vscode
 .vscode

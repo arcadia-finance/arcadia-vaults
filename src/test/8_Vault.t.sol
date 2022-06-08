@@ -51,6 +51,7 @@ contract vaultTests is Test {
     Stable internal stable;
     Liquidator internal liquidator;
 
+
     address internal creatorAddress = address(1);
     address internal tokenCreatorAddress = address(2);
     address internal oracleOwner = address(3);

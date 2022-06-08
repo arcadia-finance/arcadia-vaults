@@ -16,6 +16,8 @@ import "../../ArcadiaOracle.sol";
 import "../fixtures/ArcadiaOracleFixture.f.sol";
 
 contract FactoryPaperTradingInheritedTest is factoryTest {
+    using stdStorage for StdStorage;
+
     OracleHub private oracleHub;
     StandardERC20Registry private standardERC20Registry;
 

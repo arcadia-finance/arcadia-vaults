@@ -12,11 +12,12 @@ import "../../../lib/forge-std/src/Test.sol";
 
 import "../../utils/Constants.sol";
 import "../fixtures/ArcadiaOracleFixture.f.sol";
+import "../../../lib/forge-std/src/Test.sol";
 
 contract ArcadiaOracleTest is Test {
     using stdStorage for StdStorage;
 
-    uint8 public decimals = uint8(18);
+    uint8 public decimals = uint8(Constants.oracleStableToUsdDecimals);
 
     address public nonCreator = address(1);
     address public transmitter = address(32);

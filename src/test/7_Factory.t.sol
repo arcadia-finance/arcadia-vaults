@@ -339,6 +339,7 @@ contract factoryTest is Test {
 
         //Make sure erc721 is still owned by sender
         assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), sender);
+
     }
 
     function onERC721Received(

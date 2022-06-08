@@ -1,11 +1,13 @@
 # Forge Standard Library • [![tests](https://github.com/brockelmore/forge-std/actions/workflows/tests.yml/badge.svg)](https://github.com/brockelmore/forge-std/actions/workflows/tests.yml)
 
-Forge Standard Library is a collection of helpful contracts for use with [`forge` and `foundry`](https://github.com/gakonst/foundry). It leverages `forge`'s cheatcodes to make writing tests easier and faster, while improving the UX of cheatcodes. For more in-depth usage examples checkout the [tests](https://github.com/brockelmore/forge-std/blob/master/src/test).
+Forge Standard Library is a collection of helpful contracts for use with [`forge` and `foundry`](https://github.com/foundry-rs/foundry). It leverages `forge`'s cheatcodes to make writing tests easier and faster, while improving the UX of cheatcodes.
+
+**Learn how to use Forge Std with the [📖 Foundry Book (Forge Std Guide)](https://book.getfoundry.sh/forge/forge-std.html).**
 
 ## Install
 
 ```bash
-forge install brockelmore/forge-std
+forge install foundry-rs/forge-std
 ```
 
 ## Contracts
@@ -19,14 +21,11 @@ See the contract itself for all error codes.
 
 ```solidity
 
-import "ds-test/test.sol";
-import "forge-std/stdlib.sol";
-import "forge-std/Vm.sol";
+import "forge-std/Test.sol";
 
-contract TestContract is DSTest {
-    Vm public constant vm = Vm(HEVM_ADDRESS);
-
+contract TestContract is Test {
     ErrorsTest test;
+
     function setUp() public {
         test = new ErrorsTest();
     }
@@ -43,7 +42,6 @@ contract ErrorsTest {
     }
 }
 ```
-
 
 ### stdStorage
 
@@ -64,18 +62,12 @@ struct T {
 #### Example usage
 
 ```solidity
+import "forge-std/Test.sol";
 
-import "ds-test/test.sol";
-import "forge-std/stdlib.sol";
-import "forge-std/Vm.sol";
-
-contract TestContract is DSTest {
+contract TestContract is Test {
     using stdStorage for StdStorage;
 
-    Vm public constant vm = Vm(HEVM_ADDRESS);
-
     Storage test;
-    StdStorage stdstore;
 
     function setUp() public {
         test = new Storage();
@@ -103,7 +95,7 @@ contract TestContract is DSTest {
         // not find it. Our mechanism does
         // Also, you can use the selector instead of a string
         uint256 slot = stdstore.target(address(test)).sig(test.hidden.selector).find();
-        assertEq(slot, keccak256("my.random.var"));
+        assertEq(slot, uint256(keccak256("my.random.var")));
     }
 
     // If targeting a mapping, you have to pass in the keys necessary to perform the find
@@ -116,7 +108,7 @@ contract TestContract is DSTest {
             .find();
         // in the `Storage` constructor, we wrote that this address' value was 1 in the map
         // so when we load the slot, we expect it to be 1
-        assertEq(vm.load(slot), 1);
+        assertEq(uint(vm.load(address(test), bytes32(slot))), 1);
     }
 
     // If the target is a struct, you can specify the field depth:
@@ -134,8 +126,8 @@ contract TestContract is DSTest {
             .depth(1)
             .find();
 
-        assertEq(vm.load(slot_for_a_field), 1);
-        assertEq(vm.load(slot_for_b_field), 2);
+        assertEq(uint(vm.load(address(test), bytes32(slot_for_a_field))), 1);
+        assertEq(uint(vm.load(address(test), bytes32(slot_for_b_field))), 2);
     }
 }
 
@@ -152,16 +144,16 @@ contract Storage {
 
     uint256 public exists = 1;
     mapping(address => uint256) public map_addr;
-    mapping(address => Packed) public map_packed;
+    // mapping(address => Packed) public map_packed;
     mapping(address => UnpackedStruct) public map_struct;
     mapping(address => mapping(address => uint256)) public deep_map;
     mapping(address => mapping(address => UnpackedStruct)) public deep_map_struct;
     UnpackedStruct public basicStruct = UnpackedStruct({
         a: 1,
-        b: 2,
+        b: 2
     });
 
-    function hidden() public returns (bytes32 t) {
+    function hidden() public view returns (bytes32 t) {
         // an extremely hidden storage slot
         bytes32 slot = keccak256("my.random.var");
         assembly {
@@ -170,16 +162,6 @@ contract Storage {
     }
 }
 ```
-
-The concepts above can be combined in intuitive ways. Here is a full list of functions provided for `find` - all `checked_write` concepts are the same and should exist as well:
-
-1. `find`: Finds flat data structures or shallow mappings
-1. `find_struct`: Same as above, but adds a `depth` input to specify the field depth
-1. `find_multi_key`: Finds deeply nested mappings, i.e. `mapping(uint => mapping(uint => uint))`
-1. `find_multi_key_struct`: Same as above, but adds a `depth` input to specify the field depth
-
-With these 4 functions, you can find any slot (or write to it with their counterpart `checked_write_*`).
-
 
 ### stdCheats
 
@@ -192,14 +174,10 @@ This is a wrapper over miscellaneous cheatcodes that need wrappers to be more de
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "ds-test/test.sol";
-import {stdCheats} from "../stdlib.sol";
-import "../Vm.sol";
+import "forge-std/Test.sol";
 
 // Inherit the stdCheats
-contract StdCheatsTest is DSTest, stdCheats {
-    Vm public constant vm = Vm(HEVM_ADDRESS);
-
+contract StdCheatsTest is Test {
     Bar test;
     function setUp() public {
         test = new Bar();
@@ -237,12 +215,32 @@ contract Bar {
 }
 ```
 
+### Std Assertions
+
+Expand upon the assertion functions from the `DSTest` library.
+
 ### `console.log`
 
-Usage follows the same format as [Hardhat](https://hardhat.org/hardhat-network/reference/#console-log):
+Usage follows the same format as [Hardhat](https://hardhat.org/hardhat-network/reference/#console-log).
+It's recommended to use `console2.sol` as shown below, as this will show the decoded logs in Forge traces.
+
 ```solidity
+// import it indirectly via Test.sol
+import "forge-std/Test.sol";
+// or directly import it
+import "forge-std/console2.sol";
+...
+console2.log(someValue);
+```
+
+If you need compatibility with Hardhat, you must use the standard `console.sol` instead.
+Due to a bug in `console.sol`, logs that use `uint256` or `int256` types will not be properly decoded in Forge traces.
+
+```solidity
+// import it indirectly via Test.sol
+import "forge-std/Test.sol";
+// or directly import it
 import "forge-std/console.sol";
 ...
 console.log(someValue);
-
 ```
