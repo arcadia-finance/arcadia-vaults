@@ -809,25 +809,6 @@ contract DeployCoordTest is Test {
         uint256 len = assets.length;
         address oracleAddr_t;
         string memory symb;
-        for (uint i; i < len; ++i) {
-            (,,,,symb,,,oracleAddr_t,) = deployCoordinator.assets(i);
-            if (StringHelpers.compareStrings(symb, "mwETH")) {
-                emit log_named_address("Orac from assets", oracleAddr_t);
-            }
-        }
-    }
-
-    struct TokenInfo {
-        address[] tokenAddresses;
-        uint256[] tokenIds;
-        uint256[] tokenAmounts;
-        uint256[] tokenTypes;
-    }
-
-    function checkOracle() public {
-        uint256 len = assets.length;
-        address oracleAddr_t;
-        string memory symb;
         for (uint256 i; i < len; ++i) {
             (, , , , symb, , , oracleAddr_t, ) = deployCoordinator.assets(i);
             if (StringHelpers.compareStrings(symb, "mwETH")) {
