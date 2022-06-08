@@ -10,3 +10,6 @@ broadcast/
 
 # Vscode
 .vscode
+
+# OS generated
+.DS_STORE
