@@ -177,8 +177,9 @@ contract UniswapV2SubRegistry is SubRegistry {
    *            * amountIn > 0
    *            * amountOut > 0
    *            * Uniswap V2 AMM: (reserveIn + 997 * amountIn / 1000) * (reserveOut - amountOut) = reserveIn * reserveOut
-   *      - Solution (if a profit-maximizing trade exists):
-   *            * sqrt[(1000 * reserveIn * amountOut * trustedPriceTokenOut) / (997 * trustedPriceTokenIn)] - 1000 * reserveIn / 997
+   *      - Solution:
+   *            * amountIn = sqrt[(1000 * reserveIn * amountOut * trustedPriceTokenOut) / (997 * trustedPriceTokenIn)] - 1000 * reserveIn / 997 (if a profit-maximizing trade exists)
+   *            * amountIn = 0 (if a profit-maximizing trade does not exists)
    */
     function computeProfitMaximizingTrade(
         uint256 trustedPriceToken0,
