@@ -18,7 +18,8 @@ import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
  * @author Arcadia Finance
  * @notice The UniswapV2SubRegistry stores pricing logic and basic information for Uniswap V2 LP tokens
  * @dev No end-user should directly interact with the UniswapV2SubRegistry, only the Main-registry, Oracle-Hub or the contract owner
- * @dev Most logic in this contract is a modifications of https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2LiquidityMathLibrary.sol#L23
+ * @dev Most logic in this contract is a modifications of 
+ *      https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2LiquidityMathLibrary.sol#L23
  */
 contract UniswapV2SubRegistry is SubRegistry {
     using FixedPointMathLib for uint256;
@@ -29,7 +30,6 @@ contract UniswapV2SubRegistry is SubRegistry {
     bool feeOn;
 
     struct AssetInformation {
-        address pair;
         address token0;
         address token1;
     }
@@ -59,34 +59,59 @@ contract UniswapV2SubRegistry is SubRegistry {
 
     /**
      * @notice Adds a new asset to the UniswapV2SubRegistry, or overwrites an existing asset.
-     * @param assetInformation A Struct with information about the asset
-     *                         - pair: Contract address of the Uniswap V2 Liquidity pool
-     *                         - token0: Contract address of token0
-     *                         - token1: Contract address of token1
+     * @param assetAddress Contract address of the Uniswap V2 Liquidity pair
      * @param assetCreditRatings The List of Credit Ratings for the asset for the different Numeraires.
      * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
-     *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all numeraires is
+     *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all numeraires
      *      is initiated as credit rating with index 0 by default (worst credit rating).
      * @dev The assets are added/overwritten in the Main-Registry as well.
      *      By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
      *      (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
      *      This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      *      assets are no longer updatable.
-     * @dev Assets can't have more than 18 decimals.
      */
     function setAssetInformation(
-        AssetInformation calldata assetInformation,
+        address assetAddress,
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
-        address assetAddress = assetInformation.pair;
+        AssetInformation memory assetInformation;
+
+        assetInformation.token0 = IUniswapV2Pair(assetAddress).token0();
+        assetInformation.token1 = IUniswapV2Pair(assetAddress).token1();
+
+        address[] memory tokens = new address[](2);
+        tokens[0] = assetInformation.token0;
+        tokens[1] = assetInformation.token1;
+
+        require(IMainRegistry(mainRegistry).batchIsWhiteListed(tokens, new uint256[](2)), "UV2_SAI: NOT_WHITELISTED");
 
         if (!inSubRegistry[assetAddress]) {
-      inSubRegistry[assetAddress] = true;
-      assetsInSubRegistry.push(assetAddress);
-    }
+            inSubRegistry[assetAddress] = true;
+            assetsInSubRegistry.push(assetAddress);
+        }
+
         assetToInformation[assetAddress] = assetInformation;
         isAssetAddressWhiteListed[assetAddress] = true;
         IMainRegistry(mainRegistry).addAsset(assetAddress, assetCreditRatings);
+    }
+
+    /**
+     * @notice Checks for a token address and the corresponding Id if it is white-listed
+     * @param assetAddress The address of the asset
+     * @dev Since Uniswap V2 LP tokens (ERC20) have no Id, the Id should be set to 0
+     * @return A boolean, indicating if the asset passed as input is whitelisted
+     */
+    function isWhiteListed(address assetAddress, uint256)
+        external
+        view
+        override
+        returns (bool)
+    {
+        if (isAssetAddressWhiteListed[assetAddress]) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -115,9 +140,9 @@ contract UniswapV2SubRegistry is SubRegistry {
         tokenAmounts[0] = FixedPointMathLib.WAD;
         tokenAmounts[1] = FixedPointMathLib.WAD;
 
-        uint256[] memory tokenRates = IMainRegistry(oracleHub).getListOfValuesPerAsset(tokens, new uint256[](2), tokenAmounts, getValueInput.numeraire);
+        uint256[] memory tokenRates = IMainRegistry(mainRegistry).getListOfValuesPerAsset(tokens, new uint256[](2), tokenAmounts, getValueInput.numeraire);
 
-        uint256 token0Amount = getLiquidityValueAfterArbitrageToPrice(assetToInformation[getValueInput.assetAddress].pair, tokenRates[0], tokenRates[1], getValueInput.assetAmount);
+        uint256 token0Amount = getLiquidityValueAfterArbitrageToPrice(getValueInput.assetAddress, tokenRates[0], tokenRates[1], getValueInput.assetAmount);
         // Since Uniswap V2 uses 50/50 pools, it is sufficient to calculate the value of token 0 and multiply with 2 to get the total value of the liquidity position.
         // tokenRates[0] is the value of token0 in a given Numeraire for 1 WAD of tokens, we need to recalculate to find the value
         // of the actual amount of underlying token0 in the liquidity position.
