@@ -38,4 +38,9 @@ interface IMainRegistry {
             address,
             string memory
         );
+
+    function batchIsWhiteListed(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds
+    ) external view returns (bool);
 }
