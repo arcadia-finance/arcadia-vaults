@@ -178,7 +178,7 @@ contract UniswapV2SubRegistry is SubRegistry {
         uint totalSupply = IUniswapV2Pair(pair).totalSupply();
 
         // this also checks that totalSupply > 0
-        require(totalSupply >= liquidityAmount && liquidityAmount > 0, 'UV2: LIQUIDITY_AMOUNT');
+        require(totalSupply >= liquidityAmount && liquidityAmount > 0, 'UV2_GV: LIQUIDITY_AMOUNT');
 
         (uint reserve0, uint reserve1) = getReservesAfterArbitrage(pair, trustedPriceToken0, trustedPriceToken1);
 
@@ -206,7 +206,7 @@ contract UniswapV2SubRegistry is SubRegistry {
         // first get reserves before the swap
         (reserve0, reserve1, ) = IUniswapV2Pair(pair).getReserves();
 
-        require(reserve0 > 0 && reserve1 > 0, 'UV2: ZERO_PAIR_RESERVES');
+        require(reserve0 > 0 && reserve1 > 0, 'UV2_GV: ZERO_PAIR_RESERVES');
 
         // then compute how much to swap to arb to the true price
         (bool token0ToToken1, uint256 amountIn) = computeProfitMaximizingTrade(trustedPriceToken0, trustedPriceToken1, reserve0, reserve1);
@@ -241,7 +241,7 @@ contract UniswapV2SubRegistry is SubRegistry {
      *      The amount of tokens should be big enough to guarantee enough precision for tokens with small unit-prices
      * @dev Modification of https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2LiquidityMathLibrary.sol#L23
      * @dev See https://arxiv.org/pdf/1911.03380.pdf for the derivation:
-     *      - Maximise trustedPriceTokenOut * amountOut - trustedPriceTokenIn * amountIn
+     *      - Maximise: trustedPriceTokenOut * amountOut - trustedPriceTokenIn * amountIn
      *      - Constraints:
      *            * amountIn > 0
      *            * amountOut > 0
@@ -311,7 +311,8 @@ contract UniswapV2SubRegistry is SubRegistry {
      * @param reserveOut The reserves of tokenOut in the liquidity pool
      * @param amountIn The input amount of tokenIn
      * @return amountOut The output amount of tokenIn
-     * @dev Derived from Uniswap V2 AMM: (reserveIn + 997 * amountIn / 1000) * (reserveOut - amountOut) = reserveIn * reserveOut
+     * @dev Derived from Uniswap V2 AMM equation:
+     *      (reserveIn + 997 * amountIn / 1000) * (reserveOut - amountOut) = reserveIn * reserveOut
      */
     function getAmountOut(
         uint256 amountIn,
