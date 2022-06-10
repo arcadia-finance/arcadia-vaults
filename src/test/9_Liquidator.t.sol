@@ -586,7 +586,7 @@ contract LiquidatorTest is Test {
     ) public {
         vm.assume(
             blocksToRoll <
-                liquidator.hourlyBlocks() * liquidator.auctionDuration()
+                liquidator.hourlyBlocks() * liquidator.breakevenTime()
         );
         (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
@@ -621,7 +621,7 @@ contract LiquidatorTest is Test {
 
         uint256 expectedPrice = ((openDebt * liqThres) / 100) -
             ((blocksToRoll * ((openDebt * (liqThres - 100)) / 100)) /
-                (liquidator.hourlyBlocks() * liquidator.auctionDuration()));
+                (liquidator.hourlyBlocks() * liquidator.breakevenTime()));
 
         emit log_named_uint("expectedPrice", expectedPrice);
 
@@ -638,7 +638,7 @@ contract LiquidatorTest is Test {
     ) public {
         vm.assume(
             blocksToRoll >
-                liquidator.hourlyBlocks() * liquidator.auctionDuration()
+                liquidator.hourlyBlocks() * liquidator.breakevenTime()
         );
         (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
@@ -680,7 +680,7 @@ contract LiquidatorTest is Test {
     ) public {
         vm.assume(
             blocksToRoll >
-                liquidator.hourlyBlocks() * liquidator.auctionDuration()
+                liquidator.hourlyBlocks() * liquidator.breakevenTime()
         );
         (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
