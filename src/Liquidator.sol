@@ -29,7 +29,7 @@ contract Liquidator is Ownable {
     address public protocolTreasury;
 
     uint256 public constant hourlyBlocks = 300;
-    uint256 public auctionDuration = 6; //hours
+    uint256 public breakevenTime = 6; //hours
 
     claimRatios public claimRatio;
 
@@ -96,6 +96,17 @@ contract Liquidator is Ownable {
   */
     function setReserveFund(address _reserveFund) external onlyOwner {
         reserveFund = _reserveFund;
+    }
+
+    /** 
+    @notice Sets the breakeven time on the liquidator.
+    @dev The breakeven time is the time from starting an auction duration to
+         the moment the price of the auction has decreased to the open debt.
+         The breakevenTime controls the speed of decrease of the auction price.
+    @param _breakevenTime the new breakeven time address.
+  */
+    function setBreakevenTime(uint256 _breakevenTime) external onlyOwner {
+        breakevenTime = _breakevenTime;
     }
 
     /** 
@@ -200,7 +211,7 @@ contract Liquidator is Ownable {
             (auctionInfo[vaultAddress][life].liqThres - 100)) / 100;
         uint256 priceDecrease = (surplusPrice *
             (block.number - auctionInfo[vaultAddress][life].startBlock)) /
-            (hourlyBlocks * auctionDuration);
+            (hourlyBlocks * breakevenTime);
 
         totalPrice;
         if (priceDecrease > startPrice) {
