@@ -1137,6 +1137,62 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
     }
 
+
+    function testBreakeven(
+        uint128 amountEth,
+        uint256 newPrice,
+        uint64 blocksToRoll,
+        uint8 breakevenTime) public {
+        vm.assume(
+            blocksToRoll <
+                liquidator.hourlyBlocks() * breakevenTime
+        );
+        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
+        vm.assume(amountEth > 0);
+        uint256 valueOfOneEth = rateEthToUsd *
+            10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+        vm.assume(amountEth < type(uint128).max / valueOfOneEth);
+
+        depositERC20InVault(eth, amountEth, vaultOwner);
+
+        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+
+        vm.prank(vaultOwner);
+        proxy.takeCredit(amountCredit);
+
+        vm.prank(creatorAddress);
+        liquidator.setBreakevenTime(breakevenTime);
+
+        vm.prank(oracleOwner);
+        oracleEthToUsd.transmit(int256(newPrice));
+
+        vm.prank(liquidatorBot);
+        factory.liquidate(address(proxy));
+
+        (uint128 openDebt, , uint8 liqThres, , , , , ) = liquidator.auctionInfo(
+            address(proxy),
+            0
+        );
+        (uint256 vaultPriceBefore, , bool forSaleBefore) = liquidator
+            .getPriceOfVault(address(proxy), 0);
+
+        vm.roll(block.number + blocksToRoll);
+        (uint256 vaultPriceAfter, , bool forSaleAfter) = liquidator
+            .getPriceOfVault(address(proxy), 0);
+
+        uint256 expectedPrice = ((openDebt * liqThres) / 100) -
+            ((blocksToRoll * ((openDebt * (liqThres - 100)) / 100)) /
+                (liquidator.hourlyBlocks() * breakevenTime));
+
+        emit log_named_uint("expectedPrice", expectedPrice);
+
+        assertTrue(forSaleBefore);
+        assertTrue(forSaleAfter);
+        assertGe(vaultPriceBefore, vaultPriceAfter);
+        assertEq(vaultPriceAfter, expectedPrice);
+    }
+
     function getBalances(Stable stableAddr, address _vaultOwner)
         public
         view
