@@ -25,4 +25,6 @@ interface IUniswapV2Pair {
         );
 
     function kLast() external view returns (uint);
+
+    function initialize(address _token0, address _token1) external;
 }
