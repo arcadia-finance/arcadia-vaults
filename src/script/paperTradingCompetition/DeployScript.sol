@@ -128,9 +128,9 @@ contract DeployScript is DSTest, Script {
     oracleStableUsdToUsd = new ArcadiaOracle(uint8(Constants.oracleStableToUsdDecimals), "maUSD / USD", address(stableUsd));
     oracleStableUsdToUsd.setOffchainTransmitter(msg.sender);
     oracleStableUsdToUsd.setOffchainTransmitter(address(this));
-    oracleStableUsdToUsd.transmit(int256(Constants.oracleStableToUsdDecimals));
+    oracleStableUsdToUsd.transmit(int256(Constants.oracleStableToUsdUnit));
 
-    oracleStableEthToEth = new ArcadiaOracle(uint8(Constants.oracleStableEthToEthUnit), "maETH / ETH", address(stableEth));
+    oracleStableEthToEth = new ArcadiaOracle(uint8(Constants.oracleStableEthToEthDecimals), "maETH / ETH", address(stableEth));
     oracleStableEthToEth.setOffchainTransmitter(msg.sender);
     oracleStableEthToEth.setOffchainTransmitter(address(this));
     oracleStableEthToEth.transmit(int256(Constants.oracleStableEthToEthUnit));
@@ -186,6 +186,13 @@ contract DeployScript is DSTest, Script {
                           ));
     vm.stopBroadcast();
 
+    floorERC721Registry.getAssetInformation(assets[40].assetAddr);
+
+  }
+
+  function testall() public {
+    run();
+    helper.getAllPrices();
   }
 
   function deployERC20Contracts() public {
