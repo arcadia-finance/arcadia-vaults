@@ -184,10 +184,11 @@ contract UniswapV2SubRegistryTest is Test {
 
     }
 
+    //Test Mocked Contracts
     function testReserves() public {
         vm.startPrank(tokenCreatorAddress);
         pairSnxEth.mint(
-            lpProvider, 
+            tokenCreatorAddress, 
             calcAmountFromUsdValue(address(snx), usdValue), 
             calcAmountFromUsdValue(address(eth), usdValue)
         );
@@ -204,10 +205,216 @@ contract UniswapV2SubRegistryTest is Test {
 
         uint256[] memory values = mainRegistry.getListOfValuesPerAsset(addressArr, new uint256[](2), amountArr, Constants.UsdNumeraire);
 
-        assertEqDecimal(values[0], usdValue, 18);
-        assertEqDecimal(values[1], usdValue, 18);
+        inRange(values[0], usdValue);
+        inRange(values[1], usdValue);
     }
 
+    function testReserves2() public {
+        vm.startPrank(tokenCreatorAddress);
+        pairSnxEth.mint(
+            tokenCreatorAddress, 
+            10 ** Constants.snxDecimals, 
+            10 ** Constants.ethDecimals * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals
+        );
+        vm.stopPrank();
+
+        (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
+
+        address[] memory addressArr = new address[](2);
+        addressArr[0] = address(snx);
+        addressArr[1] = address(eth);
+        uint256[] memory amountArr = new uint256[](2);
+        amountArr[0] = uint256(reserve0);
+        amountArr[1] = uint256(reserve1);
+
+        uint256[] memory values = mainRegistry.getListOfValuesPerAsset(addressArr, new uint256[](2), amountArr, Constants.UsdNumeraire);
+
+        assertEq(values[0], values[1]);
+    }
+
+    //Test setAssetInformation
+    function testNonOwnerAddsAsset(address unprivilegedAddress) public {
+        vm.assume(unprivilegedAddress != creatorAddress);
+        vm.startPrank(unprivilegedAddress);
+        vm.expectRevert("Ownable: caller is not the owner");
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
+        vm.stopPrank();
+    }
+
+    function testOwnerAddsAssetWithNonWhiteListedUnderlyingAsset() public {
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("UV2_SAI: NOT_WHITELISTED");
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSafemoonEth),
+            emptyList
+        );
+        vm.stopPrank();
+    }
+
+    function testOwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+        vm.startPrank(creatorAddress);
+        uint256[] memory assetCreditRatings = new uint256[](1);
+        assetCreditRatings[0] = 0;
+        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            assetCreditRatings
+        );
+        vm.stopPrank();
+    }
+
+    function testOwnerAddsAssetWithEmptyListCreditRatings() public {
+        vm.startPrank(creatorAddress);
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
+        vm.stopPrank();
+
+        assertTrue(uniswapV2SubRegistry.inSubRegistry(address(pairSnxEth)));
+    }
+
+    function testOwnerAddsAssetWithFullListCreditRatings() public {
+        vm.startPrank(creatorAddress);
+        uint256[] memory assetCreditRatings = new uint256[](2);
+        assetCreditRatings[0] = 0;
+        assetCreditRatings[1] = 0;
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            assetCreditRatings
+        );
+        vm.stopPrank();
+
+        assertTrue(uniswapV2SubRegistry.inSubRegistry(address(pairSnxEth)));
+    }
+
+    function testOwnerOverwritesExistingAsset() public {
+        vm.startPrank(creatorAddress);
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
+        vm.stopPrank();
+
+        assertTrue(uniswapV2SubRegistry.inSubRegistry(address(pairSnxEth)));
+    }
+
+    //Test isWhiteListed
+    function testIsWhitelistedPositive() public {
+        vm.startPrank(creatorAddress);
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
+        vm.stopPrank();
+
+        assertTrue(uniswapV2SubRegistry.isWhiteListed(address(pairSnxEth), 0));
+    }
+
+    function testIsWhitelistedNegative(address randomAsset) public {
+        assertTrue(!uniswapV2SubRegistry.isWhiteListed(randomAsset, 0));
+    }
+
+    //Test getValue 
+    function testReturnValueFromBalancedPair(uint112 amountSnx)
+        public
+    {
+        vm.assume(amountSnx < 10**29);
+        vm.startPrank(creatorAddress);
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
+        vm.stopPrank();
+        pairSnxEth.mint(
+            tokenCreatorAddress, 
+            10 ** Constants.snxDecimals, 
+            10 ** Constants.ethDecimals * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals
+        ); //Initiate pool
+
+        uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
+        vm.assume(amountEth <= uint256(type(uint112).max));
+        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
+
+        pairSnxEth.mint(
+            lpProvider, 
+            amountSnx, 
+            amountEth
+        );
+
+        uint256 valueSnx = Constants.WAD * rateSnxToEth / 10**Constants.oracleSnxToEthDecimals * amountSnx / 10**Constants.snxDecimals;
+        uint256 expectedValueInNumeraire = 2 * valueSnx;
+
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+            .GetValueInput({
+                assetAddress: address(pairSnxEth),
+                assetId: 0,
+                assetAmount: pairSnxEth.balanceOf(lpProvider),
+                numeraire: 1
+            });
+        (
+            uint256 actualValueInUsd,
+            uint256 actualValueInNumeraire
+        ) = uniswapV2SubRegistry.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, 0);
+        inRange(actualValueInNumeraire, expectedValueInNumeraire);
+    }
+
+    function testReturnValueFromBalancedPair2()
+        public
+    {
+        vm.startPrank(creatorAddress);
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
+        vm.stopPrank();
+        pairSnxEth.mint(
+            tokenCreatorAddress, 
+            10 ** Constants.snxDecimals, 
+            10 ** Constants.ethDecimals * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals
+        ); //Initiate pool
+
+        uint112 amountSnx = 672542079414564404298816125000;
+        uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
+        vm.assume(amountEth <= uint256(type(uint112).max));
+        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
+        vm.assume(amountEth > 100000000000);
+
+        pairSnxEth.mint(
+            lpProvider, 
+            amountSnx, 
+            amountEth
+        );
+
+        uint256 valueSnx = Constants.WAD * rateSnxToEth / 10**Constants.oracleSnxToEthDecimals * amountSnx / 10**Constants.snxDecimals;
+        uint256 expectedValueInNumeraire = 2 * valueSnx;
+
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+            .GetValueInput({
+                assetAddress: address(pairSnxEth),
+                assetId: 0,
+                assetAmount: pairSnxEth.balanceOf(lpProvider),
+                numeraire: 1
+            });
+        (
+            uint256 actualValueInUsd,
+            uint256 actualValueInNumeraire
+        ) = uniswapV2SubRegistry.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, 0);
+        inRange(actualValueInNumeraire, expectedValueInNumeraire);
+    }
+
+    //Helper Functions
     function calcAmountFromUsdValue(address token, uint256 UsdValue) internal returns(uint256 amount) {
         address[] memory addressArr = new address[](1);
         uint256[] memory idArr = new uint256[](1);
@@ -228,5 +435,10 @@ contract UniswapV2SubRegistryTest is Test {
             amountArr[0],
             rateTokenToUsd
         );
+    }
+
+    function inRange(uint256 expectedValue, uint256 actualvalue) internal {
+        assertGe(expectedValue * 100000001 / 100000000,  actualvalue);
+        assertLe(expectedValue * 99999999 / 100000000,  actualvalue);
     }
 }
