@@ -495,6 +495,13 @@ contract LiquidatorPaperTradingInheritedTest is LiquidatorTest {
         uint16
     ) public override {}
 
+    function testBreakeven(
+        uint128,
+        uint256,
+        uint64,
+        uint8
+    ) public override {}
+
     function testNonVaultLiquidated(address randomAddress) public {
         vm.assume(randomAddress != address(proxy));
         vm.assume(randomAddress != address(proxy2));

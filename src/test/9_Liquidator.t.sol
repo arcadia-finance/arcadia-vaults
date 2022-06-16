@@ -1149,7 +1149,7 @@ contract LiquidatorTest is Test {
         uint128 amountEth,
         uint256 newPrice,
         uint64 blocksToRoll,
-        uint8 breakevenTime) public {
+        uint8 breakevenTime) public virtual {
         vm.assume(
             blocksToRoll <
                 liquidator.hourlyBlocks() * breakevenTime
