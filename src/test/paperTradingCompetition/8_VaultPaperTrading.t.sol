@@ -399,6 +399,7 @@ contract VaultPaperTradingInheritedTest is vaultTests {
         vault_m.initialize(
             address(this),
             address(mainRegistry),
+            Constants.UsdNumeraire,
             address(stable),
             address(stakeContract),
             address(interestRateModule)
@@ -440,6 +441,7 @@ contract VaultPaperTradingInheritedTest is vaultTests {
         vault_m.initialize(
             address(this),
             address(mainRegistry),
+            Constants.UsdNumeraire,
             address(stable),
             address(stakeContract),
             address(interestRateModule)
