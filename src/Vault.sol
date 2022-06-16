@@ -147,7 +147,7 @@ contract Vault {
     function initialize(
         address _owner,
         address registryAddress,
-        uint8 numeraire,
+        uint256 numeraire,
         address stable,
         address stakeContract,
         address irmAddress
@@ -157,7 +157,7 @@ contract Vault {
         owner = _owner;
         debt._collThres = 150;
         debt._liqThres = 110;
-        debt._numeraire = numeraire;
+        debt._numeraire = uint8(numeraire);
         _stable = stable;
         _stakeContract = stakeContract;
         _irmAddress = irmAddress;
