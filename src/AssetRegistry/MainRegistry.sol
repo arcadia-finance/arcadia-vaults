@@ -400,7 +400,7 @@ contract MainRegistry is Ownable {
 
         if (numeraire == 0) {
             //Check if numeraire is USD
-            return valueInUsd;
+            return valueInUsd + valueInNumeraire;
         } else if (valueInUsd > 0) {
             //Get the Numeraire-USD rate
             (, int256 rate, , , ) = IChainLinkData(
@@ -471,7 +471,7 @@ contract MainRegistry is Ownable {
                 ).getValue(getValueInput);
                 if (numeraire == 0) {
                     //Check if numeraire is USD
-                    valuesPerAsset[i] = valueInUsd;
+                    valuesPerAsset[i] = valueInUsd + valueInNumeraire;
                 } else if (valueInNumeraire > 0) {
                     valuesPerAsset[i] = valueInNumeraire;
                 } else {
