@@ -815,16 +815,16 @@ contract EndToEndTest is Test {
                     abi.encodeWithSignature(
                         "doRandom(uint256,uint256,bytes32)",
                         block.timestamp,
-                        block.number,
+                        block.number + 1000,
                         blockhash(block.number)
                     )
                 )
             ),
             Constants.EthNumeraire
         );
-        proxy = Vault(proxyAddr);
+        Vault proxyVault = Vault(proxyAddr);
 
-        (,,,,, uint8 num) = proxy.debt();
+        (,,,,, uint8 num) = proxyVault.debt();
 
         assertTrue(uint256(num) == Constants.EthNumeraire);
 
