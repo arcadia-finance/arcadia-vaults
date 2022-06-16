@@ -12,6 +12,7 @@ import "./AbstractSubRegistry.sol";
 import "../interfaces/IUniswapV2Pair.sol";
 import "../interfaces/IUniswapV2Factory.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import {PRBMath} from "../utils/PRBMath.sol";
 
 /**
  * @title Sub-registry for Uniswap V2 LP tokens
@@ -23,6 +24,7 @@ import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
  */
 contract UniswapV2SubRegistry is SubRegistry {
     using FixedPointMathLib for uint256;
+    using PRBMath for uint256;
 
     uint256 public constant poolUnit = 1000000000000000000;
     address public immutable uniswapV2Factory;
@@ -119,8 +121,6 @@ contract UniswapV2SubRegistry is SubRegistry {
      * @param getValueInput A Struct with all the information neccessary to get the value of an asset
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInNumeraire The value of the asset denominated in Numeraire different from USD with 18 Decimals precision
-     * @dev Since Uniswap V2 uses 50/50 pools, it is sufficient to only calculate the value of one of the underlying tokens of the 
-     *      liquidity position and multiply with 2 to get the total value of the liquidity position
      */
     function getValue(GetValueInput memory getValueInput)
         public
@@ -142,11 +142,10 @@ contract UniswapV2SubRegistry is SubRegistry {
 
         uint256[] memory tokenRates = IMainRegistry(mainRegistry).getListOfValuesPerAsset(tokens, new uint256[](2), tokenAmounts, getValueInput.numeraire);
 
-        uint256 token0Amount = getLiquidityValueAfterArbitrageToPrice(getValueInput.assetAddress, tokenRates[0], tokenRates[1], getValueInput.assetAmount);
-        // Since Uniswap V2 uses 50/50 pools, it is sufficient to calculate the value of token 0 and multiply with 2 to get the total value of the liquidity position.
-        // tokenRates[0] is the value of token0 in a given Numeraire for 1 WAD of tokens, we need to recalculate to find the value
-        // of the actual amount of underlying token0 in the liquidity position.
-        valueInNumeraire = 2 * FixedPointMathLib.mulDivDown(token0Amount, tokenRates[0], FixedPointMathLib.WAD);
+        (uint256 token0Amount, uint256 token1Amount) = getLiquidityValueAfterArbitrageToPrice(getValueInput.assetAddress, tokenRates[0], tokenRates[1], getValueInput.assetAmount);
+        // tokenRates[0] is the value of token0 in a given Numeraire with 18 decimals precision for 1 WAD of tokens,
+        // we need to recalculate to find the value of the actual amount of underlying token0 in the liquidity position.
+        valueInNumeraire = FixedPointMathLib.mulDivDown(token0Amount, tokenRates[0], FixedPointMathLib.WAD) + FixedPointMathLib.mulDivDown(token1Amount, tokenRates[1], FixedPointMathLib.WAD);
 
         return(0, valueInNumeraire);
     }
@@ -158,6 +157,7 @@ contract UniswapV2SubRegistry is SubRegistry {
      * @param trustedPriceToken1 Trusted price of an amount of Token1 in a given Numeraire
      * @param liquidityAmount The amount of LP tokens (ERC20)
      * @return token0Amount The trusted amount of token0 provided as liquidity
+     * @return token1Amount The trusted amount of token1 provided as liquidity
      * @dev Both trusted prices must be for the same Numeraire, and for an equal amount of tokens
      *      e.g. if trustedPriceToken0 is the USD price for 10**18 tokens of token0,
      *      than trustedPriceToken2 must be the USD price for 10**18 tokens of token1.
@@ -173,7 +173,7 @@ contract UniswapV2SubRegistry is SubRegistry {
         uint256 trustedPriceToken0,
         uint256 trustedPriceToken1,
         uint256 liquidityAmount
-    ) internal view returns (uint256 token0Amount) {
+    ) internal view returns (uint256 token0Amount, uint256 token1Amount) {
         uint kLast = feeOn ? IUniswapV2Pair(pair).kLast() : 0;
         uint totalSupply = IUniswapV2Pair(pair).totalSupply();
 
@@ -258,11 +258,14 @@ contract UniswapV2SubRegistry is SubRegistry {
     ) internal pure returns (bool token0ToToken1, uint256 amountIn) {
         token0ToToken1 = FixedPointMathLib.mulDivDown(reserve0, trustedPriceToken0, reserve1) < trustedPriceToken1;
 
-        uint256 invariant = reserve0 * reserve1;
+        uint256 invariant;
+        unchecked {
+            invariant = reserve0 * reserve1 * 1000; //Can never overflow: uint112 * uint112 * 1000
+        }
 
         uint256 leftSide = FixedPointMathLib.sqrt(
-            FixedPointMathLib.mulDivDown(
-                invariant * 1000,
+            PRBMath.mulDiv(
+                invariant,
                 (token0ToToken1 ? trustedPriceToken1 : trustedPriceToken0),
                 uint256(token0ToToken1 ? trustedPriceToken0 : trustedPriceToken1) * 997
             )
@@ -283,6 +286,7 @@ contract UniswapV2SubRegistry is SubRegistry {
      * @param liquidityAmount The amount of LP tokens (ERC20)
      * @param kLast The product of the reserves as of the most recent liquidity event (0 if feeOn is false)
      * @return token0Amount The amount of token0 provided as liquidity
+     * @return token1Amount The amount of token1 provided as liquidity
      * @dev Modification of https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2LiquidityMathLibrary.sol#L23
      */
     function computeLiquidityValue(
@@ -291,7 +295,7 @@ contract UniswapV2SubRegistry is SubRegistry {
         uint256 totalSupply,
         uint256 liquidityAmount,
         uint256 kLast
-    ) internal view returns (uint256 token0Amount) {
+    ) internal view returns (uint256 token0Amount, uint256 token1Amount) {
         if (feeOn && kLast > 0) {
             uint rootK = FixedPointMathLib.sqrt(reserve0 * reserve1);
             uint rootKLast = FixedPointMathLib.sqrt(kLast);
@@ -302,7 +306,10 @@ contract UniswapV2SubRegistry is SubRegistry {
                 totalSupply = totalSupply + feeLiquidity;
             }
         }
-        return FixedPointMathLib.mulDivDown(reserve0, liquidityAmount, totalSupply);
+        return (
+            FixedPointMathLib.mulDivDown(reserve0, liquidityAmount, totalSupply),
+            FixedPointMathLib.mulDivDown(reserve1, liquidityAmount, totalSupply)
+        );
     }
 
     /**
