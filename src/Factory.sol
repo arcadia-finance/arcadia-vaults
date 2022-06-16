@@ -190,6 +190,7 @@ contract Factory is ERC721, Ownable {
         IVault(vault).initialize(
             msg.sender,
             vaultDetails[currentVaultVersion].registryAddress,
+            numeraire,
             numeraireToStable[numeraire],
             vaultDetails[currentVaultVersion].stakeContract,
             vaultDetails[currentVaultVersion].interestModule
@@ -216,6 +217,23 @@ contract Factory is ERC721, Ownable {
         uint256 id
     ) public override {
         _safeTransferFrom(from, to, id);
+    }
+
+    /** 
+    @notice Function used to transfer a vault between users
+    @dev This method overwrites the safeTransferFrom function in ERC721.sol to also transfer the vault proxy contract to the new owner.
+    @param from sender.
+    @param to target.
+    @param id of the vault that is about to be transfered.
+    @param data additional data, only used for onERC721Received.
+  */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        bytes memory data
+    ) public override {
+        _safeTransferFrom(from, to, id, data);
     }
 
     /** 
@@ -262,6 +280,36 @@ contract Factory is ERC721, Ownable {
     }
 
     /**
+    @notice Internal function used to transfer a vault between users
+    @dev This function is used to transfer a vault between users.
+         Overriding to transfer ownership of linked vault.
+    @param from sender.
+    @param to target.
+    @param id of the vault that is about to be transfered.
+    @param data additional data, only used for onERC721Received.
+    */
+    function _safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        bytes memory data
+    ) internal {
+        IVault(allVaults[id]).transferOwnership(to);
+        super.transferFrom(from, to, id);
+        require(
+            to.code.length == 0 ||
+                ERC721TokenReceiver(to).onERC721Received(
+                    msg.sender,
+                    from,
+                    id,
+                    data
+                ) ==
+                ERC721TokenReceiver.onERC721Received.selector,
+            "UNSAFE_RECIPIENT"
+        );
+    }
+
+    /** 
     @notice Internal function used to transfer a vault between users
     @dev This function is used to transfer a vault between users.
          Overriding to transfer ownership of linked vault.
