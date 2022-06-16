@@ -181,7 +181,13 @@ contract UniswapV2SubRegistryTest is Test {
 
     //this is a before each
     function setUp() public {
-
+        //Initiate pool
+        vm.stopPrank();
+        pairSnxEth.mint(
+            tokenCreatorAddress, 
+            10 ** Constants.snxDecimals, 
+            10 ** Constants.ethDecimals * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals
+        );
     }
 
     //Test Mocked Contracts
@@ -322,22 +328,57 @@ contract UniswapV2SubRegistryTest is Test {
         assertTrue(!uniswapV2SubRegistry.isWhiteListed(randomAsset, 0));
     }
 
-    //Test getValue 
-    function testReturnValueFromBalancedPair(uint112 amountSnx)
+    //Test getValue
+    function testReturnValueInUsdFromBalancedPair(uint112 amountSnx)
         public
     {
-        //vm.assume(amountSnx < 10**31);
         vm.startPrank(creatorAddress);
         uniswapV2SubRegistry.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
-        vm.stopPrank();
+
+        (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
+        vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
+        uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
+        vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
+        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
+        vm.assume(amountEth > 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
+
         pairSnxEth.mint(
-            tokenCreatorAddress, 
-            10 ** Constants.snxDecimals, 
-            10 ** Constants.ethDecimals * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals
-        ); //Initiate pool
+            lpProvider, 
+            amountSnx, 
+            amountEth
+        );
+
+        uint256 valueSnx = Constants.WAD * rateSnxToEth / 10**Constants.oracleSnxToEthDecimals * rateEthToUsd / 10**Constants.oracleEthToUsdDecimals * amountSnx / 10**Constants.snxDecimals;
+        uint256 valueEth = Constants.WAD * rateEthToUsd / 10**Constants.oracleEthToUsdDecimals * amountEth / 10**Constants.ethDecimals;
+        uint256 expectedValueInNumeraire = valueSnx + valueEth;
+
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+            .GetValueInput({
+                assetAddress: address(pairSnxEth),
+                assetId: 0,
+                assetAmount: pairSnxEth.balanceOf(lpProvider),
+                numeraire: Constants.UsdNumeraire
+            });
+        (
+            uint256 actualValueInUsd,
+            uint256 actualValueInNumeraire
+        ) = uniswapV2SubRegistry.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, 0);
+        assertInRange(actualValueInNumeraire, expectedValueInNumeraire);
+    }
+
+    function testReturnValueInEthFromBalancedPair(uint112 amountSnx)
+        public
+    {
+        vm.startPrank(creatorAddress);
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
 
         (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
         vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
@@ -361,7 +402,7 @@ contract UniswapV2SubRegistryTest is Test {
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
                 assetAmount: pairSnxEth.balanceOf(lpProvider),
-                numeraire: 1
+                numeraire: Constants.EthNumeraire
             });
         (
             uint256 actualValueInUsd,
