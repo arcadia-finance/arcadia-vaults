@@ -249,6 +249,9 @@ contract UniswapV2SubRegistry is SubRegistry {
      *      - Solution:
      *            * amountIn = sqrt[(1000 * reserveIn * amountOut * trustedPriceTokenOut) / (997 * trustedPriceTokenIn)] - 1000 * reserveIn / 997 (if a profit-maximizing trade exists)
      *            * amountIn = 0 (if a profit-maximizing trade does not exists)
+     * @dev Function overflows (and reverts) if reserve0 * trustedPriceToken0 > max uint256, however this is not possible in realistic scenario's
+     *      This can only happen if trustedPriceToken0 is bigger than 2.23 * 10^43 
+     *      (for an asset with 0 decimals and reserve0 Max uint112 this would require a unit price of $2.23 * 10^7
      */
     function computeProfitMaximizingTrade(
         uint256 trustedPriceToken0,
