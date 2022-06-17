@@ -2,6 +2,7 @@
 pragma solidity >0.8.10;
 
 import "../../lib/forge-std/src/Test.sol";
+import "../utils/Constants.sol";
 
 import "../Factory.sol";
 import "../Proxy.sol";
@@ -385,6 +386,7 @@ contract vaultTests is Test {
         vault.initialize(
             vaultOwner,
             address(mainRegistry),
+            uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
             address(interestRateModule)
@@ -1575,6 +1577,7 @@ contract vaultTests is Test {
         vault_m.initialize(
             address(this),
             address(mainRegistry),
+            uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
             address(interestRateModule)
@@ -1616,6 +1619,7 @@ contract vaultTests is Test {
         vault_m.initialize(
             address(this),
             address(mainRegistry),
+            uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
             address(interestRateModule)
