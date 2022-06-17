@@ -96,7 +96,7 @@ contract UniswapV2SubRegistryTest is Test {
             rateEthToUsd
         );
         oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWmaycToUsdDecimals),
+            uint8(Constants.oracleSnxToEthDecimals),
             "SNX / ETH",
             rateSnxToEth
         );
@@ -410,6 +410,241 @@ contract UniswapV2SubRegistryTest is Test {
         assertInRange(actualValueInNumeraire, expectedValueInNumeraire);
     }
 
+    function testReturnValueFromBalancedPair(uint112 amountSnx, uint8 _ethDecimals, uint8 _snxDecimals, uint8 _oracleEthToUsdDecimals, uint8 _oracleSnxToUsdDecimals, uint128 _rateEthToUsd, uint128 _rateSnxToUsd) public {
+        //vm.assume(_ethDecimals <= 18);
+        //vm.assume(_snxDecimals <= 18);
+        vm.assume(_oracleEthToUsdDecimals <= 18);
+        vm.assume(_oracleSnxToUsdDecimals <= 18);
+        vm.assume(_rateEthToUsd > 0);
+        vm.assume(_rateSnxToUsd > 0);
+        _ethDecimals = 0;
+        _snxDecimals = 0;
+
+        eth = new ERC20Mock("ETH Mock", "mETH", _ethDecimals);
+        snx = new ERC20Mock("SNX Mock", "mSNX", _snxDecimals);
+        pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
+
+        { // Avoid Stack too deep
+            uint256 amount0 = 10 ** _snxDecimals;
+            uint256 amount1 = 10 ** (_ethDecimals + _oracleEthToUsdDecimals) * _rateSnxToUsd / (_rateEthToUsd * 10 ** _oracleSnxToUsdDecimals);
+            vm.assume(amount1 / _rateEthToUsd > 0);
+            vm.assume(amount0 * amount1 > pairSnxEth.MINIMUM_LIQUIDITY() + 1);
+            vm.assume(amount1 <= uint256(type(uint112).max));
+            pairSnxEth.mint(
+                tokenCreatorAddress, 
+                amount0, 
+                amount1
+            );
+        }
+
+        (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
+        vm.assume(uint256(amountSnx) * uint256(_rateSnxToUsd) <= type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals));
+        uint256 amountEth = uint256(amountSnx) * uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals) / (_rateEthToUsd * 10 ** (_snxDecimals + _oracleSnxToUsdDecimals));
+        vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
+        vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
+        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
+        vm.assume(amountEth >= 10000);
+        vm.assume(amountSnx >= 10000);
+        vm.assume(FixedPointMathLib.WAD * (_rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals) * (FixedPointMathLib.WAD / 10 ** _snxDecimals) <= type(uint256).max / (reserve0 + amountSnx));
+
+
+        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
+            0,
+            "ETH / USD",
+            _rateEthToUsd
+        );
+        ArcadiaOracle oracleSnxToUsd = arcadiaOracleFixture.initMockedOracle(
+            0,
+            "SNX / USD",
+            _rateSnxToUsd
+        );
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(10 ** _oracleEthToUsdDecimals),
+                baseAssetNumeraire: 0,
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(10 ** _oracleSnxToUsdDecimals),
+                baseAssetNumeraire: 0,
+                quoteAsset: "SNX",
+                baseAsset: "USD",
+                oracleAddress: address(oracleSnxToUsd),
+                quoteAssetAddress: address(snx),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleEthToUsdArr[0] = address(oracleEthToUsd);
+        address[] memory oracleSnxToUsdArr = new address[](1);
+        oracleSnxToUsdArr[0] = address(oracleSnxToUsd);
+
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**_ethDecimals),
+                assetAddress: address(eth)
+            }),
+            emptyList
+        );
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleSnxToUsdArr,
+                assetUnit: uint64(10**_snxDecimals),
+                assetAddress: address(snx)
+            }),
+            emptyList
+        );
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
+
+        uint256 amount = pairSnxEth.mint(
+            lpProvider, 
+            amountSnx,
+            amountEth
+        );
+
+        uint256 valueSnx = Constants.WAD * _rateSnxToUsd * amountSnx / 10**(_oracleSnxToUsdDecimals + _snxDecimals);
+        uint256 valueEth = Constants.WAD * _rateEthToUsd * amountEth / 10**(_oracleEthToUsdDecimals + _ethDecimals);
+        uint256 expectedValueInNumeraire = valueSnx + valueEth;
+
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+            .GetValueInput({
+                assetAddress: address(pairSnxEth),
+                assetId: 0,
+                assetAmount: amount,
+                numeraire: Constants.UsdNumeraire
+            });
+        (
+            uint256 actualValueInUsd,
+            uint256 actualValueInNumeraire
+        ) = uniswapV2SubRegistry.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, 0);
+        assertInRange(actualValueInNumeraire, expectedValueInNumeraire);
+    }
+
+    function testReturnValueFromBalancedPairOverflow(uint112 amountSnx, uint136 _rateEthToUsd, uint128 _rateSnxToUsd) public {
+
+        vm.assume(_rateEthToUsd > 0);
+        vm.assume(_rateSnxToUsd > 0);
+        uint8 _ethDecimals = 0;
+        uint8 _snxDecimals = 0;
+        uint8 _oracleEthToUsdDecimals = 0;
+        uint8 _oracleSnxToUsdDecimals = 0;
+
+        eth = new ERC20Mock("ETH Mock", "mETH", _ethDecimals);
+        snx = new ERC20Mock("SNX Mock", "mSNX", _snxDecimals);
+        pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
+
+        { // Avoid Stack too deep
+            uint256 amount0 = 10 ** _snxDecimals;
+            uint256 amount1 = 10 ** (_ethDecimals + _oracleEthToUsdDecimals) * _rateSnxToUsd / (_rateEthToUsd * 10 ** _oracleSnxToUsdDecimals);
+            vm.assume(amount1 / _rateEthToUsd > 0);
+            vm.assume(amount0 * amount1 > pairSnxEth.MINIMUM_LIQUIDITY() + 1);
+            vm.assume(amount1 <= uint256(type(uint112).max));
+            pairSnxEth.mint(
+                tokenCreatorAddress, 
+                amount0, 
+                amount1
+            );
+        }
+
+        (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
+        vm.assume(uint256(amountSnx) * uint256(_rateSnxToUsd) <= type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals));
+        uint256 amountEth = uint256(amountSnx) * uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals) / (_rateEthToUsd * 10 ** (_snxDecimals + _oracleSnxToUsdDecimals));
+        vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
+        vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
+        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
+        vm.assume(amountSnx >= 10);
+        vm.assume(FixedPointMathLib.WAD * (_rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals) * (FixedPointMathLib.WAD / 10 ** _snxDecimals) > type(uint256).max / (reserve0 + amountSnx));
+
+
+        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
+            0,
+            "ETH / USD",
+            _rateEthToUsd
+        );
+        ArcadiaOracle oracleSnxToUsd = arcadiaOracleFixture.initMockedOracle(
+            0,
+            "SNX / USD",
+            _rateSnxToUsd
+        );
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(10 ** _oracleEthToUsdDecimals),
+                baseAssetNumeraire: 0,
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(10 ** _oracleSnxToUsdDecimals),
+                baseAssetNumeraire: 0,
+                quoteAsset: "SNX",
+                baseAsset: "USD",
+                oracleAddress: address(oracleSnxToUsd),
+                quoteAssetAddress: address(snx),
+                baseAssetIsNumeraire: true
+            })
+        );
+        oracleEthToUsdArr[0] = address(oracleEthToUsd);
+        address[] memory oracleSnxToUsdArr = new address[](1);
+        oracleSnxToUsdArr[0] = address(oracleSnxToUsd);
+
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10**_ethDecimals),
+                assetAddress: address(eth)
+            }),
+            emptyList
+        );
+        standardERC20Registry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleSnxToUsdArr,
+                assetUnit: uint64(10**_snxDecimals),
+                assetAddress: address(snx)
+            }),
+            emptyList
+        );
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
+
+        uint256 amount = pairSnxEth.mint(
+            lpProvider, 
+            amountSnx,
+            amountEth
+        );
+
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+            .GetValueInput({
+                assetAddress: address(pairSnxEth),
+                assetId: 0,
+                assetAmount: amount,
+                numeraire: Constants.UsdNumeraire
+            });
+
+        //Arithmetic overflow.
+        vm.expectRevert(bytes(""));
+        uniswapV2SubRegistry.getValue(getValueInput);
+    }
+
     //Helper Functions
     function calcAmountFromUsdValue(address token, uint256 UsdValue) internal view returns(uint256 amount) {
         address[] memory addressArr = new address[](1);
@@ -434,7 +669,7 @@ contract UniswapV2SubRegistryTest is Test {
     }
 
     function assertInRange(uint256 expectedValue, uint256 actualValue) internal {
-        assertGe(expectedValue * 10001 / 10000, actualValue);
-        assertLe(expectedValue * 9999 / 10000, actualValue);
+        assertGe(expectedValue * 1003 / 1000, actualValue);
+        assertLe(expectedValue * 997 / 1000, actualValue);
     }
 }
