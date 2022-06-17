@@ -55,6 +55,8 @@ contract UniswapV2PairMock is ERC20 {
         require(liquidity > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED');
         _mint(to, liquidity);
 
+        require(amount0 <= type(uint112).max - _reserve0, 'UniswapV2: OVERFLOW');
+        require(amount1 <= type(uint112).max - _reserve1, 'UniswapV2: OVERFLOW');
         reserve0 = uint112(_reserve0 + amount0);
         reserve1 = uint112(_reserve1 + amount1);
         blockTimestampLast = uint32(block.timestamp % 2**32);
