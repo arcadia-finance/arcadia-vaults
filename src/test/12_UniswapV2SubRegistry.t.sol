@@ -32,8 +32,6 @@ contract UniswapV2SubRegistryTest is Test {
     ArcadiaOracle private oracleEthToUsd;
     ArcadiaOracle private oracleSnxToEth;
 
-    UniswapV2PairMock private uniV2SnxEth;
-
     StandardERC20Registry private standardERC20Registry;
     UniswapV2SubRegistry private uniswapV2SubRegistry;
 
@@ -182,7 +180,6 @@ contract UniswapV2SubRegistryTest is Test {
     //this is a before each
     function setUp() public {
         //Initiate pool
-        vm.stopPrank();
         pairSnxEth.mint(
             tokenCreatorAddress, 
             10 ** Constants.snxDecimals, 
@@ -343,7 +340,7 @@ contract UniswapV2SubRegistryTest is Test {
         uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
         vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
         vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
-        vm.assume(amountEth > 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
+        vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
 
         pairSnxEth.mint(
             lpProvider, 
@@ -385,7 +382,7 @@ contract UniswapV2SubRegistryTest is Test {
         uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
         vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
         vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
-        vm.assume(amountEth > 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
+        vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
 
         pairSnxEth.mint(
             lpProvider, 
