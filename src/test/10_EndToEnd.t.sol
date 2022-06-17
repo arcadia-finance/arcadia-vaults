@@ -9,11 +9,14 @@ import "../Vault.sol";
 import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
+import "../mockups/UniswapV2FactoryMock.sol";
+import "../mockups/UniswapV2PairMock.sol";
 import "../Stable.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/FloorERC1155SubRegistry.sol";
+import "../AssetRegistry/UniswapV2SubRegistry.sol";
 import "../InterestRateModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
@@ -38,6 +41,9 @@ contract EndToEndTest is Test {
     ERC20Mock private wbayc;
     ERC20Mock private wmayc;
     ERC1155Mock private interleave;
+    UniswapV2FactoryMock private uniswapV2Factory;
+    UniswapV2PairMock private uniswapV2Pair;
+    UniswapV2PairMock private pairSnxEth;
     OracleHub private oracleHub;
     ArcadiaOracle private oracleEthToUsd;
     ArcadiaOracle private oracleLinkToUsd;
@@ -49,6 +55,7 @@ contract EndToEndTest is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
+    UniswapV2SubRegistry private uniswapV2SubRegistry;
     InterestRateModule private interestRateModule;
     Stable private stable;
     Liquidator private liquidator;
@@ -59,6 +66,7 @@ contract EndToEndTest is Test {
     address private unprivilegedAddress = address(4);
     address private stakeContract = address(5);
     address private vaultOwner = address(6);
+    address private haydenAdams = address(7);
 
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
@@ -131,6 +139,18 @@ contract EndToEndTest is Test {
         interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
         interleave.mint(tokenCreatorAddress, 1, 100000);
 
+        vm.stopPrank();
+
+        vm.startPrank(haydenAdams);
+        uniswapV2Factory = new UniswapV2FactoryMock();
+        uniswapV2Pair = new UniswapV2PairMock();
+        address pairSnxEthAddr = uniswapV2Factory.createPair(address(snx), address(eth));
+        pairSnxEth = UniswapV2PairMock(pairSnxEthAddr);
+        pairSnxEth.mint(
+            tokenCreatorAddress, 
+            10 ** Constants.snxDecimals, 
+            10 ** Constants.ethDecimals * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals
+        );
         vm.stopPrank();
 
         vm.prank(creatorAddress);
@@ -324,10 +344,16 @@ contract EndToEndTest is Test {
             address(mainRegistry),
             address(oracleHub)
         );
+        uniswapV2SubRegistry = new UniswapV2SubRegistry(
+            address(mainRegistry),
+            address(oracleHub),
+            address(uniswapV2Factory)
+        );
 
         mainRegistry.addSubRegistry(address(standardERC20Registry));
         mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
         mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
+        mainRegistry.addSubRegistry(address(uniswapV2SubRegistry));
 
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
@@ -365,6 +391,10 @@ contract EndToEndTest is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
+            assetCreditRatings
+        );
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
             assetCreditRatings
         );
 
@@ -438,6 +468,7 @@ contract EndToEndTest is Test {
         safemoon.approve(address(proxy), type(uint256).max);
         stable.approve(address(proxy), type(uint256).max);
         stable.approve(address(liquidator), type(uint256).max);
+        pairSnxEth.approve(address(proxy), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -590,6 +621,46 @@ contract EndToEndTest is Test {
         uint256 actualValue = proxy.getValue(uint8(Constants.EthNumeraire));
 
         assertEq(actualValue, expectedValue);
+    }
+
+    function testReturnUsdvalueOfUniswapV2(uint112 amountSnx)
+        public
+    {
+        (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
+        vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
+        uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
+        vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
+        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
+        vm.assume(amountEth > 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
+
+        uint256 valueSnx = Constants.WAD * rateSnxToEth / 10**Constants.oracleSnxToEthDecimals * rateEthToUsd / 10**Constants.oracleEthToUsdDecimals * amountSnx / 10**Constants.snxDecimals;
+        uint256 valueEth = Constants.WAD * rateEthToUsd / 10**Constants.oracleEthToUsdDecimals * amountEth / 10**Constants.ethDecimals;
+        uint256 expectedValue = valueSnx + valueEth;
+
+        depositUniswapV2InVault(pairSnxEth, amountSnx, amountEth, vaultOwner);
+        uint256 actualValue = proxy.getValue(uint8(Constants.UsdNumeraire));
+
+        assertInRange(actualValue, expectedValue);
+    }
+
+    function testReturnEthvalueOfUniswapV2(uint112 amountSnx)
+        public
+    {
+        (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
+        vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
+        uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
+        vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
+        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
+        vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
+
+        uint256 valueSnx = Constants.WAD * rateSnxToEth / 10**Constants.oracleSnxToEthDecimals * amountSnx / 10**Constants.snxDecimals;
+        uint256 valueEth = Constants.WAD * amountEth / 10**Constants.ethDecimals;
+        uint256 expectedValue = valueSnx + valueEth;
+
+        depositUniswapV2InVault(pairSnxEth, amountSnx, amountEth, vaultOwner);
+        uint256 actualValue = proxy.getValue(uint8(Constants.EthNumeraire));
+
+        assertInRange(actualValue, expectedValue);
     }
 
     function testReturnUsdValueEthEth(uint128 amount1, uint128 amount2) public {
@@ -1400,5 +1471,47 @@ contract EndToEndTest is Test {
         vm.startPrank(sender);
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
+    }
+
+    function depositUniswapV2InVault(
+        UniswapV2PairMock token,
+        uint256 amount0,
+        uint256 amount1,
+        address sender
+    )
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        uint256 amount = pairSnxEth.mint(
+            sender, 
+            amount0, 
+            amount1
+        );
+
+        assetAddresses = new address[](1);
+        assetAddresses[0] = address(token);
+
+        assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount;
+
+        assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.startPrank(sender);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+    function assertInRange(uint256 expectedValue, uint256 actualValue) internal {
+        assertGe(expectedValue * 10001 / 10000, actualValue);
+        assertLe(expectedValue * 9999 / 10000, actualValue);
     }
 }
