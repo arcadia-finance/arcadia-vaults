@@ -532,7 +532,7 @@ contract UniswapV2SubRegistryTest is Test {
         assertInRange(actualValueInNumeraire, expectedValueInNumeraire);
     }
 
-    function testReturnValueFromBalancedPairOverflow(uint112 amountSnx, uint136 _rateEthToUsd, uint128 _rateSnxToUsd) public {
+    function testReturnValueFromBalancedPairOverflow(uint112 amountSnx, uint64 _rateEthToUsd, uint128 _rateSnxToUsd) public {
 
         vm.assume(_rateEthToUsd > 0);
         vm.assume(_rateSnxToUsd > 0);
