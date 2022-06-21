@@ -177,15 +177,12 @@ contract Factory is ERC721, Ownable {
             "FTRY_CV: Unknown Numeraire"
         );
 
-        bytes memory initCode = type(Proxy).creationCode;
-        bytes memory byteCode = abi.encodePacked(
-            initCode,
-            abi.encode(vaultDetails[currentVaultVersion].logic)
+        vault = address(
+            new Proxy{salt: bytes32(salt)}(
+                vaultDetails[currentVaultVersion].logic
+            )
         );
 
-        assembly {
-            vault := create2(0, add(byteCode, 32), mload(byteCode), salt)
-        }
         IVault(vault).initialize(
             msg.sender,
             vaultDetails[currentVaultVersion].registryAddress,
