@@ -42,23 +42,21 @@ contract UniswapV2PairMock is ERC20 {
     }
 
     function mint(address to, uint amount0, uint amount1) external returns (uint liquidity) {
-        (uint112 _reserve0, uint112 _reserve1,) = getReserves();
-
         bool feeOn = _mintFee();
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
             liquidity = FixedPointMathLib.sqrt(amount0 * amount1 - MINIMUM_LIQUIDITY);
            _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
-            liquidity = min(amount0 * _totalSupply / _reserve0, amount1 * _totalSupply / _reserve1);
+            liquidity = min(amount0 * _totalSupply / reserve0, amount1 * _totalSupply / reserve1);
         }
         require(liquidity > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED');
         _mint(to, liquidity);
 
-        require(amount0 <= type(uint112).max - _reserve0, 'UniswapV2: OVERFLOW');
-        require(amount1 <= type(uint112).max - _reserve1, 'UniswapV2: OVERFLOW');
-        reserve0 = uint112(_reserve0 + amount0);
-        reserve1 = uint112(_reserve1 + amount1);
+        require(amount0 <= type(uint112).max - reserve0, 'UniswapV2: OVERFLOW');
+        require(amount1 <= type(uint112).max - reserve1, 'UniswapV2: OVERFLOW');
+        reserve0 = uint112(reserve0 + amount0);
+        reserve1 = uint112(reserve1 + amount1);
         blockTimestampLast = uint32(block.timestamp % 2**32);
         if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
     }
@@ -86,18 +84,16 @@ contract UniswapV2PairMock is ERC20 {
         if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
     }
 
-    function swapToken0ToRoken1(uint256 amountIn) external {
-        (uint112 _reserve0, uint112 _reserve1,) = getReserves();
-        uint256 amountOut = getAmountOut(amountIn, _reserve0, _reserve1);
-        reserve0 = uint112(_reserve0 + amountIn);
-        reserve1 = uint112(_reserve1 - amountOut);
+    function swapToken0ToToken1(uint256 amountIn) external {
+        uint256 amountOut = getAmountOut(amountIn, reserve0, reserve1);
+        reserve0 = uint112(reserve0 + amountIn);
+        reserve1 = uint112(reserve1 - amountOut);
     }
 
-    function swapToken1ToRoken0(uint256 amountIn) external {
-        (uint112 _reserve0, uint112 _reserve1,) = getReserves();
-        uint256 amountOut = getAmountOut(amountIn, _reserve1, _reserve0);
-        reserve0 = uint112(_reserve0 - amountOut);
-        reserve1 = uint112(_reserve1 + amountIn);
+    function swapToken1ToToken0(uint256 amountIn) external {
+        uint256 amountOut = getAmountOut(amountIn, reserve1, reserve0);
+        reserve0 = uint112(reserve0 - amountOut);
+        reserve1 = uint112(reserve1 + amountIn);
     }
 
     function getAmountOut(
