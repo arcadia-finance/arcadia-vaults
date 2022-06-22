@@ -54,6 +54,7 @@ contract VaultPaperTrading is Vault {
     function initialize(
         address,
         address,
+        uint256,
         address,
         address,
         address
