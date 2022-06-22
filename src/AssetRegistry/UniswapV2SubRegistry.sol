@@ -13,6 +13,7 @@ import "../interfaces/IUniswapV2Pair.sol";
 import "../interfaces/IUniswapV2Factory.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 import {PRBMath} from "../utils/PRBMath.sol";
+import {Printing} from "../utils/printer.sol";
 
 /**
  * @title Sub-registry for Uniswap V2 LP tokens
@@ -279,6 +280,8 @@ contract UniswapV2SubRegistry is SubRegistry {
 
         // compute the amount that must be sent to move the price to the profit-maximizing price
         amountIn = leftSide - rightSide;
+        string memory message = Printing.append(Printing.uint2str(trustedPriceToken0), ' ', Printing.uint2str(trustedPriceToken1), ' ', Printing.uint2str(amountIn));
+        require(false, message);
     }
 
     /**
