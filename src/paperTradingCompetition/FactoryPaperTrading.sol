@@ -63,6 +63,7 @@ contract FactoryPaperTrading is Factory {
         IVaultPaperTrading(vault).initialize(
             msg.sender,
             vaultDetails[currentVaultVersion].registryAddress,
+            numeraire,
             numeraireToStable[numeraire],
             vaultDetails[currentVaultVersion].stakeContract,
             vaultDetails[currentVaultVersion].interestModule,
