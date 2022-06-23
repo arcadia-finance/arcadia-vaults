@@ -70,6 +70,7 @@ contract VaultPaperTrading is Vault {
          Costly function (156k gas)
     @param _owner The tx.origin: the sender of the 'createVault' on the factory
     @param registryAddress The 'beacon' contract to which should be looked at for external logic.
+    @param numeraire The numeraire of the vault.
     @param stable The contract address of the stablecoin of Arcadia Finance
     @param stakeContract The stake contract in which stablecoin can be staked. 
                          Used when syncing debt: interest in stable is minted to stakecontract.
@@ -80,6 +81,7 @@ contract VaultPaperTrading is Vault {
     function initialize(
         address _owner,
         address registryAddress,
+        uint256 numeraire,
         address stable,
         address stakeContract,
         address irmAddress,
@@ -90,6 +92,7 @@ contract VaultPaperTrading is Vault {
         owner = _owner;
         debt._collThres = 150;
         debt._liqThres = 110;
+        debt._numeraire = uint8(numeraire);
         _stable = stable;
         _stakeContract = stakeContract;
         _irmAddress = irmAddress;

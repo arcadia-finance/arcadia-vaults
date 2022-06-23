@@ -12,6 +12,7 @@ interface IVaultPaperTrading is IVault {
     function initialize(
         address _owner,
         address registryAddress,
+        uint256 numeraire,
         address stable,
         address stakeContract,
         address interestModule,
