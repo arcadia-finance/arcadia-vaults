@@ -446,7 +446,7 @@ contract Vault {
             uint256 erc20StoredLength = _erc20Stored.length;
 
             if (erc20StoredLength == 1) {
-                // there was only one ERC20 stored on the contract, safe to remove both lists
+                // there was only one ERC20 stored on the contract, safe to remove list
                 _erc20Stored.pop();
             } else {
                 for (uint256 i; i < erc20StoredLength; ) {
