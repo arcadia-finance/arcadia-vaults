@@ -444,14 +444,20 @@ contract Vault {
 
         if (IERC20(ERC20Address).balanceOf(address(this)) == 0) {
             uint256 erc20StoredLength = _erc20Stored.length;
-            for (uint256 i; i < erc20StoredLength; ) {
-                if (_erc20Stored[i] == ERC20Address) {
-                    _erc20Stored[i] = _erc20Stored[erc20StoredLength - 1];
-                    _erc20Stored.pop();
-                    break;
-                }
-                unchecked {
-                    ++i;
+
+            if (erc20StoredLength == 1) {
+                // there was only one ERC20 stored on the contract, safe to remove both lists
+                _erc20Stored.pop();
+            } else {
+                for (uint256 i; i < erc20StoredLength; ) {
+                    if (_erc20Stored[i] == ERC20Address) {
+                        _erc20Stored[i] = _erc20Stored[erc20StoredLength - 1];
+                        _erc20Stored.pop();
+                        break;
+                    }
+                    unchecked {
+                        ++i;
+                    }
                 }
             }
         }
