@@ -28,11 +28,12 @@ contract UniswapV2FactoryMock {
         owner = msg.sender;
     }
 
-    function createPair(address tokenA, address tokenB) external returns (address pair) {
-        require(tokenA != tokenB, 'UniswapV2: IDENTICAL_ADDRESSES');
-        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+    function createPair(address token0, address token1) external returns (address pair) {
+        require(token0 != token1, 'UniswapV2: IDENTICAL_ADDRESSES');
         require(token0 != address(0), 'UniswapV2: ZERO_ADDRESS');
-        require(getPair[token0][token1] == address(0), 'UniswapV2: PAIR_EXISTS'); // single check is sufficient
+        require(token1 != address(0), 'UniswapV2: ZERO_ADDRESS');
+        require(getPair[token0][token1] == address(0), 'UniswapV2: PAIR_EXISTS');
+        require(getPair[token1][token0] == address(0), 'UniswapV2: PAIR_EXISTS');
         bytes memory bytecode = type(UniswapV2PairMock).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         assembly {
