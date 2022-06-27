@@ -251,7 +251,6 @@ contract Vault {
             "Transfer from failed"
         );
 
-        bool addrSeen;
         uint256 erc20StoredLength = _erc20Stored.length;
         for (uint256 i; i < erc20StoredLength; ) {
             if (_erc20Stored[i] == ERC20Address) {
