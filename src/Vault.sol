@@ -270,7 +270,7 @@ contract Vault {
 
     /** 
     @notice Internal function used to deposit ERC721 tokens.
-    @dev Used for all tokens types = 1. Note the safeTransferFrom. No amounts are given since ERC721 are one-off's.
+    @dev Used for all tokens types = 1. Note the transferFrom. No amounts are given since ERC721 are one-off's.
          After successful transfer, the function pushes the ERC721 address to the stored token and stored ID array.
          This may cause duplicates in the ERC721 stored addresses array, but this is intended. 
     @param _from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
@@ -339,7 +339,7 @@ contract Vault {
     @dev All arrays should be of same length, each index in each array corresponding
          to the same asset that will get withdrawn. If multiple asset IDs of the same contract address
          are to be withdrawn, the assetAddress must be repeated in assetAddresses.
-         The ERC20 get withdrawn by transferFrom. ERC721 & ERC1155 using safeTransferFrom.
+         The ERC20 get withdrawn by transfers. ERC721 & ERC1155 using safeTransferFrom.
          Can only be called by the proxy vault owner.
          Will fail if balance on proxy vault is not sufficient for one of the withdrawals.
          Will fail if "the value after withdrawal / open debt (including unrealised debt) > collateral threshold".
