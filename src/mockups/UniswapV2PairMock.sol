@@ -84,14 +84,18 @@ contract UniswapV2PairMock is ERC20 {
         if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
     }
 
-    function swapToken0ToToken1(uint256 amountIn) external {
+    function swapToken0ToToken1(uint256 amountIn) external returns (uint256 lpGrowth) {
         uint256 amountOut = getAmountOut(amountIn, reserve0, reserve1);
+        require(amountOut < reserve1, 'UniswapV2: INSUFFICIENT_LIQUIDITY');
+        lpGrowth = FixedPointMathLib.WAD * FixedPointMathLib.sqrt((reserve0 + amountIn) * (reserve1 - amountOut)) / FixedPointMathLib.sqrt(uint256(reserve0) * uint256(reserve1));
         reserve0 = uint112(reserve0 + amountIn);
         reserve1 = uint112(reserve1 - amountOut);
     }
 
-    function swapToken1ToToken0(uint256 amountIn) external {
+    function swapToken1ToToken0(uint256 amountIn) external returns (uint256 lpGrowth) {
         uint256 amountOut = getAmountOut(amountIn, reserve1, reserve0);
+        require(amountOut < reserve0, 'UniswapV2: INSUFFICIENT_LIQUIDITY');
+        lpGrowth = FixedPointMathLib.WAD * FixedPointMathLib.sqrt((reserve0 - amountOut) * (reserve1 + amountIn)) / FixedPointMathLib.sqrt(uint256(reserve0) * uint256(reserve1));
         reserve0 = uint112(reserve0 - amountOut);
         reserve1 = uint112(reserve1 + amountIn);
     }
@@ -100,7 +104,7 @@ contract UniswapV2PairMock is ERC20 {
         uint256 amountIn,
         uint256 reserveIn,
         uint256 reserveOut
-    ) internal pure returns (uint256 amountOut) {
+    ) public pure returns (uint256 amountOut) {
         uint amountInWithFee = amountIn * 997;
         uint numerator = amountInWithFee * reserveOut;
         uint denominator = reserveIn * 1000 + amountInWithFee;

@@ -187,54 +187,6 @@ contract UniswapV2SubRegistryTest is Test {
         );
     }
 
-    //Test Mocked Contracts
-    function testReserves() public {
-        vm.startPrank(tokenCreatorAddress);
-        pairSnxEth.mint(
-            tokenCreatorAddress, 
-            calcAmountFromUsdValue(address(snx), usdValue), 
-            calcAmountFromUsdValue(address(eth), usdValue)
-        );
-        vm.stopPrank();
-
-        (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
-
-        address[] memory addressArr = new address[](2);
-        addressArr[0] = address(snx);
-        addressArr[1] = address(eth);
-        uint256[] memory amountArr = new uint256[](2);
-        amountArr[0] = uint256(reserve0);
-        amountArr[1] = uint256(reserve1);
-
-        uint256[] memory values = mainRegistry.getListOfValuesPerAsset(addressArr, new uint256[](2), amountArr, Constants.UsdNumeraire);
-
-        assertInRange(values[0], usdValue);
-        assertInRange(values[1], usdValue);
-    }
-
-    function testReserves2() public {
-        vm.startPrank(tokenCreatorAddress);
-        pairSnxEth.mint(
-            tokenCreatorAddress, 
-            10 ** Constants.snxDecimals, 
-            10 ** Constants.ethDecimals * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals
-        );
-        vm.stopPrank();
-
-        (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
-
-        address[] memory addressArr = new address[](2);
-        addressArr[0] = address(snx);
-        addressArr[1] = address(eth);
-        uint256[] memory amountArr = new uint256[](2);
-        amountArr[0] = uint256(reserve0);
-        amountArr[1] = uint256(reserve1);
-
-        uint256[] memory values = mainRegistry.getListOfValuesPerAsset(addressArr, new uint256[](2), amountArr, Constants.UsdNumeraire);
-
-        assertEq(values[0], values[1]);
-    }
-
     //Test setAssetInformation
     function testNonOwnerAddsAsset(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
@@ -336,9 +288,9 @@ contract UniswapV2SubRegistryTest is Test {
         );
 
         (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
-        vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
+        vm.assume(amountSnx < type(uint112).max - reserve0);
         uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
-        vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
+        vm.assume(amountEth < type(uint112).max - reserve1);
         vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
         vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
 
@@ -378,9 +330,9 @@ contract UniswapV2SubRegistryTest is Test {
         );
 
         (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
-        vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
+        vm.assume(amountSnx < type(uint112).max - reserve0);
         uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
-        vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
+        vm.assume(amountEth < type(uint112).max - reserve1);
         vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
         vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
 
@@ -410,7 +362,7 @@ contract UniswapV2SubRegistryTest is Test {
         assertInRange(actualValueInNumeraire, expectedValueInNumeraire);
     }
 
-    function testReturnValueInEthFromUnbalancedPair(uint112 amountSnx)
+    function testReturnValueInEthFromUnbalancedPair(uint112 amountSnx, uint112 amountEthSwapped)
         public
     {
         vm.startPrank(creatorAddress);
@@ -420,29 +372,34 @@ contract UniswapV2SubRegistryTest is Test {
         );
 
         (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
-        vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
+        vm.assume(amountSnx < uint256(type(uint112).max) - reserve0);
         uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
-        vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
+        vm.assume(amountEth < uint256(type(uint112).max) - reserve1);
         vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
         vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
 
-        pairSnxEth.mint(
+        uint256 lpAmount = pairSnxEth.mint(
             lpProvider, 
             amountSnx, 
             amountEth
         );
 
+        (reserve0, reserve1, ) = pairSnxEth.getReserves();
+        vm.assume(reserve0 > pairSnxEth.getAmountOut(amountEthSwapped, reserve1, reserve0));
+        vm.assume(amountEthSwapped < uint256(type(uint112).max) - reserve1);
+        uint256 lpGrowth = pairSnxEth.swapToken1ToToken0(amountEthSwapped);
+
         uint256 valueSnx = Constants.WAD * rateSnxToEth / 10**Constants.oracleSnxToEthDecimals * amountSnx / 10**Constants.snxDecimals;
         uint256 valueEth = Constants.WAD * amountEth / 10**Constants.ethDecimals;
-        uint256 expectedValueInNumeraire = valueSnx + valueEth;
-
-        pairSnxEth.swapToken1ToToken0((amountEth + reserve1) / 5);
+        //For approximation hereunder to hold the imbalance can't be to big, for bigger imbalances, the LP-value will always be underestimated -> no risk for protocol (see next test)
+        vm.assume(amountEthSwapped < uint256(reserve1) * 10000000000);
+        uint256 expectedValueInNumeraire = (valueSnx + valueEth) * lpGrowth**2 / FixedPointMathLib.WAD**2; //Approximation, we do two swaps of almost equal size -> lp-position acrues fees
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
-                assetAmount: pairSnxEth.balanceOf(lpProvider),
+                assetAmount: lpAmount,
                 numeraire: Constants.EthNumeraire
             });
         (
@@ -452,6 +409,56 @@ contract UniswapV2SubRegistryTest is Test {
 
         assertEq(actualValueInUsd, 0);
         assertInRange(actualValueInNumeraire, expectedValueInNumeraire);
+    }
+
+    function testReturnValueInEthFromVeryUnbalancedPair(uint112 amountSnx, uint112 amountEthSwapped)
+        public
+    {
+        vm.startPrank(creatorAddress);
+        uniswapV2SubRegistry.setAssetInformation(
+            address(pairSnxEth),
+            emptyList
+        );
+
+        (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
+        vm.assume(amountSnx < uint256(type(uint112).max) - reserve0);
+        uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
+        vm.assume(amountEth < uint256(type(uint112).max) - reserve1);
+        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
+        vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
+
+        uint256 lpAmount = pairSnxEth.mint(
+            lpProvider, 
+            amountSnx, 
+            amountEth
+        );
+
+        (reserve0, reserve1, ) = pairSnxEth.getReserves();
+        vm.assume(reserve0 > pairSnxEth.getAmountOut(amountEthSwapped, reserve1, reserve0));
+        vm.assume(amountEthSwapped < uint256(type(uint112).max) - reserve1);
+        uint256 lpGrowth = pairSnxEth.swapToken1ToToken0(amountEthSwapped);
+
+        uint256 valueSnx = Constants.WAD * rateSnxToEth / 10**Constants.oracleSnxToEthDecimals * amountSnx / 10**Constants.snxDecimals;
+        uint256 valueEth = Constants.WAD * amountEth / 10**Constants.ethDecimals;
+        //for very big imbalances, the LP-value will always be underestimated -> no risk for protocol (see next test)
+        vm.assume(amountEthSwapped > uint256(reserve1) * 10000000000);
+        uint256 expectedValueInNumeraire = (valueSnx + valueEth) * lpGrowth**2 / FixedPointMathLib.WAD**2; //Approximation, we do two swaps of almost equal size -> lp-position acrues fees
+
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+            .GetValueInput({
+                assetAddress: address(pairSnxEth),
+                assetId: 0,
+                assetAmount: lpAmount,
+                numeraire: Constants.EthNumeraire
+            });
+        (
+            uint256 actualValueInUsd,
+            uint256 actualValueInNumeraire
+        ) = uniswapV2SubRegistry.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, 0);
+        //for very big imbalances, the LP-value will always be underestimated -> no risk for protocol (see next test)
+        assertLe(actualValueInNumeraire, expectedValueInNumeraire);
     }
 
     function testReturnValueFromBalancedPair(uint112 amountSnx, uint8 _ethDecimals, uint8 _snxDecimals, uint8 _oracleEthToUsdDecimals, uint8 _oracleSnxToUsdDecimals, uint64 _rateEthToUsd, uint128 _rateSnxToUsd) public {
@@ -462,16 +469,17 @@ contract UniswapV2SubRegistryTest is Test {
         vm.assume(_rateEthToUsd > 0);
         vm.assume(_rateSnxToUsd > 0);
 
+        //Redeploy tokens with different number of decimals
         eth = new ERC20Mock("ETH Mock", "mETH", _ethDecimals);
         snx = new ERC20Mock("SNX Mock", "mSNX", _snxDecimals);
         pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
 
         { // Avoid Stack too deep
             uint256 amount0 = 10 ** _snxDecimals;
-            uint256 amount1 = 10 ** (_ethDecimals + _oracleSnxToUsdDecimals) * _rateEthToUsd / (_rateSnxToUsd * 10 ** _oracleEthToUsdDecimals);
+            uint256 amount1 = uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals) / (_rateEthToUsd * 10 ** _oracleSnxToUsdDecimals);
             vm.assume(amount1 / _rateEthToUsd > 0);
+            vm.assume(amount1 < uint256(type(uint112).max));
             vm.assume(amount0 * amount1 > pairSnxEth.MINIMUM_LIQUIDITY() + 1);
-            vm.assume(amount1 <= uint256(type(uint112).max));
             pairSnxEth.mint(
                 tokenCreatorAddress, 
                 amount0, 
@@ -480,17 +488,16 @@ contract UniswapV2SubRegistryTest is Test {
         }
 
         (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
-        vm.assume(uint256(amountSnx) * uint256(_rateSnxToUsd) <= type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals));
-        uint256 amountEth = uint256(amountSnx) * uint256(_rateEthToUsd) * 10 ** (_ethDecimals + _oracleSnxToUsdDecimals) / (_rateSnxToUsd * 10 ** (_snxDecimals + _oracleEthToUsdDecimals));
+        vm.assume(uint256(amountSnx) * uint256(_rateSnxToUsd) < type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals));
         uint256 amountEth = uint256(amountSnx) * uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals) / (_rateEthToUsd * 10 ** (_snxDecimals + _oracleSnxToUsdDecimals));
-        vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
-        vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
+        vm.assume(amountSnx < type(uint112).max - reserve0);
+        vm.assume(amountEth < type(uint112).max - reserve1);
         vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
         vm.assume(amountEth >= 10000);
         vm.assume(amountSnx >= 10000);
-        vm.assume(FixedPointMathLib.WAD * (_rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals) * (FixedPointMathLib.WAD / 10 ** _snxDecimals) <= type(uint256).max / (reserve0 + amountSnx));
+        vm.assume(FixedPointMathLib.WAD * (_rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals) * (FixedPointMathLib.WAD / 10 ** _snxDecimals) < type(uint256).max / (reserve0 + amountSnx));
 
-
+        //Redeploy oracles with new decimals
         oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
             0,
             "ETH / USD",
@@ -555,10 +562,10 @@ contract UniswapV2SubRegistryTest is Test {
             amountEth
         );
 
-        vm.assume(_rateSnxToUsd * Constants.WAD <= type(uint256).max / amountSnx);
-        vm.assume(_rateEthToUsd * Constants.WAD <= type(uint256).max / amountEth);
-        uint256 valueSnx = Constants.WAD * _rateSnxToUsd * amountSnx / 10**(_oracleSnxToUsdDecimals + _snxDecimals);
-        uint256 valueEth = Constants.WAD * _rateEthToUsd * amountEth / 10**(_oracleEthToUsdDecimals + _ethDecimals);
+        vm.assume(Constants.WAD * _rateSnxToUsd / 10**_oracleSnxToUsdDecimals < type(uint256).max / amountSnx);
+        vm.assume(Constants.WAD * _rateEthToUsd / 10**_oracleEthToUsdDecimals < type(uint256).max / amountEth);
+        uint256 valueSnx = Constants.WAD * _rateSnxToUsd / 10**_oracleSnxToUsdDecimals * amountSnx / 10**_snxDecimals;
+        uint256 valueEth = Constants.WAD * _rateEthToUsd / 10**_oracleEthToUsdDecimals * amountEth / 10**_ethDecimals;
         uint256 expectedValueInNumeraire = valueSnx + valueEth;
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
@@ -594,8 +601,8 @@ contract UniswapV2SubRegistryTest is Test {
             uint256 amount0 = 10 ** _snxDecimals;
             uint256 amount1 = 10 ** (_ethDecimals + _oracleEthToUsdDecimals) * _rateSnxToUsd / (_rateEthToUsd * 10 ** _oracleSnxToUsdDecimals);
             vm.assume(amount1 / _rateEthToUsd > 0);
-            vm.assume(amount0 * amount1 > pairSnxEth.MINIMUM_LIQUIDITY() + 1);
             vm.assume(amount1 <= uint256(type(uint112).max));
+            vm.assume(amount0 * amount1 > pairSnxEth.MINIMUM_LIQUIDITY() + 1);
             pairSnxEth.mint(
                 tokenCreatorAddress, 
                 amount0, 
@@ -604,13 +611,13 @@ contract UniswapV2SubRegistryTest is Test {
         }
 
         (uint112 reserve0, uint112 reserve1, ) = pairSnxEth.getReserves();
-        vm.assume(uint256(amountSnx) * uint256(_rateSnxToUsd) <= type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals));
+        vm.assume(uint256(amountSnx) * uint256(_rateSnxToUsd) < type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals));
         uint256 amountEth = uint256(amountSnx) * uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals) / (_rateEthToUsd * 10 ** (_snxDecimals + _oracleSnxToUsdDecimals));
-        vm.assume(amountSnx <= uint256(type(uint112).max) - reserve0);
-        vm.assume(amountEth <= uint256(type(uint112).max) - reserve1);
+        vm.assume(amountSnx < uint256(type(uint112).max) - reserve0);
+        vm.assume(amountEth < uint256(type(uint112).max) - reserve1);
         vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
         vm.assume(amountSnx >= 10);
-        vm.assume(FixedPointMathLib.WAD * (_rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals) * (FixedPointMathLib.WAD / 10 ** _snxDecimals) > type(uint256).max / (reserve0 + amountSnx));
+        vm.assume(FixedPointMathLib.WAD * (_rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals) * (FixedPointMathLib.WAD / 10 ** _snxDecimals) >= type(uint256).max / (reserve0 + amountSnx));
 
 
         oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
@@ -691,30 +698,9 @@ contract UniswapV2SubRegistryTest is Test {
     }
 
     //Helper Functions
-    function calcAmountFromUsdValue(address token, uint256 UsdValue) internal view returns(uint256 amount) {
-        address[] memory addressArr = new address[](1);
-        uint256[] memory idArr = new uint256[](1);
-        uint256[] memory amountArr = new uint256[](1);
 
-        addressArr[0] = token;
-        idArr[0] = 0;
-        amountArr[0] = 10 ** ERC20Mock(token).decimals();
-
-        uint256 rateTokenToUsd = mainRegistry.getTotalValue(
-            addressArr,
-            idArr,
-            amountArr,
-            0
-        );
-        amount = FixedPointMathLib.mulDivUp(
-            UsdValue,
-            amountArr[0],
-            rateTokenToUsd
-        );
-    }
-
-    function assertInRange(uint256 expectedValue, uint256 actualValue) internal {
-        assertGe(expectedValue * 1003 / 1000, actualValue);
-        assertLe(expectedValue * 997 / 1000, actualValue);
+    function assertInRange(uint256 actualValue, uint256 expectedValue) internal {
+        assertGe(actualValue * 10003 / 10000, expectedValue);
+        assertLe(actualValue * 9997 / 10000, expectedValue);
     }
 }
