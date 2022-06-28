@@ -251,21 +251,17 @@ contract Vault {
             "Transfer from failed"
         );
 
-        bool addrSeen;
         uint256 erc20StoredLength = _erc20Stored.length;
         for (uint256 i; i < erc20StoredLength; ) {
             if (_erc20Stored[i] == ERC20Address) {
-                addrSeen = true;
-                break;
+                return;
             }
             unchecked {
                 ++i;
             }
         }
 
-        if (!addrSeen) {
-            _erc20Stored.push(ERC20Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
-        }
+        _erc20Stored.push(ERC20Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
     }
 
     /** 
