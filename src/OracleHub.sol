@@ -181,25 +181,25 @@ contract OracleHub is Ownable {
 
             if (
                 oracleToOracleInformation[oracleAddressAtIndex]
-                    .baseAssetIsNumeraire &&
-                oracleToOracleInformation[oracleAddressAtIndex]
-                    .baseAssetNumeraire ==
-                0
+                    .baseAssetIsNumeraire
             ) {
-                //If rate is expressed in USD, break loop and return rate expressed in USD
-                rateInUsd = rate;
-                return (rateInUsd, rateInNumeraire);
-            } else if (
-                oracleToOracleInformation[oracleAddressAtIndex]
-                    .baseAssetIsNumeraire &&
-                oracleToOracleInformation[oracleAddressAtIndex]
-                    .baseAssetNumeraire ==
-                numeraire
-            ) {
-                //If rate is expressed in numeraire, break loop and return rate expressed in numeraire
-                rateInNumeraire = rate;
-                return (rateInUsd, rateInNumeraire);
+                if (
+                    oracleToOracleInformation[oracleAddressAtIndex]
+                        .baseAssetNumeraire == 0
+                ) {
+                    //If rate is expressed in USD, return rate expressed in USD
+                    rateInUsd = rate;
+                    return (rateInUsd, rateInNumeraire);
+                } else if (
+                    oracleToOracleInformation[oracleAddressAtIndex]
+                        .baseAssetNumeraire == numeraire
+                ) {
+                    //If rate is expressed in numeraire, return rate expressed in numeraire
+                    rateInNumeraire = rate;
+                    return (rateInUsd, rateInNumeraire);
+                }
             }
+
             unchecked {
                 ++i;
             }
