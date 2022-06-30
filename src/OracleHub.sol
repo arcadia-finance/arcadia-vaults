@@ -169,9 +169,8 @@ contract OracleHub is Ownable {
 
         for (uint256 i; i < oraclesLength; ) {
             oracleAddressAtIndex = oracleAdresses[i];
-            (, tempRate, , , ) = IChainLinkData(
-                oracleToOracleInformation[oracleAddressAtIndex].oracleAddress
-            ).latestRoundData();
+            (, tempRate, , , ) = IChainLinkData(oracleAddressAtIndex)
+                .latestRoundData();
             require(tempRate >= 0, "Negative oracle price");
 
             rate = rate.mulDivDown(
