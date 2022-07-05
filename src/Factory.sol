@@ -164,7 +164,7 @@ contract Factory is ERC721, Ownable {
 
     /**
   @notice Function used to create a Vault
-  @dev This is the starting point of the Vault creation process. 
+  @dev This is the starting point of the Vault creation process. Safe to cast a uint256 to a bytes32 since the space of both is 2^256.
   @param salt A salt to be used to generate the hash.
   @param numeraire An identifier (uint256) of the Numeraire
   */
@@ -178,15 +178,12 @@ contract Factory is ERC721, Ownable {
             "FTRY_CV: Unknown Numeraire"
         );
 
-        bytes memory initCode = type(Proxy).creationCode;
-        bytes memory byteCode = abi.encodePacked(
-            initCode,
-            abi.encode(vaultDetails[currentVaultVersion].logic)
+        vault = address(
+            new Proxy{salt: bytes32(salt)}(
+                vaultDetails[currentVaultVersion].logic
+            )
         );
 
-        assembly {
-            vault := create2(0, add(byteCode, 32), mload(byteCode), salt)
-        }
         IVault(vault).initialize(
             msg.sender,
             vaultDetails[currentVaultVersion].registryAddress,

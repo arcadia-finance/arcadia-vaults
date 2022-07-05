@@ -251,26 +251,22 @@ contract Vault {
             "Transfer from failed"
         );
 
-        bool addrSeen;
         uint256 erc20StoredLength = _erc20Stored.length;
         for (uint256 i; i < erc20StoredLength; ) {
             if (_erc20Stored[i] == ERC20Address) {
-                addrSeen = true;
-                break;
+                return;
             }
             unchecked {
                 ++i;
             }
         }
 
-        if (!addrSeen) {
-            _erc20Stored.push(ERC20Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
-        }
+        _erc20Stored.push(ERC20Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
     }
 
     /**
     @notice Internal function used to deposit ERC721 tokens.
-    @dev Used for all tokens types = 1. Note the safeTransferFrom. No amounts are given since ERC721 are one-off's.
+    @dev Used for all tokens types = 1. Note the transferFrom. No amounts are given since ERC721 are one-off's.
          After successful transfer, the function pushes the ERC721 address to the stored token and stored ID array.
          This may cause duplicates in the ERC721 stored addresses array, but this is intended. 
     @param _from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
@@ -339,7 +335,7 @@ contract Vault {
     @dev All arrays should be of same length, each index in each array corresponding
          to the same asset that will get withdrawn. If multiple asset IDs of the same contract address
          are to be withdrawn, the assetAddress must be repeated in assetAddresses.
-         The ERC20 get withdrawn by transferFrom. ERC721 & ERC1155 using safeTransferFrom.
+         The ERC20 get withdrawn by transfers. ERC721 & ERC1155 using safeTransferFrom.
          Can only be called by the proxy vault owner.
          Will fail if balance on proxy vault is not sufficient for one of the withdrawals.
          Will fail if "the value after withdrawal / open debt (including unrealised debt) > collateral threshold".
@@ -444,14 +440,20 @@ contract Vault {
 
         if (IERC20(ERC20Address).balanceOf(address(this)) == 0) {
             uint256 erc20StoredLength = _erc20Stored.length;
-            for (uint256 i; i < erc20StoredLength; ) {
-                if (_erc20Stored[i] == ERC20Address) {
-                    _erc20Stored[i] = _erc20Stored[erc20StoredLength - 1];
-                    _erc20Stored.pop();
-                    break;
-                }
-                unchecked {
-                    ++i;
+
+            if (erc20StoredLength == 1) {
+                // there was only one ERC20 stored on the contract, safe to remove list
+                _erc20Stored.pop();
+            } else {
+                for (uint256 i; i < erc20StoredLength; ) {
+                    if (_erc20Stored[i] == ERC20Address) {
+                        _erc20Stored[i] = _erc20Stored[erc20StoredLength - 1];
+                        _erc20Stored.pop();
+                        break;
+                    }
+                    unchecked {
+                        ++i;
+                    }
                 }
             }
         }
