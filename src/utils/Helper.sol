@@ -12,6 +12,7 @@ interface IFact {
     function allVaultsLength() external view returns (uint256);
     function allVaults(uint256) external view returns (address);
     function numeraireCounter() external view returns (uint256);
+    function vaultIndex(address) external view returns (uint256);
 }
 
 interface IVault {
@@ -42,6 +43,7 @@ contract getValues {
         uint256 vaultDebt;
         uint256 vaultNumeraire;
         uint256 vaultLife;
+        uint256 vaultId;
     }
 
     function getItAll(address factory) external view returns (ReturnInfo[] memory) {
@@ -85,7 +87,8 @@ contract getValues {
                                         vaultValue3: tempVaultValue3, 
                                         vaultDebt: tempInfo._openDebt, 
                                         vaultLife: tempLife, 
-                                        vaultNumeraire: tempInfo._numeraire});
+                                        vaultNumeraire: tempInfo._numeraire,
+                                        vaultId: i});
         }
 
         return returnInfo;
@@ -107,6 +110,7 @@ contract getValues {
         address tempOwner;
         uint256 tempLife;
 
+        uint256 lenCounter = 0;
         ReturnInfo[] memory returnInfo = new ReturnInfo[](vaultLen);
         for (uint i; i < vaultLen; i++) {
             tempVault = IFact(factory).allVaults(i);
@@ -127,7 +131,7 @@ contract getValues {
             }
             tempLife = IVault(tempVault).life();
 
-            returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
+            returnInfo[lenCounter] = ReturnInfo({vaultAddress: tempVault, 
                                         vaultOwner: tempOwner, 
                                         vaultValueUSD: tempVaultValueUSD, 
                                         vaultValueETH: tempVaultValueETH, 
@@ -135,7 +139,9 @@ contract getValues {
                                         vaultValue3: tempVaultValue3,
                                         vaultDebt: tempInfo._openDebt, 
                                         vaultLife: tempLife, 
-                                        vaultNumeraire: tempInfo._numeraire});
+                                        vaultNumeraire: tempInfo._numeraire,
+                                        vaultId: i});
+            unchecked {lenCounter++;}
         }
 
         return returnInfo;
@@ -155,6 +161,7 @@ contract getValues {
         IVault.debtInfo memory tempInfo;
         address tempOwner;
         uint256 tempLife;
+        uint256 tempVaultId;
 
         ReturnInfo[] memory returnInfo = new ReturnInfo[](fetchForVault.length);
         for (uint i; i < fetchForVault.length; i++) {
@@ -171,6 +178,7 @@ contract getValues {
                 tempVaultValue3 = IVault(tempVault).getValue(3);
             }
             tempLife = IVault(tempVault).life();
+            tempVaultId = IFact(factory).vaultIndex(tempVault);
 
             returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
                                         vaultOwner: tempOwner, 
@@ -180,7 +188,8 @@ contract getValues {
                                         vaultValue3: tempVaultValue3, 
                                         vaultDebt: tempInfo._openDebt, 
                                         vaultLife: tempLife, 
-                                        vaultNumeraire: tempInfo._numeraire});
+                                        vaultNumeraire: tempInfo._numeraire,
+                                        vaultId: tempVaultId});
         }
 
         return returnInfo;
