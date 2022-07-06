@@ -41,7 +41,41 @@ contract getValues {
         uint256 vaultLife;
     }
 
-    function getItAll(address factory, address[] calldata fetchForVault, address fetchForOwner) external view returns (ReturnInfo[] memory) {
+    function getItAll(address factory) external view returns (ReturnInfo[] memory) {
+
+        uint256 vaultLen = IFact(factory).allVaultsLength();
+
+        address tempVault;
+        IVault.debtInfo memory tempInfo;
+        address tempOwner;
+        uint256 tempValueUSD;
+        uint256 tempValueETH;
+        uint256 tempLife;
+        ReturnInfo[] memory returnInfo = new ReturnInfo[](vaultLen);
+
+        for (uint i; i < vaultLen; i++) {
+            tempVault = IFact(factory).allVaults(i);
+            tempInfo = IVault(tempVault).debt();
+            tempOwner = IVault(tempVault).owner();
+            tempValueUSD = IVault(tempVault).getValue(uint8(0));
+            tempValueETH = IVault(tempVault).getValue(uint8(1));
+            tempLife = IVault(tempVault).life();
+
+            returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
+                                        vaultOwner: tempOwner, 
+                                        vaultValueUSD: tempValueUSD, 
+                                        vaultValueETH: tempValueETH, 
+                                        vaultDebt: tempInfo._openDebt, 
+                                        vaultLife: tempLife, 
+                                        vaultNumeraire: tempInfo._numeraire});
+        }
+
+        return returnInfo;
+
+
+    }
+
+        function getItAllForOneOwner(address factory, address fetchForOwner) external view returns (ReturnInfo[] memory) {
 
         uint256 vaultLen = IFact(factory).allVaultsLength();
 
@@ -52,72 +86,63 @@ contract getValues {
         uint256 tempValueETH;
         uint256 tempLife;
 
-        if (fetchForVault[0] != address(0) && fetchForOwner == address(0)) {
-            ReturnInfo[] memory returnInfo = new ReturnInfo[](fetchForVault.length);
-            for (uint i; i < fetchForVault.length; i++) {
-                tempVault = IFact(factory).allVaults(i);
-                tempInfo = IVault(tempVault).debt();
-                tempOwner = IVault(tempVault).owner();
-                tempValueUSD = IVault(tempVault).getValue(uint8(0));
-                tempValueETH = IVault(tempVault).getValue(uint8(1));
-                tempLife = IVault(tempVault).life();
+        ReturnInfo[] memory returnInfo = new ReturnInfo[](vaultLen);
+        for (uint i; i < vaultLen; i++) {
+            tempVault = IFact(factory).allVaults(i);
+            tempOwner = IVault(tempVault).owner();
 
-                returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
-                                            vaultOwner: tempOwner, 
-                                            vaultValueUSD: tempValueUSD, 
-                                            vaultValueETH: tempValueETH, 
-                                            vaultDebt: tempInfo._openDebt, 
-                                            vaultLife: tempLife, 
-                                            vaultNumeraire: tempInfo._numeraire});
-            }
+            if (tempOwner != fetchForOwner) continue;
 
-             return returnInfo;
+            tempInfo = IVault(tempVault).debt();
 
-        } else if (fetchForVault[0] == address(0) && fetchForOwner != address(0)) {
-            ReturnInfo[] memory returnInfo = new ReturnInfo[](vaultLen);
-            for (uint i; i < vaultLen; i++) {
-                tempVault = IFact(factory).allVaults(i);
-                tempOwner = IVault(tempVault).owner();
+            tempValueUSD = IVault(tempVault).getValue(uint8(0));
+            tempValueETH = IVault(tempVault).getValue(uint8(1));
+            tempLife = IVault(tempVault).life();
 
-                if (tempOwner != fetchForOwner) continue;
-                tempInfo = IVault(tempVault).debt();
-
-                tempValueUSD = IVault(tempVault).getValue(uint8(0));
-                tempValueETH = IVault(tempVault).getValue(uint8(1));
-                tempLife = IVault(tempVault).life();
-
-                returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
-                                            vaultOwner: tempOwner, 
-                                            vaultValueUSD: tempValueUSD, 
-                                            vaultValueETH: tempValueETH, 
-                                            vaultDebt: tempInfo._openDebt, 
-                                            vaultLife: tempLife, 
-                                            vaultNumeraire: tempInfo._numeraire});
-            }
-
-             return returnInfo;
-             
-        } else {
-            ReturnInfo[] memory returnInfo = new ReturnInfo[](vaultLen);
-            for (uint i; i < vaultLen; i++) {
-                tempVault = IFact(factory).allVaults(i);
-                tempInfo = IVault(tempVault).debt();
-                tempOwner = IVault(tempVault).owner();
-                tempValueUSD = IVault(tempVault).getValue(uint8(0));
-                tempValueETH = IVault(tempVault).getValue(uint8(1));
-                tempLife = IVault(tempVault).life();
-
-                returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
-                                            vaultOwner: tempOwner, 
-                                            vaultValueUSD: tempValueUSD, 
-                                            vaultValueETH: tempValueETH, 
-                                            vaultDebt: tempInfo._openDebt, 
-                                            vaultLife: tempLife, 
-                                            vaultNumeraire: tempInfo._numeraire});
-            }
-
-             return returnInfo;
+            returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
+                                        vaultOwner: tempOwner, 
+                                        vaultValueUSD: tempValueUSD, 
+                                        vaultValueETH: tempValueETH, 
+                                        vaultDebt: tempInfo._openDebt, 
+                                        vaultLife: tempLife, 
+                                        vaultNumeraire: tempInfo._numeraire});
         }
 
+        return returnInfo;
+
     }
+
+
+        function getItAllForVaults(address factory, address[] calldata fetchForVault) external view returns (ReturnInfo[] memory) {
+
+        address tempVault;
+        IVault.debtInfo memory tempInfo;
+        address tempOwner;
+        uint256 tempValueUSD;
+        uint256 tempValueETH;
+        uint256 tempLife;
+
+        ReturnInfo[] memory returnInfo = new ReturnInfo[](fetchForVault.length);
+        for (uint i; i < fetchForVault.length; i++) {
+            tempVault = IFact(factory).allVaults(i);
+            tempInfo = IVault(tempVault).debt();
+            tempOwner = IVault(tempVault).owner();
+            tempValueUSD = IVault(tempVault).getValue(uint8(0));
+            tempValueETH = IVault(tempVault).getValue(uint8(1));
+            tempLife = IVault(tempVault).life();
+
+            returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
+                                        vaultOwner: tempOwner, 
+                                        vaultValueUSD: tempValueUSD, 
+                                        vaultValueETH: tempValueETH, 
+                                        vaultDebt: tempInfo._openDebt, 
+                                        vaultLife: tempLife, 
+                                        vaultNumeraire: tempInfo._numeraire});
+        }
+
+        return returnInfo;
+
+    }
+
+
 }
