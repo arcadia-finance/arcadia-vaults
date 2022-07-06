@@ -75,7 +75,7 @@ contract getValues {
 
     }
 
-        function getItAllForOneOwner(address factory, address fetchForOwner) external view returns (ReturnInfo[] memory) {
+    function getItAllForOneOwner(address factory, address fetchForOwner) external view returns (ReturnInfo[] memory) {
 
         uint256 vaultLen = IFact(factory).allVaultsLength();
 
@@ -113,7 +113,7 @@ contract getValues {
     }
 
 
-        function getItAllForVaults(address factory, address[] calldata fetchForVault) external view returns (ReturnInfo[] memory) {
+    function getItAllForVaults(address factory, address[] calldata fetchForVault) external view returns (ReturnInfo[] memory) {
 
         address tempVault;
         IVault.debtInfo memory tempInfo;
