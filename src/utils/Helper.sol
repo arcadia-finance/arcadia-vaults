@@ -11,6 +11,7 @@ pragma solidity ^0.8.13;
 interface IFact {
     function allVaultsLength() external view returns (uint256);
     function allVaults(uint256) external view returns (address);
+    function numeraireCounter() external view returns (uint256);
 }
 
 interface IVault {
@@ -36,6 +37,8 @@ contract getValues {
         address vaultOwner;
         uint256 vaultValueUSD;
         uint256 vaultValueETH;
+        uint256 vaultValue2;
+        uint256 vaultValue3;
         uint256 vaultDebt;
         uint256 vaultNumeraire;
         uint256 vaultLife;
@@ -44,27 +47,42 @@ contract getValues {
     function getItAll(address factory) external view returns (ReturnInfo[] memory) {
 
         uint256 vaultLen = IFact(factory).allVaultsLength();
+        uint256 numeraireCounter = IFact(factory).numeraireCounter();
 
         address tempVault;
         IVault.debtInfo memory tempInfo;
         address tempOwner;
-        uint256 tempValueUSD;
-        uint256 tempValueETH;
         uint256 tempLife;
+        uint256 tempVaultValueUSD;
+        uint256 tempVaultValueETH;
+        uint256 tempVaultValue2;
+        uint256 tempVaultValue3;
+
         ReturnInfo[] memory returnInfo = new ReturnInfo[](vaultLen);
 
         for (uint i; i < vaultLen; i++) {
             tempVault = IFact(factory).allVaults(i);
             tempInfo = IVault(tempVault).debt();
             tempOwner = IVault(tempVault).owner();
-            tempValueUSD = IVault(tempVault).getValue(uint8(0));
-            tempValueETH = IVault(tempVault).getValue(uint8(1));
+
+            tempVaultValueUSD = IVault(tempVault).getValue(0);
+            tempVaultValueETH = IVault(tempVault).getValue(1);
+
+            if (numeraireCounter > 2) {
+                tempVaultValue2 = IVault(tempVault).getValue(2);
+            }
+            if (numeraireCounter > 3) {
+                tempVaultValue3 = IVault(tempVault).getValue(3);
+            }
+
             tempLife = IVault(tempVault).life();
 
             returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
                                         vaultOwner: tempOwner, 
-                                        vaultValueUSD: tempValueUSD, 
-                                        vaultValueETH: tempValueETH, 
+                                        vaultValueUSD: tempVaultValueUSD, 
+                                        vaultValueETH: tempVaultValueETH, 
+                                        vaultValue2: tempVaultValue2, 
+                                        vaultValue3: tempVaultValue3, 
                                         vaultDebt: tempInfo._openDebt, 
                                         vaultLife: tempLife, 
                                         vaultNumeraire: tempInfo._numeraire});
@@ -78,12 +96,15 @@ contract getValues {
     function getItAllForOneOwner(address factory, address fetchForOwner) external view returns (ReturnInfo[] memory) {
 
         uint256 vaultLen = IFact(factory).allVaultsLength();
+        uint256 numeraireCounter = IFact(factory).numeraireCounter();
+        uint256 tempVaultValueUSD;
+        uint256 tempVaultValueETH;
+        uint256 tempVaultValue2;
+        uint256 tempVaultValue3;
 
         address tempVault;
         IVault.debtInfo memory tempInfo;
         address tempOwner;
-        uint256 tempValueUSD;
-        uint256 tempValueETH;
         uint256 tempLife;
 
         ReturnInfo[] memory returnInfo = new ReturnInfo[](vaultLen);
@@ -95,14 +116,23 @@ contract getValues {
 
             tempInfo = IVault(tempVault).debt();
 
-            tempValueUSD = IVault(tempVault).getValue(uint8(0));
-            tempValueETH = IVault(tempVault).getValue(uint8(1));
+            tempVaultValueUSD = IVault(tempVault).getValue(0);
+            tempVaultValueETH = IVault(tempVault).getValue(1);
+
+            if (numeraireCounter > 2) {
+                tempVaultValue2 = IVault(tempVault).getValue(2);
+            }
+            if (numeraireCounter > 3) {
+                tempVaultValue3 = IVault(tempVault).getValue(3);
+            }
             tempLife = IVault(tempVault).life();
 
             returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
                                         vaultOwner: tempOwner, 
-                                        vaultValueUSD: tempValueUSD, 
-                                        vaultValueETH: tempValueETH, 
+                                        vaultValueUSD: tempVaultValueUSD, 
+                                        vaultValueETH: tempVaultValueETH, 
+                                        vaultValue2: tempVaultValue2, 
+                                        vaultValue3: tempVaultValue3,
                                         vaultDebt: tempInfo._openDebt, 
                                         vaultLife: tempLife, 
                                         vaultNumeraire: tempInfo._numeraire});
@@ -115,11 +145,15 @@ contract getValues {
 
     function getItAllForVaults(address factory, address[] calldata fetchForVault) external view returns (ReturnInfo[] memory) {
 
+        uint256 numeraireCounter = IFact(factory).numeraireCounter();
+        uint256 tempVaultValueUSD;
+        uint256 tempVaultValueETH;
+        uint256 tempVaultValue2;
+        uint256 tempVaultValue3;
+
         address tempVault;
         IVault.debtInfo memory tempInfo;
         address tempOwner;
-        uint256 tempValueUSD;
-        uint256 tempValueETH;
         uint256 tempLife;
 
         ReturnInfo[] memory returnInfo = new ReturnInfo[](fetchForVault.length);
@@ -127,14 +161,23 @@ contract getValues {
             tempVault = IFact(factory).allVaults(i);
             tempInfo = IVault(tempVault).debt();
             tempOwner = IVault(tempVault).owner();
-            tempValueUSD = IVault(tempVault).getValue(uint8(0));
-            tempValueETH = IVault(tempVault).getValue(uint8(1));
+            tempVaultValueUSD = IVault(tempVault).getValue(0);
+            tempVaultValueETH = IVault(tempVault).getValue(1);
+
+            if (numeraireCounter > 2) {
+                tempVaultValue2 = IVault(tempVault).getValue(2);
+            }
+            if (numeraireCounter > 3) {
+                tempVaultValue3 = IVault(tempVault).getValue(3);
+            }
             tempLife = IVault(tempVault).life();
 
             returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
                                         vaultOwner: tempOwner, 
-                                        vaultValueUSD: tempValueUSD, 
-                                        vaultValueETH: tempValueETH, 
+                                        vaultValueUSD: tempVaultValueUSD, 
+                                        vaultValueETH: tempVaultValueETH, 
+                                        vaultValue2: tempVaultValue2, 
+                                        vaultValue3: tempVaultValue3, 
                                         vaultDebt: tempInfo._openDebt, 
                                         vaultLife: tempLife, 
                                         vaultNumeraire: tempInfo._numeraire});
