@@ -392,7 +392,7 @@ contract DeployScript is DSTest, Script {
 
     getValues helpercontr = new getValues();
 
-    helpercontr.getNumeraireOraclesToUsd(address(factory), address(mainRegistry), address(oracleHub));
+    helpercontr.getNumeraireToUsdRates(address(factory), address(mainRegistry), address(oracleHub));
   }
 
   function transferOwnership() public {
