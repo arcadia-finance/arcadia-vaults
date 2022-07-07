@@ -194,7 +194,7 @@ contract DeployScript is DSTest, Script {
 
   function testall() public {
     run();
-    helper.getAllPrices();
+    //helper.getAllPrices();
   }
 
   function deployERC20Contracts() public {
