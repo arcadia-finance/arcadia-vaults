@@ -77,6 +77,11 @@ contract MainRegistry is Ownable {
         }
     }
 
+    function getOracleForNumeraire(uint256 numeraire) public view returns (address) {
+        require(numeraire < numeraireCounter, "Numeraire does not exist.");
+        return numeraireToInformation[numeraire].numeraireToUsdOracle;
+    }
+
     /**
      * @notice Sets the new Factory address
      * @dev The factory can only be set on the Main Registry AFTER the Main registry is set in the Factory.
