@@ -387,13 +387,13 @@ contract DeployScript is DSTest, Script {
   
   }
 
-  function testHelper() public {
-    run();
+  // function testHelper() public {
+  //   run();
 
-    getValues helpercontr = new getValues();
+  //   getValues helpercontr = new getValues();
 
-    helpercontr.getNumeraireToUsdRates(address(factory), address(mainRegistry), address(oracleHub));
-  }
+  //   helpercontr.getNumeraireToUsdRates(address(factory), address(mainRegistry), address(oracleHub));
+  // }
 
   function transferOwnership() public {
     factory.transferOwnership(msg.sender);
