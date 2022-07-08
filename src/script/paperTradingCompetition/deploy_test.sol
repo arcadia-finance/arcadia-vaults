@@ -10,7 +10,7 @@ import "../../paperTradingCompetition/StablePaperTrading.sol";
 import "../../utils/Constants.sol";
 import "../../ArcadiaOracle.sol";
 
-import "../../paperTradingCompetition/MainRegistryPaperTrading.sol";
+import "../../AssetRegistry/MainRegistry.sol";
 import "../../paperTradingCompetition/LiquidatorPaperTrading.sol";
 import "../../paperTradingCompetition/TokenShop.sol";
 
@@ -34,6 +34,8 @@ import "../../utils/StringHelpers.sol";
 
 import "./helper.sol";
 
+import "../../utils/Helper.sol";
+
 
 contract DeployScript is DSTest, Script {
 
@@ -44,7 +46,7 @@ contract DeployScript is DSTest, Script {
   address public proxyAddr;
   
   OracleHub public oracleHub;
-  MainRegistryPaperTrading public mainRegistry;
+  MainRegistry public mainRegistry;
   StandardERC20Registry public standardERC20Registry;
   FloorERC721SubRegistry public floorERC721Registry;
   InterestRateModule public interestRateModule;
@@ -110,7 +112,7 @@ contract DeployScript is DSTest, Script {
     stableUsd = new StablePaperTrading("Mocked Arcadia USD", "maUSD", uint8(Constants.stableDecimals), 0x0000000000000000000000000000000000000000, address(factory));
     stableEth = new StablePaperTrading("Mocked Arcadia ETH", "maETH", uint8(Constants.stableEthDecimals), 0x0000000000000000000000000000000000000000, address(factory));
 
-    mainRegistry = new MainRegistryPaperTrading(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stableUsd), numeraireLabel:'USD', numeraireUnit:1}));
+    mainRegistry = new MainRegistry(MainRegistry.NumeraireInformation({numeraireToUsdOracleUnit:0, assetAddress:0x0000000000000000000000000000000000000000, numeraireToUsdOracle:0x0000000000000000000000000000000000000000, stableAddress:address(stableUsd), numeraireLabel:'USD', numeraireUnit:1}));
 
     liquidator = new LiquidatorPaperTrading(address(factory), address(mainRegistry));
     stableUsd.setLiquidator(address(liquidator));
@@ -192,7 +194,7 @@ contract DeployScript is DSTest, Script {
 
   function testall() public {
     run();
-    helper.getAllPrices();
+    //helper.getAllPrices();
   }
 
   function deployERC20Contracts() public {
@@ -384,6 +386,14 @@ contract DeployScript is DSTest, Script {
     assets.push(assetInfo({desc: "Mocked Treeverse", symbol: "mTRV", decimals: 0, rate: 10500000000000000000, oracleDecimals: 18, quoteAsset: "TRV", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
   
   }
+
+  // function testHelper() public {
+  //   run();
+
+  //   getValues helpercontr = new getValues();
+
+  //   helpercontr.getNumeraireToUsdRates(address(factory), address(mainRegistry), address(oracleHub));
+  // }
 
   function transferOwnership() public {
     factory.transferOwnership(msg.sender);
