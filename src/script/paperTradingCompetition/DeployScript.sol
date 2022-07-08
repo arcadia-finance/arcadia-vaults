@@ -76,6 +76,8 @@ contract DeployScript is DSTest, Script {
   struct assetInfo {
     uint8 decimals;
     uint8 oracleDecimals;
+    uint8 creditRatingUsd;
+    uint8 creditRatingEth;
     uint128 rate;
     string desc;
     string symbol;
@@ -147,7 +149,23 @@ contract DeployScript is DSTest, Script {
     mainRegistry.addSubRegistry(address(floorERC721Registry));
 
     interestRateModule = new InterestRateModule();
-    interestRateModule.setBaseInterestRate(5 * 10 **16);
+    interestRateModule.setBaseInterestRate(11 * 10**15); //1.1%
+    uint256[] memory creditRatings = new uint256[](10);
+    for (uint i; i < 10; ++i) {
+      creditRatings[i] = i;
+    }
+    uint256[] memory interestRates = new uint256[](10);
+    interestRates[0] = 12 * 10**16; //12%
+    interestRates[1] = 0; //0%
+    interestRates[2] = 5 * 10**15; //0.5%
+    interestRates[3] = 75 * 10**14; //0.75%
+    interestRates[4] = 12 * 10**15; //1.2%
+    interestRates[5] = 16 * 10**15; //1.6%
+    interestRates[6] = 25 * 10**15; //2.5%
+    interestRates[7] = 4 * 10**16; //4%
+    interestRates[8] = 6 * 10**16; //6%
+    interestRates[9] = 9 * 10**16; //9%
+    interestRateModule.batchSetCollateralInterestRates(creditRatings, interestRates);
 
     vault = new VaultPaperTrading();
     factory.setNewVaultInfo(address(mainRegistry), address(vault), stakeContract, address(interestRateModule));
@@ -285,30 +303,32 @@ contract DeployScript is DSTest, Script {
     vm.startBroadcast();
 
     assetInfo memory asset;
-    uint256[] memory emptyList = new uint256[](0);
+    uint256[] memory creditRatings = new uint256[](2);
     address[] memory genOracleArr1 = new address[](1);
     address[] memory genOracleArr2 = new address[](2);
     for (uint i; i < assets.length; ++i) {
       asset = assets[i];
+      creditRatings[0] = asset.creditRatingUsd;
+      creditRatings[1] = asset.creditRatingEth;
       if (StringHelpers.compareStrings(asset.baseAsset, "ETH")) {
         genOracleArr2[0] = asset.oracleAddr;
         genOracleArr2[1] = address(oracleEthToUsd);
 
         if (asset.decimals == 0) {
-          floorERC721Registry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: genOracleArr2, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), emptyList);
+          floorERC721Registry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: genOracleArr2, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), creditRatings);
         }
         else {
-          standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: genOracleArr2, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
+          standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: genOracleArr2, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), creditRatings);
           }
       }
       else {
         genOracleArr1[0] = asset.oracleAddr;
 
         if (asset.decimals == 0) {
-          floorERC721Registry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: genOracleArr1, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), emptyList);
+          floorERC721Registry.setAssetInformation(FloorERC721SubRegistry.AssetInformation({oracleAddresses: genOracleArr1, idRangeStart:0, idRangeEnd:type(uint256).max, assetAddress: asset.assetAddr}), creditRatings);
         }
         else {
-          standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: genOracleArr1, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), emptyList);
+          standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: genOracleArr1, assetUnit: uint64(10**asset.decimals), assetAddress: asset.assetAddr}), creditRatings);
           }
       }
 
@@ -322,66 +342,70 @@ contract DeployScript is DSTest, Script {
     oracleStableEthToUsdArr[0] = address(oracleStableEthToEth);
     oracleStableEthToUsdArr[1] = address(oracleEthToUsd);
 
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(weth)}), emptyList);
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableUsdToUsdArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stableUsd)}), emptyList);
-    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableEthToUsdArr, assetUnit: uint64(10**Constants.stableEthDecimals), assetAddress: address(stableEth)}), emptyList);
+    creditRatings[0] = 2;
+    creditRatings[1] = 1;
+    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleEthToUsdArr, assetUnit: uint64(10**Constants.ethDecimals), assetAddress: address(weth)}), creditRatings);
+    creditRatings[0] = 0;
+    creditRatings[1] = 0;    
+    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableUsdToUsdArr, assetUnit: uint64(10**Constants.stableDecimals), assetAddress: address(stableUsd)}), creditRatings);
+    standardERC20Registry.setAssetInformation(StandardERC20Registry.AssetInformation({oracleAddresses: oracleStableEthToUsdArr, assetUnit: uint64(10**Constants.stableEthDecimals), assetAddress: address(stableEth)}), creditRatings);
     vm.stopBroadcast();
 
   }
 
   function storeAssets() internal {
-    assets.push(assetInfo({desc: "Mocked Wrapped Ether", symbol: "mwETH", decimals: 18, rate: uint128(rateEthToUsd), oracleDecimals: 8, quoteAsset: "ETH", baseAsset: "USD", oracleAddr: address(oracleEthToUsd), assetAddr: address(weth)}));
-    assets.push(assetInfo({desc: "Mocked Wrapped BTC", symbol: "mwBTC", decimals: 8, rate: 2934300000000, oracleDecimals: 8, quoteAsset: "BTC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked USD Coin", symbol: "mUSDC", decimals: 6, rate: 100000000, oracleDecimals: 8, quoteAsset: "USDC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked SHIBA INU", symbol: "mSHIB", decimals: 18, rate: 1179, oracleDecimals: 8, quoteAsset: "SHIB", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Matic Token", symbol: "mMATIC", decimals: 18, rate: 6460430, oracleDecimals: 8, quoteAsset: "MATIC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Cronos Coin", symbol: "mCRO", decimals: 8, rate: 1872500, oracleDecimals: 8, quoteAsset: "CRO", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Uniswap", symbol: "mUNI", decimals: 18, rate: 567000000, oracleDecimals: 8, quoteAsset: "UNI", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked ChainLink Token", symbol: "mLINK", decimals: 18, rate: 706000000, oracleDecimals: 8, quoteAsset: "LINK", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked FTX Token", symbol: "mFTT", decimals: 18, rate: 2976000000, oracleDecimals: 8, quoteAsset: "FTT", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked ApeCoin", symbol: "mAPE", decimals: 18, rate: 765000000, oracleDecimals: 8, quoteAsset: "APE", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked The Sandbox", symbol: "mSAND", decimals: 8, rate: 130000000, oracleDecimals: 8, quoteAsset: "SAND", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Decentraland", symbol: "mMANA", decimals: 18, rate: 103000000, oracleDecimals: 8, quoteAsset: "MANA", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Axie Infinity", symbol: "mAXS", decimals: 18, rate: 2107000000, oracleDecimals: 8, quoteAsset: "AXS", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Aave", symbol: "mAAVE", decimals: 18, rate: 9992000000, oracleDecimals: 8, quoteAsset: "AAVE", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Fantom", symbol: "mFTM", decimals: 18, rate: 4447550, oracleDecimals: 8, quoteAsset: "FTM", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked KuCoin Token ", symbol: "mKCS", decimals: 6, rate: 1676000000, oracleDecimals: 8, quoteAsset: "KCS", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Maker", symbol: "mMKR", decimals: 18, rate: 131568000000, oracleDecimals: 8, quoteAsset: "MKR", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Dai", symbol: "mDAI", decimals: 18, rate: 100000000, oracleDecimals: 8, quoteAsset: "DAI", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Convex Finance", symbol: "mCVX", decimals: 18, rate: 1028000000, oracleDecimals: 8, quoteAsset: "CVX", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Curve DAO Token", symbol: "mCRV", decimals: 18, rate: 128000000, oracleDecimals: 8, quoteAsset: "CRV", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Loopring", symbol: "mLRC", decimals: 18, rate: 5711080, oracleDecimals: 8, quoteAsset: "LRC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked BAT", symbol: "mBAT", decimals: 18, rate: 3913420, oracleDecimals: 8, quoteAsset: "BAT", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Amp", symbol: "mAMP", decimals: 18, rate: 13226, oracleDecimals: 8, quoteAsset: "AMP", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Compound", symbol: "mCOMP", decimals: 18, rate: 6943000000, oracleDecimals: 8, quoteAsset: "COMP", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked 1INCH Token", symbol: "m1INCH", decimals: 18, rate: 9926070, oracleDecimals: 8, quoteAsset: "1INCH", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Gnosis", symbol: "mGNO", decimals: 18, rate: 21117000000, oracleDecimals: 8, quoteAsset: "GNO", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked OMG Network", symbol: "mOMG", decimals: 18, rate: 257000000, oracleDecimals: 8, quoteAsset: "OMG", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Bancor", symbol: "mBNT", decimals: 18, rate: 138000000, oracleDecimals: 8, quoteAsset: "BNT", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Celsius Network", symbol: "mCEL", decimals: 4, rate: 7629100, oracleDecimals: 8, quoteAsset: "CEL", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Ankr Network", symbol: "mANKR", decimals: 18, rate: 392627, oracleDecimals: 8, quoteAsset: "ANKR", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Frax Share ", symbol: "mFXS", decimals: 18, rate: 721000000, oracleDecimals: 8, quoteAsset: "FXS", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Immutable X", symbol: "mIMX", decimals: 18, rate: 9487620, oracleDecimals: 8, quoteAsset: "IMX", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Ethereum Name Service ", symbol: "mENS", decimals: 18, rate: 1238000000, oracleDecimals: 8, quoteAsset: "ENS", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked SushiToken", symbol: "mSUSHI", decimals: 18, rate: 166000000, oracleDecimals: 8, quoteAsset: "SUSHI", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Mocked dYdX", symbol: "mDYDX", decimals: 18, rate: 206000000, oracleDecimals: 8, quoteAsset: "DYDX", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked CelerToken", symbol: "mCELR", decimals: 18, rate: 186335, oracleDecimals: 8, quoteAsset: "CEL", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Wrapped Ether", symbol: "mwETH", creditRatingUsd: 2, creditRatingEth: 1, decimals: 18, rate: uint128(rateEthToUsd), oracleDecimals: 8, quoteAsset: "ETH", baseAsset: "USD", oracleAddr: address(oracleEthToUsd), assetAddr: address(weth)}));
+    assets.push(assetInfo({desc: "Mocked Wrapped BTC", symbol: "mwBTC", decimals: 8, creditRatingUsd: 3, creditRatingEth: 4, rate: 2934300000000, oracleDecimals: 8, quoteAsset: "BTC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked USD Coin", symbol: "mUSDC", decimals: 6, creditRatingUsd: 1, creditRatingEth: 2, rate: 100000000, oracleDecimals: 8, quoteAsset: "USDC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked SHIBA INU", symbol: "mSHIB", decimals: 18, creditRatingUsd: 9, creditRatingEth: 9, rate: 1179, oracleDecimals: 8, quoteAsset: "SHIB", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Matic Token", symbol: "mMATIC", decimals: 18, creditRatingUsd: 4, creditRatingEth: 5, rate: 6460430, oracleDecimals: 8, quoteAsset: "MATIC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Cronos Coin", symbol: "mCRO", decimals: 8, creditRatingUsd: 6, creditRatingEth: 7, rate: 1872500, oracleDecimals: 8, quoteAsset: "CRO", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Uniswap", symbol: "mUNI", decimals: 18, creditRatingUsd: 4, creditRatingEth: 5, rate: 567000000, oracleDecimals: 8, quoteAsset: "UNI", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked ChainLink Token", symbol: "mLINK", decimals: 18, creditRatingUsd: 3, creditRatingEth: 4, rate: 706000000, oracleDecimals: 8, quoteAsset: "LINK", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked FTX Token", symbol: "mFTT", decimals: 18, creditRatingUsd: 5, creditRatingEth: 6, rate: 2976000000, oracleDecimals: 8, quoteAsset: "FTT", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked ApeCoin", symbol: "mAPE", decimals: 18, creditRatingUsd: 8, creditRatingEth: 9, rate: 765000000, oracleDecimals: 8, quoteAsset: "APE", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked The Sandbox", symbol: "mSAND", decimals: 8, creditRatingUsd: 6, creditRatingEth: 7, rate: 130000000, oracleDecimals: 8, quoteAsset: "SAND", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Decentraland", symbol: "mMANA", decimals: 18, creditRatingUsd: 7, creditRatingEth: 7, rate: 103000000, oracleDecimals: 8, quoteAsset: "MANA", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Axie Infinity", symbol: "mAXS", decimals: 18, creditRatingUsd: 9, creditRatingEth: 9, rate: 2107000000, oracleDecimals: 8, quoteAsset: "AXS", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Aave", symbol: "mAAVE", decimals: 18, creditRatingUsd: 6, creditRatingEth: 6, rate: 9992000000, oracleDecimals: 8, quoteAsset: "AAVE", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Fantom", symbol: "mFTM", decimals: 18, creditRatingUsd: 5, creditRatingEth: 6, rate: 4447550, oracleDecimals: 8, quoteAsset: "FTM", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked KuCoin Token ", symbol: "mKCS", decimals: 6, creditRatingUsd: 6, creditRatingEth: 6, rate: 1676000000, oracleDecimals: 8, quoteAsset: "KCS", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Maker", symbol: "mMKR", decimals: 18, creditRatingUsd: 5, creditRatingEth: 6, rate: 131568000000, oracleDecimals: 8, quoteAsset: "MKR", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Dai", symbol: "mDAI", decimals: 18, creditRatingUsd: 3, creditRatingEth: 4, rate: 100000000, oracleDecimals: 8, quoteAsset: "DAI", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Convex Finance", symbol: "mCVX", decimals: 18, creditRatingUsd: 7, creditRatingEth: 8, rate: 1028000000, oracleDecimals: 8, quoteAsset: "CVX", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Curve DAO Token", symbol: "mCRV", decimals: 18, creditRatingUsd: 5, creditRatingEth: 6, rate: 128000000, oracleDecimals: 8, quoteAsset: "CRV", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Loopring", symbol: "mLRC", decimals: 18, creditRatingUsd: 4, creditRatingEth: 5, rate: 5711080, oracleDecimals: 8, quoteAsset: "LRC", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked BAT", symbol: "mBAT", decimals: 18, creditRatingUsd: 4, creditRatingEth: 5, rate: 3913420, oracleDecimals: 8, quoteAsset: "BAT", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Amp", symbol: "mAMP", decimals: 18, creditRatingUsd: 7, creditRatingEth: 7, rate: 13226, oracleDecimals: 8, quoteAsset: "AMP", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Compound", symbol: "mCOMP", decimals: 18, creditRatingUsd: 3, creditRatingEth: 4, rate: 6943000000, oracleDecimals: 8, quoteAsset: "COMP", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked 1INCH Token", symbol: "m1INCH", decimals: 18, creditRatingUsd: 4, creditRatingEth: 5, rate: 9926070, oracleDecimals: 8, quoteAsset: "1INCH", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Gnosis", symbol: "mGNO", decimals: 18, creditRatingUsd: 3, creditRatingEth: 3, rate: 21117000000, oracleDecimals: 8, quoteAsset: "GNO", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked OMG Network", symbol: "mOMG", decimals: 18, creditRatingUsd: 6, creditRatingEth: 6, rate: 257000000, oracleDecimals: 8, quoteAsset: "OMG", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Bancor", symbol: "mBNT", decimals: 18, creditRatingUsd: 4, creditRatingEth: 5, rate: 138000000, oracleDecimals: 8, quoteAsset: "BNT", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Celsius Network", symbol: "mCEL", decimals: 4, creditRatingUsd: 0, creditRatingEth: 0, rate: 7629100, oracleDecimals: 8, quoteAsset: "CEL", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Ankr Network", symbol: "mANKR", decimals: 18, creditRatingUsd: 7, creditRatingEth: 8, rate: 392627, oracleDecimals: 8, quoteAsset: "ANKR", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Frax Share ", symbol: "mFXS", decimals: 18, creditRatingUsd: 8, creditRatingEth: 8, rate: 721000000, oracleDecimals: 8, quoteAsset: "FXS", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Immutable X", symbol: "mIMX", decimals: 18, creditRatingUsd: 4, creditRatingEth: 5, rate: 9487620, oracleDecimals: 8, quoteAsset: "IMX", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Ethereum Name Service ", symbol: "mENS", decimals: 18, creditRatingUsd: 6, creditRatingEth: 6, rate: 1238000000, oracleDecimals: 8, quoteAsset: "ENS", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked SushiToken", symbol: "mSUSHI", decimals: 18, creditRatingUsd: 6, creditRatingEth: 6, rate: 166000000, oracleDecimals: 8, quoteAsset: "SUSHI", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Mocked dYdX", symbol: "mDYDX", decimals: 18, creditRatingUsd: 5, creditRatingEth: 6, rate: 206000000, oracleDecimals: 8, quoteAsset: "DYDX", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked CelerToken", symbol: "mCELR", decimals: 18, creditRatingUsd: 8, creditRatingEth: 7, rate: 186335, oracleDecimals: 8, quoteAsset: "CEL", baseAsset: "USD", oracleAddr: address(0), assetAddr: address(0)}));
   
-    assets.push(assetInfo({desc: "Mocked CRYPTOPUNKS", symbol: "mC", decimals: 0, rate: 48950000000000000000, oracleDecimals: 18, quoteAsset: "PUNK", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked BoredApeYachtClub", symbol: "mBAYC", decimals: 0, rate: 93990000000000000000, oracleDecimals: 18, quoteAsset: "BAYC", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked MutantApeYachtClub", symbol: "mMAYC", decimals: 0, rate: 18850000000000000000, oracleDecimals: 18, quoteAsset: "MAYC", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked CloneX", symbol: "mCloneX", decimals: 0, rate: 14400000000000000000, oracleDecimals: 18, quoteAsset: "CloneX", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Loot", symbol: "mLOOT", decimals: 0, rate: 1100000000000000000, oracleDecimals: 18, quoteAsset: "LOOT", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Sandbox's LANDs", symbol: "mLAND", decimals: 0, rate: 1630000000000000000, oracleDecimals: 18, quoteAsset: "LAND", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Cool Cats", symbol: "mCOOL", decimals: 0, rate: 3490000000000000000, oracleDecimals: 18, quoteAsset: "COOL", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Azuki", symbol: "mAZUKI", decimals: 0, rate: 12700000000000000000, oracleDecimals: 18, quoteAsset: "AZUKI", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Doodles", symbol: "mDOODLE", decimals: 0, rate: 12690000000000000000, oracleDecimals: 18, quoteAsset: "DOODLE", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Meebits", symbol: "mMEEBIT", decimals: 0, rate: 4600000000000000000, oracleDecimals: 18, quoteAsset: "MEEBIT", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked CyberKongz", symbol: "mKONGZ", decimals: 0, rate: 2760000000000000000, oracleDecimals: 18, quoteAsset: "KONGZ", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked BoredApeKennelClub", symbol: "mBAKC", decimals: 0, rate: 7200000000000000000, oracleDecimals: 18, quoteAsset: "BAKC", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Decentraland LAND", symbol: "mLAND", decimals: 0, rate: 2000000000000000000, oracleDecimals: 18, quoteAsset: "LAND", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Timeless", symbol: "mTMLS", decimals: 0, rate: 380000000000000000, oracleDecimals: 18, quoteAsset: "TMLS", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
-    assets.push(assetInfo({desc: "Mocked Treeverse", symbol: "mTRV", decimals: 0, rate: 10500000000000000000, oracleDecimals: 18, quoteAsset: "TRV", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked CRYPTOPUNKS", symbol: "mC", decimals: 0, creditRatingUsd: 5, creditRatingEth: 4, rate: 48950000000000000000, oracleDecimals: 18, quoteAsset: "PUNK", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked BoredApeYachtClub", symbol: "mBAYC", decimals: 0, creditRatingUsd: 5, creditRatingEth: 4, rate: 93990000000000000000, oracleDecimals: 18, quoteAsset: "BAYC", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked MutantApeYachtClub", symbol: "mMAYC", decimals: 0, creditRatingUsd: 6, creditRatingEth: 5, rate: 18850000000000000000, oracleDecimals: 18, quoteAsset: "MAYC", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked CloneX", symbol: "mCloneX", decimals: 0, creditRatingUsd: 9, creditRatingEth: 8, rate: 14400000000000000000, oracleDecimals: 18, quoteAsset: "CloneX", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Loot", symbol: "mLOOT", decimals: 0, creditRatingUsd: 7, creditRatingEth: 6, rate: 1100000000000000000, oracleDecimals: 18, quoteAsset: "LOOT", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Sandbox's LANDs", symbol: "mLAND", decimals: 0, creditRatingUsd: 5, creditRatingEth: 5, rate: 1630000000000000000, oracleDecimals: 18, quoteAsset: "LAND", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Cool Cats", symbol: "mCOOL", decimals: 0, creditRatingUsd: 7, creditRatingEth: 6, rate: 3490000000000000000, oracleDecimals: 18, quoteAsset: "COOL", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Azuki", symbol: "mAZUKI", decimals: 0, creditRatingUsd: 6, creditRatingEth: 6, rate: 12700000000000000000, oracleDecimals: 18, quoteAsset: "AZUKI", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Doodles", symbol: "mDOODLE", decimals: 0, creditRatingUsd: 7, creditRatingEth: 6, rate: 12690000000000000000, oracleDecimals: 18, quoteAsset: "DOODLE", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Meebits", symbol: "mMEEBIT", decimals: 0, creditRatingUsd: 8, creditRatingEth: 7, rate: 4600000000000000000, oracleDecimals: 18, quoteAsset: "MEEBIT", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked CyberKongz", symbol: "mKONGZ", decimals: 0, creditRatingUsd: 9, creditRatingEth: 9, rate: 2760000000000000000, oracleDecimals: 18, quoteAsset: "KONGZ", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked BoredApeKennelClub", symbol: "mBAKC", decimals: 0, creditRatingUsd: 7, creditRatingEth: 6, rate: 7200000000000000000, oracleDecimals: 18, quoteAsset: "BAKC", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Decentraland LAND", symbol: "mLAND", decimals: 0, creditRatingUsd: 5, creditRatingEth: 5, rate: 2000000000000000000, oracleDecimals: 18, quoteAsset: "LAND", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Timeless", symbol: "mTMLS", decimals: 0, creditRatingUsd: 8, creditRatingEth: 7, rate: 380000000000000000, oracleDecimals: 18, quoteAsset: "TMLS", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
+    assets.push(assetInfo({desc: "Mocked Treeverse", symbol: "mTRV", decimals: 0, creditRatingUsd: 7, creditRatingEth: 6, rate: 10500000000000000000, oracleDecimals: 18, quoteAsset: "TRV", baseAsset: "ETH", oracleAddr: address(0), assetAddr: address(0)}));
   
   }
 

@@ -504,6 +504,7 @@ contract factoryTest is Test {
         address stakeContract,
         address interestModule
     ) public {
+        vm.assume(randomStable != address(erc20Contr));
         registryContr2 = new MainRegistry(
             MainRegistry.NumeraireInformation({
                 numeraireToUsdOracleUnit: 0,
