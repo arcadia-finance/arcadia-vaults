@@ -1,4 +1,9 @@
-// SPDX-License-Identifier: UNLICENSED
+/** 
+    Created by Arcadia Finance
+    https://www.arcadia.finance
+
+    SPDX-License-Identifier: BUSL-1.1
+ */
 pragma solidity >0.8.10;
 
 import "../../paperTradingCompetition/Deploy/contracts/Deploy_coordinator.sol";
