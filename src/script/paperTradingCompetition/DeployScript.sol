@@ -127,16 +127,20 @@ contract DeployScript is DSTest, Script {
     oracleEthToUsd = new ArcadiaOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", address(weth));
     oracleEthToUsd.setOffchainTransmitter(address(this));
     oracleEthToUsd.setOffchainTransmitter(msg.sender);
+    oracleEthToUsd.setOffchainTransmitter(address(0xaaAaAAA3eA06C421c320903C77d8f1dde895690f));
+
     oracleEthToUsd.transmit(int256(rateEthToUsd));
 
     oracleStableUsdToUsd = new ArcadiaOracle(uint8(Constants.oracleStableToUsdDecimals), "maUSD / USD", address(stableUsd));
     oracleStableUsdToUsd.setOffchainTransmitter(msg.sender);
     oracleStableUsdToUsd.setOffchainTransmitter(address(this));
+    oracleStableUsdToUsd. setOffchainTransmitter(address(0xaaAaAAA3eA06C421c320903C77d8f1dde895690f));
     oracleStableUsdToUsd.transmit(int256(Constants.oracleStableToUsdUnit));
 
     oracleStableEthToEth = new ArcadiaOracle(uint8(Constants.oracleStableEthToEthDecimals), "maETH / ETH", address(stableEth));
     oracleStableEthToEth.setOffchainTransmitter(msg.sender);
     oracleStableEthToEth.setOffchainTransmitter(address(this));
+    oracleStableEthToEth.setOffchainTransmitter(address(0xaaAaAAA3eA06C421c320903C77d8f1dde895690f));
     oracleStableEthToEth.transmit(int256(Constants.oracleStableEthToEthUnit));
 
     stableUsd.setTokenShop(address(tokenShop));
@@ -259,6 +263,7 @@ contract DeployScript is DSTest, Script {
         newContr = address(new ArcadiaOracle(asset.oracleDecimals, string(abi.encodePacked(asset.quoteAsset, " / USD")), asset.assetAddr));
         ArcadiaOracle(newContr).setOffchainTransmitter(address(this));
         ArcadiaOracle(newContr).setOffchainTransmitter(msg.sender);
+        ArcadiaOracle(newContr).setOffchainTransmitter(address(0xaaAaAAA3eA06C421c320903C77d8f1dde895690f));
         assets[i].oracleAddr = newContr;
       }
     }

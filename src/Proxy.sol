@@ -3,7 +3,6 @@ pragma solidity >=0.4.22 <0.9.0;
 
 /**
  * @title Proxy
- * @author Arcadia Finance
  */
 contract Proxy {
     struct AddressSlot {

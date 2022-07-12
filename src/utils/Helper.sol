@@ -35,6 +35,7 @@ interface IVaults {
     function getValue(uint8) external view returns (uint256);
     function owner() external view returns (address);
     function life() external view returns (uint256);
+    function getOpenDebt() external view returns (uint256);
 }
 
 contract getValues {
@@ -94,6 +95,7 @@ contract getValues {
         address tempOwner;
         uint256 tempLife;
         uint256 tempVaultValueNumeraire;
+        uint256 tempVaultDebt;
 
         ReturnInfo[] memory returnInfo = new ReturnInfo[](vaultLen);
 
@@ -103,13 +105,14 @@ contract getValues {
             tempOwner = IVaults(tempVault).owner();
 
             tempVaultValueNumeraire = IVaults(tempVault).getValue(tempInfo._numeraire);
+            tempVaultDebt = IVaults(tempVault).getOpenDebt();
 
             tempLife = IVaults(tempVault).life();
 
             returnInfo[i] = ReturnInfo({vaultAddress: tempVault, 
                                         vaultOwner: tempOwner, 
                                         vaultValueNumeraire: tempVaultValueNumeraire, 
-                                        vaultDebt: tempInfo._openDebt, 
+                                        vaultDebt: tempVaultDebt, 
                                         vaultLife: tempLife, 
                                         vaultNumeraire: tempInfo._numeraire,
                                         vaultId: i});
