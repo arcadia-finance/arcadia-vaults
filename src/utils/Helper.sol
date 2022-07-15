@@ -54,7 +54,7 @@ interface IVaults {
     function _irmAddress() external view returns (address);
 }
 
-interface IRM {
+interface IRM_H {
     function creditRatingToInterestRate(uint256) external view returns (uint256);
     function baseInterestRate() external view returns (uint256);
 }
@@ -259,7 +259,7 @@ contract beHelper {
                 uint256((overview.vaultDebt) * tempInfo._collThres) / 100;
         }
 
-        overview.interestRate = IRM(irm).baseInterestRate() + calculateWeightedCollateralInterestrate(overview.valuesPerCreditRating, minCollValue, irm);
+        overview.interestRate = IRM_H(irm).baseInterestRate() + calculateWeightedCollateralInterestrate(overview.valuesPerCreditRating, minCollValue, irm);
 
         return (overview, tempInfo);
 
@@ -313,12 +313,12 @@ contract beHelper {
             for (uint256 i = 1; i < valuesPerCreditRatingLength; ) {
                 value = valuesPerCreditRating[i];
                 if (totalValue + value < minCollValue) {
-                    collateralInterestRate += IRM(IrmAddr).creditRatingToInterestRate(i)
+                    collateralInterestRate += IRM_H(IrmAddr).creditRatingToInterestRate(i)
                         .mulDivDown(value, minCollValue);
                     totalValue += value;
                 } else {
                     value = minCollValue - totalValue;
-                    collateralInterestRate += IRM(IrmAddr).creditRatingToInterestRate(i)
+                    collateralInterestRate += IRM_H(IrmAddr).creditRatingToInterestRate(i)
                         .mulDivDown(value, minCollValue);
                     return collateralInterestRate;
                 }
@@ -328,7 +328,7 @@ contract beHelper {
             }
             //Loop ended without returning -> use lowest credit rating (at index 0) for remaining collateral
             value = minCollValue - totalValue;
-            collateralInterestRate += IRM(IrmAddr).creditRatingToInterestRate(0).mulDivDown(
+            collateralInterestRate += IRM_H(IrmAddr).creditRatingToInterestRate(0).mulDivDown(
                 value,
                 minCollValue
             );
