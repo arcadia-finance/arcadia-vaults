@@ -7,6 +7,7 @@
 pragma solidity >0.8.10;
 
 import "../../lib/forge-std/src/Test.sol";
+import "../../lib/forge-std/src/Vm.sol";
 
 import "../ReserveFund.sol";
 import "../mockups/ERC20SolmateMock.sol";
@@ -32,10 +33,13 @@ contract ReserveFundTest is Test {
         vm.startPrank(ownerAddress);
         reserveFund.setLiquidator(address(liquidatorAddress));
         vm.stopPrank();
+
+        assertEq(reserveFund.getLiquidator(), address(liquidatorAddress));
     }
 
-    function testFailUserSetLiquidator() public {
+    function testUserSetLiquidator() public {
         vm.startPrank(randomAddress);
+        vm.expectRevert();
         reserveFund.setLiquidator(address(randomAddress));
         vm.stopPrank();
     }
@@ -44,7 +48,7 @@ contract ReserveFundTest is Test {
         vm.startPrank(ownerAddress);
         reserveFund.withdraw(50e18, address(stableCoin), address(ownerAddress));
         vm.stopPrank();
-        require(stableCoin.balanceOf(address(ownerAddress)) == 50e18);
+        assertEq(stableCoin.balanceOf(address(ownerAddress)), 50e18);
         
         // set liquidator for testing liquidator withdraw
         vm.startPrank(ownerAddress);
@@ -54,12 +58,14 @@ contract ReserveFundTest is Test {
         vm.startPrank(liquidatorAddress);
         reserveFund.withdraw(50e18, address(stableCoin), address(liquidatorAddress));
         vm.stopPrank();
-        require(stableCoin.balanceOf(address(liquidatorAddress)) == 50e18);
+        assertEq(stableCoin.balanceOf(address(liquidatorAddress)), 50e18);
     }
 
-    function testFailOwnerOrLiquidatorWithdraw() public {
+    function testNonOwnerOrNonLiquidatorWithdraw() public {
         vm.startPrank(randomAddress);
+        vm.expectRevert();
         reserveFund.withdraw(50e18, address(stableCoin), address(randomAddress));
         vm.stopPrank();
     }
+
 }

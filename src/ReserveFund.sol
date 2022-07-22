@@ -39,6 +39,11 @@ contract ReserveFund {
         liquidator = _liquidator;
     }
 
+    // Helper function for testing, can be deleted on production for gas optimization.
+    function getLiquidator() public view returns (address) {
+        return liquidator;
+    }
+
     /**   
     @notice Allows this reserve fund to send rewards to liquidatorkeepers if the surplus of a vaultauction isn't sufficient.
     @dev The protocol treasury to which liquidation rewards have to be sent to, could be this address as well.
