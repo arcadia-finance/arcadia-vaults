@@ -17,12 +17,12 @@ contract ReserveFund {
     address public liquidator;
 
     modifier onlyOwnerOrLiquidator() {
-        require(msg.sender == owner || msg.sender == liquidator);
+        require(msg.sender == owner || msg.sender == liquidator, "Ownable: caller is not the owner");
         _;
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == owner, "Ownable: caller is not the owner");
         _;
     }
 
