@@ -11,6 +11,7 @@ import "./interfaces/IVault.sol";
 import "./interfaces/IMainRegistry.sol";
 import "../lib/solmate/src/tokens/ERC721.sol";
 import "./utils/Strings.sol";
+import "./utils/MerkleProofLib.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract Factory is ERC721, Ownable {
@@ -21,13 +22,13 @@ contract Factory is ERC721, Ownable {
         address logic;
         address stakeContract;
         address interestModule;
+        bytes32 upgradeRoot;
     }
 
     mapping(address => bool) public isVault;
     mapping(uint256 => vaultVersionInfo) public vaultDetails;
 
     uint256 public currentVaultVersion;
-    bool public factoryInitialised;
     bool public newVaultInfoSet;
 
     address[] public allVaults;
@@ -81,10 +82,11 @@ contract Factory is ERC721, Ownable {
                 ++currentVaultVersion;
             }
             newVaultInfoSet = false;
-            if (!factoryInitialised) {
-                factoryInitialised = true;
-            }
         }
+    }
+
+    function getVaultUpgradeRoot() public view returns (bytes32) {
+        return vaultDetails[currentVaultVersion].upgradeRoot;
     }
 
     /** 
@@ -106,17 +108,19 @@ contract Factory is ERC721, Ownable {
         address registryAddress,
         address logic,
         address stakeContract,
-        address interestModule
+        address interestModule,
+        bytes32 upgradeRoot
     ) external onlyOwner {
         vaultDetails[currentVaultVersion + 1].registryAddress = registryAddress;
         vaultDetails[currentVaultVersion + 1].logic = logic;
         vaultDetails[currentVaultVersion + 1].stakeContract = stakeContract;
         vaultDetails[currentVaultVersion + 1].interestModule = interestModule;
+        vaultDetails[currentVaultVersion + 1].upgradeRoot = upgradeRoot;
         newVaultInfoSet = true;
 
         //If there is a new Main Registry Contract, Check that numeraires in factory and main registry match
         if (
-            factoryInitialised &&
+            getVaultUpgradeRoot() != bytes32(0) &&
             vaultDetails[currentVaultVersion].registryAddress != registryAddress
         ) {
             address mainRegistryStableAddress;
@@ -187,7 +191,8 @@ contract Factory is ERC721, Ownable {
             numeraire,
             numeraireToStable[numeraire],
             vaultDetails[currentVaultVersion].stakeContract,
-            vaultDetails[currentVaultVersion].interestModule
+            vaultDetails[currentVaultVersion].interestModule, 
+            uint16(currentVaultVersion)
         );
 
         allVaults.push(vault);
@@ -364,6 +369,22 @@ contract Factory is ERC721, Ownable {
 
         delete getApproved[vaultIndex[vault]];
         emit Transfer(from, liquidatorAddress, vaultIndex[vault]);
+    }
+
+
+    function upgradeVaultVersion(address vault, uint256 version, bytes32[] calldata proofs) external {
+        require(isVault[vault], "FTRY_UVV: Not a vault");
+        require(ownerOf[vaultIndex[vault]] == msg.sender, "FTRY_UVV: You are not the owner");
+        uint256 currentVersion = IVault(vault).vaultVersion();
+
+        bool canUpgrade = MerkleProofLib.verify(proofs, getVaultUpgradeRoot(), keccak256(abi.encodePacked(currentVersion, version)));
+
+        require(canUpgrade, "FTR_UVV: Cannot upgrade to this version");
+
+        address newImplementation = vaultDetails[version].logic;
+        require(newImplementation != address(0), "FTRY_UVV: Invalid logic");
+
+        IVault(vault)._setImplementation(newImplementation);
     }
 
     /** 

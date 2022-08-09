@@ -70,7 +70,8 @@ contract factoryTest is Test {
             address(registryContr),
             address(vaultContr),
             0x0000000000000000000000000000000000000000,
-            address(interestContr)
+            address(interestContr),
+            Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
         factoryContr.setLiquidator(address(liquidatorContr));
@@ -391,7 +392,8 @@ contract factoryTest is Test {
             address(registryContr2),
             address(vaultContr),
             0x0000000000000000000000000000000000000000,
-            address(interestContr)
+            address(interestContr),
+            Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
@@ -440,7 +442,8 @@ contract factoryTest is Test {
             address(registryContr),
             address(vaultContr),
             0x0000000000000000000000000000000000000000,
-            address(interestContr)
+            address(interestContr),
+            Constants.upgradeProof1To2
         );
         vm.stopPrank();
     }
@@ -452,16 +455,17 @@ contract factoryTest is Test {
         address interestModule
     ) public {
         factoryContr = new Factory();
-        assertTrue(!factoryContr.factoryInitialised());
+        assertTrue(factoryContr.getVaultUpgradeRoot() == bytes32(0));
         assertTrue(!factoryContr.newVaultInfoSet());
 
         factoryContr.setNewVaultInfo(
             registry,
             logic,
             stakeContract,
-            interestModule
+            interestModule,
+            Constants.upgradeProof1To2
         );
-        assertTrue(!factoryContr.factoryInitialised());
+        assertTrue(factoryContr.getVaultUpgradeRoot() == bytes32(0));
         assertTrue(factoryContr.newVaultInfoSet());
     }
 
@@ -475,7 +479,8 @@ contract factoryTest is Test {
             address(registryContr),
             logic,
             stakeContract,
-            interestModule
+            interestModule,
+            Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
     }
@@ -490,14 +495,16 @@ contract factoryTest is Test {
             address(registryContr),
             logic,
             stakeContract,
-            interestModule
+            interestModule,
+            Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
         factoryContr.setNewVaultInfo(
             address(registryContr),
             logic,
             stakeContract,
-            interestModule
+            interestModule,
+            Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
     }
@@ -524,7 +531,8 @@ contract factoryTest is Test {
             address(registryContr2),
             logic,
             stakeContract,
-            interestModule
+            interestModule,
+            Constants.upgradeProof1To2
         );
         vm.stopPrank();
     }
@@ -566,7 +574,8 @@ contract factoryTest is Test {
             address(registryContr2),
             logic,
             stakeContract,
-            interestModule
+            interestModule,
+            Constants.upgradeProof1To2
         );
     }
 
@@ -615,7 +624,8 @@ contract factoryTest is Test {
             address(registryContr2),
             logic,
             stakeContract,
-            interestModule
+            interestModule,
+            Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
@@ -658,7 +668,8 @@ contract factoryTest is Test {
             address(registryContr2),
             logic,
             stakeContract,
-            interestModule
+            interestModule,
+            Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
@@ -688,19 +699,20 @@ contract factoryTest is Test {
         address interestModule
     ) public {
         factoryContr = new Factory();
-        assertTrue(!factoryContr.factoryInitialised());
+        assertTrue(factoryContr.getVaultUpgradeRoot() == bytes32(0));
         assertEq(0, factoryContr.currentVaultVersion());
 
         factoryContr.setNewVaultInfo(
             registry,
             logic,
             stakeContract,
-            interestModule
+            interestModule,
+            Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
 
         factoryContr.confirmNewVaultInfo();
-        assertTrue(factoryContr.factoryInitialised());
+        assertTrue(factoryContr.getVaultUpgradeRoot() == Constants.upgradeProof1To2);
         assertTrue(!factoryContr.newVaultInfoSet());
         assertEq(1, factoryContr.currentVaultVersion());
     }
@@ -717,7 +729,8 @@ contract factoryTest is Test {
             address(registryContr),
             logic,
             stakeContract,
-            interestModule
+            interestModule,
+            Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
         assertEq(1, factoryContr.currentVaultVersion());

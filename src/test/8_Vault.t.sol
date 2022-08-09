@@ -329,7 +329,8 @@ contract vaultTests is Test {
             address(mainRegistry),
             address(vault),
             stakeContract,
-            address(interestRateModule)
+            address(interestRateModule),
+            Constants.upgradeProof1To2
         );
         vm.prank(creatorAddress);
         factoryContr.confirmNewVaultInfo();
@@ -394,7 +395,8 @@ contract vaultTests is Test {
             uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
-            address(interestRateModule)
+            address(interestRateModule),
+            1
         );
         bayc.setApprovalForAll(address(vault), true);
         mayc.setApprovalForAll(address(vault), true);
@@ -1585,7 +1587,8 @@ contract vaultTests is Test {
             uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
-            address(interestRateModule)
+            address(interestRateModule),
+            1
         );
         assertEq(address(this), vault_m.owner());
 
@@ -1627,7 +1630,8 @@ contract vaultTests is Test {
             uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
-            address(interestRateModule)
+            address(interestRateModule),
+            1
         );
         assertEq(address(this), vault_m.owner());
 

@@ -17,10 +17,14 @@ interface IVault {
         uint256 numeraire,
         address stable,
         address stakeContract,
-        address interestModule
+        address interestModule,
+        uint16 currentVaultVersion
     ) external;
 
     function liquidateVault(address liquidationKeeper, address liquidator)
         external
         returns (bool);
+
+    function _setImplementation(address) external;
+    function vaultVersion() external view returns (uint8);
 }
