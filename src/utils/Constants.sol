@@ -9,9 +9,9 @@ pragma solidity ^0.8.0;
 
 library Constants {
     // Math
-    uint256 internal constant UsdNumeraire = 0;
-    uint256 internal constant EthNumeraire = 1;
-    uint256 internal constant SafemoonNumeraire = 2;
+    uint256 internal constant UsdBaseCurrency = 0;
+    uint256 internal constant EthBaseCurrency = 1;
+    uint256 internal constant SafemoonBaseCurrency = 2;
 
     uint256 internal constant ethDecimals = 12;
     uint256 internal constant ethCreditRatingUsd = 2;

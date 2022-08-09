@@ -11,7 +11,7 @@ interface ISubRegistry {
         address assetAddress;
         uint256 assetId;
         uint256 assetAmount;
-        uint256 numeraire;
+        uint256 baseCurrency;
     }
 
     function isAssetAddressWhiteListed(address) external view returns (bool);

@@ -14,6 +14,6 @@ interface ILiquidator {
         address originalOwner,
         uint128 openDebt,
         uint8 liqThres,
-        uint8 numeraire
+        uint8 baseCurrency
     ) external returns (bool);
 }

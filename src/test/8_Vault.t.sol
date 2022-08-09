@@ -175,67 +175,67 @@ contract vaultTests is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
                 quoteAssetAddress: address(wmayc),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -299,26 +299,26 @@ contract vaultTests is Test {
     function setUp() public {
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: address(stable),
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
         uint256[] memory emptyList = new uint256[](0);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 stableAddress: address(stable),
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -391,7 +391,6 @@ contract vaultTests is Test {
         vault.initialize(
             vaultOwner,
             address(mainRegistry),
-            uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
             address(interestRateModule)
@@ -875,7 +874,7 @@ contract vaultTests is Test {
             vaultOwner
         );
 
-        uint256 vaultValue = vault.getValue(uint8(Constants.UsdNumeraire));
+        uint256 vaultValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
 
         assertEq(vaultValue, valueAmount);
 
@@ -889,7 +888,7 @@ contract vaultTests is Test {
             assetInfo.assetTypes
         );
 
-        uint256 vaultValueAfter = vault.getValue(uint8(Constants.UsdNumeraire));
+        uint256 vaultValueAfter = vault.getValue(uint8(Constants.UsdBaseCurrency));
         assertEq(vaultValueAfter, 0);
         vm.stopPrank();
     }
@@ -958,7 +957,7 @@ contract vaultTests is Test {
         );
         vm.stopPrank();
 
-        uint256 actualValue = vault.getValue(uint8(Constants.UsdNumeraire));
+        uint256 actualValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
         uint256 expectedValue = valueDeposit - valueWithdraw;
 
         assertEq(expectedValue, actualValue);
@@ -1069,7 +1068,7 @@ contract vaultTests is Test {
             withdrawalTypes
         );
 
-        uint256 actualValue = vault.getValue(uint8(Constants.UsdNumeraire));
+        uint256 actualValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
         uint256 expectedValue = valueOfDeposit - valueOfWithdrawal;
 
         assertEq(expectedValue, actualValue);
@@ -1151,7 +1150,7 @@ contract vaultTests is Test {
 
         uint256 expectedValue = ((Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals) * depositAmount;
-        uint256 actualValue = vault.getValue(uint8(Constants.UsdNumeraire));
+        uint256 actualValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
 
         assertEq(expectedValue, actualValue);
     }
@@ -1167,7 +1166,7 @@ contract vaultTests is Test {
         depositBaycInVault(tokenIds, vaultOwner);
 
         uint256 gasStart = gasleft();
-        vault.getValue(uint8(Constants.UsdNumeraire));
+        vault.getValue(uint8(Constants.UsdBaseCurrency));
         uint256 gasAfter = gasleft();
         emit log_int(int256(gasStart - gasAfter));
         assertLt(gasStart - gasAfter, 200000);
@@ -1294,7 +1293,7 @@ contract vaultTests is Test {
         uint8 _liqThres; //factor 100
         uint64 _yearlyInterestRate; //factor 10**18
         uint32 _lastBlock;
-        uint8 _numeraire;
+        uint8 _baseCurrency;
     }
 
     function testMinCollValueUnchecked() public {
@@ -1391,7 +1390,7 @@ contract vaultTests is Test {
             ,
             uint64 _yearlyInterestRate,
             ,
-            uint8 _numeraire
+            uint8 _baseCurrency
         ) = vault.debt();
         uint128 amountEthToDeposit = uint128(
             ((openDebt / rateEthToUsd / 10**18) *
@@ -1414,7 +1413,7 @@ contract vaultTests is Test {
 
         uint256 _lastBlock = block.number;
 
-        (, _collThres, , _yearlyInterestRate, , _numeraire) = vault.debt();
+        (, _collThres, , _yearlyInterestRate, , _baseCurrency) = vault.debt();
         assertTrue(_yearlyInterestRate == base - 1e18);
 
         vm.roll(block.number + deltaBlocks);
@@ -1424,7 +1423,7 @@ contract vaultTests is Test {
         debtInfo memory debtLocal;
         debtLocal._openDebt = remainingCredit;
         debtLocal._collThres = _collThres;
-        debtLocal._numeraire = _numeraire;
+        debtLocal._baseCurrency = _baseCurrency;
         debtLocal._lastBlock = uint32(_lastBlock);
         debtLocal._yearlyInterestRate = _yearlyInterestRate;
 
@@ -1451,7 +1450,7 @@ contract vaultTests is Test {
             ,
             uint64 _yearlyInterestRate,
             ,
-            uint8 _numeraire
+            uint8 _baseCurrency
         ) = vault.debt();
         uint128 amountEthToDeposit = uint128(
             (((10 * 10**9 * 10**18) / rateEthToUsd / 10**18) *
@@ -1463,7 +1462,7 @@ contract vaultTests is Test {
         ); //10bn USD debt
         uint256 _lastBlock = block.number;
 
-        (, _collThres, , _yearlyInterestRate, , _numeraire) = vault.debt();
+        (, _collThres, , _yearlyInterestRate, , _baseCurrency) = vault.debt();
 
         vm.roll(block.number + blocksToRoll);
 
@@ -1474,7 +1473,7 @@ contract vaultTests is Test {
         debtInfo memory debtLocal;
         debtLocal._openDebt = remainingCredit;
         debtLocal._collThres = _collThres;
-        debtLocal._numeraire = _numeraire;
+        debtLocal._baseCurrency = _baseCurrency;
         debtLocal._lastBlock = uint32(_lastBlock);
         debtLocal._yearlyInterestRate = _yearlyInterestRate;
 
@@ -1505,7 +1504,7 @@ contract vaultTests is Test {
             ,
             _yearlyInterestRate,
             _lastBlock,
-            _numeraire
+            _baseCurrency
         ) = vault.debt();
 
         assertEq(debtLocal._openDebt, _openDebt);
@@ -1533,7 +1532,7 @@ contract vaultTests is Test {
         vm.prank(vaultOwner);
         vault.takeCredit((((amountEth * 100) / 150) * factor) / 255);
 
-        uint256 currentValue = vault.getValue(uint8(Constants.UsdNumeraire));
+        uint256 currentValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
         uint256 openDebt = vault.getOpenDebt();
         (, uint16 _collThres, , , , ) = vault.debt();
 
@@ -1582,7 +1581,6 @@ contract vaultTests is Test {
         vault_m.initialize(
             address(this),
             address(mainRegistry),
-            uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
             address(interestRateModule)
@@ -1624,7 +1622,6 @@ contract vaultTests is Test {
         vault_m.initialize(
             address(this),
             address(mainRegistry),
-            uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
             address(interestRateModule)

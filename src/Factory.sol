@@ -37,8 +37,8 @@ contract Factory is ERC721, Ownable {
 
     address public liquidatorAddress;
 
-    uint256 public numeraireCounter;
-    mapping(uint256 => address) public numeraireToStable;
+    uint256 public baseCurrencyCounter;
+    mapping(uint256 => address) public baseCurrencyToStable;
 
     event VaultCreated(
         address indexed vaultAddress,
@@ -95,7 +95,7 @@ contract Factory is ERC721, Ownable {
          ToDo Add a time lock between setting a new vault version, and confirming a new vault version
          Changing any of the logic contracts with this function does NOT immediately take effect,
          only after the function 'confirmNewVaultInfo' is called.
-         If a new Main Registry contract is set, all the Numeraires currently stored in the Factory 
+         If a new Main Registry contract is set, all the BaseCurrencys currently stored in the Factory 
          (and the corresponding Stable Contracts) must also be stored in the new Main registry contract.
     @param registryAddress The contract addres of the Main Registry
     @param logic The contract address of the Vault logic
@@ -114,19 +114,19 @@ contract Factory is ERC721, Ownable {
         vaultDetails[currentVaultVersion + 1].interestModule = interestModule;
         newVaultInfoSet = true;
 
-        //If there is a new Main Registry Contract, Check that numeraires in factory and main registry match
+        //If there is a new Main Registry Contract, Check that baseCurrencys in factory and main registry match
         if (
             factoryInitialised &&
             vaultDetails[currentVaultVersion].registryAddress != registryAddress
         ) {
             address mainRegistryStableAddress;
-            for (uint256 i; i < numeraireCounter; ) {
+            for (uint256 i; i < baseCurrencyCounter; ) {
                 (, , , , mainRegistryStableAddress, ) = IMainRegistry(
                     registryAddress
-                ).numeraireToInformation(i);
+                ).baseCurrencyToInformation(i);
                 require(
-                    mainRegistryStableAddress == numeraireToStable[i],
-                    "FTRY_SNVI:No match numeraires MR"
+                    mainRegistryStableAddress == baseCurrencyToStable[i],
+                    "FTRY_SNVI:No match baseCurrencys MR"
                 );
                 unchecked {
                     ++i;
@@ -136,19 +136,19 @@ contract Factory is ERC721, Ownable {
     }
 
     /** 
-  @notice Function adds numeraire and corresponding stable contract to the factory
-  @dev Numeraires can only be added by the latest Main Registry
-  @param numeraire An identifier (uint256) of the Numeraire
-  @param stable The contract address of the corresponding ERC20 token pegged to the numeraire
+  @notice Function adds baseCurrency and corresponding stable contract to the factory
+  @dev BaseCurrencys can only be added by the latest Main Registry
+  @param baseCurrency An identifier (uint256) of the BaseCurrency
+  @param stable The contract address of the corresponding ERC20 token pegged to the baseCurrency
   */
-    function addNumeraire(uint256 numeraire, address stable) external {
+    function addBaseCurrency(uint256 baseCurrency, address stable) external {
         require(
             vaultDetails[currentVaultVersion].registryAddress == msg.sender,
-            "FTRY_AN: Add Numeraires via MR"
+            "FTRY_AN: Add BaseCurrencys via MR"
         );
-        numeraireToStable[numeraire] = stable;
+        baseCurrencyToStable[baseCurrency] = stable;
         unchecked {
-            ++numeraireCounter;
+            ++baseCurrencyCounter;
         }
     }
 
@@ -164,16 +164,11 @@ contract Factory is ERC721, Ownable {
   @notice Function used to create a Vault
   @dev This is the starting point of the Vault creation process. Safe to cast a uint256 to a bytes32 since the space of both is 2^256.
   @param salt A salt to be used to generate the hash.
-  @param numeraire An identifier (uint256) of the Numeraire
   */
-    function createVault(uint256 salt, uint256 numeraire)
+    function createVault(uint256 salt)
         external
         returns (address vault)
     {
-        require(
-            numeraire <= numeraireCounter - 1,
-            "FTRY_CV: Unknown Numeraire"
-        );
 
         vault = address(
             new Proxy{salt: bytes32(salt)}(
@@ -184,8 +179,7 @@ contract Factory is ERC721, Ownable {
         IVault(vault).initialize(
             msg.sender,
             vaultDetails[currentVaultVersion].registryAddress,
-            numeraire,
-            numeraireToStable[numeraire],
+            baseCurrencyToStable[0],
             vaultDetails[currentVaultVersion].stakeContract,
             vaultDetails[currentVaultVersion].interestModule
         );

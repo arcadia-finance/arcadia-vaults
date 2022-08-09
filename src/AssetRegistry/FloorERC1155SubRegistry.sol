@@ -39,9 +39,9 @@ contract FloorERC1155SubRegistry is SubRegistry {
      *                         - id: The Id of the asset
      *                         - assetAddress: The contract address of the asset
      *                         - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
-     * @param assetCreditRatings The List of Credit Ratings for the asset for the different Numeraires.
-     * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
-     *  or the list must have length 0. If the list has length zero, the credit ratings of the asset for all numeraires is
+     * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencys.
+     * @dev The list of Credit Ratings should or be as long as the number of baseCurrencys added to the Main Registry,
+     *  or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencys is
      *  is initiated as credit rating with index 0 by default (worst credit rating).
      * @dev The assets are added/overwritten in the Main-Registry as well.
      *      By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
@@ -89,16 +89,16 @@ contract FloorERC1155SubRegistry is SubRegistry {
     }
 
     /**
-     * @notice Returns the value of a certain asset, denominated in USD or in another Numeraire
+     * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency
      * @param getValueInput A Struct with all the information neccessary to get the value of an asset
      *                      - assetAddress: The contract address of the asset
      *                      - assetId: The Id of the asset
      *                      - assetAmount: The Amount of tokens
-     *                      - numeraire: The Numeraire (base-asset) in which the value is ideally expressed
+     *                      - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
-     * @return valueInNumeraire The value of the asset denominated in Numeraire different from USD with 18 Decimals precision
-     * @dev If the Oracle-Hub returns the rate in a numeraire different from USD, the StandardERC20Registry will return
-     *      the value of the asset in the same Numeraire. If the Oracle-Hub returns the rate in USD, the StandardERC20Registry
+     * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
+     * @dev If the Oracle-Hub returns the rate in a baseCurrency different from USD, the StandardERC20Registry will return
+     *      the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the StandardERC20Registry
      *      will return the value of the asset in USD.
      *      Only one of the two values can be different from 0.
      * @dev Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
@@ -110,18 +110,18 @@ contract FloorERC1155SubRegistry is SubRegistry {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInNumeraire)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency)
     {
         uint256 rateInUsd;
-        uint256 rateInNumeraire;
+        uint256 rateInBaseCurrency;
 
-        (rateInUsd, rateInNumeraire) = IOraclesHub(oracleHub).getRate(
+        (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
             assetToInformation[getValueInput.assetAddress].oracleAddresses,
-            getValueInput.numeraire
+            getValueInput.baseCurrency
         );
 
-        if (rateInNumeraire > 0) {
-            valueInNumeraire = getValueInput.assetAmount * rateInNumeraire;
+        if (rateInBaseCurrency > 0) {
+            valueInBaseCurrency = getValueInput.assetAmount * rateInBaseCurrency;
         } else {
             valueInUsd = getValueInput.assetAmount * rateInUsd;
         }

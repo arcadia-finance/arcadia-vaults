@@ -56,13 +56,13 @@ contract factoryTest is Test {
             0x0000000000000000000000000000000000000000
         );
         registryContr = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: address(erc20Contr),
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
 
@@ -117,8 +117,7 @@ contract factoryTest is Test {
         uint256 amountBefore = factoryContr.allVaultsLength();
 
         address actualDeployed = factoryContr.createVault(
-            salt,
-            Constants.UsdNumeraire
+            salt
         );
         assertEq(amountBefore + 1, factoryContr.allVaultsLength());
         assertEq(
@@ -135,8 +134,7 @@ contract factoryTest is Test {
         uint256 amountBefore = factoryContr.allVaultsLength();
 
         address actualDeployed = factoryContr.createVault(
-            salt,
-            Constants.UsdNumeraire
+            salt
         );
         assertEq(amountBefore + 1, factoryContr.allVaultsLength());
         assertEq(IVaultExtra(actualDeployed).life(), 0);
@@ -151,8 +149,7 @@ contract factoryTest is Test {
         vm.prank(sender);
         vm.assume(sender != address(0));
         address actualDeployed = factoryContr.createVault(
-            salt,
-            Constants.UsdNumeraire
+            salt
         );
         assertEq(amountBefore + 1, factoryContr.allVaultsLength());
         assertEq(IVaultExtra(actualDeployed).life(), 0);
@@ -167,7 +164,7 @@ contract factoryTest is Test {
         vm.assume(sender != address(0));
 
         vm.startPrank(sender);
-        address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+        address vault = factoryContr.createVault(0);
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
@@ -202,7 +199,7 @@ contract factoryTest is Test {
         vm.assume(sender != address(0) && sender != vaultOwner);
 
         vm.startPrank(vaultOwner);
-        address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+        address vault = factoryContr.createVault(0);
         vm.stopPrank();
 
         //Make sure index in erc721 == vaultIndex
@@ -229,7 +226,7 @@ contract factoryTest is Test {
         vm.assume(sender != address(0));
 
         vm.startPrank(sender);
-        address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+        address vault = factoryContr.createVault(0);
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
@@ -264,7 +261,7 @@ contract factoryTest is Test {
         vm.assume(sender != address(0) && sender != vaultOwner);
 
         vm.startPrank(vaultOwner);
-        address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+        address vault = factoryContr.createVault(0);
         vm.stopPrank();
 
         //Make sure index in erc721 == vaultIndex
@@ -319,7 +316,7 @@ contract factoryTest is Test {
         vm.assume(receiver != address(1));
 
         vm.prank(sender);
-        address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+        address vault = factoryContr.createVault(0);
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
@@ -365,26 +362,26 @@ contract factoryTest is Test {
         return this.onERC1155Received.selector;
     }
 
-    //Test addNumeraire
-    function testNonRegistryAddsNumeraire(address unprivilegedAddress) public {
+    //Test addBaseCurrency
+    function testNonRegistryAddsBaseCurrency(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != address(registryContr));
         vm.assume(unprivilegedAddress != address(this));
         vm.assume(unprivilegedAddress != address(factoryContr));
         vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("FTRY_AN: Add Numeraires via MR");
-        factoryContr.addNumeraire(2, address(erc20Contr));
+        vm.expectRevert("FTRY_AN: Add BaseCurrencys via MR");
+        factoryContr.addBaseCurrency(2, address(erc20Contr));
         vm.stopPrank();
     }
 
-    function testOldRegistryAddsNumeraire(address newNumeraire) public {
+    function testOldRegistryAddsBaseCurrency(address newBaseCurrency) public {
         registryContr2 = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: address(erc20Contr),
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
         factoryContr.setNewVaultInfo(
@@ -396,37 +393,37 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
 
-        vm.expectRevert("FTRY_AN: Add Numeraires via MR");
-        registryContr.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+        vm.expectRevert("FTRY_AN: Add BaseCurrencys via MR");
+        registryContr.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
-                stableAddress: newNumeraire,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
+                stableAddress: newBaseCurrency,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
     }
 
-    function testLatestRegistryAddsNumeraire(address newStable) public {
-        assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
-        assertEq(address(0), factoryContr.numeraireToStable(1));
-        registryContr.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+    function testLatestRegistryAddsBaseCurrency(address newStable) public {
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(address(0), factoryContr.baseCurrencyToStable(1));
+        registryContr.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: newStable,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
 
-        assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
-        assertEq(newStable, factoryContr.numeraireToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
     }
 
     //Test setNewVaultInfo
@@ -510,16 +507,16 @@ contract factoryTest is Test {
     ) public {
         vm.assume(randomStable != address(erc20Contr));
         registryContr2 = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: randomStable,
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
-        vm.expectRevert("FTRY_SNVI:No match numeraires MR");
+        vm.expectRevert("FTRY_SNVI:No match baseCurrencys MR");
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
@@ -529,7 +526,7 @@ contract factoryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerSetsNewVaultWithInfoMissingNumeraireInMainRegistry(
+    function testOwnerSetsNewVaultWithInfoMissingBaseCurrencyInMainRegistry(
         address newStable,
         address logic,
         address stakeContract,
@@ -537,31 +534,31 @@ contract factoryTest is Test {
     ) public {
         vm.assume(newStable != address(0));
 
-        registryContr.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+        registryContr.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: newStable,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
-        assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
-        assertEq(newStable, factoryContr.numeraireToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
 
         registryContr2 = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: address(erc20Contr),
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
-        vm.expectRevert("FTRY_SNVI:No match numeraires MR");
+        vm.expectRevert("FTRY_SNVI:No match baseCurrencys MR");
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
@@ -570,44 +567,44 @@ contract factoryTest is Test {
         );
     }
 
-    function testOwnerSetsNewVaultWithIdenticalNumerairesInMainRegistry(
+    function testOwnerSetsNewVaultWithIdenticalBaseCurrencysInMainRegistry(
         address newStable,
         address logic,
         address stakeContract,
         address interestModule
     ) public {
-        registryContr.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+        registryContr.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: newStable,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
-        assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
-        assertEq(newStable, factoryContr.numeraireToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
 
         registryContr2 = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: address(erc20Contr),
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
-        registryContr2.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+        registryContr2.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: newStable,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -620,37 +617,37 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
 
-        assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
-        assertEq(newStable, factoryContr.numeraireToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
     }
 
-    function testOwnerSetsNewVaultWithMoreNumerairesInMainRegistry(
+    function testOwnerSetsNewVaultWithMoreBaseCurrencysInMainRegistry(
         address newStable,
         address logic,
         address stakeContract,
         address interestModule
     ) public {
-        assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
-        assertEq(address(0), factoryContr.numeraireToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(address(0), factoryContr.baseCurrencyToStable(1));
 
         registryContr2 = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: address(erc20Contr),
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
-        registryContr2.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+        registryContr2.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: newStable,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -663,8 +660,8 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
 
-        assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
-        assertEq(newStable, factoryContr.numeraireToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
     }
 
     //Test confirmNewVaultInfo

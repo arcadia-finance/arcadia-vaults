@@ -176,67 +176,67 @@ contract LiquidatorTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
                 quoteAssetAddress: address(wmayc),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -297,26 +297,26 @@ contract LiquidatorTest is Test {
     function setUp() public {
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: address(stable),
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
         uint256[] memory emptyList = new uint256[](0);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 stableAddress: address(stable),
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -421,8 +421,7 @@ contract LiquidatorTest is Test {
                         blockhash(block.number)
                     )
                 )
-            ),
-            Constants.UsdNumeraire
+            )
         );
         proxy = Vault(proxyAddr);
 
@@ -790,7 +789,7 @@ contract LiquidatorTest is Test {
         auction.openDebt = uint128(remainingCred);
         auction.originalOwner = vaultOwner;
         auction.liquidationKeeper = address(1110);
-        auction.numeraire = 0;
+        auction.baseCurrency = 0;
 
         liquidator.claimable(auction, address(proxy), 0);
 
@@ -937,7 +936,7 @@ contract LiquidatorTest is Test {
         eth.mint(vaultOwner, amountEth * 2);
 
         vm.startPrank(vaultOwner);
-        address proxy2 = factory.createVault(45855465656845214, 0);
+        address proxy2 = factory.createVault(45855465656845214);
         eth.approve(proxy2, type(uint256).max);
         Vault(proxy2).deposit(
             assetAddresses,
@@ -1073,7 +1072,7 @@ contract LiquidatorTest is Test {
         auction.openDebt = uint128(remainingCred);
         auction.originalOwner = vaultOwner;
         auction.liquidationKeeper = address(1110);
-        auction.numeraire = 0;
+        auction.baseCurrency = 0;
 
         liquidator.claimable(auction, address(proxy), newLife);
 

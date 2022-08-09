@@ -68,8 +68,8 @@ contract InterestRateModule is Ownable {
 
     /**
      * @notice Returns the weighted interest rate of a basket of different assets depending on their Credit rating category
-     * @param valuesPerCreditRating A list of the values (denominated in a single Numeraire) of assets per Credit Rating Category
-     * @param minCollValue The minimal collaterisation value (denominated in the same Numeraire)
+     * @param valuesPerCreditRating A list of the values (denominated in a single BaseCurrency) of assets per Credit Rating Category
+     * @param minCollValue The minimal collaterisation value (denominated in the same BaseCurrency)
      * @return collateralInterestRate The weighted asset specific interest rate of a basket of assets
      * @dev Since each Credit Rating Category has its own specific interest rate, the interest rate for a basket of collateral
      *      is calculated as the weighted interest rate over the different Credit Rating Categories.
@@ -119,8 +119,8 @@ contract InterestRateModule is Ownable {
 
     /**
      * @notice Returns the interest rate of a basket of different assets
-     * @param valuesPerCreditRating A list of the values (denominated in a single Numeraire) of assets per Credit Rating Category
-     * @param minCollValue The minimal collaterisation value (denominated in the same Numeraire)
+     * @param valuesPerCreditRating A list of the values (denominated in a single BaseCurrency) of assets per Credit Rating Category
+     * @param minCollValue The minimal collaterisation value (denominated in the same BaseCurrency)
      * @return yearlyInterestRate The total yearly compounded interest rate of of a basket of assets
      * @dev The yearly interest rate exists out of a base rate (cost of capital) and a collatereal specific rate (price risks of collateral)
      *      The interest rate is the relative compounded interest after one year, it is an integer with 18 decimals

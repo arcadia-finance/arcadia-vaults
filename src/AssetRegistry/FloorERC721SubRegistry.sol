@@ -41,9 +41,9 @@ contract FloorERC721SubRegistry is SubRegistry {
      *                         - idRangeEnd: The id of the last NFT of the collection
      *                         - assetAddress: The contract address of the asset
      *                         - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
-     * @param assetCreditRatings The List of Credit Ratings for the asset for the different Numeraires
-     * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
-     *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all numeraires is
+     * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencys
+     * @dev The list of Credit Ratings should or be as long as the number of baseCurrencys added to the Main Registry,
+     *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencys is
      *      is initiated as credit rating with index 0 by default (worst credit rating)
      * @dev The assets are added/overwritten in the Main-Registry as well.
      *      By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
@@ -139,16 +139,16 @@ contract FloorERC721SubRegistry is SubRegistry {
     }
 
     /**
-     * @notice Returns the value of a certain asset, denominated in USD or in another Numeraire
+     * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency
      * @param getValueInput A Struct with all the information neccessary to get the value of an asset
      *                      - assetAddress: The contract address of the asset
      *                      - assetId: The Id of the asset
      *                      - assetAmount: Since ERC721 tokens have no amount, the amount should be set to 0
-     *                      - numeraire: The Numeraire (base-asset) in which the value is ideally expressed
+     *                      - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
-     * @return valueInNumeraire The value of the asset denominated in Numeraire different from USD with 18 Decimals precision
-     * @dev If the Oracle-Hub returns the rate in a numeraire different from USD, the StandardERC20Registry will return
-     *      the value of the asset in the same Numeraire. If the Oracle-Hub returns the rate in USD, the StandardERC20Registry
+     * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
+     * @dev If the Oracle-Hub returns the rate in a baseCurrency different from USD, the StandardERC20Registry will return
+     *      the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the StandardERC20Registry
      *      will return the value of the asset in USD.
      *      Only one of the two values can be different from 0.
      * @dev If the asset is not first added to subregistry this function will return value 0 without throwing an error.
@@ -159,11 +159,11 @@ contract FloorERC721SubRegistry is SubRegistry {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInNumeraire)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency)
     {
-        (valueInUsd, valueInNumeraire) = IOraclesHub(oracleHub).getRate(
+        (valueInUsd, valueInBaseCurrency) = IOraclesHub(oracleHub).getRate(
             assetToInformation[getValueInput.assetAddress].oracleAddresses,
-            getValueInput.numeraire
+            getValueInput.baseCurrency
         );
     }
 }
