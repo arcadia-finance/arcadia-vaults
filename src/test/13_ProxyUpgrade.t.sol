@@ -560,7 +560,6 @@ contract VaultV2Test is Test {
         address _irmAddress;
         uint256 life;
         address owner;
-        uint16 vaultVersion;
         Debt debt;
     }
 
@@ -579,7 +578,6 @@ contract VaultV2Test is Test {
         checks._irmAddress = proxy._irmAddress();
         checks.life = proxy.life();
         checks.owner = proxy.owner();
-        checks.vaultVersion = proxy.vaultVersion();
         (debt._openDebt,
         debt._collThres,
         debt._liqThres,
@@ -630,6 +628,7 @@ contract VaultV2Test is Test {
         assertEq(keccak256(abi.encode(checkAfter)), keccak256(abi.encode(checkBefore)));
         emit log_named_bytes32("before", keccak256(abi.encode(checkBefore)));
         emit log_named_bytes32("after", keccak256(abi.encode(checkAfter)));
+        assertEq(factory.currentVaultVersion(), proxy.vaultVersion());
     }
 
     function testAssetsAfterUpgradeFail(uint128 amount) public {

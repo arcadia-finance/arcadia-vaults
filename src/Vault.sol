@@ -136,8 +136,8 @@ contract Vault {
      * @dev Stores a new address in the EIP1967 implementation slot & updates the vault version.
      */
     function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
-        getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
         vaultVersion = newVersion;
+        getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
     }
 
     /**

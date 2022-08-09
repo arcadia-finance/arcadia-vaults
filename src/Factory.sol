@@ -28,7 +28,7 @@ contract Factory is ERC721, Ownable {
     mapping(address => bool) public isVault;
     mapping(uint256 => vaultVersionInfo) public vaultDetails;
 
-    uint256 public currentVaultVersion;
+    uint16 public currentVaultVersion;
     bool public newVaultInfoSet;
 
     address[] public allVaults;
@@ -192,7 +192,7 @@ contract Factory is ERC721, Ownable {
             numeraireToStable[numeraire],
             vaultDetails[currentVaultVersion].stakeContract,
             vaultDetails[currentVaultVersion].interestModule, 
-            uint16(currentVaultVersion)
+            currentVaultVersion
         );
 
         allVaults.push(vault);
@@ -372,12 +372,12 @@ contract Factory is ERC721, Ownable {
     }
 
 
-    function upgradeVaultVersion(address vault, uint256 version, bytes32[] calldata proofs) external {
+    function upgradeVaultVersion(address vault, uint16 version, bytes32[] calldata proofs) external {
         require(isVault[vault], "FTRY_UVV: Not a vault");
         require(ownerOf[vaultIndex[vault]] == msg.sender, "FTRY_UVV: You are not the owner");
         uint256 currentVersion = IVault(vault).vaultVersion();
 
-        bool canUpgrade = MerkleProofLib.verify(proofs, getVaultUpgradeRoot(), keccak256(abi.encodePacked(currentVersion, version)));
+        bool canUpgrade = MerkleProofLib.verify(proofs, getVaultUpgradeRoot(), keccak256(abi.encodePacked(currentVersion, uint256(version))));
 
         require(canUpgrade, "FTR_UVV: Cannot upgrade to this version");
 
