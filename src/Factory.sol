@@ -384,7 +384,7 @@ contract Factory is ERC721, Ownable {
         address newImplementation = vaultDetails[version].logic;
         require(newImplementation != address(0), "FTRY_UVV: Invalid logic");
 
-        IVault(vault)._setImplementation(newImplementation);
+        IVault(vault).upgradeVault(newImplementation, version);
     }
 
     /** 

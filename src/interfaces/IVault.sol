@@ -25,6 +25,6 @@ interface IVault {
         external
         returns (bool);
 
-    function _setImplementation(address) external;
+    function upgradeVault(address, uint256) external;
     function vaultVersion() external view returns (uint8);
 }
