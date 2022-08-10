@@ -861,7 +861,7 @@ contract vaultTests is Test {
         assetTypes[0] = 0;
 
         vm.startPrank(sender);
-        vm.expectRevert("You are not the owner");
+        vm.expectRevert("VL: You are not the owner");
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
@@ -1136,7 +1136,7 @@ contract vaultTests is Test {
             withdrawalAmount *
             10**Constants.ethDecimals;
         vm.startPrank(sender);
-        vm.expectRevert("You are not the owner");
+        vm.expectRevert("VL: You are not the owner");
         vault.withdraw(
             assetInfo.assetAddresses,
             assetInfo.assetIds,
@@ -1283,7 +1283,7 @@ contract vaultTests is Test {
         depositEthInVault(amountEth, vaultOwner);
 
         vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("You are not the owner");
+        vm.expectRevert("VL: You are not the owner");
         vault.takeCredit(amountCredit);
     }
 
@@ -1555,7 +1555,7 @@ contract vaultTests is Test {
     function testTransferOwnershipOfVaultByNonOwner(address sender) public {
         vm.assume(sender != address(factoryContr));
         vm.startPrank(sender);
-        vm.expectRevert("VL: Not factory");
+        vm.expectRevert("VL: You are not the factory");
         vault.transferOwnership(address(10));
         vm.stopPrank();
     }
@@ -1612,7 +1612,7 @@ contract vaultTests is Test {
         assertEq(address(0), vault_m.owner());
 
         vm.startPrank(from);
-        vm.expectRevert("VL: Not factory");
+        vm.expectRevert("VL: You are not the factory");
         vault_m.transferOwnership(to);
         vm.stopPrank();
 
@@ -1629,7 +1629,7 @@ contract vaultTests is Test {
         assertEq(address(this), vault_m.owner());
 
         vm.startPrank(from);
-        vm.expectRevert("VL: Not factory");
+        vm.expectRevert("VL: You are not the factory");
         vault_m.transferOwnership(to);
         assertEq(address(this), vault_m.owner());
     }

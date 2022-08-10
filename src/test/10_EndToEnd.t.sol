@@ -811,7 +811,7 @@ contract EndToEndTest is Test {
         assertEq(actualValue, expectedValueSnx + expectedValueLink);
     }
 
-    function testBaseCurrencyOfEthVault() public {
+    function testFailBaseCurrencyOfEthVault() public {
         vm.prank(vaultOwner);
         proxyAddr = factory.createVault(
             uint256(

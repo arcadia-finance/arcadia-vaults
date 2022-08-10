@@ -50,11 +50,16 @@ contract Vault {
     address public _stakeContract;
     address public _irmAddress;
 
+
+
+    // ACCESS CONTROL
+    address public owner;
+    mapping(address => bool) public allowed;
+
+
     // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
     // Used by the liquidator contract for proceed claims
     uint256 public life;
-
-    address public owner;
 
     bool public initialized;
 
@@ -86,9 +91,28 @@ contract Vault {
     modifier onlyFactory() {
         require(
             msg.sender == IMainRegistry(_registryAddress).factoryAddress(),
-            "VL: Not factory"
+            "VL: You are not the factory"
         );
         _;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the factory adress.
+     */
+    modifier onlyAuthorized() {
+        require(
+            allowed[msg.sender],
+            "VL: You are not authorized"
+        );
+        _;
+    }
+
+    function authorize(address user) external onlyOwner {
+        allowed[user] = true;
+    }
+
+    function revokeAuth(address user) external onlyOwner {
+        allowed[user] = false;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -103,7 +127,7 @@ contract Vault {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == owner, "VL: You are not the owner");
         _;
     }
 
@@ -658,6 +682,25 @@ contract Vault {
             assetAmounts,
             baseCurrency
         );
+    }
+
+    /** 
+    @notice Sets the baseCurrency of a vault.
+    @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
+  */
+    function setBaseCurrency(uint8 newBaseCurrency) public onlyAuthorized onlyOwner {
+        require(getOpenDebt() == 0, "VL: Can't change baseCurrency when openDebt > 0");
+        _setBaseCurrency(newBaseCurrency);
+    }
+
+    /** 
+    @notice Internal function: sets baseCurrency.
+    @param newBaseCurrency the new baseCurrency for the vault.
+  */
+    function _setBaseCurrency(
+        uint8 newBaseCurrency
+    ) private {
+        debt._baseCurrency = newBaseCurrency; //Change this tio where ever it is going to be actually set
     }
 
     /** 
