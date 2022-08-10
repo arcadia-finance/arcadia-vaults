@@ -12,14 +12,14 @@ contract TestCompiler {
     function MRGetAssetToBaseCurrencyToCreditRating(
         address mainRegAddr,
         address[] calldata assets,
-        uint256[] calldata baseCurrencies
+        uint256[] calldata baseCurrencys
     ) public view returns (uint256[] memory) {
         uint256[] memory ratings = new uint256[](assets.length);
 
         for (uint256 i; i < assets.length; i++) {
             ratings[i] = IMainReg(mainRegAddr).assetToBaseCurrencyToCreditRating(
                 assets[i],
-                baseCurrencies[i]
+                baseCurrencys[i]
             );
         }
 

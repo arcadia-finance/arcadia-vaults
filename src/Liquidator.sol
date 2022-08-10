@@ -402,25 +402,25 @@ contract Liquidator is Ownable {
     ) internal {
         for (uint8 k; k < baseCurrencyCounter; ) {
             if (totalClaimable[k] > 0) {
-                address baseCurrenciestable = IFactory(factoryAddress)
+                address baseCurrencyStable = IFactory(factoryAddress)
                     .baseCurrencyToStable(k);
-                uint256 balance = IERC20(baseCurrenciestable).balanceOf(
+                uint256 balance = IERC20(baseCurrencyStable).balanceOf(
                     address(this)
                 );
 
                 if (balance >= totalClaimable[k]) {
                     require(
-                        IERC20(baseCurrenciestable).transfer(
+                        IERC20(baseCurrencyStable).transfer(
                             claimer,
                             totalClaimable[k]
                         )
                     );
                 } else {
-                    require(IERC20(baseCurrenciestable).transfer(claimer, balance));
+                    require(IERC20(baseCurrencyStable).transfer(claimer, balance));
                     require(
                         IReserveFund(reserveFund).withdraw(
                             totalClaimable[k] - balance,
-                            baseCurrenciestable,
+                            baseCurrencyStable,
                             claimer
                         )
                     );
