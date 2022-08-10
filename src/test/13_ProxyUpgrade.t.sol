@@ -292,7 +292,6 @@ contract VaultV2Test is Test {
 
     //this is a before each
     function setUp() public {
-        //emit log_named_address("oracleEthToUsdArr[0]", oracleEthToUsdArr[0]);
 
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
