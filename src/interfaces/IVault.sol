@@ -18,7 +18,7 @@ interface IVault {
         address stable,
         address stakeContract,
         address interestModule,
-        uint16 currentVaultVersion
+        uint16 latestVaultVersion
     ) external;
 
     function liquidateVault(address liquidationKeeper, address liquidator)

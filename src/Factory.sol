@@ -28,7 +28,7 @@ contract Factory is ERC721, Ownable {
     mapping(address => bool) public isVault;
     mapping(uint256 => vaultVersionInfo) public vaultDetails;
 
-    uint16 public currentVaultVersion;
+    uint16 public latestVaultVersion;
     bool public newVaultInfoSet;
 
     address[] public allVaults;
@@ -79,14 +79,14 @@ contract Factory is ERC721, Ownable {
     function confirmNewVaultInfo() public onlyOwner {
         if (newVaultInfoSet) {
             unchecked {
-                ++currentVaultVersion;
+                ++latestVaultVersion;
             }
             newVaultInfoSet = false;
         }
     }
 
     function getVaultUpgradeRoot() public view returns (bytes32) {
-        return vaultDetails[currentVaultVersion].upgradeRoot;
+        return vaultDetails[latestVaultVersion].upgradeRoot;
     }
 
     /** 
@@ -111,17 +111,17 @@ contract Factory is ERC721, Ownable {
         address interestModule,
         bytes32 upgradeRoot
     ) external onlyOwner {
-        vaultDetails[currentVaultVersion + 1].registryAddress = registryAddress;
-        vaultDetails[currentVaultVersion + 1].logic = logic;
-        vaultDetails[currentVaultVersion + 1].stakeContract = stakeContract;
-        vaultDetails[currentVaultVersion + 1].interestModule = interestModule;
-        vaultDetails[currentVaultVersion + 1].upgradeRoot = upgradeRoot;
+        vaultDetails[latestVaultVersion + 1].registryAddress = registryAddress;
+        vaultDetails[latestVaultVersion + 1].logic = logic;
+        vaultDetails[latestVaultVersion + 1].stakeContract = stakeContract;
+        vaultDetails[latestVaultVersion + 1].interestModule = interestModule;
+        vaultDetails[latestVaultVersion + 1].upgradeRoot = upgradeRoot;
         newVaultInfoSet = true;
 
         //If there is a new Main Registry Contract, Check that numeraires in factory and main registry match
         if (
             getVaultUpgradeRoot() != bytes32(0) &&
-            vaultDetails[currentVaultVersion].registryAddress != registryAddress
+            vaultDetails[latestVaultVersion].registryAddress != registryAddress
         ) {
             address mainRegistryStableAddress;
             for (uint256 i; i < numeraireCounter; ) {
@@ -147,7 +147,7 @@ contract Factory is ERC721, Ownable {
   */
     function addNumeraire(uint256 numeraire, address stable) external {
         require(
-            vaultDetails[currentVaultVersion].registryAddress == msg.sender,
+            vaultDetails[latestVaultVersion].registryAddress == msg.sender,
             "FTRY_AN: Add Numeraires via MR"
         );
         numeraireToStable[numeraire] = stable;
@@ -161,7 +161,7 @@ contract Factory is ERC721, Ownable {
   @return registry The contract addres of the Main Registry of the latest Vault Version
   */
     function getCurrentRegistry() external view returns (address registry) {
-        registry = vaultDetails[currentVaultVersion].registryAddress;
+        registry = vaultDetails[latestVaultVersion].registryAddress;
     }
 
     /** 
@@ -181,18 +181,18 @@ contract Factory is ERC721, Ownable {
 
         vault = address(
             new Proxy{salt: bytes32(salt)}(
-                vaultDetails[currentVaultVersion].logic
+                vaultDetails[latestVaultVersion].logic
             )
         );
 
         IVault(vault).initialize(
             msg.sender,
-            vaultDetails[currentVaultVersion].registryAddress,
+            vaultDetails[latestVaultVersion].registryAddress,
             numeraire,
             numeraireToStable[numeraire],
-            vaultDetails[currentVaultVersion].stakeContract,
-            vaultDetails[currentVaultVersion].interestModule, 
-            currentVaultVersion
+            vaultDetails[latestVaultVersion].stakeContract,
+            vaultDetails[latestVaultVersion].interestModule, 
+            latestVaultVersion
         );
 
         allVaults.push(vault);

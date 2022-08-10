@@ -700,7 +700,7 @@ contract factoryTest is Test {
     ) public {
         factoryContr = new Factory();
         assertTrue(factoryContr.getVaultUpgradeRoot() == bytes32(0));
-        assertEq(0, factoryContr.currentVaultVersion());
+        assertEq(0, factoryContr.latestVaultVersion());
 
         factoryContr.setNewVaultInfo(
             registry,
@@ -714,7 +714,7 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         assertTrue(factoryContr.getVaultUpgradeRoot() == Constants.upgradeProof1To2);
         assertTrue(!factoryContr.newVaultInfoSet());
-        assertEq(1, factoryContr.currentVaultVersion());
+        assertEq(1, factoryContr.latestVaultVersion());
     }
 
     function testOwnerConfirmsNewVaultInfoWithIdenticalMainRegistry(
@@ -723,7 +723,7 @@ contract factoryTest is Test {
         address interestModule
     ) public {
         assertTrue(!factoryContr.newVaultInfoSet());
-        assertEq(1, factoryContr.currentVaultVersion());
+        assertEq(1, factoryContr.latestVaultVersion());
 
         factoryContr.setNewVaultInfo(
             address(registryContr),
@@ -733,19 +733,19 @@ contract factoryTest is Test {
             Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
-        assertEq(1, factoryContr.currentVaultVersion());
+        assertEq(1, factoryContr.latestVaultVersion());
 
         factoryContr.confirmNewVaultInfo();
         assertTrue(!factoryContr.newVaultInfoSet());
-        assertEq(2, factoryContr.currentVaultVersion());
+        assertEq(2, factoryContr.latestVaultVersion());
     }
 
     function testOwnerConfirmsVaultInfoWithoutNewVaultInfoSet() public {
         assertTrue(!factoryContr.newVaultInfoSet());
-        assertEq(1, factoryContr.currentVaultVersion());
+        assertEq(1, factoryContr.latestVaultVersion());
 
         factoryContr.confirmNewVaultInfo();
         assertTrue(!factoryContr.newVaultInfoSet());
-        assertEq(1, factoryContr.currentVaultVersion());
+        assertEq(1, factoryContr.latestVaultVersion());
     }
 }

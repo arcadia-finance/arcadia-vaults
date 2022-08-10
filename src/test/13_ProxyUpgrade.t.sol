@@ -604,7 +604,7 @@ contract VaultV2Test is Test {
         vaultV2 = new VaultV2();
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);        
+        vm.startPrank(creatorAddress);
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vaultV2),
@@ -620,7 +620,7 @@ contract VaultV2Test is Test {
         proofs[0] = Constants.upgradeProof1To2;
 
         vm.startPrank(vaultOwner);
-        factory.upgradeVaultVersion(address(proxy), factory.currentVaultVersion(), proofs);
+        factory.upgradeVaultVersion(address(proxy), factory.latestVaultVersion(), proofs);
         vm.stopPrank();
 
         Checks memory checkAfter = createCompareStruct();
@@ -628,7 +628,7 @@ contract VaultV2Test is Test {
         assertEq(keccak256(abi.encode(checkAfter)), keccak256(abi.encode(checkBefore)));
         emit log_named_bytes32("before", keccak256(abi.encode(checkBefore)));
         emit log_named_bytes32("after", keccak256(abi.encode(checkAfter)));
-        assertEq(factory.currentVaultVersion(), proxy.vaultVersion());
+        assertEq(factory.latestVaultVersion(), proxy.vaultVersion());
     }
 
     function testAssetsAfterUpgradeFail(uint128 amount) public {
