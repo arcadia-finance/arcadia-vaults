@@ -111,6 +111,9 @@ contract Factory is ERC721, Ownable {
         address interestModule,
         bytes32 versionRoot
     ) external onlyOwner {
+        require(versionRoot != bytes32(0), "FTRY_SNVI: version root is zero");
+        require(logic != address(0), "FTRY_SNVI: logic address is zero");
+
         vaultDetails[latestVaultVersion + 1].registryAddress = registryAddress;
         vaultDetails[latestVaultVersion + 1].logic = logic;
         vaultDetails[latestVaultVersion + 1].stakeContract = stakeContract;
@@ -382,7 +385,6 @@ contract Factory is ERC721, Ownable {
         require(canUpgrade, "FTR_UVV: Cannot upgrade to this version");
 
         address newImplementation = vaultDetails[version].logic;
-        require(newImplementation != address(0), "FTRY_UVV: Invalid logic");
 
         IVault(vault).upgradeVault(newImplementation, version);
     }
