@@ -455,7 +455,7 @@ contract factoryTest is Test {
         address interestModule
     ) public {
         factoryContr = new Factory();
-        assertTrue(factoryContr.getVaultUpgradeRoot() == bytes32(0));
+        assertTrue(factoryContr.getVaultVersionRoot() == bytes32(0));
         assertTrue(!factoryContr.newVaultInfoSet());
 
         factoryContr.setNewVaultInfo(
@@ -465,7 +465,7 @@ contract factoryTest is Test {
             interestModule,
             Constants.upgradeProof1To2
         );
-        assertTrue(factoryContr.getVaultUpgradeRoot() == bytes32(0));
+        assertTrue(factoryContr.getVaultVersionRoot() == bytes32(0));
         assertTrue(factoryContr.newVaultInfoSet());
     }
 
@@ -699,7 +699,7 @@ contract factoryTest is Test {
         address interestModule
     ) public {
         factoryContr = new Factory();
-        assertTrue(factoryContr.getVaultUpgradeRoot() == bytes32(0));
+        assertTrue(factoryContr.getVaultVersionRoot() == bytes32(0));
         assertEq(0, factoryContr.latestVaultVersion());
 
         factoryContr.setNewVaultInfo(
@@ -712,7 +712,7 @@ contract factoryTest is Test {
         assertTrue(factoryContr.newVaultInfoSet());
 
         factoryContr.confirmNewVaultInfo();
-        assertTrue(factoryContr.getVaultUpgradeRoot() == Constants.upgradeProof1To2);
+        assertTrue(factoryContr.getVaultVersionRoot() == Constants.upgradeProof1To2);
         assertTrue(!factoryContr.newVaultInfoSet());
         assertEq(1, factoryContr.latestVaultVersion());
     }

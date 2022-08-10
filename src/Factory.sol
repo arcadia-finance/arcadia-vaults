@@ -22,7 +22,7 @@ contract Factory is ERC721, Ownable {
         address logic;
         address stakeContract;
         address interestModule;
-        bytes32 upgradeRoot;
+        bytes32 versionRoot;
     }
 
     mapping(address => bool) public isVault;
@@ -85,8 +85,8 @@ contract Factory is ERC721, Ownable {
         }
     }
 
-    function getVaultUpgradeRoot() public view returns (bytes32) {
-        return vaultDetails[latestVaultVersion].upgradeRoot;
+    function getVaultVersionRoot() public view returns (bytes32) {
+        return vaultDetails[latestVaultVersion].versionRoot;
     }
 
     /** 
@@ -109,18 +109,18 @@ contract Factory is ERC721, Ownable {
         address logic,
         address stakeContract,
         address interestModule,
-        bytes32 upgradeRoot
+        bytes32 versionRoot
     ) external onlyOwner {
         vaultDetails[latestVaultVersion + 1].registryAddress = registryAddress;
         vaultDetails[latestVaultVersion + 1].logic = logic;
         vaultDetails[latestVaultVersion + 1].stakeContract = stakeContract;
         vaultDetails[latestVaultVersion + 1].interestModule = interestModule;
-        vaultDetails[latestVaultVersion + 1].upgradeRoot = upgradeRoot;
+        vaultDetails[latestVaultVersion + 1].versionRoot = versionRoot;
         newVaultInfoSet = true;
 
         //If there is a new Main Registry Contract, Check that numeraires in factory and main registry match
         if (
-            getVaultUpgradeRoot() != bytes32(0) &&
+            getVaultVersionRoot() != bytes32(0) &&
             vaultDetails[latestVaultVersion].registryAddress != registryAddress
         ) {
             address mainRegistryStableAddress;
@@ -377,7 +377,7 @@ contract Factory is ERC721, Ownable {
         require(ownerOf[vaultIndex[vault]] == msg.sender, "FTRY_UVV: You are not the owner");
         uint256 currentVersion = IVault(vault).vaultVersion();
 
-        bool canUpgrade = MerkleProofLib.verify(proofs, getVaultUpgradeRoot(), keccak256(abi.encodePacked(currentVersion, uint256(version))));
+        bool canUpgrade = MerkleProofLib.verify(proofs, getVaultVersionRoot(), keccak256(abi.encodePacked(currentVersion, uint256(version))));
 
         require(canUpgrade, "FTR_UVV: Cannot upgrade to this version");
 
