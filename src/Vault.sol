@@ -690,6 +690,7 @@ contract Vault {
   */
     function setBaseCurrency(uint8 newBaseCurrency) public onlyAuthorized onlyOwner {
         require(getOpenDebt() == 0, "VL: Can't change baseCurrency when openDebt > 0");
+        require(newBaseCurrency + 1 <= IMainRegistry(_registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
         _setBaseCurrency(newBaseCurrency);
     }
 

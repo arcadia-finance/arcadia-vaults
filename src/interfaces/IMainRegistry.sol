@@ -29,4 +29,6 @@ interface IMainRegistry {
             address,
             string memory
         );
+
+    function baseCurrencyCounter() external view returns (uint256);
 }
