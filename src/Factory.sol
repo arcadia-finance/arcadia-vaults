@@ -114,7 +114,7 @@ contract Factory is ERC721, Ownable {
         vaultDetails[currentVaultVersion + 1].interestModule = interestModule;
         newVaultInfoSet = true;
 
-        //If there is a new Main Registry Contract, Check that baseCurrencys in factory and main registry match
+        //If there is a new Main Registry Contract, Check that baseCurrencies in factory and main registry match
         if (
             factoryInitialised &&
             vaultDetails[currentVaultVersion].registryAddress != registryAddress
@@ -126,7 +126,7 @@ contract Factory is ERC721, Ownable {
                 ).baseCurrencyToInformation(i);
                 require(
                     mainRegistryStableAddress == baseCurrencyToStable[i],
-                    "FTRY_SNVI:No match baseCurrencys MR"
+                    "FTRY_SNVI:No match baseCurrencies MR"
                 );
                 unchecked {
                     ++i;

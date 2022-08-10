@@ -516,7 +516,7 @@ contract factoryTest is Test {
                 baseCurrencyUnit: 1
             })
         );
-        vm.expectRevert("FTRY_SNVI:No match baseCurrencys MR");
+        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
@@ -558,7 +558,7 @@ contract factoryTest is Test {
                 baseCurrencyUnit: 1
             })
         );
-        vm.expectRevert("FTRY_SNVI:No match baseCurrencys MR");
+        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,

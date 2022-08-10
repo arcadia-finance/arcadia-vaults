@@ -1970,9 +1970,9 @@ contract MainRegistryTest is Test {
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
 
-        uint256[] memory baseCurrencys = new uint256[](2);
-        baseCurrencys[0] = Constants.UsdBaseCurrency;
-        baseCurrencys[1] = Constants.EthBaseCurrency;
+        uint256[] memory baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
 
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
@@ -1982,7 +1982,7 @@ contract MainRegistryTest is Test {
         vm.expectRevert("Ownable: caller is not the owner");
         mainRegistry.batchSetCreditRating(
             assetAddresses,
-            baseCurrencys,
+            baseCurrencies,
             assetCreditRatings
         );
         vm.stopPrank();
@@ -2036,8 +2036,8 @@ contract MainRegistryTest is Test {
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
 
-        uint256[] memory baseCurrencys = new uint256[](1);
-        baseCurrencys[0] = Constants.UsdBaseCurrency;
+        uint256[] memory baseCurrencies = new uint256[](1);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
 
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
@@ -2047,14 +2047,14 @@ contract MainRegistryTest is Test {
         vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
         mainRegistry.batchSetCreditRating(
             assetAddresses,
-            baseCurrencys,
+            baseCurrencies,
             assetCreditRatings
         );
         vm.stopPrank();
 
-        baseCurrencys = new uint256[](2);
-        baseCurrencys[0] = Constants.UsdBaseCurrency;
-        baseCurrencys[1] = Constants.EthBaseCurrency;
+        baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
 
         assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
@@ -2063,7 +2063,7 @@ contract MainRegistryTest is Test {
         vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
         mainRegistry.batchSetCreditRating(
             assetAddresses,
-            baseCurrencys,
+            baseCurrencies,
             assetCreditRatings
         );
         vm.stopPrank();
@@ -2117,9 +2117,9 @@ contract MainRegistryTest is Test {
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
 
-        uint256[] memory baseCurrencys = new uint256[](2);
-        baseCurrencys[0] = Constants.UsdBaseCurrency;
-        baseCurrencys[1] = Constants.EthBaseCurrency;
+        uint256[] memory baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
 
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
@@ -2128,7 +2128,7 @@ contract MainRegistryTest is Test {
         vm.startPrank(creatorAddress);
         mainRegistry.batchSetCreditRating(
             assetAddresses,
-            baseCurrencys,
+            baseCurrencies,
             assetCreditRatings
         );
         vm.stopPrank();
@@ -2199,9 +2199,9 @@ contract MainRegistryTest is Test {
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
 
-        uint256[] memory baseCurrencys = new uint256[](2);
-        baseCurrencys[0] = Constants.UsdBaseCurrency;
-        baseCurrencys[1] = Constants.EthBaseCurrency;
+        uint256[] memory baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
 
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = mainRegistry.CREDIT_RATING_CATOGERIES();
@@ -2211,7 +2211,7 @@ contract MainRegistryTest is Test {
         vm.expectRevert("MR_BSCR: non-existing creditRat");
         mainRegistry.batchSetCreditRating(
             assetAddresses,
-            baseCurrencys,
+            baseCurrencies,
             assetCreditRatings
         );
         vm.stopPrank();
