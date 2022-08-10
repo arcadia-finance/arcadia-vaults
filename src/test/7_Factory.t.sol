@@ -368,7 +368,7 @@ contract factoryTest is Test {
         vm.assume(unprivilegedAddress != address(this));
         vm.assume(unprivilegedAddress != address(factoryContr));
         vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("FTRY_AN: Add BaseCurrencys via MR");
+        vm.expectRevert("FTRY_AN: Add baseCurrencies via MR");
         factoryContr.addBaseCurrency(2, address(erc20Contr));
         vm.stopPrank();
     }
@@ -393,7 +393,7 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
 
-        vm.expectRevert("FTRY_AN: Add BaseCurrencys via MR");
+        vm.expectRevert("FTRY_AN: Add baseCurrencies via MR");
         registryContr.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
@@ -516,7 +516,7 @@ contract factoryTest is Test {
                 baseCurrencyUnit: 1
             })
         );
-        vm.expectRevert("FTRY_SNVI:No match baseCurrencys MR");
+        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
@@ -558,7 +558,7 @@ contract factoryTest is Test {
                 baseCurrencyUnit: 1
             })
         );
-        vm.expectRevert("FTRY_SNVI:No match baseCurrencys MR");
+        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
@@ -567,7 +567,7 @@ contract factoryTest is Test {
         );
     }
 
-    function testOwnerSetsNewVaultWithIdenticalBaseCurrencysInMainRegistry(
+    function testOwnerSetsNewVaultWithIdenticalbaseCurrenciesInMainRegistry(
         address newStable,
         address logic,
         address stakeContract,
@@ -621,7 +621,7 @@ contract factoryTest is Test {
         assertEq(newStable, factoryContr.baseCurrencyToStable(1));
     }
 
-    function testOwnerSetsNewVaultWithMoreBaseCurrencysInMainRegistry(
+    function testOwnerSetsNewVaultWithMorebaseCurrenciesInMainRegistry(
         address newStable,
         address logic,
         address stakeContract,
