@@ -1634,6 +1634,69 @@ contract vaultTests is Test {
         assertEq(address(this), vault_m.owner());
     }
 
+    function testAuthorizeAddress(address toAuth) public {
+        vm.assume(
+            toAuth != address(this) &&
+                toAuth != address(0) &&
+                toAuth != address(factoryContr)
+        );
+        Vault vault_m = new Vault();
+
+        vault_m.authorize(toAuth);
+
+        assertTrue(vault_m.allowed(toAuth));
+
+    }
+
+    function testAuthorizeAddressByNonOwner(address toAuth) public {
+        vm.assume(
+            toAuth != address(this) &&
+                toAuth != address(0) &&
+                toAuth != address(factoryContr)
+        );
+        Vault vault_m = new Vault();
+        address notOwner = address(789);
+
+        vm.startPrank(notOwner);
+        vm.expectRevert("VL: You are not the owner");
+        vault_m.authorize(toAuth);
+        vm.stopPrank();
+
+        assertFalse(vault_m.allowed(toAuth));
+    }      
+
+    function testSetBaseCurrency(address toAuth) public {
+        vm.assume(
+            toAuth != address(this) &&
+                toAuth != address(0) &&
+                toAuth != address(factoryContr)
+        );
+        Vault vault_m = new Vault();
+
+        vault_m.authorize(toAuth);
+
+        
+        vm.startPrank(toAuth);
+        vault_m.setBaseCurrency(Constants.EthBaseCurrency);
+        vm.stopPrank();
+
+        (,,,,,uint256 _baseCurrency) = vault_m.debt();
+        assertEq(_baseCurrency, Constants.EthBaseCurrency);
+    }
+
+    function testSetBaseCurrencyByNonAuthorized() public {
+        Vault vault_m = new Vault();
+        address nonAuthorized = address(789);
+
+        vm.startPrank(nonAuthorized);
+        vm.expectRevert("VL: You are not authorized");
+        vault_m.setBaseCurrency(Constants.EthBaseCurrency);
+        vm.stopPrank();
+
+        (,,,,,uint256 _baseCurrency) = vault_m.debt();
+        assertEq(_baseCurrency, Constants.UsdBaseCurrency);
+    }
+
     function depositEthAndTakeMaxCredit(uint128 amountEth)
         public
         returns (uint256)

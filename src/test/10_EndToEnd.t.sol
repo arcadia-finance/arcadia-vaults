@@ -811,28 +811,6 @@ contract EndToEndTest is Test {
         assertEq(actualValue, expectedValueSnx + expectedValueLink);
     }
 
-    function testFailBaseCurrencyOfEthVault() public {
-        vm.prank(vaultOwner);
-        proxyAddr = factory.createVault(
-            uint256(
-                keccak256(
-                    abi.encodeWithSignature(
-                        "doRandom(uint256,uint256,bytes32)",
-                        block.timestamp,
-                        block.number + 1000,
-                        blockhash(block.number)
-                    )
-                )
-            )
-        );
-        Vault proxyVault = Vault(proxyAddr);
-
-        (,,,,, uint8 num) = proxyVault.debt();
-
-        assertTrue(uint256(num) == Constants.EthBaseCurrency);
-
-    }
-
     function testReturnUsdValueEthPriceChange(
         uint128 amountEth,
         uint256 newRateEthToUsd
