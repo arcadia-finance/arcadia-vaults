@@ -583,7 +583,8 @@ contract gasDeposits is Test {
                     )
                 )
             ),
-            Constants.UsdNumeraire
+            Constants.UsdNumeraire,
+            0
         );
         proxy = Vault(proxyAddr);
 

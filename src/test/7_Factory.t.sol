@@ -119,7 +119,8 @@ contract factoryTest is Test {
 
         address actualDeployed = factoryContr.createVault(
             salt,
-            Constants.UsdNumeraire
+            Constants.UsdNumeraire,
+            0
         );
         assertEq(amountBefore + 1, factoryContr.allVaultsLength());
         assertEq(
@@ -137,7 +138,8 @@ contract factoryTest is Test {
 
         address actualDeployed = factoryContr.createVault(
             salt,
-            Constants.UsdNumeraire
+            Constants.UsdNumeraire,
+            0
         );
         assertEq(amountBefore + 1, factoryContr.allVaultsLength());
         assertEq(IVaultExtra(actualDeployed).life(), 0);
@@ -153,7 +155,8 @@ contract factoryTest is Test {
         vm.assume(sender != address(0));
         address actualDeployed = factoryContr.createVault(
             salt,
-            Constants.UsdNumeraire
+            Constants.UsdNumeraire,
+            0
         );
         assertEq(amountBefore + 1, factoryContr.allVaultsLength());
         assertEq(IVaultExtra(actualDeployed).life(), 0);
@@ -168,7 +171,7 @@ contract factoryTest is Test {
         vm.assume(sender != address(0));
 
         vm.startPrank(sender);
-        address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+        address vault = factoryContr.createVault(0, Constants.UsdNumeraire, 0);
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
@@ -203,7 +206,7 @@ contract factoryTest is Test {
         vm.assume(sender != address(0) && sender != vaultOwner);
 
         vm.startPrank(vaultOwner);
-        address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+        address vault = factoryContr.createVault(0, Constants.UsdNumeraire, 0);
         vm.stopPrank();
 
         //Make sure index in erc721 == vaultIndex
@@ -230,7 +233,7 @@ contract factoryTest is Test {
         vm.assume(sender != address(0));
 
         vm.startPrank(sender);
-        address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+        address vault = factoryContr.createVault(0, Constants.UsdNumeraire, 0);
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
@@ -265,7 +268,7 @@ contract factoryTest is Test {
         vm.assume(sender != address(0) && sender != vaultOwner);
 
         vm.startPrank(vaultOwner);
-        address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+        address vault = factoryContr.createVault(0, Constants.UsdNumeraire, 0);
         vm.stopPrank();
 
         //Make sure index in erc721 == vaultIndex
@@ -320,7 +323,7 @@ contract factoryTest is Test {
         vm.assume(receiver != address(1));
 
         vm.prank(sender);
-        address vault = factoryContr.createVault(0, Constants.UsdNumeraire);
+        address vault = factoryContr.createVault(0, Constants.UsdNumeraire, 0);
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
@@ -455,7 +458,7 @@ contract factoryTest is Test {
         address interestModule
     ) public {
         vm.assume(logic != address(0));
-        
+
         factoryContr = new Factory();
         assertTrue(factoryContr.getVaultVersionRoot() == bytes32(0));
         assertTrue(!factoryContr.newVaultInfoSet());
@@ -765,5 +768,76 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         assertTrue(!factoryContr.newVaultInfoSet());
         assertEq(1, factoryContr.latestVaultVersion());
+    }
+
+    function testCreateNonExistingVaultVersion(uint256 vaultVersion) public {
+        uint256 currentVersion = factoryContr.latestVaultVersion();
+        vm.assume(vaultVersion > currentVersion);
+
+        vm.expectRevert("FTRY_CV: Unknown vault version");
+        factoryContr.createVault(
+            uint256(keccak256(abi.encodePacked(vaultVersion, block.timestamp))),
+            0,
+            vaultVersion
+            );
+    }
+
+    function testBlockVaultVersion(uint16 vaultVersion) public {
+        uint256 currentVersion = factoryContr.latestVaultVersion();
+        vm.assume(vaultVersion <= currentVersion);
+        vm.assume(vaultVersion != 0);
+        factoryContr.blockVaultVersion(vaultVersion);
+
+        assertTrue(factoryContr.vaultVersionBlocked(vaultVersion));
+    }
+
+    function testBlockNonExistingVaultVersion(uint16 vaultVersion) public {
+        uint256 currentVersion = factoryContr.latestVaultVersion();
+        vm.assume(vaultVersion > currentVersion || vaultVersion == 0);
+
+        vm.expectRevert("FTRY_BVV: Invalid version");
+        factoryContr.blockVaultVersion(vaultVersion);
+    }
+
+    function testBlockVaultVersionByNonOwner(uint16 vaultVersion, address sender) public {
+        uint256 currentVersion = factoryContr.latestVaultVersion();
+        vm.assume(vaultVersion <= currentVersion);
+        vm.assume(vaultVersion != 0);
+
+        vm.assume(sender != address(this));
+        vm.startPrank(sender);
+        vm.expectRevert("Ownable: caller is not the owner");
+        factoryContr.blockVaultVersion(vaultVersion);
+        vm.stopPrank();
+    }
+
+    function testCreateVaultFromBlockedVersion(uint16 vaultVersion, uint16 versionsToMake, uint16[] calldata versionsToBlock) public {
+        vm.assume(versionsToBlock.length < 10 && versionsToBlock.length > 0);
+        vm.assume(uint256(versionsToMake) + 1  < type(uint16).max);
+        vm.assume(vaultVersion <= versionsToMake +1);
+        for (uint i; i < versionsToMake; ++i) {
+            factoryContr.setNewVaultInfo(
+                address(registryContr),
+                address(vaultContr),
+                address(0),
+                address(interestContr),
+                Constants.upgradeProof1To2
+            );
+        }
+
+        for (uint y; y < versionsToBlock.length; ++y) {
+            if (versionsToBlock[y] == 0 || versionsToBlock[y] > factoryContr.latestVaultVersion()) continue;
+            factoryContr.blockVaultVersion(versionsToBlock[y]);
+        }
+
+        for (uint z; z < versionsToBlock.length; ++z) {
+            if (versionsToBlock[z] == 0 || versionsToBlock[z] > factoryContr.latestVaultVersion()) continue;
+            vm.expectRevert("FTRY_CV: This vault version cannot be created");
+            factoryContr.createVault(
+                uint256(keccak256(abi.encodePacked(versionsToBlock[z], block.timestamp))),
+                0,
+                versionsToBlock[z]
+                );
+        }
     }
 }

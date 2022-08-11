@@ -428,7 +428,8 @@ contract VaultV2Test is Test {
                     )
                 )
             ),
-            Constants.UsdNumeraire
+            Constants.UsdNumeraire,
+            0
         );
         proxy = Vault(proxyAddr);
 
@@ -533,7 +534,7 @@ contract VaultV2Test is Test {
         assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
 
         vm.startPrank(address(123456789));
-        proxyAddr2 = factory.createVault(salt, 0);
+        proxyAddr2 = factory.createVault(salt, 0, 0);
         vaultV2 = VaultV2(proxyAddr2);
         assertEq(vaultV2.returnFive(), 5);
         vm.stopPrank();

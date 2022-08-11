@@ -421,7 +421,8 @@ contract gasProxyDeploy is Test {
                     )
                 )
             ),
-            Constants.UsdNumeraire
+            Constants.UsdNumeraire,
+            0
         );
         proxy = Vault(proxyAddr);
 
@@ -439,7 +440,7 @@ contract gasProxyDeploy is Test {
 
     function testCreateProxyVault() public {
         uint256 salt = 123456789;
-        factory.createVault(salt, Constants.UsdNumeraire);
+        factory.createVault(salt, Constants.UsdNumeraire, 0);
     }
 
     //This test should probably be deleted

@@ -588,7 +588,8 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
                     )
                 )
             ),
-            Constants.UsdNumeraire
+            Constants.UsdNumeraire,
+            0
         );
         proxy = Vault(proxyAddr);
 

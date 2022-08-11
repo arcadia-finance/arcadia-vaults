@@ -27,6 +27,7 @@ contract Factory is ERC721, Ownable {
 
     mapping(address => bool) public isVault;
     mapping(uint256 => vaultVersionInfo) public vaultDetails;
+    mapping(uint256 => bool) public vaultVersionBlocked;
 
     uint16 public latestVaultVersion;
     bool public newVaultInfoSet;
@@ -44,7 +45,8 @@ contract Factory is ERC721, Ownable {
     event VaultCreated(
         address indexed vaultAddress,
         address indexed owner,
-        uint256 id
+        uint256 id,
+        uint256 version
     );
 
     constructor() ERC721("Arcadia Vault", "ARCADIA") {}
@@ -94,6 +96,17 @@ contract Factory is ERC721, Ownable {
      */
     function getVaultVersionRoot() public view returns (bytes32) {
         return vaultDetails[latestVaultVersion].versionRoot;
+    }
+
+    /**
+    @notice Function to block a certain vault logic version from being created as a new vault.
+    @dev Should any vault logic version be phased out, 
+         this function can be used to block it from being created for new vaults.
+    @param version The vault version to be phased out.
+     */
+    function blockVaultVersion(uint256 version) external onlyOwner {
+        require(version > 0 && version <= latestVaultVersion, "FTRY_BVV: Invalid version");
+        vaultVersionBlocked[version] = true;
     }
 
     /** 
@@ -180,7 +193,7 @@ contract Factory is ERC721, Ownable {
   @param salt A salt to be used to generate the hash.
   @param numeraire An identifier (uint256) of the Numeraire
   */
-    function createVault(uint256 salt, uint256 numeraire)
+    function createVault(uint256 salt, uint256 numeraire, uint256 vaultVersion)
         external
         returns (address vault)
     {
@@ -189,20 +202,32 @@ contract Factory is ERC721, Ownable {
             "FTRY_CV: Unknown Numeraire"
         );
 
+        vaultVersion = vaultVersion == 0 ? latestVaultVersion : vaultVersion;
+
+        require(
+            vaultVersion <= latestVaultVersion,
+            "FTRY_CV: Unknown vault version"
+        );
+
+        require(
+            vaultVersionBlocked[vaultVersion] == false,
+            "FTRY_CV: This vault version cannot be created"
+        );
+
         vault = address(
             new Proxy{salt: bytes32(salt)}(
-                vaultDetails[latestVaultVersion].logic
+                vaultDetails[vaultVersion].logic
             )
         );
 
         IVault(vault).initialize(
             msg.sender,
-            vaultDetails[latestVaultVersion].registryAddress,
+            vaultDetails[vaultVersion].registryAddress,
             numeraire,
             numeraireToStable[numeraire],
-            vaultDetails[latestVaultVersion].stakeContract,
-            vaultDetails[latestVaultVersion].interestModule, 
-            latestVaultVersion
+            vaultDetails[vaultVersion].stakeContract,
+            vaultDetails[vaultVersion].interestModule, 
+            uint16(vaultVersion)
         );
 
         allVaults.push(vault);
@@ -210,7 +235,7 @@ contract Factory is ERC721, Ownable {
         vaultIndex[vault] = allVaults.length - 1;
 
         _mint(msg.sender, allVaults.length - 1);
-        emit VaultCreated(vault, msg.sender, allVaults.length - 1);
+        emit VaultCreated(vault, msg.sender, allVaults.length - 1, vaultVersion);
     }
 
     /** 

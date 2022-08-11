@@ -423,7 +423,8 @@ contract LiquidatorTest is Test {
                     )
                 )
             ),
-            Constants.UsdNumeraire
+            Constants.UsdNumeraire,
+            0
         );
         proxy = Vault(proxyAddr);
 
@@ -938,7 +939,7 @@ contract LiquidatorTest is Test {
         eth.mint(vaultOwner, amountEth * 2);
 
         vm.startPrank(vaultOwner);
-        address proxy2 = factory.createVault(45855465656845214, 0);
+        address proxy2 = factory.createVault(45855465656845214, 0, 0);
         eth.approve(proxy2, type(uint256).max);
         Vault(proxy2).deposit(
             assetAddresses,
