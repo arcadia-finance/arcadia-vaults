@@ -459,59 +459,6 @@ contract VaultV2Test is Test {
         vm.stopPrank();
     }
 
-
-    /* 
-    {
-        "root": "0x625c6c30f2e98ed7b66eb25e04f2696cc314f0c871465f8b41dbf0d540935543",
-        "upgrades": {
-            "1 to 1": {
-                "proofs": [
-                    "0xc3a24b0501bd2c13a7e57f2db4369ec4c223447539fc0724a9d55ac4a06ebd4d",
-                    "0xe90b7bceb6e7df5418fb78d8ee546e97c83a08bbccc01a0644d599ccd2a7c2e0"
-                ]
-            },
-            "1 to 2": {
-                "proofs": [
-                    "0x8ae168d747311c5cedc2c9972c323d5cecbb52816a42868c8054a9ee75be242f"
-                ]
-            },
-            "2 to 3": {
-                "proofs": [
-                    "Constants.upgradeProof1To2",
-                    "0xe90b7bceb6e7df5418fb78d8ee546e97c83a08bbccc01a0644d599ccd2a7c2e0"
-                ]
-            }
-        }
-    } 
-
-
-    {
-        "root": "0x472ba66bf173e177005d95fe17be2002ac4c417ff5bef6fb20a1e357f75bf394",
-        "upgrades": {
-            "1 to 1": {
-                "proofs": [
-                    "0xe90b7bceb6e7df5418fb78d8ee546e97c83a08bbccc01a0644d599ccd2a7c2e0"
-                ]
-            },
-            "1 to 2": {
-                "proofs": [
-                    "0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f"
-                ]
-            }
-        }
-    }
-
-
-    {
-        "root": "0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f",
-        "upgrades": {
-            "1 to 1": {
-                "proofs": []
-            }
-        }
-    }
-    */
-
     function testNewVaultVersion(uint256 salt) public {
         vm.assume(salt > 0);
 
