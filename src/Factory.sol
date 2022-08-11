@@ -85,6 +85,13 @@ contract Factory is ERC721, Ownable {
         }
     }
 
+    /**
+    @notice Function to get the latest and current versioning root.
+    @dev The versioning root is the root of the merkle tree of all the compatible vault versions.
+         The root is updated every time a new vault version is confirmed. The root is used to verify the
+         proofs when a vault is being upgraded.
+    @return The latest and current versioning root.
+     */
     function getVaultVersionRoot() public view returns (bytes32) {
         return vaultDetails[latestVaultVersion].versionRoot;
     }
@@ -103,6 +110,7 @@ contract Factory is ERC721, Ownable {
     @param logic The contract address of the Vault logic
     @param stakeContract The contract addres of the Staking Contract
     @param interestModule The contract address of the Interest Rate Module
+    @param versionRoot The root of the merkle tree of all the compatible vault versions
   */
     function setNewVaultInfo(
         address registryAddress,
@@ -123,7 +131,6 @@ contract Factory is ERC721, Ownable {
 
         //If there is a new Main Registry Contract, Check that numeraires in factory and main registry match
         if (
-            getVaultVersionRoot() != bytes32(0) &&
             vaultDetails[latestVaultVersion].registryAddress != registryAddress
         ) {
             address mainRegistryStableAddress;
