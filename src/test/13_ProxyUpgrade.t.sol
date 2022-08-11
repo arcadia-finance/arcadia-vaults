@@ -677,8 +677,6 @@ contract VaultV2Test is Test {
         emit log_named_bytes32("after", keccak256(abi.encode(checkAfter)));
     }
 
-
-
     function depositERC20InVault(
         ERC20Mock token,
         uint128 amount,

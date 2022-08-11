@@ -454,6 +454,8 @@ contract factoryTest is Test {
         address stakeContract,
         address interestModule
     ) public {
+        vm.assume(logic != address(0));
+        
         factoryContr = new Factory();
         assertTrue(factoryContr.getVaultVersionRoot() == bytes32(0));
         assertTrue(!factoryContr.newVaultInfoSet());
@@ -474,6 +476,8 @@ contract factoryTest is Test {
         address stakeContract,
         address interestModule
     ) public {
+        vm.assume(logic != address(0));
+
         assertTrue(!factoryContr.newVaultInfoSet());
         factoryContr.setNewVaultInfo(
             address(registryContr),
@@ -490,6 +494,8 @@ contract factoryTest is Test {
         address stakeContract,
         address interestModule
     ) public {
+        vm.assume(logic != address(0));
+
         assertTrue(!factoryContr.newVaultInfoSet());
         factoryContr.setNewVaultInfo(
             address(registryContr),
@@ -515,6 +521,8 @@ contract factoryTest is Test {
         address stakeContract,
         address interestModule
     ) public {
+        vm.assume(logic != address(0));
+
         vm.assume(randomStable != address(erc20Contr));
         registryContr2 = new MainRegistry(
             MainRegistry.NumeraireInformation({
@@ -543,6 +551,8 @@ contract factoryTest is Test {
         address stakeContract,
         address interestModule
     ) public {
+        vm.assume(logic != address(0));
+
         vm.assume(newStable != address(0));
 
         registryContr.addNumeraire(
@@ -585,6 +595,8 @@ contract factoryTest is Test {
         address stakeContract,
         address interestModule
     ) public {
+        vm.assume(logic != address(0));
+
         registryContr.addNumeraire(
             MainRegistry.NumeraireInformation({
                 numeraireToUsdOracleUnit: 0,
@@ -640,6 +652,8 @@ contract factoryTest is Test {
         address stakeContract,
         address interestModule
     ) public {
+        vm.assume(logic != address(0));
+
         assertEq(address(erc20Contr), factoryContr.numeraireToStable(0));
         assertEq(address(0), factoryContr.numeraireToStable(1));
 
@@ -698,6 +712,8 @@ contract factoryTest is Test {
         address stakeContract,
         address interestModule
     ) public {
+        vm.assume(logic != address(0));
+
         factoryContr = new Factory();
         assertTrue(factoryContr.getVaultVersionRoot() == bytes32(0));
         assertEq(0, factoryContr.latestVaultVersion());
@@ -722,6 +738,8 @@ contract factoryTest is Test {
         address stakeContract,
         address interestModule
     ) public {
+        vm.assume(logic != address(0));
+
         assertTrue(!factoryContr.newVaultInfoSet());
         assertEq(1, factoryContr.latestVaultVersion());
 
