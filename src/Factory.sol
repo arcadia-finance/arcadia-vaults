@@ -406,9 +406,16 @@ contract Factory is ERC721, Ownable {
         emit Transfer(from, liquidatorAddress, vaultIndex[vault]);
     }
 
-
+    /** 
+    @notice This function allows vault owners to upgrade the logic of the vault.
+    @dev As each vault is a proxy, the implementation of the proxy can be changed by the owner of the vault.
+         Checks are done such that only compatible versions can be upgraded to.
+         Merkle proofs and their leaves can be found on https://www.github.com/arcadia-finance.
+    @param vault Vault that needs to get updated.
+    @param version The vaultversion to upgrade to.
+    @param proofs The merkle proofs that prove the compatibility of the upgrade.
+  */
     function upgradeVaultVersion(address vault, uint16 version, bytes32[] calldata proofs) external {
-        require(isVault[vault], "FTRY_UVV: Not a vault");
         require(ownerOf[vaultIndex[vault]] == msg.sender, "FTRY_UVV: You are not the owner");
         uint256 currentVersion = IVault(vault).vaultVersion();
 
