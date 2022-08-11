@@ -309,7 +309,7 @@ contract FloorERC1155SubRegistryTest is Test {
         assertEq(actualValueInNumeraire, expectedValueInNumeraire);
     }
 
-    function testreturnNumeraireValueWhenNumeraireIsNotUsd(
+    function testReturnNumeraireValueWhenNumeraireIsNotUsd(
         uint128 amountInterleave
     ) public {
         //Does not test on overflow, test to check if function correctly returns value in Numeraire
@@ -385,12 +385,12 @@ contract FloorERC1155SubRegistryTest is Test {
         assertEq(actualValueInNumeraire, expectedValueInNumeraire);
     }
 
-    function testreturnValueSucces(
+    function testReturnValueSucces(
         uint256 amountInterleave,
-        uint192 rateInterleaveToEthNew
+        uint256 rateInterleaveToEthNew
     ) public {
-        vm.assume(rateInterleaveToEthNew <= uint256(type(uint192).max));
-        vm.assume(rateInterleaveToEthNew <= type(uint192).max / Constants.WAD);
+        vm.assume(rateInterleaveToEthNew <= uint256(type(int256).max));
+        vm.assume(rateInterleaveToEthNew <= type(uint256).max / Constants.WAD);
 
         if (rateInterleaveToEthNew == 0) {
             vm.assume(
@@ -399,15 +399,15 @@ contract FloorERC1155SubRegistryTest is Test {
         } else {
             vm.assume(
                 uint256(amountInterleave) <=
-                    (type(uint256).max /
-                        uint256(rateInterleaveToEthNew) /
-                        Constants.WAD) *
-                        10**Constants.oracleInterleaveToEthDecimals
+                    type(uint256).max /
+                        Constants.WAD *
+                        10**Constants.oracleInterleaveToEthDecimals /
+                        uint256(rateInterleaveToEthNew)
             );
         }
 
         vm.startPrank(oracleOwner);
-        oracleInterleaveToEth.transmit(int192(rateInterleaveToEthNew));
+        oracleInterleaveToEth.transmit(int256(rateInterleaveToEthNew));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -442,7 +442,7 @@ contract FloorERC1155SubRegistryTest is Test {
         assertEq(actualValueInNumeraire, expectedValueInNumeraire);
     }
 
-    function testFailreturnValueOverflow(
+    function testFailReturnValueOverflow(
         uint256 amountInterleave,
         uint256 rateInterleaveToEthNew
     ) public {
@@ -452,10 +452,10 @@ contract FloorERC1155SubRegistryTest is Test {
 
         vm.assume(
             uint256(amountInterleave) >
-                (type(uint256).max /
-                    uint256(rateInterleaveToEthNew) /
-                    Constants.WAD) *
-                    10**Constants.oracleInterleaveToEthDecimals
+                type(uint256).max /
+                    Constants.WAD *
+                    10**Constants.oracleInterleaveToEthDecimals /
+                    uint256(rateInterleaveToEthNew)
         );
 
         vm.startPrank(oracleOwner);
