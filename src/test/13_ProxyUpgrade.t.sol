@@ -678,6 +678,31 @@ contract VaultV2Test is Test {
         emit log_named_bytes32("after", keccak256(abi.encode(checkAfter)));
     }
 
+    function testUpgradeVaultByNonOwner(address sender) public {
+        vm.startPrank(vaultOwner);
+        vaultV2 = new VaultV2();
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);        
+        factory.setNewVaultInfo(
+            address(mainRegistry),
+            address(vaultV2),
+            stakeContract,
+            address(interestRateModule),
+            Constants.upgradeRoot1To2
+        );
+        factory.confirmNewVaultInfo();
+        vm.stopPrank();
+
+        bytes32[] memory proofs = new bytes32[](1);
+        proofs[0] = Constants.upgradeProof1To2;
+
+        vm.startPrank(sender);
+        vm.expectRevert("FTRY_UVV: You are not the owner");
+        factory.upgradeVaultVersion(address(proxy), 2, proofs);
+        vm.stopPrank();
+    }
+
     function depositERC20InVault(
         ERC20Mock token,
         uint128 amount,
