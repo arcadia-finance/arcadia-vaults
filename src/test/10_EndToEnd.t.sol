@@ -390,7 +390,8 @@ contract EndToEndTest is Test {
             address(mainRegistry),
             address(vault),
             stakeContract,
-            address(interestRateModule)
+            address(interestRateModule),
+            Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
@@ -416,7 +417,8 @@ contract EndToEndTest is Test {
                     )
                 )
             ),
-            Constants.UsdNumeraire
+            Constants.UsdNumeraire,
+            0
         );
         proxy = Vault(proxyAddr);
 
@@ -825,7 +827,8 @@ contract EndToEndTest is Test {
                     )
                 )
             ),
-            Constants.EthNumeraire
+            Constants.EthNumeraire,
+            0
         );
         Vault proxyVault = Vault(proxyAddr);
 

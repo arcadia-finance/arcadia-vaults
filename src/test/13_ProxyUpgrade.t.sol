@@ -6,34 +6,36 @@
  */
 pragma solidity >0.8.10;
 
-import "../../../lib/forge-std/src/Test.sol";
+import "../../lib/forge-std/src/Test.sol";
 
-import "../../Factory.sol";
-import "../../Proxy.sol";
-import "../../Vault.sol";
-import "../../mockups/ERC20SolmateMock.sol";
-import "../../mockups/ERC721SolmateMock.sol";
-import "../../mockups/ERC1155SolmateMock.sol";
-import "../../Stable.sol";
-import "../../AssetRegistry/MainRegistry.sol";
-import "../../AssetRegistry/FloorERC721SubRegistry.sol";
-import "../../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../../AssetRegistry/FloorERC1155SubRegistry.sol";
-import "../../InterestRateModule.sol";
-import "../../Liquidator.sol";
-import "../../OracleHub.sol";
+import "../Factory.sol";
+import "../Proxy.sol";
+import "../Vault.sol";
+import "../mockups/ERC20SolmateMock.sol";
+import "../mockups/ERC721SolmateMock.sol";
+import "../mockups/ERC1155SolmateMock.sol";
+import "../mockups/VaultV2.sol";
+import "../Stable.sol";
+import "../AssetRegistry/MainRegistry.sol";
+import "../AssetRegistry/FloorERC721SubRegistry.sol";
+import "../AssetRegistry/StandardERC20SubRegistry.sol";
+import "../AssetRegistry/FloorERC1155SubRegistry.sol";
+import "../InterestRateModule.sol";
+import "../Liquidator.sol";
+import "../OracleHub.sol";
+import "../utils/Constants.sol";
+import "../ArcadiaOracle.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-import "../../utils/Constants.sol";
-import "../../ArcadiaOracle.sol";
-import "../fixtures/ArcadiaOracleFixture.f.sol";
-
-contract gasLiquidate_1ERC20 is Test {
+contract VaultV2Test is Test {
     using stdStorage for StdStorage;
 
     Factory private factory;
     Vault private vault;
     Vault private proxy;
+    VaultV2 private vaultV2;
     address private proxyAddr;
+    address private proxyAddr2;
     ERC20Mock private eth;
     ERC20Mock private snx;
     ERC20Mock private link;
@@ -44,7 +46,6 @@ contract gasLiquidate_1ERC20 is Test {
     ERC20Mock private wbayc;
     ERC20Mock private wmayc;
     ERC1155Mock private interleave;
-    ERC1155Mock private genericStoreFront;
     OracleHub private oracleHub;
     ArcadiaOracle private oracleEthToUsd;
     ArcadiaOracle private oracleLinkToUsd;
@@ -52,7 +53,6 @@ contract gasLiquidate_1ERC20 is Test {
     ArcadiaOracle private oracleWbaycToEth;
     ArcadiaOracle private oracleWmaycToUsd;
     ArcadiaOracle private oracleInterleaveToEth;
-    ArcadiaOracle private oracleGenericStoreFrontToEth;
     MainRegistry private mainRegistry;
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
@@ -67,7 +67,6 @@ contract gasLiquidate_1ERC20 is Test {
     address private unprivilegedAddress = address(4);
     address private stakeContract = address(5);
     address private vaultOwner = address(6);
-    address private liquidatorBot = address(7);
 
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
@@ -76,7 +75,6 @@ contract gasLiquidate_1ERC20 is Test {
     uint256 rateWmaycToUsd = 50000 * 10**Constants.oracleWmaycToUsdDecimals;
     uint256 rateInterleaveToEth =
         1 * 10**(Constants.oracleInterleaveToEthDecimals - 2);
-    uint256 rateGenericStoreFrontToEth = 1 * 10**(8);
 
     address[] public oracleEthToUsdArr = new address[](1);
     address[] public oracleLinkToUsdArr = new address[](1);
@@ -84,12 +82,6 @@ contract gasLiquidate_1ERC20 is Test {
     address[] public oracleWbaycToEthEthToUsd = new address[](2);
     address[] public oracleWmaycToUsdArr = new address[](1);
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
-    address[] public oracleGenericStoreFrontToEthEthToUsd = new address[](2);
-
-    address[] public s_assetAddresses;
-    uint256[] public s_assetIds;
-    uint256[] public s_assetAmounts;
-    uint256[] public s_assetTypes;
 
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
@@ -130,32 +122,12 @@ contract gasLiquidate_1ERC20 is Test {
         bayc.mint(tokenCreatorAddress, 1);
         bayc.mint(tokenCreatorAddress, 2);
         bayc.mint(tokenCreatorAddress, 3);
-        bayc.mint(tokenCreatorAddress, 4);
-        bayc.mint(tokenCreatorAddress, 5);
-        bayc.mint(tokenCreatorAddress, 6);
-        bayc.mint(tokenCreatorAddress, 7);
-        bayc.mint(tokenCreatorAddress, 8);
-        bayc.mint(tokenCreatorAddress, 9);
-        bayc.mint(tokenCreatorAddress, 10);
-        bayc.mint(tokenCreatorAddress, 11);
-        bayc.mint(tokenCreatorAddress, 12);
 
         mayc = new ERC721Mock("MAYC Mock", "mMAYC");
         mayc.mint(tokenCreatorAddress, 0);
-        mayc.mint(tokenCreatorAddress, 1);
-        mayc.mint(tokenCreatorAddress, 2);
-        mayc.mint(tokenCreatorAddress, 3);
-        mayc.mint(tokenCreatorAddress, 4);
-        mayc.mint(tokenCreatorAddress, 5);
-        mayc.mint(tokenCreatorAddress, 6);
-        mayc.mint(tokenCreatorAddress, 7);
-        mayc.mint(tokenCreatorAddress, 8);
-        mayc.mint(tokenCreatorAddress, 9);
 
         dickButs = new ERC721Mock("DickButs Mock", "mDICK");
         dickButs.mint(tokenCreatorAddress, 0);
-        dickButs.mint(tokenCreatorAddress, 1);
-        dickButs.mint(tokenCreatorAddress, 2);
 
         wbayc = new ERC20Mock(
             "wBAYC Mock",
@@ -166,17 +138,6 @@ contract gasLiquidate_1ERC20 is Test {
 
         interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
         interleave.mint(tokenCreatorAddress, 1, 100000);
-        interleave.mint(tokenCreatorAddress, 2, 100000);
-        interleave.mint(tokenCreatorAddress, 3, 100000);
-        interleave.mint(tokenCreatorAddress, 4, 100000);
-        interleave.mint(tokenCreatorAddress, 5, 100000);
-
-        genericStoreFront = new ERC1155Mock("Generic Storefront Mock", "mGSM");
-        genericStoreFront.mint(tokenCreatorAddress, 1, 100000);
-        genericStoreFront.mint(tokenCreatorAddress, 2, 100000);
-        genericStoreFront.mint(tokenCreatorAddress, 3, 100000);
-        genericStoreFront.mint(tokenCreatorAddress, 4, 100000);
-        genericStoreFront.mint(tokenCreatorAddress, 5, 100000);
 
         vm.stopPrank();
 
@@ -185,38 +146,27 @@ contract gasLiquidate_1ERC20 is Test {
 
         oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleEthToUsdDecimals),
-            "ETH / USD",
-            rateEthToUsd
+            "ETH / USD"
         );
         oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleLinkToUsdDecimals),
-            "LINK / USD",
-            rateLinkToUsd
+            "LINK / USD"
         );
         oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleSnxToEthDecimals),
-            "SNX / ETH",
-            rateSnxToEth
+            "SNX / ETH"
         );
         oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleWbaycToEthDecimals),
-            "WBAYC / ETH",
-            rateWbaycToEth
+            "WBAYC / ETH"
         );
         oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleWmaycToUsdDecimals),
-            "WBAYC / USD",
-            rateWmaycToUsd
+            "WBAYC / USD"
         );
         oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleInterleaveToEthDecimals),
-            "INTERLEAVE / ETH",
-            rateInterleaveToEth
-        );
-        oracleGenericStoreFrontToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(10),
-            "GenericStoreFront / ETH",
-            rateGenericStoreFrontToEth
+            "INTERLEAVE / ETH"
         );
 
         vm.startPrank(creatorAddress);
@@ -286,17 +236,6 @@ contract gasLiquidate_1ERC20 is Test {
                 baseAssetIsNumeraire: true
             })
         );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(10**10),
-                baseAssetNumeraire: 1,
-                quoteAsset: "GenericStoreFront",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleGenericStoreFrontToEth),
-                quoteAssetAddress: address(genericStoreFront),
-                baseAssetIsNumeraire: true
-            })
-        );
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
@@ -308,93 +247,12 @@ contract gasLiquidate_1ERC20 is Test {
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 1);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 2);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 3);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 4);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 5);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 6);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 7);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 8);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 9);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 10);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 11);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 12);
         mayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
-        mayc.transferFrom(tokenCreatorAddress, vaultOwner, 1);
-        mayc.transferFrom(tokenCreatorAddress, vaultOwner, 2);
-        mayc.transferFrom(tokenCreatorAddress, vaultOwner, 3);
-        mayc.transferFrom(tokenCreatorAddress, vaultOwner, 4);
-        mayc.transferFrom(tokenCreatorAddress, vaultOwner, 5);
-        mayc.transferFrom(tokenCreatorAddress, vaultOwner, 6);
-        mayc.transferFrom(tokenCreatorAddress, vaultOwner, 7);
-        mayc.transferFrom(tokenCreatorAddress, vaultOwner, 8);
-        mayc.transferFrom(tokenCreatorAddress, vaultOwner, 9);
         dickButs.transferFrom(tokenCreatorAddress, vaultOwner, 0);
         interleave.safeTransferFrom(
             tokenCreatorAddress,
             vaultOwner,
             1,
-            100000,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        interleave.safeTransferFrom(
-            tokenCreatorAddress,
-            vaultOwner,
-            2,
-            100000,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        interleave.safeTransferFrom(
-            tokenCreatorAddress,
-            vaultOwner,
-            3,
-            100000,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        interleave.safeTransferFrom(
-            tokenCreatorAddress,
-            vaultOwner,
-            4,
-            100000,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        interleave.safeTransferFrom(
-            tokenCreatorAddress,
-            vaultOwner,
-            5,
-            100000,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        genericStoreFront.safeTransferFrom(
-            tokenCreatorAddress,
-            vaultOwner,
-            1,
-            100000,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        genericStoreFront.safeTransferFrom(
-            tokenCreatorAddress,
-            vaultOwner,
-            2,
-            100000,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        genericStoreFront.safeTransferFrom(
-            tokenCreatorAddress,
-            vaultOwner,
-            3,
-            100000,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        genericStoreFront.safeTransferFrom(
-            tokenCreatorAddress,
-            vaultOwner,
-            4,
-            100000,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        genericStoreFront.safeTransferFrom(
-            tokenCreatorAddress,
-            vaultOwner,
-            5,
             100000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
@@ -430,15 +288,11 @@ contract gasLiquidate_1ERC20 is Test {
 
         oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
-
-        oracleGenericStoreFrontToEthEthToUsd[0] = address(
-            oracleGenericStoreFrontToEth
-        );
-        oracleGenericStoreFrontToEthEthToUsd[1] = address(oracleEthToUsd);
     }
 
     //this is a before each
     function setUp() public {
+
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
             MainRegistry.NumeraireInformation({
@@ -520,28 +374,12 @@ contract gasLiquidate_1ERC20 is Test {
             }),
             assetCreditRatings
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
-                oracleAddresses: oracleWmaycToUsdArr,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(mayc)
-            }),
-            assetCreditRatings
-        );
+
         floorERC1155SubRegistry.setAssetInformation(
             FloorERC1155SubRegistry.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
                 assetAddress: address(interleave)
-            }),
-            assetCreditRatings
-        );
-        floorERC1155SubRegistry.setAssetInformation(
-            FloorERC1155SubRegistry.AssetInformation({
-                oracleAddresses: oracleGenericStoreFrontToEthEthToUsd,
-                id: 1,
-                assetAddress: address(genericStoreFront)
             }),
             assetCreditRatings
         );
@@ -570,6 +408,7 @@ contract gasLiquidate_1ERC20 is Test {
         factory.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
+        mainRegistry.setFactory(address(factory));
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
@@ -595,12 +434,7 @@ contract gasLiquidate_1ERC20 is Test {
         proxy = Vault(proxyAddr);
 
         vm.prank(address(proxy));
-        stable.mint(
-            tokenCreatorAddress,
-            10000000 * 10**Constants.stableDecimals
-        );
-        vm.prank(tokenCreatorAddress);
-        stable.transfer(vaultOwner, 10000000 * 10**Constants.stableDecimals);
+        stable.mint(tokenCreatorAddress, 100000 * 10**Constants.stableDecimals);
 
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
@@ -611,17 +445,11 @@ contract gasLiquidate_1ERC20 is Test {
         oracleInterleaveToEth.transmit(int256(rateInterleaveToEth));
         vm.stopPrank();
 
-        vm.roll(1); //increase block for random salt
-
-        vm.prank(tokenCreatorAddress);
-        eth.mint(vaultOwner, 1e18);
-
         vm.startPrank(vaultOwner);
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
         dickButs.setApprovalForAll(address(proxy), true);
         interleave.setApprovalForAll(address(proxy), true);
-        genericStoreFront.setApprovalForAll(address(proxy), true);
         eth.approve(address(proxy), type(uint256).max);
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
@@ -629,41 +457,330 @@ contract gasLiquidate_1ERC20 is Test {
         stable.approve(address(proxy), type(uint256).max);
         stable.approve(address(liquidator), type(uint256).max);
         vm.stopPrank();
+    }
+
+    function testNewVaultVersion(uint256 salt) public {
+        vm.assume(salt > 0);
 
         vm.startPrank(vaultOwner);
-
-        s_assetAddresses = new address[](1);
-        s_assetAddresses[0] = address(eth);
-
-        s_assetIds = new uint256[](1);
-        s_assetIds[0] = 0;
-
-        s_assetAmounts = new uint256[](1);
-        s_assetAmounts[0] = 1e18;
-
-        s_assetTypes = new uint256[](1);
-        s_assetTypes[0] = 0;
-
-        proxy.deposit(
-            s_assetAddresses,
-            s_assetIds,
-            s_assetAmounts,
-            s_assetTypes
-        );
+        vaultV2 = new VaultV2();
         vm.stopPrank();
 
-        vm.prank(vaultOwner);
-        uint256 valueEth = (((10**18 * rateEthToUsd) /
-            10**Constants.oracleEthToUsdDecimals) * s_assetAmounts[0]) /
-            10**Constants.ethDecimals;
-        proxy.takeCredit(uint128((valueEth * 100) / 150));
+        vm.startPrank(creatorAddress);        
+        factory.setNewVaultInfo(
+            address(mainRegistry),
+            address(vaultV2),
+            stakeContract,
+            address(interestRateModule),
+            Constants.upgradeRoot1To2
+        );
+        factory.confirmNewVaultInfo();
+        vm.stopPrank();
 
-        vm.prank(oracleOwner);
-        oracleEthToUsd.transmit(int256(rateEthToUsd) / 2);
+        
+        assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
+
+        vm.startPrank(address(123456789));
+        proxyAddr2 = factory.createVault(salt, 0, 0);
+        vaultV2 = VaultV2(proxyAddr2);
+        assertEq(vaultV2.returnFive(), 5);
+        vm.stopPrank();
     }
 
-    function testLiquidate() public {
-        vm.prank(liquidatorBot);
-        factory.liquidate(address(proxy));
+    struct Debt {
+        uint128 _openDebt;
+        uint16 _collThres;
+        uint8 _liqThres;
+        uint64 _yearlyInterestRate;
+        uint32 _lastBlock;
+        uint8 _numeraire;
     }
+    struct Checks {
+        address _erc20Stored;
+        address _erc721Stored;
+        address _erc1155Stored;
+        uint256 _erc721TokenIds;
+        uint256 _erc1155TokenIds;
+        address _registryAddress;
+        address _stable;
+        address _stakeContract;
+        address _irmAddress;
+        uint256 life;
+        address owner;
+        Debt debt;
+    }
+
+    function createCompareStruct() public view returns (Checks memory) {
+        Checks memory checks;
+        Debt memory debt;
+
+        checks._erc20Stored = proxy._erc20Stored(0); //to be improved for whole list
+        checks._erc721Stored = proxy._erc721Stored(0);
+        checks._erc1155Stored = proxy._erc1155Stored(0);
+        checks._erc721TokenIds = proxy._erc721TokenIds(0);
+        checks._erc1155TokenIds = proxy._erc1155TokenIds(0);
+        checks._registryAddress = proxy._registryAddress();
+        checks._stable = proxy._stable();
+        checks._stakeContract = proxy._stakeContract();
+        checks._irmAddress = proxy._irmAddress();
+        checks.life = proxy.life();
+        checks.owner = proxy.owner();
+        (debt._openDebt,
+        debt._collThres,
+        debt._liqThres,
+        debt._yearlyInterestRate,
+        debt._lastBlock,
+        debt._numeraire) = proxy.debt();
+        checks.debt = debt;
+
+        return checks;
+    }
+
+    function testAssetsAfterUpgrade(uint128 amount) public {
+        depositERC20InVault(eth, amount, vaultOwner);
+        uint128[] memory tokenIds = new uint128[](3);
+        tokenIds[0] = 1;
+        tokenIds[1] = 2;
+        tokenIds[2] = 3;
+        depositERC721InVault(bayc, tokenIds, vaultOwner);
+        depositERC1155InVault(interleave, 1, 1000, vaultOwner);
+
+        Checks memory checkBefore = createCompareStruct();
+
+        vm.startPrank(vaultOwner);
+        vaultV2 = new VaultV2();
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);
+        factory.setNewVaultInfo(
+            address(mainRegistry),
+            address(vaultV2),
+            stakeContract,
+            address(interestRateModule),
+            Constants.upgradeRoot1To2
+        );
+        factory.confirmNewVaultInfo();
+        vm.stopPrank();
+
+
+        bytes32[] memory proofs = new bytes32[](1);
+        proofs[0] = Constants.upgradeProof1To2;
+
+        vm.startPrank(vaultOwner);
+        factory.upgradeVaultVersion(address(proxy), factory.latestVaultVersion(), proofs);
+        vm.stopPrank();
+
+        Checks memory checkAfter = createCompareStruct();
+
+        assertEq(keccak256(abi.encode(checkAfter)), keccak256(abi.encode(checkBefore)));
+        emit log_named_bytes32("before", keccak256(abi.encode(checkBefore)));
+        emit log_named_bytes32("after", keccak256(abi.encode(checkAfter)));
+        assertEq(factory.latestVaultVersion(), proxy.vaultVersion());
+    }
+
+    function testAssetsAfterUpgradeFail(uint128 amount) public {
+        depositERC20InVault(eth, amount, vaultOwner);
+        uint128[] memory tokenIds = new uint128[](3);
+        tokenIds[0] = 1;
+        tokenIds[1] = 2;
+        tokenIds[2] = 3;
+        depositERC721InVault(bayc, tokenIds, vaultOwner);
+        depositERC1155InVault(interleave, 1, 1000, vaultOwner);
+
+        Checks memory checkBefore = createCompareStruct();
+
+        vm.startPrank(vaultOwner);
+        vaultV2 = new VaultV2();
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);        
+        factory.setNewVaultInfo(
+            address(mainRegistry),
+            address(vaultV2),
+            stakeContract,
+            address(interestRateModule),
+            Constants.upgradeRoot1To2
+        );
+        factory.confirmNewVaultInfo();
+        vm.stopPrank();
+
+
+        bytes32[] memory proofs = new bytes32[](1);
+        proofs[0] = Constants.upgradeProof1To2;
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("FTR_UVV: Cannot upgrade to this version");
+        factory.upgradeVaultVersion(address(proxy), 0, proofs);
+        vm.stopPrank();
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("FTR_UVV: Cannot upgrade to this version");
+        factory.upgradeVaultVersion(address(proxy), 3, proofs);
+        vm.stopPrank();
+
+        Checks memory checkAfter = createCompareStruct();
+
+        assertEq(keccak256(abi.encode(checkAfter)), keccak256(abi.encode(checkBefore)));
+        emit log_named_bytes32("before", keccak256(abi.encode(checkBefore)));
+        emit log_named_bytes32("after", keccak256(abi.encode(checkAfter)));
+    }
+
+    function testUpgradeVaultByNonOwner(address sender) public {
+        vm.startPrank(vaultOwner);
+        vaultV2 = new VaultV2();
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);        
+        factory.setNewVaultInfo(
+            address(mainRegistry),
+            address(vaultV2),
+            stakeContract,
+            address(interestRateModule),
+            Constants.upgradeRoot1To2
+        );
+        factory.confirmNewVaultInfo();
+        vm.stopPrank();
+
+        bytes32[] memory proofs = new bytes32[](1);
+        proofs[0] = Constants.upgradeProof1To2;
+
+        vm.startPrank(sender);
+        vm.expectRevert("FTRY_UVV: You are not the owner");
+        factory.upgradeVaultVersion(address(proxy), 2, proofs);
+        vm.stopPrank();
+    }
+
+    function depositERC20InVault(
+        ERC20Mock token,
+        uint128 amount,
+        address sender
+    )
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](1);
+        assetAddresses[0] = address(token);
+
+        assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount;
+
+        assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.prank(tokenCreatorAddress);
+        token.mint(sender, amount);
+
+        vm.startPrank(sender);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+    function depositERC20InVaultV2(
+        ERC20Mock token,
+        uint128 amount,
+        address sender
+    )
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](1);
+        assetAddresses[0] = address(token);
+
+        assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount;
+
+        assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.prank(tokenCreatorAddress);
+        token.mint(sender, amount);
+
+        vm.startPrank(sender);
+        vaultV2.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+        function depositERC721InVault(
+        ERC721Mock token,
+        uint128[] memory tokenIds,
+        address sender
+    )
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](tokenIds.length);
+        assetIds = new uint256[](tokenIds.length);
+        assetAmounts = new uint256[](tokenIds.length);
+        assetTypes = new uint256[](tokenIds.length);
+
+        uint256 tokenIdToWorkWith;
+        for (uint256 i; i < tokenIds.length; i++) {
+            tokenIdToWorkWith = tokenIds[i];
+            while (token.ownerOf(tokenIdToWorkWith) != address(0)) {
+                tokenIdToWorkWith++;
+            }
+
+            token.mint(sender, tokenIdToWorkWith);
+            assetAddresses[i] = address(token);
+            assetIds[i] = tokenIdToWorkWith;
+            assetAmounts[i] = 1;
+            assetTypes[i] = 1;
+        }
+
+        vm.startPrank(sender);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+    function depositERC1155InVault(
+        ERC1155Mock token,
+        uint256 tokenId,
+        uint256 amount,
+        address sender
+    )
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](1);
+        assetIds = new uint256[](1);
+        assetAmounts = new uint256[](1);
+        assetTypes = new uint256[](1);
+
+        token.mint(sender, tokenId, amount);
+        assetAddresses[0] = address(token);
+        assetIds[0] = tokenId;
+        assetAmounts[0] = amount;
+        assetTypes[0] = 2;
+
+        vm.startPrank(sender);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
 }

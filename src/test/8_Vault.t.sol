@@ -297,6 +297,11 @@ contract vaultTests is Test {
 
     //this is a before each
     function setUp() public {
+        vm.startPrank(vaultOwner);
+        vault = new Vault();
+        stable.transfer(address(0), stable.balanceOf(vaultOwner));
+        vm.stopPrank();
+
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
             MainRegistry.NumeraireInformation({
@@ -329,7 +334,8 @@ contract vaultTests is Test {
             address(mainRegistry),
             address(vault),
             stakeContract,
-            address(interestRateModule)
+            address(interestRateModule),
+            Constants.upgradeProof1To2
         );
         vm.prank(creatorAddress);
         factoryContr.confirmNewVaultInfo();
@@ -359,10 +365,7 @@ contract vaultTests is Test {
         );
         vm.stopPrank();
 
-        vm.startPrank(vaultOwner);
-        vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
-        vm.stopPrank();
+
 
         uint256 slot = stdstore
             .target(address(factoryContr))
@@ -394,7 +397,8 @@ contract vaultTests is Test {
             uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
-            address(interestRateModule)
+            address(interestRateModule),
+            1
         );
         bayc.setApprovalForAll(address(vault), true);
         mayc.setApprovalForAll(address(vault), true);
@@ -1585,7 +1589,8 @@ contract vaultTests is Test {
             uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
-            address(interestRateModule)
+            address(interestRateModule),
+            1
         );
         assertEq(address(this), vault_m.owner());
 
@@ -1627,7 +1632,8 @@ contract vaultTests is Test {
             uint8(Constants.UsdNumeraire),
             address(stable),
             address(stakeContract),
-            address(interestRateModule)
+            address(interestRateModule),
+            1
         );
         assertEq(address(this), vault_m.owner());
 

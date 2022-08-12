@@ -6,14 +6,14 @@
  */
 pragma solidity >=0.8.0 <0.9.0;
 
-import "./utils/LogExpMath.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/IERC721.sol";
-import "./interfaces/IERC1155.sol";
-import "./interfaces/ILiquidator.sol";
-import "./interfaces/IRegistry.sol";
-import "./interfaces/IRM.sol";
-import "./interfaces/IMainRegistry.sol";
+import "../utils/LogExpMath.sol";
+import "../interfaces/IERC20.sol";
+import "../interfaces/IERC721.sol";
+import "../interfaces/IERC1155.sol";
+import "../interfaces/ILiquidator.sol";
+import "../interfaces/IRegistry.sol";
+import "../interfaces/IRM.sol";
+import "../interfaces/IMainRegistry.sol";
 
 /** 
   * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -29,7 +29,7 @@ import "./interfaces/IMainRegistry.sol";
          Arcadia's vault functions will guarantee you a certain value of the vault.
          For whitelists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
-contract Vault {
+contract VaultV2 {
 
     /**
      * @dev Storage slot with the address of the current implementation.
@@ -1079,5 +1079,9 @@ contract Vault {
             _erc721TokenIds.length,
             _erc1155Stored.length
         );
+    }
+
+    function returnFive() external pure returns (uint256) {
+        return 5;
     }
 }
