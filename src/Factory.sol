@@ -192,6 +192,7 @@ contract Factory is ERC721, Ownable {
   @dev This is the starting point of the Vault creation process. Safe to cast a uint256 to a bytes32 since the space of both is 2^256.
   @param salt A salt to be used to generate the hash.
   @param numeraire An identifier (uint256) of the Numeraire
+  @param vaultVersion The version of the Vault logic to be used. This version can be changed after deployment.
   */
     function createVault(uint256 salt, uint256 numeraire, uint256 vaultVersion)
         external
