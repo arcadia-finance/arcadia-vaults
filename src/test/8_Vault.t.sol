@@ -1641,8 +1641,18 @@ contract vaultTests is Test {
                 toAuth != address(factoryContr)
         );
         Vault vault_m = new Vault();
+        
+        uint256 slot3 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m.owner.selector)
+            .find();
+        bytes32 loc3 = bytes32(slot3);
+        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
+        vm.store(address(vault_m), loc3, newOwner);
 
+        vm.startPrank(vaultOwner);
         vault_m.authorize(toAuth);
+        vm.stopPrank();
 
         assertTrue(vault_m.allowed(toAuth));
 
@@ -1673,11 +1683,20 @@ contract vaultTests is Test {
         );
         Vault vault_m = new Vault();
 
-        vault_m.authorize(toAuth);
+        uint256 slot4 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m.owner.selector)
+            .find();
+        bytes32 loc4 = bytes32(slot4);
+        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
+        vm.store(address(vault_m), loc4, newOwner);
 
+        vm.startPrank(vaultOwner);
+        vault_m.authorize(toAuth);
+        vm.stopPrank();
         
         vm.startPrank(toAuth);
-        vault_m.setBaseCurrency(Constants.EthBaseCurrency);
+        vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
         vm.stopPrank();
 
         (,,,,,uint256 _baseCurrency) = vault_m.debt();
@@ -1690,7 +1709,7 @@ contract vaultTests is Test {
 
         vm.startPrank(nonAuthorized);
         vm.expectRevert("VL: You are not authorized");
-        vault_m.setBaseCurrency(Constants.EthBaseCurrency);
+        vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
         vm.stopPrank();
 
         (,,,,,uint256 _baseCurrency) = vault_m.debt();
