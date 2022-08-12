@@ -1671,6 +1671,7 @@ contract vaultTests is Test {
         vm.expectRevert("VL: You are not the owner");
         vault_m.authorize(toAuth);
         vm.stopPrank();
+        emit log_named_address("auth", toAuth);
 
         assertFalse(vault_m.allowed(toAuth));
     }      
@@ -1683,18 +1684,26 @@ contract vaultTests is Test {
         );
         Vault vault_m = new Vault();
 
-        uint256 slot4 = stdstore
+        uint256 slot2 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m._registryAddress.selector)
+            .find();
+        bytes32 loc2 = bytes32(slot2);
+        bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
+        vm.store(address(vault_m), loc2, newReg);
+        
+        uint256 slot3 = stdstore
             .target(address(vault_m))
             .sig(vault_m.owner.selector)
             .find();
-        bytes32 loc4 = bytes32(slot4);
+        bytes32 loc3 = bytes32(slot3);
         bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc4, newOwner);
+        vm.store(address(vault_m), loc3, newOwner);
 
         vm.startPrank(vaultOwner);
         vault_m.authorize(toAuth);
         vm.stopPrank();
-        
+
         vm.startPrank(toAuth);
         vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
         vm.stopPrank();

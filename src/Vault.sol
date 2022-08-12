@@ -688,7 +688,7 @@ contract Vault {
     @notice Sets the baseCurrency of a vault.
     @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
   */
-    function setBaseCurrency(uint8 newBaseCurrency) public onlyAuthorized onlyOwner {
+    function setBaseCurrency(uint256 newBaseCurrency) public onlyAuthorized {
         require(getOpenDebt() == 0, "VL: Can't change baseCurrency when openDebt > 0");
         require(newBaseCurrency + 1 <= IMainRegistry(_registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
         _setBaseCurrency(newBaseCurrency);
@@ -699,9 +699,9 @@ contract Vault {
     @param newBaseCurrency the new baseCurrency for the vault.
   */
     function _setBaseCurrency(
-        uint8 newBaseCurrency
+        uint256 newBaseCurrency
     ) private {
-        debt._baseCurrency = newBaseCurrency; //Change this tio where ever it is going to be actually set
+        debt._baseCurrency = uint8(newBaseCurrency); //Change this tio where ever it is going to be actually set
     }
 
     /** 
