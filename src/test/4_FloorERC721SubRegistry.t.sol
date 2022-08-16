@@ -60,13 +60,13 @@ contract FloorERC721SubRegistryTest is Test {
 
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
         oracleHub = new OracleHub();
@@ -92,34 +92,34 @@ contract FloorERC721SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
                 quoteAssetAddress: address(wmayc),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -134,25 +134,25 @@ contract FloorERC721SubRegistryTest is Test {
     function setUp() public {
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -298,7 +298,7 @@ contract FloorERC721SubRegistryTest is Test {
         assertTrue(!floorERC721SubRegistry.isWhiteListed(address(bayc), id));
     }
 
-    function testReturnUsdValueWhenNumeraireIsUsd() public {
+    function testReturnUsdValueWhenBaseCurrencyIsUsd() public {
         vm.startPrank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
@@ -317,25 +317,25 @@ contract FloorERC721SubRegistryTest is Test {
             10 **
                 (Constants.oracleWbaycToEthDecimals +
                     Constants.oracleEthToUsdDecimals);
-        uint256 expectedValueInNumeraire = 0;
+        uint256 expectedValueInBaseCurrency = 0;
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(bayc),
                 assetId: 0,
                 assetAmount: 1,
-                numeraire: 0
+                baseCurrency: 0
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = floorERC721SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInNumeraire, expectedValueInNumeraire);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testreturnNumeraireValueWhenNumeraireIsNotUsd() public {
+    function testreturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
@@ -349,7 +349,7 @@ contract FloorERC721SubRegistryTest is Test {
         vm.stopPrank();
 
         uint256 expectedValueInUsd = 0;
-        uint256 expectedValueInNumeraire = (rateWbaycToEth * Constants.WAD) /
+        uint256 expectedValueInBaseCurrency = (rateWbaycToEth * Constants.WAD) /
             10**Constants.oracleWbaycToEthDecimals;
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
@@ -357,18 +357,18 @@ contract FloorERC721SubRegistryTest is Test {
                 assetAddress: address(bayc),
                 assetId: 0,
                 assetAmount: 1,
-                numeraire: 1
+                baseCurrency: 1
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = floorERC721SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInNumeraire, expectedValueInNumeraire);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnUsdValueWhenNumeraireIsNotUsd() public {
+    function testReturnUsdValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
@@ -383,21 +383,21 @@ contract FloorERC721SubRegistryTest is Test {
 
         uint256 expectedValueInUsd = (rateWmaycToUsd * Constants.WAD) /
             10**Constants.oracleWmaycToUsdDecimals;
-        uint256 expectedValueInNumeraire = 0;
+        uint256 expectedValueInBaseCurrency = 0;
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(mayc),
                 assetId: 0,
                 assetAmount: 1,
-                numeraire: 1
+                baseCurrency: 1
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = floorERC721SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInNumeraire, expectedValueInNumeraire);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 }

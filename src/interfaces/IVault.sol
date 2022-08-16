@@ -14,13 +14,15 @@ interface IVault {
     function initialize(
         address _owner,
         address registryAddress,
-        uint256 numeraire,
-        address stable,
         address stakeContract,
-        address interestModule
+        address interestModule,
+        uint16 latestVaultVersion
     ) external;
 
     function liquidateVault(address liquidationKeeper, address liquidator)
         external
         returns (bool);
+
+    function upgradeVault(address, uint16) external;
+    function vaultVersion() external view returns (uint8);
 }
