@@ -776,7 +776,6 @@ contract factoryTest is Test {
         vm.expectRevert("FTRY_CV: Unknown vault version");
         factoryContr.createVault(
             uint256(keccak256(abi.encodePacked(vaultVersion, block.timestamp))),
-            0,
             vaultVersion
             );
     }
@@ -834,7 +833,6 @@ contract factoryTest is Test {
             vm.expectRevert("FTRY_CV: This vault version cannot be created");
             factoryContr.createVault(
                 uint256(keccak256(abi.encodePacked(versionsToBlock[z], block.timestamp))),
-                0,
                 versionsToBlock[z]
                 );
         }

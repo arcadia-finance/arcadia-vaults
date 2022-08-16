@@ -173,67 +173,67 @@ contract VaultV2Test is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
                 quoteAssetAddress: address(wmayc),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -295,26 +295,26 @@ contract VaultV2Test is Test {
 
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: address(stable),
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
         uint256[] memory emptyList = new uint256[](0);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 stableAddress: address(stable),
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -428,7 +428,6 @@ contract VaultV2Test is Test {
                     )
                 )
             ),
-            Constants.UsdNumeraire,
             0
         );
         proxy = Vault(proxyAddr);
@@ -481,7 +480,7 @@ contract VaultV2Test is Test {
         assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
 
         vm.startPrank(address(123456789));
-        proxyAddr2 = factory.createVault(salt, 0, 0);
+        proxyAddr2 = factory.createVault(salt, 0);
         vaultV2 = VaultV2(proxyAddr2);
         assertEq(vaultV2.returnFive(), 5);
         vm.stopPrank();
@@ -493,7 +492,7 @@ contract VaultV2Test is Test {
         uint8 _liqThres;
         uint64 _yearlyInterestRate;
         uint32 _lastBlock;
-        uint8 _numeraire;
+        uint8 _baseCurrency;
     }
     struct Checks {
         address _erc20Stored;
@@ -530,7 +529,7 @@ contract VaultV2Test is Test {
         debt._liqThres,
         debt._yearlyInterestRate,
         debt._lastBlock,
-        debt._numeraire) = proxy.debt();
+        debt._baseCurrency) = proxy.debt();
         checks.debt = debt;
 
         return checks;

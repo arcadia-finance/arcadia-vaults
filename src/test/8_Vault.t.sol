@@ -395,7 +395,6 @@ contract vaultTests is Test {
         vault.initialize(
             vaultOwner,
             address(mainRegistry),
-            address(stable),
             address(stakeContract),
             address(interestRateModule),
             1
@@ -1588,7 +1587,6 @@ contract vaultTests is Test {
         vault_m.initialize(
             address(this),
             address(mainRegistry),
-            address(stable),
             address(stakeContract),
             address(interestRateModule),
             1
@@ -1630,7 +1628,6 @@ contract vaultTests is Test {
         vault_m.initialize(
             address(this),
             address(mainRegistry),
-            address(stable),
             address(stakeContract),
             address(interestRateModule),
             1

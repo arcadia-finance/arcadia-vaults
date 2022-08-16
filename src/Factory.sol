@@ -171,7 +171,7 @@ contract Factory is ERC721, Ownable {
     function addBaseCurrency(uint256 baseCurrency, address stable) external {
         require(
             vaultDetails[latestVaultVersion].registryAddress == msg.sender,
-            "FTRY_AN: Add Numeraires via MR"
+            "FTRY_AN: Add BaseCurrencies via MR"
         );
         baseCurrencyToStable[baseCurrency] = stable;
         unchecked {
@@ -218,7 +218,6 @@ contract Factory is ERC721, Ownable {
         IVault(vault).initialize(
             msg.sender,
             vaultDetails[vaultVersion].registryAddress,
-            baseCurrencyToStable[0],
             vaultDetails[vaultVersion].stakeContract,
             vaultDetails[vaultVersion].interestModule, 
             uint16(vaultVersion)
