@@ -78,7 +78,7 @@ contract MainRegistry is Ownable {
     /**
      * @notice Sets the new Factory address
      * @dev The factory can only be set on the Main Registry AFTER the Main registry is set in the Factory.
-     *      This ensures that the allowed BaseCurrencys and corresponding stable contracts in both contract are equal.
+     *      This ensures that the allowed BaseCurrencies and corresponding stable contracts in both contract are equal.
      * @param _factoryAddress The address of the Factory
      */
     function setFactory(address _factoryAddress) external onlyOwner {
@@ -187,7 +187,7 @@ contract MainRegistry is Ownable {
     /**
      * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
      * @param assetAddress The address of the asset
-     * @param assetCreditRatings The List of Credit Rating Categories for the asset for the different BaseCurrencys
+     * @param assetCreditRatings The List of Credit Rating Categories for the asset for the different BaseCurrencies
      * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
      *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies
      *      is initiated as credit rating with index 0 by default (worst credit rating).
@@ -234,7 +234,7 @@ contract MainRegistry is Ownable {
     /**
      * @notice Change the Credit Rating Category for one or more assets for one or more baseCurrencies
      * @param assets The List of addresses of the assets
-     * @param baseCurrencies The corresponding List of BaseCurrencys
+     * @param baseCurrencies The corresponding List of BaseCurrencies
      * @param newCreditRating The corresponding List of new Credit Ratings
      * @dev The function loops over all indexes, and changes for each index the Credit Rating Category of the combination of asset and baseCurrency.
      *      In case multiple Credit Rating Categories for the same assets need to be changed, the address must be repeated in the assets.

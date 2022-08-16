@@ -41,7 +41,7 @@ contract FloorERC721SubRegistry is SubRegistry {
      *                         - idRangeEnd: The id of the last NFT of the collection
      *                         - assetAddress: The contract address of the asset
      *                         - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
-     * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencys
+     * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencies
      * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
      *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies is
      *      is initiated as credit rating with index 0 by default (worst credit rating)

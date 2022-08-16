@@ -2259,7 +2259,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerSetsFactoryWithMultipleBaseCurrencys() public {
+    function testOwnerSetsFactoryWithMultipleBaseCurrencies() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({

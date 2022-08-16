@@ -368,7 +368,7 @@ contract factoryTest is Test {
         vm.assume(unprivilegedAddress != address(this));
         vm.assume(unprivilegedAddress != address(factoryContr));
         vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("FTRY_AN: Add BaseCurrencys via MR");
+        vm.expectRevert("FTRY_AN: Add BaseCurrencies via MR");
         factoryContr.addBaseCurrency(2, address(erc20Contr));
         vm.stopPrank();
     }
@@ -393,7 +393,7 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
 
-        vm.expectRevert("FTRY_AN: Add BaseCurrencys via MR");
+        vm.expectRevert("FTRY_AN: Add BaseCurrencies via MR");
         registryContr.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
@@ -567,7 +567,7 @@ contract factoryTest is Test {
         );
     }
 
-    function testOwnerSetsNewVaultWithIdenticalBaseCurrencysInMainRegistry(
+    function testOwnerSetsNewVaultWithIdenticalBaseCurrenciesInMainRegistry(
         address newStable,
         address logic,
         address stakeContract,
@@ -621,7 +621,7 @@ contract factoryTest is Test {
         assertEq(newStable, factoryContr.baseCurrencyToStable(1));
     }
 
-    function testOwnerSetsNewVaultWithMoreBaseCurrencysInMainRegistry(
+    function testOwnerSetsNewVaultWithMoreBaseCurrenciesInMainRegistry(
         address newStable,
         address logic,
         address stakeContract,
