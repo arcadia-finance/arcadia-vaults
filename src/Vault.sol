@@ -210,7 +210,7 @@ contract Vault {
         debt._liqThres = 110;
         _stakeContract = stakeContract;
         _irmAddress = irmAddress;
-
+        (,,,,_stable,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
     }
 

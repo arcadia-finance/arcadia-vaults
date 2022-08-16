@@ -625,6 +625,7 @@ contract VaultV2Test is Test {
     }
 
     function testUpgradeVaultByNonOwner(address sender) public {
+        vm.assume(sender != address(6));
         vm.startPrank(vaultOwner);
         vaultV2 = new VaultV2();
         vm.stopPrank();

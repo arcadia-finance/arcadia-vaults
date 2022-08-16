@@ -58,12 +58,18 @@ contract VaultV2 {
     address public _stakeContract;
     address public _irmAddress;
 
+
+
+    // ACCESS CONTROL
+    address public owner;
+    mapping(address => bool) public allowed;
+
+
     // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
     // Used by the liquidator contract for proceed claims
     uint256 public life;
 
-    address public owner;
-
+    bool public initialized;
     uint16 public vaultVersion;
 
     struct debtInfo {
@@ -98,9 +104,24 @@ contract VaultV2 {
     modifier onlyFactory() {
         require(
             msg.sender == IMainRegistry(_registryAddress).factoryAddress(),
-            "VL: Not factory"
+            "VL: You are not the factory"
         );
         _;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the factory adress.
+     */
+    modifier onlyAuthorized() {
+        require(
+            allowed[msg.sender],
+            "VL: You are not authorized"
+        );
+        _;
+    }
+
+    function authorize(address user, bool isAuthorized) external onlyOwner {
+        allowed[user] = isAuthorized;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -115,7 +136,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == owner, "VL: You are not the owner");
         _;
     }
 
@@ -189,7 +210,7 @@ contract VaultV2 {
         debt._liqThres = 110;
         _stakeContract = stakeContract;
         _irmAddress = irmAddress;
-
+        (,,,,_stable,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
     }
 
@@ -693,6 +714,26 @@ contract VaultV2 {
     }
 
     /** 
+    @notice Sets the baseCurrency of a vault.
+    @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
+  */
+    function setBaseCurrency(uint256 newBaseCurrency) public onlyAuthorized {
+        require(getOpenDebt() == 0, "VL: Can't change baseCurrency when openDebt > 0");
+        require(newBaseCurrency + 1 <= IMainRegistry(_registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
+        _setBaseCurrency(newBaseCurrency);
+    }
+
+    /** 
+    @notice Internal function: sets baseCurrency.
+    @param newBaseCurrency the new baseCurrency for the vault.
+  */
+    function _setBaseCurrency(
+        uint256 newBaseCurrency
+    ) private {
+        debt._baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
+    }
+
+    /** 
     @notice Sets the yearly interest rate of the proxy vault, in the form of a 1e18 decimal number.
     @dev First syncs all debt to realise all unrealised debt. Fetches all the asset data and queries the
          Registry to obtain an array of values, split up according to the credit rating of the underlying assets.
@@ -1075,7 +1116,6 @@ contract VaultV2 {
             _erc1155Stored.length
         );
     }
-
     function returnFive() external pure returns (uint256) {
         return 5;
     }
