@@ -1651,7 +1651,7 @@ contract vaultTests is Test {
         vm.store(address(vault_m), loc3, newOwner);
 
         vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth);
+        vault_m.authorize(toAuth, true);
         vm.stopPrank();
 
         assertTrue(vault_m.allowed(toAuth));
@@ -1674,13 +1674,13 @@ contract vaultTests is Test {
         vm.store(address(vault_m), loc3, newOwner);
 
         vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth);
+        vault_m.authorize(toAuth, true);
         vm.stopPrank();
 
         assertTrue(vault_m.allowed(toAuth));
 
         vm.startPrank(vaultOwner);
-        vault_m.revokeAuth(toAuth);
+        vault_m.authorize(toAuth, false);
         vm.stopPrank();
 
         assertFalse(vault_m.allowed(toAuth));
@@ -1698,7 +1698,7 @@ contract vaultTests is Test {
 
         vm.startPrank(notOwner);
         vm.expectRevert("VL: You are not the owner");
-        vault_m.authorize(toAuth);
+        vault_m.authorize(toAuth, true);
         vm.stopPrank();
 
         assertFalse(vault_m.allowed(toAuth));
@@ -1721,14 +1721,14 @@ contract vaultTests is Test {
         vm.store(address(vault_m), loc3, newOwner);
 
         vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth);
+        vault_m.authorize(toAuth, true);
         vm.stopPrank();
 
         assertTrue(vault_m.allowed(toAuth));
 
         vm.startPrank(notOwner);
         vm.expectRevert("VL: You are not the owner");
-        vault_m.revokeAuth(toAuth);
+        vault_m.authorize(toAuth, false);
         vm.stopPrank();
 
         assertTrue(vault_m.allowed(toAuth));
@@ -1759,7 +1759,7 @@ contract vaultTests is Test {
         vm.store(address(vault_m), loc3, newOwner);
 
         vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth);
+        vault_m.authorize(toAuth, true);
         vm.stopPrank();
 
         vm.startPrank(toAuth);
@@ -1780,6 +1780,53 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         (,,,,,uint256 _baseCurrency) = vault_m.debt();
+        assertEq(_baseCurrency, Constants.UsdBaseCurrency);
+    }
+
+//SIMON DO THIS WITH CHEATXCODE
+        function testSetBaseCurrencyWithDebt(address toAuth) public {
+        vm.assume(
+            toAuth != address(this) &&
+                toAuth != address(0) &&
+                toAuth != address(factoryContr)
+        );
+        Vault vault_m = new Vault();
+
+        uint256 slot2 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m._registryAddress.selector)
+            .find();
+        bytes32 loc2 = bytes32(slot2);
+        bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
+        vm.store(address(vault_m), loc2, newReg);
+        
+        uint256 slot3 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m.owner.selector)
+            .find();
+        bytes32 loc3 = bytes32(slot3);
+        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
+        vm.store(address(vault_m), loc3, newOwner);
+
+        uint256 slot4 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m.debt.selector)
+            .depth(0)
+            .find();
+        bytes32 loc4 = bytes32(slot4);
+        bytes32 addDebt = bytes32(abi.encode(1));
+        vm.store(address(vault_m), loc4, addDebt);
+
+        vm.startPrank(vaultOwner);
+        vault_m.authorize(toAuth, true);
+        vm.stopPrank();
+
+        vm.startPrank(toAuth);
+        vm.expectRevert("VL: Can't change baseCurrency when openDebt > 0");
+        vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
+        vm.stopPrank();
+
+        (uint128 _openDebt,,,,,uint256 _baseCurrency) = vault_m.debt();
         assertEq(_baseCurrency, Constants.UsdBaseCurrency);
     }
 

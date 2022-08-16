@@ -107,12 +107,8 @@ contract Vault {
         _;
     }
 
-    function authorize(address user) external onlyOwner {
-        allowed[user] = true;
-    }
-
-    function revokeAuth(address user) external onlyOwner {
-        allowed[user] = false;
+    function authorize(address user, bool isAuthorized) external onlyOwner {
+        allowed[user] = isAuthorized;
     }
 
     /*///////////////////////////////////////////////////////////////
