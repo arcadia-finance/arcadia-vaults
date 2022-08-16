@@ -12,6 +12,7 @@ import "../utils/Constants.sol";
 import "../Factory.sol";
 import "../Proxy.sol";
 import "../Vault.sol";
+import "../Liquidator.sol";
 import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
@@ -888,7 +889,9 @@ contract vaultTests is Test {
             assetInfo.assetTypes
         );
 
-        uint256 vaultValueAfter = vault.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 vaultValueAfter = vault.getValue(
+            uint8(Constants.UsdBaseCurrency)
+        );
         assertEq(vaultValueAfter, 0);
         vm.stopPrank();
     }
@@ -1641,7 +1644,7 @@ contract vaultTests is Test {
                 toAuth != address(factoryContr)
         );
         Vault vault_m = new Vault();
-        
+
         uint256 slot3 = stdstore
             .target(address(vault_m))
             .sig(vault_m.owner.selector)
@@ -1655,8 +1658,8 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         assertTrue(vault_m.allowed(toAuth));
-
     }
+
     function testRevokeAuthAddress(address toAuth) public {
         vm.assume(
             toAuth != address(this) &&
@@ -1664,7 +1667,7 @@ contract vaultTests is Test {
                 toAuth != address(factoryContr)
         );
         Vault vault_m = new Vault();
-        
+
         uint256 slot3 = stdstore
             .target(address(vault_m))
             .sig(vault_m.owner.selector)
@@ -1684,7 +1687,6 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         assertFalse(vault_m.allowed(toAuth));
-
     }
 
     function testAuthorizeAddressByNonOwner(address toAuth) public {
@@ -1702,16 +1704,17 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         assertFalse(vault_m.allowed(toAuth));
-    }      
+    }
+
     function testRevokeAuthAddressByNonOwner(address toAuth) public {
-             vm.assume(
+        vm.assume(
             toAuth != address(this) &&
                 toAuth != address(0) &&
                 toAuth != address(factoryContr)
         );
         Vault vault_m = new Vault();
         address notOwner = address(789);
-        
+
         uint256 slot3 = stdstore
             .target(address(vault_m))
             .sig(vault_m.owner.selector)
@@ -1732,7 +1735,7 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         assertTrue(vault_m.allowed(toAuth));
-    }      
+    }
 
     function testSetBaseCurrency(address toAuth) public {
         vm.assume(
@@ -1749,7 +1752,7 @@ contract vaultTests is Test {
         bytes32 loc2 = bytes32(slot2);
         bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
         vm.store(address(vault_m), loc2, newReg);
-        
+
         uint256 slot3 = stdstore
             .target(address(vault_m))
             .sig(vault_m.owner.selector)
@@ -1766,7 +1769,7 @@ contract vaultTests is Test {
         vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
         vm.stopPrank();
 
-        (,,,,,uint256 _baseCurrency) = vault_m.debt();
+        (, , , , , uint256 _baseCurrency) = vault_m.debt();
         assertEq(_baseCurrency, Constants.EthBaseCurrency);
     }
 
@@ -1779,12 +1782,12 @@ contract vaultTests is Test {
         vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
         vm.stopPrank();
 
-        (,,,,,uint256 _baseCurrency) = vault_m.debt();
+        (, , , , , uint256 _baseCurrency) = vault_m.debt();
         assertEq(_baseCurrency, Constants.UsdBaseCurrency);
     }
 
-//SIMON DO THIS WITH CHEATXCODE
-        function testSetBaseCurrencyWithDebt(address toAuth) public {
+    //SIMON DO THIS WITH CHEATXCODE
+    function testSetBaseCurrencyWithDebt(address toAuth) public {
         vm.assume(
             toAuth != address(this) &&
                 toAuth != address(0) &&
@@ -1799,7 +1802,7 @@ contract vaultTests is Test {
         bytes32 loc2 = bytes32(slot2);
         bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
         vm.store(address(vault_m), loc2, newReg);
-        
+
         uint256 slot3 = stdstore
             .target(address(vault_m))
             .sig(vault_m.owner.selector)
@@ -1826,8 +1829,82 @@ contract vaultTests is Test {
         vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
         vm.stopPrank();
 
-        (uint128 _openDebt,,,,,uint256 _baseCurrency) = vault_m.debt();
+        (uint128 _openDebt, , , , , uint256 _baseCurrency) = vault_m.debt();
         assertEq(_baseCurrency, Constants.UsdBaseCurrency);
+    }
+
+    //TODO: Change this test
+    function testFailLiquidateVaultFactory(address liquidationKeeper) public {
+        vm.assume(
+            liquidationKeeper != address(this) &&
+                liquidationKeeper != address(0) &&
+                liquidationKeeper != address(factoryContr)
+        );
+        Vault vault_m = new Vault();
+
+        uint256 slot2 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m._registryAddress.selector)
+            .find();
+        bytes32 loc2 = bytes32(slot2);
+        bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
+        vm.store(address(vault_m), loc2, newReg);
+
+        uint256 slot3 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m.owner.selector)
+            .find();
+        bytes32 loc3 = bytes32(slot3);
+        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
+        vm.store(address(vault_m), loc3, newOwner);
+
+
+        //TODO: abi encode this or overwrite the specific bytes probably possible in next update
+        uint256 slot4 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m.debt.selector)
+            .depth(0)
+            .find();
+        vm.store(address(vault_m), bytes32(slot4), bytes32(abi.encode(100000000)));
+        
+        vm.startPrank(address(factoryContr));
+        vault_m.liquidateVault(liquidationKeeper, address(liquidator));
+        vm.stopPrank();
+
+        // assertEq(vault_m.owner(), address(liquidator));
+    }
+
+    function testLiquidateVaultNonFactory(address liquidationKeeper) public {
+        vm.assume(
+            liquidationKeeper != address(this) &&
+                liquidationKeeper != address(0) &&
+                liquidationKeeper != address(factoryContr)
+        );
+        Vault vault_m = new Vault();
+
+        uint256 slot2 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m._registryAddress.selector)
+            .find();
+        bytes32 loc2 = bytes32(slot2);
+        bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
+        vm.store(address(vault_m), loc2, newReg);
+
+        uint256 slot3 = stdstore
+            .target(address(vault_m))
+            .sig(vault_m.owner.selector)
+            .find();
+        bytes32 loc3 = bytes32(slot3);
+        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
+        vm.store(address(vault_m), loc3, newOwner);
+
+        assertEq(vault_m.owner(), vaultOwner);
+
+        vm.expectRevert("VL: You are not the factory");
+        vault_m.liquidateVault(liquidationKeeper, address(liquidator));
+
+       assertEq(vault_m.owner(), vaultOwner);
+       
     }
 
     function depositEthAndTakeMaxCredit(uint128 amountEth)
