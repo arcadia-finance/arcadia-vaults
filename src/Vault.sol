@@ -701,7 +701,7 @@ contract Vault {
     function _setBaseCurrency(
         uint256 newBaseCurrency
     ) private {
-        debt._baseCurrency = uint8(newBaseCurrency); //Change this tio where ever it is going to be actually set
+        debt._baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
     }
 
     /** 
