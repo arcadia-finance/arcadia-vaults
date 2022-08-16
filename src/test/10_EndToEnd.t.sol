@@ -390,7 +390,8 @@ contract EndToEndTest is Test {
             address(mainRegistry),
             address(vault),
             stakeContract,
-            address(interestRateModule)
+            address(interestRateModule),
+            Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
@@ -414,8 +415,8 @@ contract EndToEndTest is Test {
                         block.number,
                         blockhash(block.number)
                     )
-                )
-            )
+                )),
+            0
         );
         proxy = Vault(proxyAddr);
 
@@ -810,7 +811,7 @@ contract EndToEndTest is Test {
         actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
         assertEq(actualValue, expectedValueSnx + expectedValueLink);
     }
-
+    
     function testReturnUsdValueEthPriceChange(
         uint128 amountEth,
         uint256 newRateEthToUsd

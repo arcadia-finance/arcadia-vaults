@@ -563,7 +563,8 @@ contract gasLiquidate_2ERC202ERC721 is Test {
             address(mainRegistry),
             address(vault),
             stakeContract,
-            address(interestRateModule)
+            address(interestRateModule),
+            Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
@@ -587,7 +588,8 @@ contract gasLiquidate_2ERC202ERC721 is Test {
                         blockhash(block.number)
                     )
                 )
-            )
+            ),
+            0
         );
         proxy = Vault(proxyAddr);
 

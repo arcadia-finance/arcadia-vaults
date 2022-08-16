@@ -6,30 +6,30 @@
  */
 pragma solidity >=0.8.0 <0.9.0;
 
-import "./utils/LogExpMath.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/IERC721.sol";
-import "./interfaces/IERC1155.sol";
-import "./interfaces/ILiquidator.sol";
-import "./interfaces/IRegistry.sol";
-import "./interfaces/IRM.sol";
-import "./interfaces/IMainRegistry.sol";
+import "../utils/LogExpMath.sol";
+import "../interfaces/IERC20.sol";
+import "../interfaces/IERC721.sol";
+import "../interfaces/IERC1155.sol";
+import "../interfaces/ILiquidator.sol";
+import "../interfaces/IRegistry.sol";
+import "../interfaces/IRM.sol";
+import "../interfaces/IMainRegistry.sol";
 
 /** 
   * @title An Arcadia Vault used to deposit a combination of all kinds of assets
   * @author Arcadia Finance
   * @notice Users can use this vault to deposit assets (ERC20, ERC721, ERC1155, ...). 
-            The vault will denominate all the pooled assets into one baseCurrency (one unit of account, like usd or eth).
+            The vault will denominate all the pooled assets into one numeraire (one unit of account, like usd or eth).
             An increase of value of one asset will offset a decrease in value of another asset.
             Users can take out a credit line against the single denominated value.
             Ensure your total value denomination remains above the liquidation threshold, or risk being liquidated!
   * @dev A vault is a smart contract that will contain multiple assets.
-         Using getValue(<baseCurrency>), the vault returns the combined total value of all (whitelisted) assets the vault contains.
+         Using getValue(<numeraire>), the vault returns the combined total value of all (whitelisted) assets the vault contains.
          Integrating this vault as means of collateral management for your own protocol that requires collateral is encouraged.
          Arcadia's vault functions will guarantee you a certain value of the vault.
          For whitelists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
-contract Vault {
+contract VaultV2 {
 
     /**
      * @dev Storage slot with the address of the current implementation.
@@ -58,18 +58,12 @@ contract Vault {
     address public _stakeContract;
     address public _irmAddress;
 
-
-
-    // ACCESS CONTROL
-    address public owner;
-    mapping(address => bool) public allowed;
-
-
     // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
     // Used by the liquidator contract for proceed claims
     uint256 public life;
 
-    bool public initialized;
+    address public owner;
+
     uint16 public vaultVersion;
 
     struct debtInfo {
@@ -78,7 +72,7 @@ contract Vault {
         uint8 _liqThres; //2 decimals precision (factor 100)
         uint64 _yearlyInterestRate; //18 decimals precision (factor 10**18)
         uint32 _lastBlock;
-        uint8 _baseCurrency;
+        uint8 _numeraire;
     }
 
     debtInfo public debt;
@@ -104,24 +98,9 @@ contract Vault {
     modifier onlyFactory() {
         require(
             msg.sender == IMainRegistry(_registryAddress).factoryAddress(),
-            "VL: You are not the factory"
+            "VL: Not factory"
         );
         _;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the factory adress.
-     */
-    modifier onlyAuthorized() {
-        require(
-            allowed[msg.sender],
-            "VL: You are not authorized"
-        );
-        _;
-    }
-
-    function authorize(address user, bool isAuthorized) external onlyOwner {
-        allowed[user] = isAuthorized;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -136,7 +115,7 @@ contract Vault {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner, "VL: You are not the owner");
+        require(msg.sender == owner, "You are not the owner");
         _;
     }
 
@@ -190,6 +169,7 @@ contract Vault {
          Costly function (156k gas)
     @param _owner The tx.origin: the sender of the 'createVault' on the factory
     @param registryAddress The 'beacon' contract to which should be looked at for external logic.
+    @param stable The contract address of the Arcadia Finance issued stablecoin, pegged to the Numeraire of the vault
     @param stakeContract The stake contract in which stablecoin can be staked. 
                          Used when syncing debt: interest in stable is minted to stakecontract.
     @param irmAddress The contract address of the InterestRateModule, which calculates the interest rate
@@ -198,6 +178,8 @@ contract Vault {
     function initialize(
         address _owner,
         address registryAddress,
+        uint256 numeraire,
+        address stable,
         address stakeContract,
         address irmAddress,
         uint16 _vaultVersion
@@ -208,6 +190,8 @@ contract Vault {
         owner = _owner;
         debt._collThres = 150;
         debt._liqThres = 110;
+        debt._numeraire = uint8(numeraire);
+        _stable = stable;
         _stakeContract = stakeContract;
         _irmAddress = irmAddress;
 
@@ -451,7 +435,7 @@ contract Vault {
                     _assetAddresses,
                     _assetIds,
                     _assetAmounts,
-                    debt._baseCurrency
+                    debt._numeraire
                 );
             uint256 vaultValue = sumElementsOfList(valuesPerCreditRating);
             uint256 minCollValue;
@@ -689,13 +673,13 @@ contract Vault {
     }
 
     /** 
-    @notice Returns the total value of the vault in a specific baseCurrency (0 = USD, 1 = ETH, more can be added)
+    @notice Returns the total value of the vault in a specific numeraire (0 = USD, 1 = ETH, more can be added)
     @dev Fetches all stored assets with their amounts on the proxy vault.
-         Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
-    @param baseCurrency BaseCurrency to return the value in. For example, 0 (USD) or 1 (ETH).
-    @return vaultValue Total value stored on the vault, expressed in baseCurrency.
+         Using a specified numeraire, fetches the value of all assets on the proxy vault in said numeraire.
+    @param numeraire Numeraire to return the value in. For example, 0 (USD) or 1 (ETH).
+    @return vaultValue Total value stored on the vault, expressed in numeraire.
   */
-    function getValue(uint8 baseCurrency)
+    function getValue(uint8 numeraire)
         public
         view
         returns (uint256 vaultValue)
@@ -709,28 +693,8 @@ contract Vault {
             assetAddresses,
             assetIds,
             assetAmounts,
-            baseCurrency
+            numeraire
         );
-    }
-
-    /** 
-    @notice Sets the baseCurrency of a vault.
-    @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
-  */
-    function setBaseCurrency(uint256 newBaseCurrency) public onlyAuthorized {
-        require(getOpenDebt() == 0, "VL: Can't change baseCurrency when openDebt > 0");
-        require(newBaseCurrency + 1 <= IMainRegistry(_registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
-        _setBaseCurrency(newBaseCurrency);
-    }
-
-    /** 
-    @notice Internal function: sets baseCurrency.
-    @param newBaseCurrency the new baseCurrency for the vault.
-  */
-    function _setBaseCurrency(
-        uint256 newBaseCurrency
-    ) private {
-        debt._baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
     }
 
     /** 
@@ -755,7 +719,7 @@ contract Vault {
                 assetAddresses,
                 assetIds,
                 assetAmounts,
-                debt._baseCurrency
+                debt._numeraire
             );
 
         _setYearlyInterestRate(ValuesPerCreditRating, minCollValue);
@@ -914,7 +878,7 @@ contract Vault {
                 _assetAddresses,
                 _assetIds,
                 _assetAmounts,
-                debt._baseCurrency
+                debt._numeraire
             );
         uint256 vaultValue = sumElementsOfList(valuesPerCreditRating);
 
@@ -960,7 +924,7 @@ contract Vault {
 
     /** 
     @notice Calculates the remaining credit the owner of the proxy vault can take out.
-    @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
+    @dev Returns the remaining credit in the numeraire in which the proxy vault is initialised.
     @return remainingCredit The remaining amount of credit a user can take, 
                             returned in the decimals of the stablecoin.
   */
@@ -969,7 +933,7 @@ contract Vault {
         view
         returns (uint256 remainingCredit)
     {
-        uint256 currentValue = getValue(debt._baseCurrency);
+        uint256 currentValue = getValue(debt._numeraire);
         uint256 openDebt = getOpenDebt();
 
         uint256 maxAllowedCredit;
@@ -1041,7 +1005,7 @@ contract Vault {
         returns (bool success)
     {
         //gas: 35 gas cheaper to not take debt into memory
-        uint256 totalValue = getValue(debt._baseCurrency);
+        uint256 totalValue = getValue(debt._numeraire);
         uint256 leftHand;
         uint256 rightHand;
 
@@ -1063,7 +1027,7 @@ contract Vault {
                 owner,
                 debt._openDebt,
                 debt._liqThres,
-                debt._baseCurrency
+                debt._numeraire
             ),
             "Failed to start auction!"
         );
@@ -1115,5 +1079,9 @@ contract Vault {
             _erc721TokenIds.length,
             _erc1155Stored.length
         );
+    }
+
+    function returnFive() external pure returns (uint256) {
+        return 5;
     }
 }

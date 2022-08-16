@@ -2224,9 +2224,10 @@ contract MainRegistryTest is Test {
         factory = new Factory();
         factory.setNewVaultInfo(
             address(mainRegistry),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
+            0x0000000000000000000000000000001234567890,
+            0x0000000000000000000000000000001234567891,
+            0x0000000000000000000000000000001234567892,
+            Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         vm.stopPrank();
@@ -2250,9 +2251,10 @@ contract MainRegistryTest is Test {
         factory = new Factory();
         factory.setNewVaultInfo(
             address(mainRegistry),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
+            0x0000000000000000000000000000001234567890,
+            0x0000000000000000000000000000001234567891,
+            0x0000000000000000000000000000001234567892,
+            Constants.upgradeProof1To2
         );
         vm.expectRevert("MR_AA: MR not set in factory");
         mainRegistry.setFactory(address(factory));
@@ -2277,9 +2279,10 @@ contract MainRegistryTest is Test {
         factory = new Factory();
         factory.setNewVaultInfo(
             address(mainRegistry),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
+            0x0000000000000000000000000000001234567890,
+            0x0000000000000000000000000000001234567891,
+            0x0000000000000000000000000000001234567892,
+            Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         mainRegistry.setFactory(address(factory));

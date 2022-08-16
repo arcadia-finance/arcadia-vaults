@@ -398,7 +398,8 @@ contract LiquidatorTest is Test {
             address(mainRegistry),
             address(vault),
             stakeContract,
-            address(interestRateModule)
+            address(interestRateModule),
+            Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
@@ -421,7 +422,8 @@ contract LiquidatorTest is Test {
                         blockhash(block.number)
                     )
                 )
-            )
+            ),
+            0
         );
         proxy = Vault(proxyAddr);
 
@@ -936,7 +938,7 @@ contract LiquidatorTest is Test {
         eth.mint(vaultOwner, amountEth * 2);
 
         vm.startPrank(vaultOwner);
-        address proxy2 = factory.createVault(45855465656845214);
+        address proxy2 = factory.createVault(45855465656845214, 0);
         eth.approve(proxy2, type(uint256).max);
         Vault(proxy2).deposit(
             assetAddresses,

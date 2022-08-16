@@ -382,9 +382,10 @@ contract OracleHubTest is Test {
         } else {
             vm.assume(
                 uint256(rateEthToUsd) <=
-                    type(uint256).max /
-                        uint256(rateSnxToEth) /
-                        10**(18 - oracleSnxToEthDecimals)
+                    type(uint256).max / 
+                    Constants.WAD *
+                    10**oracleSnxToEthDecimals /
+                    uint256(rateSnxToEth)
             );
         }
 
@@ -505,8 +506,10 @@ contract OracleHubTest is Test {
 
         vm.assume(
             uint256(rateEthToUsd) >
-                (type(uint256).max / uint256(rateSnxToEth) / Constants.WAD) *
-                    10**oracleSnxToEthDecimals
+                type(uint256).max / 
+                Constants.WAD *
+                10**oracleSnxToEthDecimals /
+                uint256(rateSnxToEth)
         );
 
         uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
@@ -655,7 +658,7 @@ contract OracleHubTest is Test {
 
         uint256 expectedRateInUsd = 0;
         uint256 expectedRateInBaseCurrency = (Constants.WAD *
-            uint256(rateSnxToEth)) / 10**(oracleSnxToEthDecimals);
+            uint256(rateSnxToEth) / 10**(oracleSnxToEthDecimals));
 
         oraclesSnxToUsd[0] = address(oracleSnxToEth);
         oraclesSnxToUsd[1] = address(oracleEthToUsd);
@@ -740,10 +743,10 @@ contract OracleHubTest is Test {
         } else {
             vm.assume(
                 uint256(rateEthToUsd) <=
-                    (type(uint256).max /
-                        uint256(rateSnxToEth) /
-                        Constants.WAD) *
-                        10**oracleSnxToEthDecimals
+                    type(uint256).max /
+                    Constants.WAD *
+                    10**oracleSnxToEthDecimals /
+                    uint256(rateSnxToEth)
             );
         }
 
@@ -864,8 +867,10 @@ contract OracleHubTest is Test {
 
         vm.assume(
             uint256(rateEthToUsd) >
-                (type(uint256).max / uint256(rateSnxToEth) / Constants.WAD) *
-                    10**oracleSnxToEthDecimals
+                type(uint256).max /
+                Constants.WAD *
+                10**oracleSnxToEthDecimals /
+                uint256(rateSnxToEth)
         );
 
         uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
