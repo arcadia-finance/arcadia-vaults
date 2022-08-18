@@ -15,13 +15,11 @@ import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
  * @notice The StandardERC20Registry stores pricing logic and basic information for ERC20 tokens for which a direct price feed exists
  * @dev No end-user should directly interact with the StandardERC20Registry, only the Main-registry, Oracle-Hub or the contract owner
  */
-contract AaveTokenSubRegistry is SubRegistry {
+contract ATokenSubRegistry is SubRegistry {
     using FixedPointMathLib for uint256;
 
     struct AssetInformation {
-        uint64 assetUnit;
-        address assetAddress;
-        address[] oracleAddresses;
+        address underlyingAssetAddress;
     }
 
     mapping(address => AssetInformation) public assetToInformation;
@@ -56,15 +54,12 @@ contract AaveTokenSubRegistry is SubRegistry {
         AssetInformation calldata assetInformation,
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
-        IOraclesHub(oracleHub).checkOracleSequence(
-            assetInformation.oracleAddresses
-        );
 
-        address assetAddress = assetInformation.assetAddress;
-        require(
-            assetInformation.assetUnit <= 1000000000000000000,
-            "SSR_SAI: Maximal 18 decimals"
-        );
+
+        assetInformation.underlyingAssetAddress = IAToken(getValueInput.assetAddress).UNDERLYING_ASSET_ADDRESS()
+
+        require(IMainRegistry(mainRegistry).batchIsWhiteListed(tokens, new uint256[](2)), "AV2_SAI: NOT_WHITELISTED");
+        
         if (!inSubRegistry[assetAddress]) {
             inSubRegistry[assetAddress] = true;
             assetsInSubRegistry.push(assetAddress);
@@ -94,7 +89,6 @@ contract AaveTokenSubRegistry is SubRegistry {
         return (
             assetToInformation[asset].assetUnit,
             assetToInformation[asset].assetAddress,
-            assetToInformation[asset].oracleAddresses
         );
     }
 
@@ -144,8 +138,12 @@ contract AaveTokenSubRegistry is SubRegistry {
         uint256 rateInUsd;
         uint256 rateInBaseCurrency;
 
+        //Get underlying asset address
+        address underlying =  IAToken(getValueInput.assetAddress).UNDERLYING_ASSET_ADDRESS()
+
+        //Get rate 
         (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[getValueInput.assetAddress].oracleAddresses,
+            assetToInformation[underlying].oracleAddresses,
             getValueInput.baseCurrency
         );
 
@@ -161,4 +159,5 @@ contract AaveTokenSubRegistry is SubRegistry {
             );
         }
     }
+
 }
