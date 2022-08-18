@@ -7,6 +7,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "./AbstractSubRegistry.sol";
+import "../interfaces/IAToken.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
 /**
@@ -19,7 +20,10 @@ contract ATokenSubRegistry is SubRegistry {
     using FixedPointMathLib for uint256;
 
     struct AssetInformation {
+        uint64 assetUnit;
+        address assetAddress;
         address underlyingAssetAddress;
+        address[] underlyingAssetOracleAddresses;
     }
 
     mapping(address => AssetInformation) public assetToInformation;
@@ -54,11 +58,26 @@ contract ATokenSubRegistry is SubRegistry {
         AssetInformation calldata assetInformation,
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
+        IOraclesHub(oracleHub).checkOracleSequence(
+            assetInformation.underlyingAssetOracleAddresses
+        );
 
+        address assetAddress = assetInformation.assetAddress;
 
-        assetInformation.underlyingAssetAddress = IAToken(getValueInput.assetAddress).UNDERLYING_ASSET_ADDRESS()
+      address[] memory tokens = new address[](1);
+      tokens[0] = assetInformation.underlyingAssetAddress;
 
-        require(IMainRegistry(mainRegistry).batchIsWhiteListed(tokens, new uint256[](2)), "AV2_SAI: NOT_WHITELISTED");
+    //   require(
+    //         IMainRegistry(mainRegistry).batchIsWhiteListed(tokens,
+    //         new uint256[](1)),
+    //         "ASR_SAI: NOT_WHITELISTED"
+    //     );
+
+        require(
+            assetInformation.assetUnit <= 1000000000000000000,
+            "ASR_SAI: Maximal 18 decimals"
+        );
+  
         
         if (!inSubRegistry[assetAddress]) {
             inSubRegistry[assetAddress] = true;
@@ -83,12 +102,15 @@ contract ATokenSubRegistry is SubRegistry {
         returns (
             uint64,
             address,
+            address,
             address[] memory
         )
     {
         return (
             assetToInformation[asset].assetUnit,
             assetToInformation[asset].assetAddress,
+            assetToInformation[asset].underlyingAssetAddress,
+            assetToInformation[asset].underlyingAssetOracleAddresses
         );
     }
 
@@ -139,11 +161,11 @@ contract ATokenSubRegistry is SubRegistry {
         uint256 rateInBaseCurrency;
 
         //Get underlying asset address
-        address underlying =  IAToken(getValueInput.assetAddress).UNDERLYING_ASSET_ADDRESS()
+        // address underlying =  IAToken(getValueInput.assetAddress).UNDERLYING_ASSET_ADDRESS();
 
-        //Get rate 
+        //Get rate -> 
         (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[underlying].oracleAddresses,
+            assetToInformation[getValueInput.assetAddress].underlyingAssetOracleAddresses,
             getValueInput.baseCurrency
         );
 

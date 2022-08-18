@@ -212,6 +212,7 @@ contract MainRegistry is Ownable {
         assetToSubRegistry[assetAddress] = msg.sender;
 
         uint256 assetCreditRatingsLength = assetCreditRatings.length;
+
         require(
             assetCreditRatingsLength == baseCurrencyCounter ||
                 assetCreditRatingsLength == 0,
@@ -306,7 +307,7 @@ contract MainRegistry is Ownable {
         require(
             assetCreditRatingsLength == assetsInMainRegistry.length ||
                 assetCreditRatingsLength == 0,
-            "MR_AN: lenght"
+            "MR_AN: length"
         );
         for (uint256 i; i < assetCreditRatingsLength; ) {
             require(
