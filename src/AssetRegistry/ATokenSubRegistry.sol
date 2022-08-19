@@ -159,10 +159,6 @@ contract ATokenSubRegistry is SubRegistry {
     {
         uint256 rateInUsd;
         uint256 rateInBaseCurrency;
-
-        //Get underlying asset address
-        // address underlying =  IAToken(getValueInput.assetAddress).UNDERLYING_ASSET_ADDRESS();
-
         //Get rate -> 
         (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
             assetToInformation[getValueInput.assetAddress].underlyingAssetOracleAddresses,
