@@ -15,14 +15,14 @@ import { IERC4626 } from "../interfaces/IERC4626.sol";
  * @author Arcadia Finance
  * @notice The StandardERC4626Registry stores pricing logic and basic information for ERC4626 tokens for which the underlying assets have direct price feed.
  * @dev No end-user should directly interact with the StandardERC4626Registry, only the Main-registry, Oracle-Hub or the contract owner */
-contract StandardERC4626Registry is SubRegistry {
+contract StandardERC4626SubRegistry is SubRegistry {
     using FixedPointMathLib for uint256;
 
     struct AssetInformation {
         uint64 assetUnit;
         address assetAddress;
         address underlyingAssetAddress;
-        address[] underlyingOracleAddresses;
+        address[] underlyingAssetOracleAddresses;
     }
 
     mapping(address => AssetInformation) public assetToInformation;
@@ -42,7 +42,7 @@ contract StandardERC4626Registry is SubRegistry {
      *                         - assetUnit: The unit of the asset, equal to 10 to the power of the number of decimals of the asset
      *                         - assetAddress: The contract address of the asset
      *                         - underlyingAssetAddress: The contract address of the underlying asset
-     *                         - underlyingOracleAddresses: An array of addresses of oracle contracts, to price the underlying asset in USD
+     *                         - underlyingAssetOracleAddresses: An array of addresses of oracle contracts, to price the underlying asset in USD
      * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencies.
      * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
      *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies is
@@ -59,7 +59,7 @@ contract StandardERC4626Registry is SubRegistry {
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
         IOraclesHub(oracleHub).checkOracleSequence(
-            assetInformation.underlyingOracleAddresses
+            assetInformation.underlyingAssetOracleAddresses
         );
 
         address assetAddress = assetInformation.assetAddress;
@@ -83,7 +83,7 @@ contract StandardERC4626Registry is SubRegistry {
      * @return assetDecimals The number of decimals of the asset
      * @return assetAddress The Token address of the asset
      * @return underlyingAssetAddress The Token address of the underlying asset
-     * @return underlyingOracleAddresses The list of addresses of the oracles to get the exchange rate of the underlying asset in USD
+     * @return underlyingAssetOracleAddresses The list of addresses of the oracles to get the exchange rate of the underlying asset in USD
      */
     function getAssetInformation(address asset)
         external
@@ -99,7 +99,7 @@ contract StandardERC4626Registry is SubRegistry {
             assetToInformation[asset].assetUnit,
             assetToInformation[asset].assetAddress,
             assetToInformation[asset].underlyingAssetAddress,
-            assetToInformation[asset].underlyingOracleAddresses
+            assetToInformation[asset].underlyingAssetOracleAddresses
         );
     }
 
@@ -150,7 +150,7 @@ contract StandardERC4626Registry is SubRegistry {
         uint256 rateInBaseCurrency;
 
         (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[getValueInput.assetAddress].underlyingOracleAddresses,
+            assetToInformation[getValueInput.assetAddress].underlyingAssetOracleAddresses,
             getValueInput.baseCurrency
         );
 

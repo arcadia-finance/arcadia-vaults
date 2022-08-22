@@ -306,7 +306,7 @@ contract MainRegistry is Ownable {
         require(
             assetCreditRatingsLength == assetsInMainRegistry.length ||
                 assetCreditRatingsLength == 0,
-            "MR_AN: lenght"
+            "MR_AN: length"
         );
         for (uint256 i; i < assetCreditRatingsLength; ) {
             require(
