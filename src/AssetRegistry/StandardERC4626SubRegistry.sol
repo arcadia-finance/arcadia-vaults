@@ -8,6 +8,7 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "./AbstractSubRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import { IERC4626 } from "../interfaces/IERC4626.sol";
 
 /**
  * @title Sub-registry for Standard ERC4626 tokens
