@@ -13,7 +13,7 @@ import { IERC4626 } from "../interfaces/IERC4626.sol";
 /**
  * @title Sub-registry for Standard ERC4626 tokens
  * @author Arcadia Finance
- * @notice The StandardERC4626Registry stores pricing logic and basic information for ERC20 tokens for which a direct price feed exists
+ * @notice The StandardERC4626Registry stores pricing logic and basic information for ERC4626 tokens for which the underlying assets have direct price feed.
  * @dev No end-user should directly interact with the StandardERC4626Registry, only the Main-registry, Oracle-Hub or the contract owner */
 contract StandardERC4626Registry is SubRegistry {
     using FixedPointMathLib for uint256;
@@ -41,7 +41,8 @@ contract StandardERC4626Registry is SubRegistry {
      * @param assetInformation A Struct with information about the asset
      *                         - assetUnit: The unit of the asset, equal to 10 to the power of the number of decimals of the asset
      *                         - assetAddress: The contract address of the asset
-     *                         - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
+     *                         - underlyingAssetAddress: The contract address of the underlying asset
+     *                         - underlyingOracleAddresses: An array of addresses of oracle contracts, to price the underlying asset in USD
      * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencies.
      * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
      *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies is
@@ -81,7 +82,8 @@ contract StandardERC4626Registry is SubRegistry {
      * @param asset The Token address of the asset
      * @return assetDecimals The number of decimals of the asset
      * @return assetAddress The Token address of the asset
-     * @return oracleAddresses The list of addresses of the oracles to get the exchange rate of the asset in USD
+     * @return underlyingAssetAddress The Token address of the underlying asset
+     * @return underlyingOracleAddresses The list of addresses of the oracles to get the exchange rate of the underlying asset in USD
      */
     function getAssetInformation(address asset)
         external
@@ -104,7 +106,7 @@ contract StandardERC4626Registry is SubRegistry {
     /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
      * @param assetAddress The address of the asset
-     * @dev Since ERC20 tokens have no Id, the Id should be set to 0
+     * @dev Since ERC4626 tokens have no Id, the Id should be set to 0
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
     function isWhiteListed(address assetAddress, uint256)
@@ -124,8 +126,8 @@ contract StandardERC4626Registry is SubRegistry {
      * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency
      * @param getValueInput A Struct with all the information neccessary to get the value of an asset
      *                      - assetAddress: The contract address of the asset
-     *                      - assetId: Since ERC20 tokens have no Id, the Id should be set to 0
-     *                      - assetAmount: The Amount of tokens, ERC20 tokens can have any Decimals precision smaller than 18.
+     *                      - assetId: Since ERC4626 tokens have no Id, the Id should be set to 0
+     *                      - assetAmount: The Amount of Shares, ERC4626 tokens can have any Decimals precision smaller than 18.
      *                      - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
@@ -152,13 +154,14 @@ contract StandardERC4626Registry is SubRegistry {
             getValueInput.baseCurrency
         );
 
+        uint256 assetAmount = IERC4626(getValueInput.assetAddress).convertToAssets(getValueInput.assetAmount);
         if (rateInBaseCurrency > 0) {
-            valueInBaseCurrency = (IERC4626(getValueInput.assetAddress).convertToAssets(getValueInput.assetAmount)).mulDivDown(
+            valueInBaseCurrency = assetAmount.mulDivDown(
                 rateInBaseCurrency,
                 assetToInformation[getValueInput.assetAddress].assetUnit
             );
         } else {
-            valueInUsd = (getValueInput.assetAmount).mulDivDown(
+            valueInUsd = assetAmount.mulDivDown(
                 rateInUsd,
                 assetToInformation[getValueInput.assetAddress].assetUnit
             );
