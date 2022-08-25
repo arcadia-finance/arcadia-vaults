@@ -41,10 +41,7 @@ contract ATokenSubRegistry is SubRegistry {
 
     /**
      * @notice Adds a new asset to the ATokenSubRegistry, or overwrites an existing asset.
-     * @param assetInformation A Struct with information about the asset
-     *                         - assetUnit: The unit of the asset, equal to 10 to the power of the number of decimals of the asset
-     *                         - assetAddress: The contract address of the asset
-     *                         - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
+     * @param assetAddress The contract address of the asset
      * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencies.
      * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
      *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies is
@@ -57,24 +54,26 @@ contract ATokenSubRegistry is SubRegistry {
      * @dev Assets can't have more than 18 decimals.
      */
     function setAssetInformation(
-        AssetInformation calldata assetInformation,
+        address assetAddress,
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
-        (uint64 assetUnits,
+        address underlyingAddress = IAToken(assetAddress).UNDERLYING_ASSET_ADDRESS();
+        (
+            uint64 assetUnit,
             address underlyingAssetAddress,
-            address[] memory underlyingAssetsOracleAddresses) = ISubRegistry(IMainRegistry(mainRegistry).assetToSubRegistry(assetInformation.assetAddress)).getAssetInformation(assetInformation.assetAddress);
+            address[] memory underlyingAssetOracleAddresses
+            ) = ISubRegistry(IMainRegistry(mainRegistry).assetToSubRegistry(underlyingAddress)).getAssetInformation(underlyingAddress);
 
         IOraclesHub(oracleHub).checkOracleSequence(
-            assetInformation.underlyingAssetOracleAddresses
+            underlyingAssetOracleAddresses
         );
 
-      address assetAddress = assetInformation.assetAddress;
 
       address[] memory tokens = new address[](1);
-      tokens[0] = assetInformation.underlyingAssetAddress;
+      tokens[0] = underlyingAssetAddress;
 
         require(
-            assetInformation.assetUnit <= 1000000000000000000,
+            assetUnit <= 1000000000000000000,
             "ASR_SAI: Maximal 18 decimals"
         );
   
@@ -83,10 +82,10 @@ contract ATokenSubRegistry is SubRegistry {
             inSubRegistry[assetAddress] = true;
             assetsInSubRegistry.push(assetAddress);
         }
-        assetToInformation[assetAddress] = assetInformation;
-        assetToInformation[assetAddress].assetUnit = assetUnits;
+        assetToInformation[assetAddress].assetAddress = assetAddress;
+        assetToInformation[assetAddress].assetUnit = assetUnit;
         assetToInformation[assetAddress].underlyingAssetAddress = underlyingAssetAddress;
-        assetToInformation[assetAddress].underlyingAssetOracleAddresses = underlyingAssetsOracleAddresses;
+        assetToInformation[assetAddress].underlyingAssetOracleAddresses = underlyingAssetOracleAddresses;
         isAssetAddressWhiteListed[assetAddress] = true;
         IMainRegistry(mainRegistry).addAsset(assetAddress, assetCreditRatings);
     }

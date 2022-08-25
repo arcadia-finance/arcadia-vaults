@@ -9,9 +9,11 @@ pragma solidity >0.8.10;
 import "../../lib/forge-std/src/Test.sol";
 
 import "../mockups/ERC20SolmateMock.sol";
+import "../mockups/ATokenMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../AssetRegistry/aTokenSubRegistry.sol";
+import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
@@ -22,17 +24,12 @@ contract aTokenSubRegistryTest is Test {
     OracleHub private oracleHub;
     MainRegistry private mainRegistry;
 
-    ERC20Mock private aEth;
-    ERC20Mock private aLink;
-    ERC20Mock private aSnx;
     ERC20Mock private eth;
-    ERC20Mock private link;
-    ERC20Mock private snx;
+    ATokenMock private aEth;
 
     ArcadiaOracle private oracleEthToUsd;
-    ArcadiaOracle private oracleLinkToUsd;
-    ArcadiaOracle private oracleSnxToEth;
 
+    StandardERC20Registry private standardERC20SubRegistry;
     ATokenSubRegistry private aTokenSubRegistry;
 
     address private creatorAddress = address(1);
@@ -40,26 +37,20 @@ contract aTokenSubRegistryTest is Test {
     address private oracleOwner = address(3);
 
     uint256 rateEthToUsd = 1850 * 10**Constants.oracleEthToUsdDecimals;
-    uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
-    uint256 rateSnxToEth = 1600000000000000;
 
-    address[] public oracleAEthToUsdArr = new address[](1);
-    address[] public oracleALinkToUsdArr = new address[](1);
-    address[] public oracleASnxToEthEthToUsd = new address[](2);
+    address[] public oracleEthToUsdArr = new address[](1);
 
     uint256[] emptyList = new uint256[](0);
 
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture =
-        new ArcadiaOracleFixture(oracleOwner);
+    new ArcadiaOracleFixture(oracleOwner);
 
     //this is a before
     constructor() {
         vm.startPrank(tokenCreatorAddress);
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        link = new ERC20Mock("LINK Mock", "mLink", uint8(Constants.linkDecimals));
-        aEth = new ERC20Mock("aETH Mock", "maETH", uint8(Constants.ethDecimals));
-        aLink = new ERC20Mock("aLink Mock", "maLink", uint8(Constants.linkDecimals));
+        aEth = new ATokenMock   (address(eth), "aETH Mock", "maETH");
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -81,16 +72,6 @@ contract aTokenSubRegistryTest is Test {
             "ETH / USD",
             rateEthToUsd
         );
-        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleEthToUsdDecimals),
-            "LINK / USD",
-            rateLinkToUsd
-        );
-        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWmaycToUsdDecimals),
-            "SNX / ETH",
-            rateSnxToEth
-        );
 
         vm.startPrank(creatorAddress);
         oracleHub.addOracle(
@@ -104,35 +85,9 @@ contract aTokenSubRegistryTest is Test {
                 baseAssetIsBaseCurrency: true
             })
         );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleLinkToUsdUnit), //Should be same right?
-                baseAssetBaseCurrency: 0,
-                quoteAsset: "LINK",
-                baseAsset: "USD",
-                oracleAddress: address(oracleLinkToUsd),
-                quoteAssetAddress: address(link),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-
-          oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetBaseCurrency: 1,
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
-            })
-        );
         vm.stopPrank();
 
-        oracleAEthToUsdArr[0] = address(oracleEthToUsd);
-        oracleALinkToUsdArr[0] = address(oracleLinkToUsd);
-        oracleASnxToEthEthToUsd[0] = address(oracleSnxToEth);
-        oracleASnxToEthEthToUsd[1] = address(oracleEthToUsd);
+        oracleEthToUsdArr[0] = address(oracleEthToUsd);
     }
 
     //this is a before each
@@ -162,75 +117,57 @@ contract aTokenSubRegistryTest is Test {
             emptyList
         );
 
+        standardERC20SubRegistry = new StandardERC20Registry(
+            address(mainRegistry),
+            address(oracleHub)
+        );
+
         aTokenSubRegistry = new ATokenSubRegistry(
             address(mainRegistry),
             address(oracleHub)
         );
-        mainRegistry.addSubRegistry(address(aTokenSubRegistry));
-        vm.stopPrank();
-    }
 
-    function testNonOwnerAddsAsset(address unprivilegedAddress) public {
-        vm.assume(unprivilegedAddress != creatorAddress);
-        vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("Ownable: caller is not the owner");
-        aTokenSubRegistry.setAssetInformation(
-            ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
+        mainRegistry.addSubRegistry(address(standardERC20SubRegistry));
+        mainRegistry.addSubRegistry(address(aTokenSubRegistry));
+
+        standardERC20SubRegistry.setAssetInformation(
+            StandardERC20Registry.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10**Constants.ethDecimals),
-                assetAddress: address(aEth)
+                assetAddress: address(eth)
             }),
             emptyList
         );
         vm.stopPrank();
     }
 
-    function testOwnerAddsAssetWithMoreThan18Decimals() public {
-        vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatings = new uint256[](2);
-        assetCreditRatings[0] = 0;
-        emit log_named_uint("acrLength", assetCreditRatings.length);
-        emit log_named_uint("baseCurrencyCounter", mainRegistry.baseCurrencyCounter());
-        vm.expectRevert("ASR_SAI: Maximal 18 decimals");
+    function testRevert_NonOwnerAddsAsset(address unprivilegedAddress) public {
+        vm.assume(unprivilegedAddress != creatorAddress);
+        vm.startPrank(unprivilegedAddress);
+        vm.expectRevert("Ownable: caller is not the owner");
         aTokenSubRegistry.setAssetInformation(
-        ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
-                assetUnit: uint64(10**19),
-                assetAddress: address(aEth)
-            }),
-            assetCreditRatings
+            address(aEth),
+            emptyList
         );
         vm.stopPrank();
     }
 
-    function testOwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+    function testRevert_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-                aTokenSubRegistry.setAssetInformation(
-                ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
-                assetAddress: address(aEth)
-            }),
+        aTokenSubRegistry.setAssetInformation(
+            address(aEth),
             assetCreditRatings
         );
         vm.stopPrank();
     }
 
-    function testOwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
         aTokenSubRegistry.setAssetInformation(
-            ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
-                assetAddress: address(aEth)
-            }),
+            address(aEth),
             emptyList
         );
         vm.stopPrank();
@@ -238,18 +175,13 @@ contract aTokenSubRegistryTest is Test {
         assertTrue(aTokenSubRegistry.inSubRegistry(address(aEth)));
     }
 
-    function testOwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_OwnerAddsAssetWithFullListCreditRatings() public {
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
         aTokenSubRegistry.setAssetInformation(
-            ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
-                assetAddress: address(aEth)
-            }),
+            address(aEth),
             assetCreditRatings
         );
         vm.stopPrank();
@@ -257,24 +189,14 @@ contract aTokenSubRegistryTest is Test {
         assertTrue(aTokenSubRegistry.inSubRegistry(address(aEth)));
     }
 
-    function testOwnerOverwritesExistingAsset() public {
+    function testSuccess_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
         aTokenSubRegistry.setAssetInformation(
-            ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
-                assetAddress: address(aEth)
-            }),
+            address(aEth),
             emptyList
         );
         aTokenSubRegistry.setAssetInformation(
-            ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
-                assetAddress: address(aEth)
-            }),
+            address(aEth),
             emptyList
         );
         vm.stopPrank();
@@ -282,23 +204,19 @@ contract aTokenSubRegistryTest is Test {
         assertTrue(aTokenSubRegistry.inSubRegistry(address(aEth)));
     }
 
-    function testIsWhitelistedPositive() public {
+    function testSuccess_IsWhitelistedPositive() public {
         vm.startPrank(creatorAddress);
+
         aTokenSubRegistry.setAssetInformation(
-           ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
-                assetAddress: address(aEth)
-            }),
-            emptyList
+        address(aEth),
+        emptyList
         );
         vm.stopPrank();
 
         assertTrue(aTokenSubRegistry.isWhiteListed(address(aEth), 0));
     }
 
-    function testIsWhitelistedNegative(address randomAsset) public {
+    function testSuccess_IsWhitelistedNegative(address randomAsset) public {
         assertTrue(!aTokenSubRegistry.isWhiteListed(randomAsset, 0));
     }
 
@@ -306,12 +224,7 @@ contract aTokenSubRegistryTest is Test {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
         aTokenSubRegistry.setAssetInformation(
-         ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
-                assetAddress: address(aEth)
-            }),
+         address(aEth),
             emptyList
         );
         vm.stopPrank();
@@ -331,82 +244,6 @@ contract aTokenSubRegistryTest is Test {
                 baseCurrency: 0
             });
 
-        (
-            uint256 actualValueInUsd,
-            uint256 actualValueInBaseCurrency
-        ) = aTokenSubRegistry.getValue(getValueInput);
-
-        assertEq(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
-    }
-
-    function testReturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountSnx)
-        public
-    {
-        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
-        vm.startPrank(creatorAddress);
-        aTokenSubRegistry.setAssetInformation(
-         ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(snx),
-                underlyingAssetOracleAddresses: oracleASnxToEthEthToUsd,
-                assetUnit: uint64(10**Constants.snxDecimals),
-                assetAddress: address(aSnx)
-            }),
-            emptyList
-        );
-        vm.stopPrank();
-
-        uint256 expectedValueInUsd = 0;
-        uint256 expectedValueInBaseCurrency = (amountSnx *
-            rateSnxToEth *
-            Constants.WAD) /
-            10**(Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
-
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(aSnx),
-                assetId: 0,
-                assetAmount: amountSnx,
-                baseCurrency: 1
-            });
-        (
-            uint256 actualValueInUsd,
-            uint256 actualValueInBaseCurrency
-        ) = aTokenSubRegistry.getValue(getValueInput);
-
-        assertEq(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
-    }
-
-    function testReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountLink)
-        public
-    {
-        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
-        vm.startPrank(creatorAddress);
-        aTokenSubRegistry.setAssetInformation(
-         ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(link),
-                underlyingAssetOracleAddresses: oracleALinkToUsdArr,
-                assetUnit: uint64(10**Constants.linkDecimals),
-                assetAddress: address(aLink)
-            }),
-            emptyList
-        );
-        vm.stopPrank();
-
-        uint256 expectedValueInUsd = (amountLink *
-            rateLinkToUsd *
-            Constants.WAD) /
-            10**(Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
-        uint256 expectedValueInBaseCurrency = 0;
-
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(aLink),
-                assetId: 0,
-                assetAmount: amountLink,
-                baseCurrency: 1
-            });
         (
             uint256 actualValueInUsd,
             uint256 actualValueInBaseCurrency
@@ -440,12 +277,7 @@ contract aTokenSubRegistryTest is Test {
 
         vm.startPrank(creatorAddress);
         aTokenSubRegistry.setAssetInformation(
-                  ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
-                assetAddress: address(aEth)
-            }),
+                  address(aEth),
             emptyList
         );
         vm.stopPrank();
@@ -492,12 +324,7 @@ contract aTokenSubRegistryTest is Test {
 
         vm.startPrank(creatorAddress);
         aTokenSubRegistry.setAssetInformation(
-               ATokenSubRegistry.AssetInformation({
-                underlyingAssetAddress: address(eth),
-                underlyingAssetOracleAddresses: oracleAEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
-                assetAddress: address(aEth)
-            }),
+               address(aEth),
             emptyList
         );
         vm.stopPrank();
