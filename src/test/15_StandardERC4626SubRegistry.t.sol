@@ -25,7 +25,7 @@ contract standardERC4626SubRegistryTest is Test {
     MainRegistry private mainRegistry;
 
     ERC20Mock private eth;
-    MockERC4626 private aEth;
+    MockERC4626 private ybEth;
 
     ArcadiaOracle private oracleEthToUsd;
 
@@ -50,7 +50,7 @@ contract standardERC4626SubRegistryTest is Test {
     constructor() {
         vm.startPrank(tokenCreatorAddress);
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        aEth = new MockERC4626(eth, "aETH Mock", "maETH");
+        ybEth = new MockERC4626(eth, "ybETH Mock", "mybETH");
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -146,7 +146,7 @@ contract standardERC4626SubRegistryTest is Test {
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
         standardERC4626SubRegistry.setAssetInformation(
-            address(aEth),
+            address(ybEth),
             emptyList
         );
         vm.stopPrank();
@@ -158,7 +158,7 @@ contract standardERC4626SubRegistryTest is Test {
         assetCreditRatings[0] = 0;
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
         standardERC4626SubRegistry.setAssetInformation(
-            address(aEth),
+            address(ybEth),
             assetCreditRatings
         );
         vm.stopPrank();
@@ -167,12 +167,12 @@ contract standardERC4626SubRegistryTest is Test {
     function testSuccess_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
         standardERC4626SubRegistry.setAssetInformation(
-            address(aEth),
+            address(ybEth),
             emptyList
         );
         vm.stopPrank();
 
-        assertTrue(standardERC4626SubRegistry.inSubRegistry(address(aEth)));
+        assertTrue(standardERC4626SubRegistry.inSubRegistry(address(ybEth)));
     }
 
     function testSuccess_OwnerAddsAssetWithFullListCreditRatings() public {
@@ -181,39 +181,39 @@ contract standardERC4626SubRegistryTest is Test {
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
         standardERC4626SubRegistry.setAssetInformation(
-            address(aEth),
+            address(ybEth),
             assetCreditRatings
         );
         vm.stopPrank();
 
-        assertTrue(standardERC4626SubRegistry.inSubRegistry(address(aEth)));
+        assertTrue(standardERC4626SubRegistry.inSubRegistry(address(ybEth)));
     }
 
     function testSuccess_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
         standardERC4626SubRegistry.setAssetInformation(
-            address(aEth),
+            address(ybEth),
             emptyList
         );
         standardERC4626SubRegistry.setAssetInformation(
-            address(aEth),
+            address(ybEth),
             emptyList
         );
         vm.stopPrank();
 
-        assertTrue(standardERC4626SubRegistry.inSubRegistry(address(aEth)));
+        assertTrue(standardERC4626SubRegistry.inSubRegistry(address(ybEth)));
     }
 
     function testSuccess_IsWhitelistedPositive() public {
         vm.startPrank(creatorAddress);
 
         standardERC4626SubRegistry.setAssetInformation(
-        address(aEth),
+        address(ybEth),
         emptyList
         );
         vm.stopPrank();
 
-        assertTrue(standardERC4626SubRegistry.isWhiteListed(address(aEth), 0));
+        assertTrue(standardERC4626SubRegistry.isWhiteListed(address(ybEth), 0));
     }
 
     function testSuccess_IsWhitelistedNegative(address randomAsset) public {
@@ -224,7 +224,7 @@ contract standardERC4626SubRegistryTest is Test {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
         standardERC4626SubRegistry.setAssetInformation(
-         address(aEth),
+         address(ybEth),
             emptyList
         );
         vm.stopPrank();
@@ -238,7 +238,7 @@ contract standardERC4626SubRegistryTest is Test {
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
-                assetAddress: address(aEth),
+                assetAddress: address(ybEth),
                 assetId: 0,
                 assetAmount: amountEth,
                 baseCurrency: 0
@@ -277,7 +277,7 @@ contract standardERC4626SubRegistryTest is Test {
 
         vm.startPrank(creatorAddress);
         standardERC4626SubRegistry.setAssetInformation(
-                  address(aEth),
+                  address(ybEth),
             emptyList
         );
         vm.stopPrank();
@@ -289,7 +289,7 @@ contract standardERC4626SubRegistryTest is Test {
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
-                assetAddress: address(aEth),
+                assetAddress: address(ybEth),
                 assetId: 0,
                 assetAmount: amountEth,
                 baseCurrency: 0
@@ -324,14 +324,14 @@ contract standardERC4626SubRegistryTest is Test {
 
         vm.startPrank(creatorAddress);
         standardERC4626SubRegistry.setAssetInformation(
-               address(aEth),
+               address(ybEth),
             emptyList
         );
         vm.stopPrank();
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
-                assetAddress: address(aEth),
+                assetAddress: address(ybEth),
                 assetId: 0,
                 assetAmount: amountEth,
                 baseCurrency: 0
