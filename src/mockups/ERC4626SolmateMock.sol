@@ -1,34 +1,27 @@
-// SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import "../../lib/solmate/src/mixins/ERC4626.sol";
+import {ERC20} from "../../lib/solmate/src/tokens/ERC20.sol";
+import {ERC4626} from "../../lib/solmate/src/mixins/ERC4626.sol";
 
-contract ERC4626Mock is ERC4626 {
+contract MockERC4626 is ERC4626 {
+    uint256 public beforeWithdrawHookCalledCounter = 0;
+    uint256 public afterDepositHookCalledCounter = 0;
+
     constructor(
-        ERC20 asset,
-        string memory name,
-        string memory symbol
-    ) ERC20(name, symbol,asset.decimals()) {
-        asset = asset;
+        ERC20 _underlying,
+        string memory _name,
+        string memory _symbol
+    ) ERC4626(_underlying, _name, _symbol) {}
+
+    function totalAssets() public view override returns (uint256) {
+        return ERC20(asset).balanceOf(address(this));
     }
 
-
-   
-}
-
-// mock class using ERC20
-contract ERC4626Mock is ERC4626 {
-    constructor(
-        IERC20Metadata asset,
-        string memory name,
-        string memory symbol
-    ) ERC20(name, symbol) ERC4626(asset) {}
-
-    function mockMint(address account, uint256 amount) public {
-        _mint(account, amount);
+    function beforeWithdraw(uint256, uint256) internal override {
+        beforeWithdrawHookCalledCounter++;
     }
 
-    function mockBurn(address account, uint256 amount) public {
-        _burn(account, amount);
+    function afterDeposit(uint256, uint256) internal override {
+        afterDepositHookCalledCounter++;
     }
 }
