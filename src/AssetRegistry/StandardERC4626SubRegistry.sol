@@ -7,8 +7,10 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "./AbstractSubRegistry.sol";
+import "../interfaces/IERC4626.sol";
+import "../interfaces/ISubRegistry.sol";
+import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
-import { IERC4626 } from "../interfaces/IERC4626.sol";
 
 /**
  * @title Sub-registry for Standard ERC4626 tokens
@@ -37,12 +39,8 @@ contract StandardERC4626SubRegistry is SubRegistry {
     {}
 
     /**
-     * @notice Adds a new asset to the StandardERC4626Registry, or overwrites an existing asset.
-     * @param assetInformation A Struct with information about the asset
-     *                         - assetUnit: The unit of the asset, equal to 10 to the power of the number of decimals of the asset
-     *                         - assetAddress: The contract address of the asset
-     *                         - underlyingAssetAddress: The contract address of the underlying asset
-     *                         - underlyingAssetOracleAddresses: An array of addresses of oracle contracts, to price the underlying asset in USD
+     * @notice Adds a new asset to the ATokenSubRegistry, or overwrites an existing asset.
+     * @param assetAddress The contract address of the asset
      * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencies.
      * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
      *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies is
@@ -55,23 +53,38 @@ contract StandardERC4626SubRegistry is SubRegistry {
      * @dev Assets can't have more than 18 decimals.
      */
     function setAssetInformation(
-        AssetInformation calldata assetInformation,
+        address assetAddress,
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
+        address underlyingAddress = address(IERC4626(assetAddress).asset());
+        (
+            uint64 assetUnit,
+            address underlyingAssetAddress,
+            address[] memory underlyingAssetOracleAddresses
+            ) = ISubRegistry(IMainRegistry(mainRegistry).assetToSubRegistry(underlyingAddress)).getAssetInformation(underlyingAddress);
+
         IOraclesHub(oracleHub).checkOracleSequence(
-            assetInformation.underlyingAssetOracleAddresses
+            underlyingAssetOracleAddresses
         );
 
-        address assetAddress = assetInformation.assetAddress;
+
+      address[] memory tokens = new address[](1);
+      tokens[0] = underlyingAssetAddress;
+
         require(
-            assetInformation.assetUnit <= 1000000000000000000,
-            "SR_SAI: Maximal 18 decimals"
+            assetUnit <= 1000000000000000000,
+            "ASR_SAI: Maximal 18 decimals"
         );
+  
+        
         if (!inSubRegistry[assetAddress]) {
             inSubRegistry[assetAddress] = true;
             assetsInSubRegistry.push(assetAddress);
         }
-        assetToInformation[assetAddress] = assetInformation;
+        assetToInformation[assetAddress].assetAddress = assetAddress;
+        assetToInformation[assetAddress].assetUnit = assetUnit;
+        assetToInformation[assetAddress].underlyingAssetAddress = underlyingAssetAddress;
+        assetToInformation[assetAddress].underlyingAssetOracleAddresses = underlyingAssetOracleAddresses;
         isAssetAddressWhiteListed[assetAddress] = true;
         IMainRegistry(mainRegistry).addAsset(assetAddress, assetCreditRatings);
     }

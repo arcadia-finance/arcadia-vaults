@@ -31,4 +31,6 @@ interface IMainRegistry {
         );
 
     function baseCurrencyCounter() external view returns (uint256);
+
+    function assetToSubRegistry(address) external view returns (address);
 }
