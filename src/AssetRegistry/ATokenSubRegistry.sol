@@ -8,6 +8,8 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "./AbstractSubRegistry.sol";
 import "../interfaces/IAToken.sol";
+import "../interfaces/ISubRegistry.sol";
+import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
 /**
@@ -58,11 +60,15 @@ contract ATokenSubRegistry is SubRegistry {
         AssetInformation calldata assetInformation,
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
+        (uint64 assetUnits,
+            address underlyingAssetAddress,
+            address[] memory underlyingAssetsOracleAddresses) = ISubRegistry(IMainRegistry(mainRegistry).assetToSubRegistry(assetInformation.assetAddress)).getAssetInformation(assetInformation.assetAddress);
+
         IOraclesHub(oracleHub).checkOracleSequence(
             assetInformation.underlyingAssetOracleAddresses
         );
 
-        address assetAddress = assetInformation.assetAddress;
+      address assetAddress = assetInformation.assetAddress;
 
       address[] memory tokens = new address[](1);
       tokens[0] = assetInformation.underlyingAssetAddress;
@@ -78,6 +84,9 @@ contract ATokenSubRegistry is SubRegistry {
             assetsInSubRegistry.push(assetAddress);
         }
         assetToInformation[assetAddress] = assetInformation;
+        assetToInformation[assetAddress].assetUnit = assetUnits;
+        assetToInformation[assetAddress].underlyingAssetAddress = underlyingAssetAddress;
+        assetToInformation[assetAddress].underlyingAssetOracleAddresses = underlyingAssetsOracleAddresses;
         isAssetAddressWhiteListed[assetAddress] = true;
         IMainRegistry(mainRegistry).addAsset(assetAddress, assetCreditRatings);
     }

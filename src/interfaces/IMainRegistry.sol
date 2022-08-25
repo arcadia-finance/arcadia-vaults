@@ -36,4 +36,6 @@ interface IMainRegistry {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds
     ) external view returns (bool);
+
+    function assetToSubRegistry(address) external view returns (address);
 }
