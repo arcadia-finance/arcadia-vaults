@@ -13,6 +13,14 @@ interface ISubRegistry {
         uint256 assetAmount;
         uint256 baseCurrency;
     }
+    
+    function getAssetInformation(address asset) external
+        view
+        returns (
+            uint64,
+            address,
+            address[] memory
+    );
 
     function isAssetAddressWhiteListed(address) external view returns (bool);
 
