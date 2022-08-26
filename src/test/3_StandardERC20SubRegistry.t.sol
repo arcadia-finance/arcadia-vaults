@@ -412,10 +412,10 @@ contract StandardERC20RegistryTest is Test {
         } else {
             vm.assume(
                 uint256(amountEth) <=
-                    type(uint256).max / 
-                        Constants.WAD *
-                        10**Constants.oracleEthToUsdDecimals /
-                        uint256(rateEthToUsdNew)
+                    (type(uint256).max /
+                        uint256(rateEthToUsdNew) /
+                        Constants.WAD) *
+                        10**Constants.oracleEthToUsdDecimals
             );
         }
 
@@ -464,10 +464,8 @@ contract StandardERC20RegistryTest is Test {
 
         vm.assume(
             uint256(amountEth) >
-                type(uint256).max / 
-                    Constants.WAD *
-                    10**Constants.oracleEthToUsdDecimals /
-                    uint256(rateEthToUsdNew)
+                (type(uint256).max / uint256(rateEthToUsdNew) / Constants.WAD) *
+                    10**Constants.oracleEthToUsdDecimals
         );
 
         vm.startPrank(oracleOwner);

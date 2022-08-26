@@ -212,6 +212,7 @@ contract MainRegistry is Ownable {
         assetToSubRegistry[assetAddress] = msg.sender;
 
         uint256 assetCreditRatingsLength = assetCreditRatings.length;
+
         require(
             assetCreditRatingsLength == baseCurrencyCounter ||
                 assetCreditRatingsLength == 0,
