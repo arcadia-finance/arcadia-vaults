@@ -302,7 +302,7 @@ contract MainRegistryTest is Test {
 
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
-        vm.expectRevert("MR_AN: lenght");
+        vm.expectRevert("MR_AN: length");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(

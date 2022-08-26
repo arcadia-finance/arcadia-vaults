@@ -64,18 +64,8 @@ contract ATokenSubRegistry is SubRegistry {
             address[] memory underlyingAssetOracleAddresses
             ) = ISubRegistry(IMainRegistry(mainRegistry).assetToSubRegistry(underlyingAddress)).getAssetInformation(underlyingAddress);
 
-        IOraclesHub(oracleHub).checkOracleSequence(
-            underlyingAssetOracleAddresses
-        );
-
-
       address[] memory tokens = new address[](1);
       tokens[0] = underlyingAssetAddress;
-
-        require(
-            assetUnit <= 1000000000000000000,
-            "ASR_SAI: Maximal 18 decimals"
-        );
   
         
         if (!inSubRegistry[assetAddress]) {
@@ -94,9 +84,10 @@ contract ATokenSubRegistry is SubRegistry {
      * @notice Returns the information that is stored in the Sub-registry for a given asset
      * @dev struct is not taken into memory; saves 6613 gas
      * @param asset The Token address of the asset
-     * @return assetDecimals The number of decimals of the asset
+     * @return assetUnit The number of decimals of the asset
      * @return assetAddress The Token address of the asset
-     * @return oracleAddresses The list of addresses of the oracles to get the exchange rate of the asset in USD
+     * @return underlyingAssetAddress The Token address of the underlyting asset
+     * @return underlyingAsseOracleoracleAddresses The list of addresses of the oracles to get the exchange rate of the underlying asset in USD
      */
     function getAssetInformation(address asset)
         external
