@@ -63,20 +63,9 @@ contract StandardERC4626SubRegistry is SubRegistry {
             address[] memory underlyingAssetOracleAddresses
             ) = ISubRegistry(IMainRegistry(mainRegistry).assetToSubRegistry(underlyingAddress)).getAssetInformation(underlyingAddress);
 
-        IOraclesHub(oracleHub).checkOracleSequence(
-            underlyingAssetOracleAddresses
-        );
+        address[] memory tokens = new address[](1);
+        tokens[0] = underlyingAssetAddress;
 
-
-      address[] memory tokens = new address[](1);
-      tokens[0] = underlyingAssetAddress;
-
-        require(
-            assetUnit <= 1000000000000000000,
-            "ASR_SAI: Maximal 18 decimals"
-        );
-  
-        
         if (!inSubRegistry[assetAddress]) {
             inSubRegistry[assetAddress] = true;
             assetsInSubRegistry.push(assetAddress);
