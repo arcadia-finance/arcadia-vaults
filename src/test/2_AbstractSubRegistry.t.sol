@@ -1,4 +1,9 @@
-// SPDX-License-Identifier: UNLICENSED
+/** 
+    Created by Arcadia Finance
+    https://www.arcadia.finance
+
+    SPDX-License-Identifier: BUSL-1.1
+ */
 pragma solidity >0.8.10;
 
 import "../../lib/forge-std/src/Test.sol";
@@ -52,13 +57,13 @@ contract AbstractSubRegistryTest is Test {
 
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
         oracleHub = new OracleHub();

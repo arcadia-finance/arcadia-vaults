@@ -1,19 +1,17 @@
 /** 
-    This is a private, unpublished repository.
-    All rights reserved to Arcadia Finance.
-    Any modification, publication, reproduction, commercialization, incorporation, 
-    sharing or any other kind of use of any part of this code or derivatives thereof is not allowed.
-    
-    SPDX-License-Identifier: UNLICENSED
+    Created by Arcadia Finance
+    https://www.arcadia.finance
+
+    SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 pragma solidity ^0.8.0;
 
 library Constants {
     // Math
-    uint256 internal constant UsdNumeraire = 0;
-    uint256 internal constant EthNumeraire = 1;
-    uint256 internal constant SafemoonNumeraire = 2;
+    uint256 internal constant UsdBaseCurrency = 0;
+    uint256 internal constant EthBaseCurrency = 1;
+    uint256 internal constant SafemoonBaseCurrency = 2;
 
     uint256 internal constant ethDecimals = 12;
     uint256 internal constant ethCreditRatingUsd = 2;
@@ -67,4 +65,9 @@ library Constants {
     uint256 internal constant stableEthDecimals = 18;
 
     uint256 internal constant WAD = 1e18;
+
+    // see src\test\MerkleTrees
+    bytes32 internal constant upgradeProof1To2 = 0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f;
+    bytes32 internal constant upgradeRoot1To2 = 0x472ba66bf173e177005d95fe17be2002ac4c417ff5bef6fb20a1e357f75bf394;
+    bytes32 internal constant upgradeRoot1To1 = 0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f;
 }

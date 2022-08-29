@@ -1,4 +1,9 @@
-// SPDX-License-Identifier: UNLICENSED
+/** 
+    Created by Arcadia Finance
+    https://www.arcadia.finance
+
+    SPDX-License-Identifier: BUSL-1.1
+ */
 pragma solidity >0.8.10;
 
 import "../../lib/forge-std/src/Test.sol";
@@ -76,12 +81,12 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
 
@@ -94,24 +99,24 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.expectRevert("Oracle already in oracle-hub");
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -124,12 +129,12 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -144,12 +149,12 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -160,12 +165,12 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -178,23 +183,23 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthDecimals),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -214,23 +219,23 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthDecimals),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdDecimals),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -245,12 +250,12 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthDecimals),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -264,12 +269,12 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthDecimals),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -278,7 +283,7 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesSequence);
     }
 
-    function testReturnUsdRateWhenNumeraireIsUsdForSingleOracleSuccess(
+    function testReturnUsdRateWhenBaseCurrencyIsUsdForSingleOracleSuccess(
         uint256 rateEthToUsd,
         uint8 oracleEthToUsdDecimals
     ) public {
@@ -294,12 +299,12 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -310,17 +315,17 @@ contract OracleHubTest is Test {
 
         uint256 expectedRateInUsd = (Constants.WAD * uint256(rateEthToUsd)) /
             10**(oracleEthToUsdDecimals);
-        uint256 expectedRateInNumeraire = 0;
+        uint256 expectedRateInBaseCurrency = 0;
 
         oraclesEthToUsd[0] = address(oracleEthToUsd);
-        (uint256 actualRateInUsd, uint256 actualRateInNumeraire) = oracleHub
-            .getRate(oraclesEthToUsd, Constants.UsdNumeraire);
+        (uint256 actualRateInUsd, uint256 actualRateInBaseCurrency) = oracleHub
+            .getRate(oraclesEthToUsd, Constants.UsdBaseCurrency);
 
         assertEq(actualRateInUsd, expectedRateInUsd);
-        assertEq(actualRateInNumeraire, expectedRateInNumeraire);
+        assertEq(actualRateInBaseCurrency, expectedRateInBaseCurrency);
     }
 
-    function testReturnUsdRateWhenNumeraireIsUsdForSingleOracleOverflow(
+    function testReturnUsdRateWhenBaseCurrencyIsUsdForSingleOracleOverflow(
         uint256 rateEthToUsd,
         uint8 oracleEthToUsdDecimals
     ) public {
@@ -336,12 +341,12 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -354,10 +359,371 @@ contract OracleHubTest is Test {
 
         //Arithmetic overflow.
         vm.expectRevert(bytes(""));
-        oracleHub.getRate(oraclesEthToUsd, Constants.UsdNumeraire);
+        oracleHub.getRate(oraclesEthToUsd, Constants.UsdBaseCurrency);
     }
 
-    function testReturnUsdRateWhenNumeraireIsUsdForMultipleOraclesSucces(
+    function testReturnUsdRateWhenBaseCurrencyIsUsdForMultipleOraclesSucces(
+        uint256 rateSnxToEth,
+        uint256 rateEthToUsd,
+        uint8 oracleSnxToEthDecimals,
+        uint8 oracleEthToUsdDecimals
+    ) public {
+        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
+
+        vm.assume(rateSnxToEth <= uint256(type(int256).max));
+        vm.assume(rateEthToUsd <= uint256(type(int256).max));
+
+        vm.assume(rateSnxToEth <= type(uint256).max / Constants.WAD);
+
+        if (rateSnxToEth == 0) {
+            vm.assume(
+                uint256(rateEthToUsd) <= type(uint256).max / Constants.WAD
+            );
+        } else {
+            vm.assume(
+                uint256(rateEthToUsd) <=
+                    type(uint256).max / 
+                    Constants.WAD *
+                    10**oracleSnxToEthDecimals /
+                    uint256(rateSnxToEth)
+            );
+        }
+
+        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
+        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
+
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleSnxToEthUnit,
+                baseAssetBaseCurrency: 1,
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleEthToUsdUnit,
+                baseAssetBaseCurrency: 0,
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(oracleOwner);
+        oracleSnxToEth.transmit(int256(rateSnxToEth));
+        oracleEthToUsd.transmit(int256(rateEthToUsd));
+        vm.stopPrank();
+
+        uint256 expectedRateInUsd = (((Constants.WAD * uint256(rateSnxToEth)) /
+            10**(oracleSnxToEthDecimals)) * uint256(rateEthToUsd)) /
+            10**(oracleEthToUsdDecimals);
+        uint256 expectedRateInBaseCurrency = 0;
+
+        oraclesSnxToUsd[0] = address(oracleSnxToEth);
+        oraclesSnxToUsd[1] = address(oracleEthToUsd);
+        (uint256 actualRateInUsd, uint256 actualRateInBaseCurrency) = oracleHub
+            .getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
+
+        assertEq(expectedRateInUsd, actualRateInUsd);
+        assertEq(expectedRateInBaseCurrency, actualRateInBaseCurrency);
+    }
+
+    function testReturnUsdRateWhenBaseCurrencyIsUsdForMultipleOraclesOverflow1(
+        uint256 rateSnxToEth,
+        uint256 rateEthToUsd,
+        uint8 oracleSnxToEthDecimals,
+        uint8 oracleEthToUsdDecimals
+    ) public {
+        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
+
+        vm.assume(rateSnxToEth <= uint256(type(int256).max));
+        vm.assume(rateEthToUsd <= uint256(type(int256).max));
+
+        vm.assume(rateSnxToEth > type(uint256).max / Constants.WAD);
+
+        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
+        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
+
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleSnxToEthUnit,
+                baseAssetBaseCurrency: 1,
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleEthToUsdUnit,
+                baseAssetBaseCurrency: 0,
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(oracleOwner);
+        oracleSnxToEth.transmit(int256(rateSnxToEth));
+        oracleEthToUsd.transmit(int256(rateEthToUsd));
+        vm.stopPrank();
+
+        oraclesSnxToUsd[0] = address(oracleSnxToEth);
+        oraclesSnxToUsd[1] = address(oracleEthToUsd);
+
+        //Arithmetic overflow.
+        vm.expectRevert(bytes(""));
+        oracleHub.getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
+    }
+
+    function testReturnUsdRateWhenBaseCurrencyIsUsdForMultipleOraclesOverflow2(
+        uint256 rateSnxToEth,
+        uint256 rateEthToUsd,
+        uint8 oracleSnxToEthDecimals,
+        uint8 oracleEthToUsdDecimals
+    ) public {
+        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
+
+        vm.assume(rateSnxToEth <= uint256(type(int256).max));
+        vm.assume(rateEthToUsd <= uint256(type(int256).max));
+        vm.assume(rateSnxToEth > 0);
+
+        vm.assume(uint256(rateSnxToEth) <= type(uint256).max / Constants.WAD);
+
+        vm.assume(
+            uint256(rateEthToUsd) >
+                type(uint256).max / 
+                Constants.WAD *
+                10**oracleSnxToEthDecimals /
+                uint256(rateSnxToEth)
+        );
+
+        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
+        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
+
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleSnxToEthUnit,
+                baseAssetBaseCurrency: 1,
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleEthToUsdUnit,
+                baseAssetBaseCurrency: 0,
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(oracleOwner);
+        oracleSnxToEth.transmit(int256(rateSnxToEth));
+        oracleEthToUsd.transmit(int256(rateEthToUsd));
+        vm.stopPrank();
+
+        oraclesSnxToUsd[0] = address(oracleSnxToEth);
+        oraclesSnxToUsd[1] = address(oracleEthToUsd);
+
+        //Arithmetic overflow.
+        vm.expectRevert(bytes(""));
+        oracleHub.getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
+    }
+
+    function testReturnUsdRateWhenBaseCurrencyIsUsdForMultipleOraclesFirstRateIsZero(
+        uint256 rateEthToUsd,
+        uint8 oracleSnxToEthDecimals,
+        uint8 oracleEthToUsdDecimals
+    ) public {
+        uint256 rateSnxToEth = 0;
+
+        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
+        vm.assume(rateEthToUsd <= uint256(type(int256).max));
+
+        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
+        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
+
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleSnxToEthUnit,
+                baseAssetBaseCurrency: 1,
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleEthToUsdUnit,
+                baseAssetBaseCurrency: 0,
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(oracleOwner);
+        oracleSnxToEth.transmit(int256(rateSnxToEth));
+        oracleEthToUsd.transmit(int256(rateEthToUsd));
+        vm.stopPrank();
+
+        uint256 expectedRateInUsd = (((Constants.WAD * uint256(rateSnxToEth)) /
+            10**(oracleSnxToEthDecimals)) * uint256(rateEthToUsd)) /
+            10**(oracleEthToUsdDecimals);
+        uint256 expectedRateInBaseCurrency = 0;
+
+        oraclesSnxToUsd[0] = address(oracleSnxToEth);
+        oraclesSnxToUsd[1] = address(oracleEthToUsd);
+        (uint256 actualRateInUsd, uint256 actualRateInBaseCurrency) = oracleHub
+            .getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
+
+        assertEq(expectedRateInUsd, actualRateInUsd);
+        assertEq(expectedRateInBaseCurrency, actualRateInBaseCurrency);
+    }
+
+    function testReturnBaseCurrencyRateWhenBaseCurrencyIsNotUsdSucces(
+        uint256 rateSnxToEth,
+        uint256 rateEthToUsd,
+        uint8 oracleSnxToEthDecimals,
+        uint8 oracleEthToUsdDecimals
+    ) public {
+        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
+
+        vm.assume(rateSnxToEth <= uint256(type(int256).max));
+        vm.assume(rateEthToUsd <= uint256(type(int256).max));
+
+        vm.assume(uint256(rateSnxToEth) <= type(uint256).max / Constants.WAD);
+
+        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
+        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
+
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleSnxToEthUnit,
+                baseAssetBaseCurrency: 1,
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleEthToUsdUnit,
+                baseAssetBaseCurrency: 0,
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(oracleOwner);
+        oracleSnxToEth.transmit(int256(rateSnxToEth));
+        oracleEthToUsd.transmit(int256(rateEthToUsd));
+        vm.stopPrank();
+
+        uint256 expectedRateInUsd = 0;
+        uint256 expectedRateInBaseCurrency = (Constants.WAD *
+            uint256(rateSnxToEth) / 10**(oracleSnxToEthDecimals));
+
+        oraclesSnxToUsd[0] = address(oracleSnxToEth);
+        oraclesSnxToUsd[1] = address(oracleEthToUsd);
+        (uint256 actualRateInUsd, uint256 actualRateInBaseCurrency) = oracleHub
+            .getRate(oraclesSnxToUsd, Constants.EthBaseCurrency);
+
+        assertEq(expectedRateInUsd, actualRateInUsd);
+        assertEq(expectedRateInBaseCurrency, actualRateInBaseCurrency);
+    }
+
+    function testReturnBaseCurrencyRateWhenBaseCurrencyIsNotUsdOverflow(
+        uint256 rateSnxToEth,
+        uint256 rateEthToUsd,
+        uint8 oracleSnxToEthDecimals,
+        uint8 oracleEthToUsdDecimals
+    ) public {
+        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
+
+        vm.assume(rateSnxToEth <= uint256(type(int256).max));
+        vm.assume(rateEthToUsd <= uint256(type(int256).max));
+
+        vm.assume(uint256(rateSnxToEth) > type(uint256).max / Constants.WAD);
+
+        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
+        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
+
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleSnxToEthUnit,
+                baseAssetBaseCurrency: 1,
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracleAddress: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: oracleEthToUsdUnit,
+                baseAssetBaseCurrency: 0,
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(oracleOwner);
+        oracleSnxToEth.transmit(int256(rateSnxToEth));
+        oracleEthToUsd.transmit(int256(rateEthToUsd));
+        vm.stopPrank();
+
+        oraclesSnxToUsd[0] = address(oracleSnxToEth);
+        oraclesSnxToUsd[1] = address(oracleEthToUsd);
+
+        //Arithmetic overflow.
+        vm.expectRevert(bytes(""));
+        oracleHub.getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
+    }
+
+    function testReturnUsdRateWhenBaseCurrencyIsNotUsdSucces(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -378,8 +744,9 @@ contract OracleHubTest is Test {
             vm.assume(
                 uint256(rateEthToUsd) <=
                     type(uint256).max /
-                        uint256(rateSnxToEth) /
-                        10**(18 - oracleSnxToEthDecimals)
+                    Constants.WAD *
+                    10**oracleSnxToEthDecimals /
+                    uint256(rateSnxToEth)
             );
         }
 
@@ -390,23 +757,23 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleSnxToEthUnit,
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -419,249 +786,18 @@ contract OracleHubTest is Test {
         uint256 expectedRateInUsd = (((Constants.WAD * uint256(rateSnxToEth)) /
             10**(oracleSnxToEthDecimals)) * uint256(rateEthToUsd)) /
             10**(oracleEthToUsdDecimals);
-        uint256 expectedRateInNumeraire = 0;
+        uint256 expectedRateInBaseCurrency = 0;
 
         oraclesSnxToUsd[0] = address(oracleSnxToEth);
         oraclesSnxToUsd[1] = address(oracleEthToUsd);
-        (uint256 actualRateInUsd, uint256 actualRateInNumeraire) = oracleHub
-            .getRate(oraclesSnxToUsd, Constants.UsdNumeraire);
+        (uint256 actualRateInUsd, uint256 actualRateInBaseCurrency) = oracleHub
+            .getRate(oraclesSnxToUsd, Constants.SafemoonBaseCurrency);
 
         assertEq(expectedRateInUsd, actualRateInUsd);
-        assertEq(expectedRateInNumeraire, actualRateInNumeraire);
+        assertEq(expectedRateInBaseCurrency, actualRateInBaseCurrency);
     }
 
-    function testReturnUsdRateWhenNumeraireIsUsdForMultipleOraclesOverflow1(
-        uint256 rateSnxToEth,
-        uint256 rateEthToUsd,
-        uint8 oracleSnxToEthDecimals,
-        uint8 oracleEthToUsdDecimals
-    ) public {
-        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
-
-        vm.assume(rateSnxToEth <= uint256(type(int256).max));
-        vm.assume(rateEthToUsd <= uint256(type(int256).max));
-
-        vm.assume(rateSnxToEth > type(uint256).max / Constants.WAD);
-
-        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
-        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
-
-        vm.startPrank(creatorAddress);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleSnxToEthUnit,
-                baseAssetNumeraire: 1,
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
-                quoteAsset: "ETH",
-                baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
-            })
-        );
-        vm.stopPrank();
-
-        vm.startPrank(oracleOwner);
-        oracleSnxToEth.transmit(int256(rateSnxToEth));
-        oracleEthToUsd.transmit(int256(rateEthToUsd));
-        vm.stopPrank();
-
-        oraclesSnxToUsd[0] = address(oracleSnxToEth);
-        oraclesSnxToUsd[1] = address(oracleEthToUsd);
-
-        //Arithmetic overflow.
-        vm.expectRevert(bytes(""));
-        oracleHub.getRate(oraclesSnxToUsd, Constants.UsdNumeraire);
-    }
-
-    function testReturnUsdRateWhenNumeraireIsUsdForMultipleOraclesOverflow2(
-        uint256 rateSnxToEth,
-        uint256 rateEthToUsd,
-        uint8 oracleSnxToEthDecimals,
-        uint8 oracleEthToUsdDecimals
-    ) public {
-        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
-
-        vm.assume(rateSnxToEth <= uint256(type(int256).max));
-        vm.assume(rateEthToUsd <= uint256(type(int256).max));
-        vm.assume(rateSnxToEth > 0);
-
-        vm.assume(uint256(rateSnxToEth) <= type(uint256).max / Constants.WAD);
-
-        vm.assume(
-            uint256(rateEthToUsd) >
-                (type(uint256).max / uint256(rateSnxToEth) / Constants.WAD) *
-                    10**oracleSnxToEthDecimals
-        );
-
-        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
-        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
-
-        vm.startPrank(creatorAddress);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleSnxToEthUnit,
-                baseAssetNumeraire: 1,
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
-                quoteAsset: "ETH",
-                baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
-            })
-        );
-        vm.stopPrank();
-
-        vm.startPrank(oracleOwner);
-        oracleSnxToEth.transmit(int256(rateSnxToEth));
-        oracleEthToUsd.transmit(int256(rateEthToUsd));
-        vm.stopPrank();
-
-        oraclesSnxToUsd[0] = address(oracleSnxToEth);
-        oraclesSnxToUsd[1] = address(oracleEthToUsd);
-
-        //Arithmetic overflow.
-        vm.expectRevert(bytes(""));
-        oracleHub.getRate(oraclesSnxToUsd, Constants.UsdNumeraire);
-    }
-
-    function testReturnUsdRateWhenNumeraireIsUsdForMultipleOraclesFirstRateIsZero(
-        uint256 rateEthToUsd,
-        uint8 oracleSnxToEthDecimals,
-        uint8 oracleEthToUsdDecimals
-    ) public {
-        uint256 rateSnxToEth = 0;
-
-        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
-        vm.assume(rateEthToUsd <= uint256(type(int256).max));
-
-        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
-        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
-
-        vm.startPrank(creatorAddress);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleSnxToEthUnit,
-                baseAssetNumeraire: 1,
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
-                quoteAsset: "ETH",
-                baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
-            })
-        );
-        vm.stopPrank();
-
-        vm.startPrank(oracleOwner);
-        oracleSnxToEth.transmit(int256(rateSnxToEth));
-        oracleEthToUsd.transmit(int256(rateEthToUsd));
-        vm.stopPrank();
-
-        uint256 expectedRateInUsd = (((Constants.WAD * uint256(rateSnxToEth)) /
-            10**(oracleSnxToEthDecimals)) * uint256(rateEthToUsd)) /
-            10**(oracleEthToUsdDecimals);
-        uint256 expectedRateInNumeraire = 0;
-
-        oraclesSnxToUsd[0] = address(oracleSnxToEth);
-        oraclesSnxToUsd[1] = address(oracleEthToUsd);
-        (uint256 actualRateInUsd, uint256 actualRateInNumeraire) = oracleHub
-            .getRate(oraclesSnxToUsd, Constants.UsdNumeraire);
-
-        assertEq(expectedRateInUsd, actualRateInUsd);
-        assertEq(expectedRateInNumeraire, actualRateInNumeraire);
-    }
-
-    function testReturnNumeraireRateWhenNumeraireIsNotUsdSucces(
-        uint256 rateSnxToEth,
-        uint256 rateEthToUsd,
-        uint8 oracleSnxToEthDecimals,
-        uint8 oracleEthToUsdDecimals
-    ) public {
-        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
-
-        vm.assume(rateSnxToEth <= uint256(type(int256).max));
-        vm.assume(rateEthToUsd <= uint256(type(int256).max));
-
-        vm.assume(uint256(rateSnxToEth) <= type(uint256).max / Constants.WAD);
-
-        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
-        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
-
-        vm.startPrank(creatorAddress);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleSnxToEthUnit,
-                baseAssetNumeraire: 1,
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
-                quoteAsset: "ETH",
-                baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
-            })
-        );
-        vm.stopPrank();
-
-        vm.startPrank(oracleOwner);
-        oracleSnxToEth.transmit(int256(rateSnxToEth));
-        oracleEthToUsd.transmit(int256(rateEthToUsd));
-        vm.stopPrank();
-
-        uint256 expectedRateInUsd = 0;
-        uint256 expectedRateInNumeraire = (Constants.WAD *
-            uint256(rateSnxToEth)) / 10**(oracleSnxToEthDecimals);
-
-        oraclesSnxToUsd[0] = address(oracleSnxToEth);
-        oraclesSnxToUsd[1] = address(oracleEthToUsd);
-        (uint256 actualRateInUsd, uint256 actualRateInNumeraire) = oracleHub
-            .getRate(oraclesSnxToUsd, Constants.EthNumeraire);
-
-        assertEq(expectedRateInUsd, actualRateInUsd);
-        assertEq(expectedRateInNumeraire, actualRateInNumeraire);
-    }
-
-    function testReturnNumeraireRateWhenNumeraireIsNotUsdOverflow(
+    function testReturnUsdRateWhenBaseCurrencyIsNotUsdOverflow1(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -681,23 +817,23 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleSnxToEthUnit,
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -712,138 +848,10 @@ contract OracleHubTest is Test {
 
         //Arithmetic overflow.
         vm.expectRevert(bytes(""));
-        oracleHub.getRate(oraclesSnxToUsd, Constants.UsdNumeraire);
+        oracleHub.getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
     }
 
-    function testReturnUsdRateWhenNumeraireIsNotUsdSucces(
-        uint256 rateSnxToEth,
-        uint256 rateEthToUsd,
-        uint8 oracleSnxToEthDecimals,
-        uint8 oracleEthToUsdDecimals
-    ) public {
-        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
-
-        vm.assume(rateSnxToEth <= uint256(type(int256).max));
-        vm.assume(rateEthToUsd <= uint256(type(int256).max));
-
-        vm.assume(rateSnxToEth <= type(uint256).max / Constants.WAD);
-
-        if (rateSnxToEth == 0) {
-            vm.assume(
-                uint256(rateEthToUsd) <= type(uint256).max / Constants.WAD
-            );
-        } else {
-            vm.assume(
-                uint256(rateEthToUsd) <=
-                    (type(uint256).max /
-                        uint256(rateSnxToEth) /
-                        Constants.WAD) *
-                        10**oracleSnxToEthDecimals
-            );
-        }
-
-        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
-        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
-
-        vm.startPrank(creatorAddress);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleSnxToEthUnit,
-                baseAssetNumeraire: 1,
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
-                quoteAsset: "ETH",
-                baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
-            })
-        );
-        vm.stopPrank();
-
-        vm.startPrank(oracleOwner);
-        oracleSnxToEth.transmit(int256(rateSnxToEth));
-        oracleEthToUsd.transmit(int256(rateEthToUsd));
-        vm.stopPrank();
-
-        uint256 expectedRateInUsd = (((Constants.WAD * uint256(rateSnxToEth)) /
-            10**(oracleSnxToEthDecimals)) * uint256(rateEthToUsd)) /
-            10**(oracleEthToUsdDecimals);
-        uint256 expectedRateInNumeraire = 0;
-
-        oraclesSnxToUsd[0] = address(oracleSnxToEth);
-        oraclesSnxToUsd[1] = address(oracleEthToUsd);
-        (uint256 actualRateInUsd, uint256 actualRateInNumeraire) = oracleHub
-            .getRate(oraclesSnxToUsd, Constants.SafemoonNumeraire);
-
-        assertEq(expectedRateInUsd, actualRateInUsd);
-        assertEq(expectedRateInNumeraire, actualRateInNumeraire);
-    }
-
-    function testReturnUsdRateWhenNumeraireIsNotUsdOverflow1(
-        uint256 rateSnxToEth,
-        uint256 rateEthToUsd,
-        uint8 oracleSnxToEthDecimals,
-        uint8 oracleEthToUsdDecimals
-    ) public {
-        vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
-
-        vm.assume(rateSnxToEth <= uint256(type(int256).max));
-        vm.assume(rateEthToUsd <= uint256(type(int256).max));
-
-        vm.assume(uint256(rateSnxToEth) > type(uint256).max / Constants.WAD);
-
-        uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
-        uint64 oracleEthToUsdUnit = uint64(10**oracleEthToUsdDecimals);
-
-        vm.startPrank(creatorAddress);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleSnxToEthUnit,
-                baseAssetNumeraire: 1,
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
-                quoteAsset: "ETH",
-                baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
-            })
-        );
-        vm.stopPrank();
-
-        vm.startPrank(oracleOwner);
-        oracleSnxToEth.transmit(int256(rateSnxToEth));
-        oracleEthToUsd.transmit(int256(rateEthToUsd));
-        vm.stopPrank();
-
-        oraclesSnxToUsd[0] = address(oracleSnxToEth);
-        oraclesSnxToUsd[1] = address(oracleEthToUsd);
-
-        //Arithmetic overflow.
-        vm.expectRevert(bytes(""));
-        oracleHub.getRate(oraclesSnxToUsd, Constants.UsdNumeraire);
-    }
-
-    function testReturnUsdRateWhenNumeraireIsNotUsdOverflow2(
+    function testReturnUsdRateWhenBaseCurrencyIsNotUsdOverflow2(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -859,8 +867,10 @@ contract OracleHubTest is Test {
 
         vm.assume(
             uint256(rateEthToUsd) >
-                (type(uint256).max / uint256(rateSnxToEth) / Constants.WAD) *
-                    10**oracleSnxToEthDecimals
+                type(uint256).max /
+                Constants.WAD *
+                10**oracleSnxToEthDecimals /
+                uint256(rateSnxToEth)
         );
 
         uint64 oracleSnxToEthUnit = uint64(10**oracleSnxToEthDecimals);
@@ -870,23 +880,23 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleSnxToEthUnit,
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -901,10 +911,10 @@ contract OracleHubTest is Test {
 
         //Arithmetic overflow.
         vm.expectRevert(bytes(""));
-        oracleHub.getRate(oraclesSnxToUsd, Constants.UsdNumeraire);
+        oracleHub.getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
     }
 
-    function testReturnUsdRateWhenNumeraireIsNotUsdFirstRateIsZero(
+    function testReturnUsdRateWhenBaseCurrencyIsNotUsdFirstRateIsZero(
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
@@ -921,23 +931,23 @@ contract OracleHubTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleSnxToEthUnit,
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleEthToUsdUnit,
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -950,14 +960,14 @@ contract OracleHubTest is Test {
         uint256 expectedRateInUsd = (((Constants.WAD * uint256(rateSnxToEth)) /
             10**(oracleSnxToEthDecimals)) * uint256(rateEthToUsd)) /
             10**(oracleEthToUsdDecimals);
-        uint256 expectedRateInNumeraire = 0;
+        uint256 expectedRateInBaseCurrency = 0;
 
         oraclesSnxToUsd[0] = address(oracleSnxToEth);
         oraclesSnxToUsd[1] = address(oracleEthToUsd);
-        (uint256 actualRateInUsd, uint256 actualRateInNumeraire) = oracleHub
-            .getRate(oraclesSnxToUsd, Constants.SafemoonNumeraire);
+        (uint256 actualRateInUsd, uint256 actualRateInBaseCurrency) = oracleHub
+            .getRate(oraclesSnxToUsd, Constants.SafemoonBaseCurrency);
 
         assertEq(expectedRateInUsd, actualRateInUsd);
-        assertEq(expectedRateInNumeraire, actualRateInNumeraire);
+        assertEq(expectedRateInBaseCurrency, actualRateInBaseCurrency);
     }
 }

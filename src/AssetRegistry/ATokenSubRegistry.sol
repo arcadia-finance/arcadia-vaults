@@ -7,21 +7,25 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "./AbstractSubRegistry.sol";
+import "../interfaces/IAToken.sol";
+import "../interfaces/ISubRegistry.sol";
+import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
 /**
- * @title Sub-registry for Standard ERC20 tokens
+ * @title Sub-registry for Aave Yield Bearing ERC20 tokens
  * @author Arcadia Finance
- * @notice The StandardERC20Registry stores pricing logic and basic information for ERC20 tokens for which a direct price feed exists
- * @dev No end-user should directly interact with the StandardERC20Registry, only the Main-registry, Oracle-Hub or the contract owner
+ * @notice The ATokenSubRegistry stores pricing logic and basic information for yield bearing Aave ERC20 tokens for which a direct price feed exists
+ * @dev No end-user should directly interact with the ATokenSubRegistry, only the Main-registry, Oracle-Hub or the contract owner
  */
-contract StandardERC20Registry is SubRegistry {
+contract ATokenSubRegistry is SubRegistry {
     using FixedPointMathLib for uint256;
 
     struct AssetInformation {
         uint64 assetUnit;
         address assetAddress;
-        address[] oracleAddresses;
+        address underlyingAssetAddress;
+        address[] underlyingAssetOracleAddresses;
     }
 
     mapping(address => AssetInformation) public assetToInformation;
@@ -36,11 +40,8 @@ contract StandardERC20Registry is SubRegistry {
     {}
 
     /**
-     * @notice Adds a new asset to the StandardERC20Registry, or overwrites an existing asset.
-     * @param assetInformation A Struct with information about the asset
-     *                         - assetUnit: The unit of the asset, equal to 10 to the power of the number of decimals of the asset
-     *                         - assetAddress: The contract address of the asset
-     *                         - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
+     * @notice Adds a new asset to the ATokenSubRegistry, or overwrites an existing asset.
+     * @param assetAddress The contract address of the asset
      * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencies.
      * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
      *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies is
@@ -53,23 +54,28 @@ contract StandardERC20Registry is SubRegistry {
      * @dev Assets can't have more than 18 decimals.
      */
     function setAssetInformation(
-        AssetInformation calldata assetInformation,
+        address assetAddress,
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
-        IOraclesHub(oracleHub).checkOracleSequence(
-            assetInformation.oracleAddresses
-        );
+        address underlyingAddress = IAToken(assetAddress).UNDERLYING_ASSET_ADDRESS();
+        (
+            uint64 assetUnit,
+            address underlyingAssetAddress,
+            address[] memory underlyingAssetOracleAddresses
+            ) = ISubRegistry(IMainRegistry(mainRegistry).assetToSubRegistry(underlyingAddress)).getAssetInformation(underlyingAddress);
 
-        address assetAddress = assetInformation.assetAddress;
-        require(
-            assetInformation.assetUnit <= 1000000000000000000,
-            "SSR_SAI: Maximal 18 decimals"
-        );
+      address[] memory tokens = new address[](1);
+      tokens[0] = underlyingAssetAddress;
+  
+        
         if (!inSubRegistry[assetAddress]) {
             inSubRegistry[assetAddress] = true;
             assetsInSubRegistry.push(assetAddress);
         }
-        assetToInformation[assetAddress] = assetInformation;
+        assetToInformation[assetAddress].assetAddress = assetAddress;
+        assetToInformation[assetAddress].assetUnit = assetUnit;
+        assetToInformation[assetAddress].underlyingAssetAddress = underlyingAssetAddress;
+        assetToInformation[assetAddress].underlyingAssetOracleAddresses = underlyingAssetOracleAddresses;
         isAssetAddressWhiteListed[assetAddress] = true;
         IMainRegistry(mainRegistry).addAsset(assetAddress, assetCreditRatings);
     }
@@ -78,9 +84,10 @@ contract StandardERC20Registry is SubRegistry {
      * @notice Returns the information that is stored in the Sub-registry for a given asset
      * @dev struct is not taken into memory; saves 6613 gas
      * @param asset The Token address of the asset
-     * @return assetDecimals The number of decimals of the asset
+     * @return assetUnit The number of decimals of the asset
      * @return assetAddress The Token address of the asset
-     * @return oracleAddresses The list of addresses of the oracles to get the exchange rate of the asset in USD
+     * @return underlyingAssetAddress The Token address of the underlyting asset
+     * @return underlyingAsseOracleoracleAddresses The list of addresses of the oracles to get the exchange rate of the underlying asset in USD
      */
     function getAssetInformation(address asset)
         external
@@ -88,13 +95,15 @@ contract StandardERC20Registry is SubRegistry {
         returns (
             uint64,
             address,
+            address,
             address[] memory
         )
     {
         return (
             assetToInformation[asset].assetUnit,
             assetToInformation[asset].assetAddress,
-            assetToInformation[asset].oracleAddresses
+            assetToInformation[asset].underlyingAssetAddress,
+            assetToInformation[asset].underlyingAssetOracleAddresses
         );
     }
 
@@ -126,13 +135,13 @@ contract StandardERC20Registry is SubRegistry {
      *                      - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
-     * @dev If the Oracle-Hub returns the rate in a baseCurrency different from USD, the StandardERC20Registry will return
-     *      the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the StandardERC20Registry
+     * @dev If the Oracle-Hub returns the rate in a baseCurrency different from USD, the ATokenSubRegistry will return
+     *      the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the ATokenSubRegistry
      *      will return the value of the asset in USD.
      *      Only one of the two values can be different from 0.
      * @dev Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
      * @dev If the asset is not first added to subregistry this function will return value 0 without throwing an error.
-     *      However no check in StandardERC20Registry is necessary, since the check if the asset is whitelisted (and hence added to subregistry)
+     *      However no check in ATokenSubRegistry is necessary, since the check if the asset is whitelisted (and hence added to subregistry)
      *      is already done in the Main-Registry.
      */
     function getValue(GetValueInput memory getValueInput)
@@ -143,9 +152,8 @@ contract StandardERC20Registry is SubRegistry {
     {
         uint256 rateInUsd;
         uint256 rateInBaseCurrency;
-
         (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[getValueInput.assetAddress].oracleAddresses,
+            assetToInformation[getValueInput.assetAddress].underlyingAssetOracleAddresses,
             getValueInput.baseCurrency
         );
 
@@ -161,4 +169,5 @@ contract StandardERC20Registry is SubRegistry {
             );
         }
     }
+
 }

@@ -1,4 +1,9 @@
-// SPDX-License-Identifier: UNLICENSED
+/** 
+    Created by Arcadia Finance
+    https://www.arcadia.finance
+
+    SPDX-License-Identifier: BUSL-1.1
+ */
 pragma solidity >0.8.10;
 
 import "../../lib/forge-std/src/Test.sol";
@@ -49,13 +54,13 @@ contract FloorERC1155SubRegistryTest is Test {
 
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
         oracleHub = new OracleHub();
@@ -76,23 +81,23 @@ contract FloorERC1155SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -105,25 +110,25 @@ contract FloorERC1155SubRegistryTest is Test {
     function setUp() public {
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -264,10 +269,10 @@ contract FloorERC1155SubRegistryTest is Test {
         );
     }
 
-    function testReturnUsdValueWhenNumeraireIsUsd(uint128 amountInterleave)
+    function testReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountInterleave)
         public
     {
-        //Does not test on overflow, test to check if function correctly returns value in Numeraire
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         floorERC1155SubRegistry.setAssetInformation(
             FloorERC1155SubRegistry.AssetInformation({
@@ -286,28 +291,28 @@ contract FloorERC1155SubRegistryTest is Test {
             10 **
                 (Constants.oracleInterleaveToEthDecimals +
                     Constants.oracleEthToUsdDecimals);
-        uint256 expectedValueInNumeraire = 0;
+        uint256 expectedValueInBaseCurrency = 0;
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(interleave),
                 assetId: 1,
                 assetAmount: amountInterleave,
-                numeraire: 0
+                baseCurrency: 0
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = floorERC1155SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInNumeraire, expectedValueInNumeraire);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testreturnNumeraireValueWhenNumeraireIsNotUsd(
+    function testreturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(
         uint128 amountInterleave
     ) public {
-        //Does not test on overflow, test to check if function correctly returns value in Numeraire
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         floorERC1155SubRegistry.setAssetInformation(
             FloorERC1155SubRegistry.AssetInformation({
@@ -320,7 +325,7 @@ contract FloorERC1155SubRegistryTest is Test {
         vm.stopPrank();
 
         uint256 expectedValueInUsd = 0;
-        uint256 expectedValueInNumeraire = (amountInterleave *
+        uint256 expectedValueInBaseCurrency = (amountInterleave *
             rateInterleaveToEth *
             Constants.WAD) / 10**(Constants.oracleInterleaveToEthDecimals);
 
@@ -329,21 +334,21 @@ contract FloorERC1155SubRegistryTest is Test {
                 assetAddress: address(interleave),
                 assetId: 1,
                 assetAmount: amountInterleave,
-                numeraire: 1
+                baseCurrency: 1
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = floorERC1155SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInNumeraire, expectedValueInNumeraire);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnUsdValueWhenNumeraireIsNotUsd(uint128 amountInterleave)
+    function testReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountInterleave)
         public
     {
-        //Does not test on overflow, test to check if function correctly returns value in Numeraire
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         floorERC1155SubRegistry.setAssetInformation(
             FloorERC1155SubRegistry.AssetInformation({
@@ -362,30 +367,30 @@ contract FloorERC1155SubRegistryTest is Test {
             10 **
                 (Constants.oracleInterleaveToEthDecimals +
                     Constants.oracleEthToUsdDecimals);
-        uint256 expectedValueInNumeraire = 0;
+        uint256 expectedValueInBaseCurrency = 0;
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(interleave),
                 assetId: 1,
                 assetAmount: amountInterleave,
-                numeraire: 2
+                baseCurrency: 2
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = floorERC1155SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInNumeraire, expectedValueInNumeraire);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testreturnValueSucces(
+    function testReturnValueSucces(
         uint256 amountInterleave,
-        uint192 rateInterleaveToEthNew
+        uint256 rateInterleaveToEthNew
     ) public {
-        vm.assume(rateInterleaveToEthNew <= uint256(type(uint192).max));
-        vm.assume(rateInterleaveToEthNew <= type(uint192).max / Constants.WAD);
+        vm.assume(rateInterleaveToEthNew <= uint256(type(int256).max));
+        vm.assume(rateInterleaveToEthNew <= type(uint256).max / Constants.WAD);
 
         if (rateInterleaveToEthNew == 0) {
             vm.assume(
@@ -394,15 +399,15 @@ contract FloorERC1155SubRegistryTest is Test {
         } else {
             vm.assume(
                 uint256(amountInterleave) <=
-                    (type(uint256).max /
-                        uint256(rateInterleaveToEthNew) /
-                        Constants.WAD) *
-                        10**Constants.oracleInterleaveToEthDecimals
+                    type(uint256).max /
+                        Constants.WAD *
+                        10**Constants.oracleInterleaveToEthDecimals /
+                        uint256(rateInterleaveToEthNew)
             );
         }
 
         vm.startPrank(oracleOwner);
-        oracleInterleaveToEth.transmit(int192(rateInterleaveToEthNew));
+        oracleInterleaveToEth.transmit(int256(rateInterleaveToEthNew));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -417,7 +422,7 @@ contract FloorERC1155SubRegistryTest is Test {
         vm.stopPrank();
 
         uint256 expectedValueInUsd = 0;
-        uint256 expectedValueInNumeraire = ((rateInterleaveToEthNew *
+        uint256 expectedValueInBaseCurrency = ((rateInterleaveToEthNew *
             Constants.WAD) / 10**Constants.oracleInterleaveToEthDecimals) *
             amountInterleave;
 
@@ -426,18 +431,18 @@ contract FloorERC1155SubRegistryTest is Test {
                 assetAddress: address(interleave),
                 assetId: 1,
                 assetAmount: amountInterleave,
-                numeraire: 1
+                baseCurrency: 1
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = floorERC1155SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInNumeraire, expectedValueInNumeraire);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testFailreturnValueOverflow(
+    function testFailReturnValueOverflow(
         uint256 amountInterleave,
         uint256 rateInterleaveToEthNew
     ) public {
@@ -447,10 +452,10 @@ contract FloorERC1155SubRegistryTest is Test {
 
         vm.assume(
             uint256(amountInterleave) >
-                (type(uint256).max /
-                    uint256(rateInterleaveToEthNew) /
-                    Constants.WAD) *
-                    10**Constants.oracleInterleaveToEthDecimals
+                type(uint256).max /
+                    Constants.WAD *
+                    10**Constants.oracleInterleaveToEthDecimals /
+                    uint256(rateInterleaveToEthNew)
         );
 
         vm.startPrank(oracleOwner);
@@ -473,7 +478,7 @@ contract FloorERC1155SubRegistryTest is Test {
                 assetAddress: address(interleave),
                 assetId: 1,
                 assetAmount: amountInterleave,
-                numeraire: 1
+                baseCurrency: 1
             });
         //Arithmetic overflow.
         floorERC1155SubRegistry.getValue(getValueInput);

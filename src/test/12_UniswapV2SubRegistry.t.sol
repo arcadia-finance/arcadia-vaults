@@ -78,13 +78,13 @@ contract UniswapV2SubRegistryTest is Test {
 
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
         oracleHub = new OracleHub();
@@ -105,23 +105,23 @@ contract UniswapV2SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -132,16 +132,16 @@ contract UniswapV2SubRegistryTest is Test {
         oracleSnxToEthEthToUsd[1] = address(oracleEthToUsd);
 
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -302,22 +302,22 @@ contract UniswapV2SubRegistryTest is Test {
 
         uint256 valueSnx = Constants.WAD * rateSnxToEth / 10**Constants.oracleSnxToEthDecimals * rateEthToUsd / 10**Constants.oracleEthToUsdDecimals * amountSnx / 10**Constants.snxDecimals;
         uint256 valueEth = Constants.WAD * rateEthToUsd / 10**Constants.oracleEthToUsdDecimals * amountEth / 10**Constants.ethDecimals;
-        uint256 expectedValueInNumeraire = valueSnx + valueEth;
+        uint256 expectedValueInBaseCurrency = valueSnx + valueEth;
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
                 assetAmount: pairSnxEth.balanceOf(lpProvider),
-                numeraire: Constants.UsdNumeraire
+                baseCurrency: Constants.UsdBaseCurrency
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = uniswapV2SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, 0);
-        assertInRange(actualValueInNumeraire, expectedValueInNumeraire);
+        assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testReturnValueInEthFromBalancedPair(uint112 amountSnx)
@@ -344,22 +344,22 @@ contract UniswapV2SubRegistryTest is Test {
 
         uint256 valueSnx = Constants.WAD * rateSnxToEth / 10**Constants.oracleSnxToEthDecimals * amountSnx / 10**Constants.snxDecimals;
         uint256 valueEth = Constants.WAD * amountEth / 10**Constants.ethDecimals;
-        uint256 expectedValueInNumeraire = valueSnx + valueEth;
+        uint256 expectedValueInBaseCurrency = valueSnx + valueEth;
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
                 assetAmount: pairSnxEth.balanceOf(lpProvider),
-                numeraire: Constants.EthNumeraire
+                baseCurrency: Constants.EthBaseCurrency
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = uniswapV2SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, 0);
-        assertInRange(actualValueInNumeraire, expectedValueInNumeraire);
+        assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testReturnValueInEthFromUnbalancedPair(uint112 amountSnx, uint112 amountEthSwapped)
@@ -393,22 +393,22 @@ contract UniswapV2SubRegistryTest is Test {
         uint256 valueEth = Constants.WAD * amountEth / 10**Constants.ethDecimals;
         //For approximation hereunder to hold the imbalance can't be to big, for bigger imbalances, the LP-value will always be underestimated -> no risk for protocol (see next test)
         vm.assume(amountEthSwapped < uint256(reserve1) * 10000000000);
-        uint256 expectedValueInNumeraire = (valueSnx + valueEth) * lpGrowth**2 / FixedPointMathLib.WAD**2; //Approximation, we do two swaps of almost equal size -> lp-position acrues fees
+        uint256 expectedValueInBaseCurrency = (valueSnx + valueEth) * lpGrowth**2 / FixedPointMathLib.WAD**2; //Approximation, we do two swaps of almost equal size -> lp-position acrues fees
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
                 assetAmount: lpAmount,
-                numeraire: Constants.EthNumeraire
+                baseCurrency: Constants.EthBaseCurrency
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = uniswapV2SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, 0);
-        assertInRange(actualValueInNumeraire, expectedValueInNumeraire);
+        assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testReturnValueInEthFromVeryUnbalancedPair(uint112 amountSnx, uint112 amountEthSwapped)
@@ -442,23 +442,23 @@ contract UniswapV2SubRegistryTest is Test {
         uint256 valueEth = Constants.WAD * amountEth / 10**Constants.ethDecimals;
         //for very big imbalances, the LP-value will always be underestimated -> no risk for protocol (see next test)
         vm.assume(amountEthSwapped > uint256(reserve1) * 10000000000);
-        uint256 expectedValueInNumeraire = (valueSnx + valueEth) * lpGrowth**2 / FixedPointMathLib.WAD**2; //Approximation, we do two swaps of almost equal size -> lp-position acrues fees
+        uint256 expectedValueInBaseCurrency = (valueSnx + valueEth) * lpGrowth**2 / FixedPointMathLib.WAD**2; //Approximation, we do two swaps of almost equal size -> lp-position acrues fees
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
                 assetAmount: lpAmount,
-                numeraire: Constants.EthNumeraire
+                baseCurrency: Constants.EthBaseCurrency
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = uniswapV2SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, 0);
         //for very big imbalances, the LP-value will always be underestimated -> no risk for protocol (see next test)
-        assertLe(actualValueInNumeraire, expectedValueInNumeraire);
+        assertLe(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testReturnValueFromBalancedPair(uint112 amountSnx, uint8 _ethDecimals, uint8 _snxDecimals, uint8 _oracleEthToUsdDecimals, uint8 _oracleSnxToUsdDecimals, uint64 _rateEthToUsd, uint128 _rateSnxToUsd) public {
@@ -512,23 +512,23 @@ contract UniswapV2SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** _oracleEthToUsdDecimals),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** _oracleSnxToUsdDecimals),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "SNX",
                 baseAsset: "USD",
                 oracleAddress: address(oracleSnxToUsd),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -566,22 +566,22 @@ contract UniswapV2SubRegistryTest is Test {
         vm.assume(Constants.WAD * _rateEthToUsd / 10**_oracleEthToUsdDecimals < type(uint256).max / amountEth);
         uint256 valueSnx = Constants.WAD * _rateSnxToUsd / 10**_oracleSnxToUsdDecimals * amountSnx / 10**_snxDecimals;
         uint256 valueEth = Constants.WAD * _rateEthToUsd / 10**_oracleEthToUsdDecimals * amountEth / 10**_ethDecimals;
-        uint256 expectedValueInNumeraire = valueSnx + valueEth;
+        uint256 expectedValueInBaseCurrency = valueSnx + valueEth;
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
                 assetAmount: amount,
-                numeraire: Constants.UsdNumeraire
+                baseCurrency: Constants.UsdBaseCurrency
             });
         (
             uint256 actualValueInUsd,
-            uint256 actualValueInNumeraire
+            uint256 actualValueInBaseCurrency
         ) = uniswapV2SubRegistry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, 0);
-        assertInRange(actualValueInNumeraire, expectedValueInNumeraire);
+        assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testReturnValueFromBalancedPairOverflow(uint112 amountSnx, uint64 _rateEthToUsd, uint128 _rateSnxToUsd) public {
@@ -634,23 +634,23 @@ contract UniswapV2SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** _oracleEthToUsdDecimals),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** _oracleSnxToUsdDecimals),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "SNX",
                 baseAsset: "USD",
                 oracleAddress: address(oracleSnxToUsd),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
@@ -689,7 +689,7 @@ contract UniswapV2SubRegistryTest is Test {
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
                 assetAmount: amount,
-                numeraire: Constants.UsdNumeraire
+                baseCurrency: Constants.UsdBaseCurrency
             });
 
         //Arithmetic overflow.
