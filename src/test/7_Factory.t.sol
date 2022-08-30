@@ -414,8 +414,8 @@ contract factoryTest is Test {
     }
 
     function testLatestRegistryAddsBaseCurrency(address newStable) public {
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
-        assertEq(address(0), factoryContr.baseCurrencyToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
+        assertEq(address(0), factoryContr.baseCurrencyToLiquidityPool(1));
         registryContr.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
@@ -428,8 +428,8 @@ contract factoryTest is Test {
             emptyList
         );
 
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
-        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
+        assertEq(newStable, factoryContr.baseCurrencyToLiquidityPool(1));
     }
 
     //Test setNewVaultInfo
@@ -567,8 +567,8 @@ contract factoryTest is Test {
             }),
             emptyList
         );
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
-        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
+        assertEq(newStable, factoryContr.baseCurrencyToLiquidityPool(1));
 
         registryContr2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
@@ -610,8 +610,8 @@ contract factoryTest is Test {
             }),
             emptyList
         );
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
-        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
+        assertEq(newStable, factoryContr.baseCurrencyToLiquidityPool(1));
 
         registryContr2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
@@ -644,8 +644,8 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
 
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
-        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
+        assertEq(newStable, factoryContr.baseCurrencyToLiquidityPool(1));
     }
 
     function testOwnerSetsNewVaultWithMoreBaseCurrenciesInMainRegistry(
@@ -656,8 +656,8 @@ contract factoryTest is Test {
     ) public {
         vm.assume(logic != address(0));
 
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
-        assertEq(address(0), factoryContr.baseCurrencyToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
+        assertEq(address(0), factoryContr.baseCurrencyToLiquidityPool(1));
 
         registryContr2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
@@ -690,8 +690,8 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
 
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
-        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
+        assertEq(newStable, factoryContr.baseCurrencyToLiquidityPool(1));
     }
 
     //Test confirmNewVaultInfo

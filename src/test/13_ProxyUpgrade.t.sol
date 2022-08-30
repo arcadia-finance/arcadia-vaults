@@ -501,7 +501,7 @@ contract VaultV2Test is Test {
         uint256 _erc721TokenIds;
         uint256 _erc1155TokenIds;
         address _registryAddress;
-        address _stable;
+        address _liquidityPool;
         address _stakeContract;
         address _irmAddress;
         uint256 life;
@@ -519,7 +519,7 @@ contract VaultV2Test is Test {
         checks._erc721TokenIds = proxy._erc721TokenIds(0);
         checks._erc1155TokenIds = proxy._erc1155TokenIds(0);
         checks._registryAddress = proxy._registryAddress();
-        checks._stable = proxy._stable();
+        checks._liquidityPool = proxy._liquidityPool();
         checks._stakeContract = proxy._stakeContract();
         checks._irmAddress = proxy._irmAddress();
         checks.life = proxy.life();

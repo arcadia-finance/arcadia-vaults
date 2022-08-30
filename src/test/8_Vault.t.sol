@@ -1832,7 +1832,7 @@ contract vaultTests is Test {
         vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
         vm.stopPrank();
 
-        (uint128 _openDebt, , , , , uint256 _baseCurrency) = vault_m.debt();
+        (, , , , , uint256 _baseCurrency) = vault_m.debt();
         assertEq(_baseCurrency, Constants.UsdBaseCurrency);
     }
 

@@ -64,7 +64,7 @@ contract MainRegistry is Ownable {
      *                              - baseCurrencyUnit: Since there is no native token for USD, this is 0 by default for USD
      *                              - assetAddress: Since there is no native token for usd, this is 0 address by default for USD
      *                              - baseCurrencyToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
-     *                              - liquidityPool: The contract address of the Arcadia issued token, pegged to the baseCurrency
+     *                              - liquidityPool: The contract of the Liquidity Pool, correspo,nding to the baseCurrency
      *                              - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      */
     constructor(BaseCurrencyInformation memory _baseCurrencyInformation) {

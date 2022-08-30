@@ -40,7 +40,7 @@ contract Factory is ERC721, Ownable {
     address public liquidatorAddress;
 
     uint256 public baseCurrencyCounter;
-    mapping(uint256 => address) public baseCurrencyToStable;
+    mapping(uint256 => address) public baseCurrencyToLiquidityPool;
 
     event VaultCreated(
         address indexed vaultAddress,
@@ -146,13 +146,13 @@ contract Factory is ERC721, Ownable {
         if (
             vaultDetails[latestVaultVersion].registryAddress != registryAddress
         ) {
-            address mainRegistryStableAddress;
+            address liquidityPool;
             for (uint256 i; i < baseCurrencyCounter; ) {
-                (, , , , mainRegistryStableAddress, ) = IMainRegistry(
+                (, , , , liquidityPool, ) = IMainRegistry(
                     registryAddress
                 ).baseCurrencyToInformation(i);
                 require(
-                    mainRegistryStableAddress == baseCurrencyToStable[i],
+                    liquidityPool == baseCurrencyToLiquidityPool[i],
                     "FTRY_SNVI:No match baseCurrencies MR"
                 );
                 unchecked {
@@ -166,14 +166,14 @@ contract Factory is ERC721, Ownable {
   @notice Function adds baseCurrency and corresponding stable contract to the factory
   @dev BaseCurrencies can only be added by the latest Main Registry
   @param baseCurrency An identifier (uint256) of the BaseCurrency
-  @param stable The contract address of the corresponding ERC20 token pegged to the baseCurrency
+  @param liquidityPool The contract address of the corresponding Liquidity Pool
   */
-    function addBaseCurrency(uint256 baseCurrency, address stable) external {
+    function addBaseCurrency(uint256 baseCurrency, address liquidityPool) external {
         require(
             vaultDetails[latestVaultVersion].registryAddress == msg.sender,
             "FTRY_AN: Add BaseCurrencies via MR"
         );
-        baseCurrencyToStable[baseCurrency] = stable;
+        baseCurrencyToLiquidityPool[baseCurrency] = liquidityPool;
         unchecked {
             ++baseCurrencyCounter;
         }
