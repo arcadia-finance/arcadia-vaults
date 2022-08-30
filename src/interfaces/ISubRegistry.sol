@@ -22,14 +22,6 @@ interface ISubRegistry {
             address[] memory
     );
 
-    function getAssetInformation(address asset) external
-        view
-        returns (
-            uint64,
-            address,
-            address[] memory
-    );
-
     function isAssetAddressWhiteListed(address) external view returns (bool);
 
     function isWhiteListed(address, uint256) external view returns (bool);
