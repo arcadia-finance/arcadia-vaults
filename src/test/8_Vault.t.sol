@@ -1184,7 +1184,7 @@ contract vaultTests is Test {
     }
 
     function testGetRemainingCreditAtStart() public {
-        uint256 remainingCredit = vault.getRemainingCredit();
+        uint256 remainingCredit = vault.getFreeMargin();
         assertEq(remainingCredit, 0);
     }
 
@@ -1196,7 +1196,7 @@ contract vaultTests is Test {
         (, uint16 _collThres, , , , ) = vault.debt();
 
         uint256 expectedRemaining = (depositValue * 100) / _collThres;
-        assertEq(expectedRemaining, vault.getRemainingCredit());
+        assertEq(expectedRemaining, vault.getFreeMargin());
     }
 
     function testGetRemainingCreditAfterTopUp(
@@ -1212,7 +1212,7 @@ contract vaultTests is Test {
             10**Constants.oracleEthToUsdDecimals) * amountEth;
         assertEq(
             (depositValueEth * 100) / _collThres,
-            vault.getRemainingCredit()
+            vault.getFreeMargin()
         );
 
         depositLinkInVault(amountLink, vaultOwner);
@@ -1220,7 +1220,7 @@ contract vaultTests is Test {
             10**Constants.oracleLinkToUsdDecimals) * amountLink;
         assertEq(
             ((depositValueEth + depositValueLink) * 100) / _collThres,
-            vault.getRemainingCredit()
+            vault.getFreeMargin()
         );
 
         (, uint256[] memory assetIds, , ) = depositBaycInVault(
@@ -1236,7 +1236,7 @@ contract vaultTests is Test {
         assertEq(
             ((depositValueEth + depositValueLink + depositBaycValue) * 100) /
                 _collThres,
-            vault.getRemainingCredit()
+            vault.getFreeMargin()
         );
     }
 
@@ -1255,7 +1255,7 @@ contract vaultTests is Test {
         vm.prank(vaultOwner);
         vault.takeCredit(amountCredit);
 
-        uint256 actualRemainingCredit = vault.getRemainingCredit();
+        uint256 actualRemainingCredit = vault.getFreeMargin();
         uint256 expectedRemainingCredit = (depositValue * 100) /
             _collThres -
             amountCredit;
@@ -1553,7 +1553,7 @@ contract vaultTests is Test {
             ? maxAllowedCreditLocal - openDebt
             : 0;
 
-        uint256 remainingCreditFetched = vault.getRemainingCredit();
+        uint256 remainingCreditFetched = vault.getFreeMargin();
 
         assertEq(remainingCreditLocal, remainingCreditFetched);
     }
@@ -1932,7 +1932,7 @@ contract vaultTests is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
         vm.startPrank(vaultOwner);
-        uint256 remainingCredit = vault.getRemainingCredit();
+        uint256 remainingCredit = vault.getFreeMargin();
         vault.takeCredit(uint128(remainingCredit));
         vm.stopPrank();
 

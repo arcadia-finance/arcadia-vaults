@@ -530,7 +530,7 @@ contract LiquidatorTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
         assertEq(proxy.life(), 0);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
@@ -559,7 +559,7 @@ contract LiquidatorTest is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
@@ -603,7 +603,7 @@ contract LiquidatorTest is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
@@ -655,7 +655,7 @@ contract LiquidatorTest is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
@@ -702,7 +702,7 @@ contract LiquidatorTest is Test {
             uint256[] memory assetTypes
         ) = depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
@@ -755,7 +755,7 @@ contract LiquidatorTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        uint256 remainingCred = uint128(proxy.getRemainingCredit());
+        uint256 remainingCred = uint128(proxy.getFreeMargin());
         proxy.takeCredit(uint128(remainingCred));
         vm.stopPrank();
 
@@ -851,7 +851,7 @@ contract LiquidatorTest is Test {
             depositERC20InVault(eth, amountEth, vaultOwner);
 
             vm.startPrank(vaultOwner);
-            remainingCred = uint128(proxy.getRemainingCredit());
+            remainingCred = uint128(proxy.getFreeMargin());
             proxy.takeCredit(uint128(remainingCred));
             vm.stopPrank();
 
@@ -949,7 +949,7 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        uint256 remainingCred = uint128(proxy.getRemainingCredit());
+        uint256 remainingCred = uint128(proxy.getFreeMargin());
         proxy.takeCredit(uint128(remainingCred));
         Vault(proxy2).takeCredit(uint128(remainingCred));
         vm.stopPrank();
@@ -1035,7 +1035,7 @@ contract LiquidatorTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        uint256 remainingCred = uint128(proxy.getRemainingCredit());
+        uint256 remainingCred = uint128(proxy.getFreeMargin());
         proxy.takeCredit(uint128(remainingCred));
         vm.stopPrank();
 
@@ -1114,7 +1114,7 @@ contract LiquidatorTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        uint256 remainingCred = uint128(proxy.getRemainingCredit());
+        uint256 remainingCred = uint128(proxy.getFreeMargin());
         proxy.takeCredit(uint128(remainingCred));
         vm.stopPrank();
 
@@ -1162,7 +1162,7 @@ contract LiquidatorTest is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);

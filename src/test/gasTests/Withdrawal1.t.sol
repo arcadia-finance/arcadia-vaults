@@ -648,7 +648,7 @@ contract gasWithdrawal1_1ERC20 is Test {
     }
 
     function testGetRemainingValue_1_ERC20() public view {
-        proxy.getRemainingCredit();
+        proxy.getFreeMargin();
     }
 
     function testTakeCredit() public {

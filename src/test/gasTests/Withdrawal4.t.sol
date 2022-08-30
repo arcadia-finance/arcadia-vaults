@@ -655,7 +655,7 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
     }
 
     function testGetRemainingValue() public view {
-        proxy.getRemainingCredit();
+        proxy.getFreeMargin();
     }
 
     function testTakeCredit() public {

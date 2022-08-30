@@ -844,7 +844,7 @@ contract EndToEndTest is Test {
 
         uint256 expectedValue = (((valueOfOneEth * amountEth) /
             10**Constants.ethDecimals) * 100) / _collThres;
-        uint256 actualValue = proxy.getRemainingCredit();
+        uint256 actualValue = proxy.getFreeMargin();
 
         assertEq(actualValue, expectedValue);
     }
@@ -1016,7 +1016,7 @@ contract EndToEndTest is Test {
             _collThres -
             amountCredit;
 
-        uint256 actualAvailableCredit = proxy.getRemainingCredit();
+        uint256 actualAvailableCredit = proxy.getFreeMargin();
 
         assertEq(actualAvailableCredit, expectedAvailableCredit); //no blocks pass in foundry
     }
@@ -1042,7 +1042,7 @@ contract EndToEndTest is Test {
             uint256[] memory assetTypes
         ) = depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit() - 1);
+        uint128 amountCredit = uint128(proxy.getFreeMargin() - 1);
 
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
@@ -1077,7 +1077,7 @@ contract EndToEndTest is Test {
         ) = depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.assume(
-            proxy.getRemainingCredit() >
+            proxy.getFreeMargin() >
                 ((amountEthWithdrawal * valueOfOneEth) /
                     10**Constants.ethDecimals) +
                     amountCredit
@@ -1088,7 +1088,7 @@ contract EndToEndTest is Test {
 
         assetAmounts[0] = amountEthWithdrawal;
         vm.startPrank(vaultOwner);
-        proxy.getRemainingCredit();
+        proxy.getFreeMargin();
         proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }

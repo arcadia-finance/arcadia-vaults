@@ -743,7 +743,7 @@ contract Vault {
         uint256 minCollValue;
         //gas: can't overflow: uint128 * uint16 << uint256
         unchecked {
-            minCollValue = (uint256(debt._usedMargin) * debt._collThres) / 100;
+            minCollValue = (uint256(getUsedMargin()) * debt._collThres) / 100;
         }
         (
             address[] memory assetAddresses,
@@ -820,6 +820,86 @@ contract Vault {
         }
     }
 
+    /*///////////////////////////////////////////////////////////////
+                          MARGIN REQUIREMENTS
+    ///////////////////////////////////////////////////////////////*/
+
+    function getCollateralValue()
+        public
+        view
+        returns (uint256 collateralValue)
+    {
+        //gas: cannot overflow unless currentValue is more than
+        // 1.15**57 *10**18 decimals, which is too many billions to write out
+        unchecked {
+            collateralValue = getValue(debt._baseCurrency) * 100 / debt._collThres;
+        }
+    }
+
+    function getCollateralValue(uint256 vaultValue)
+        public
+        view
+        returns (uint256 collateralValue)
+    {
+        //gas: cannot overflow unless currentValue is more than
+        // 1.15**57 *10**18 decimals, which is too many billions to write out
+        unchecked {
+            collateralValue = vaultValue * 100 / debt._collThres;
+        }
+    }
+
+    function getUsedMargin() public view returns (uint128 usedMargin) {
+        usedMargin = debt._usedMargin;
+    }
+
+    /** 
+    @notice Calculates the remaining margin the owner of the proxy vault can use.
+    @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
+    @return freeMargin The remaining amount of margin a user can take, 
+                            returned in the decimals of the base currency.
+  */
+    function getFreeMargin()
+        public
+        view
+        returns (uint256 freeMargin)
+    {
+        uint256 collateralValue = getCollateralValue();
+        uint256 usedMargin = getUsedMargin();
+
+        //gas: explicit check is done to prevent underflow
+        unchecked {
+            freeMargin = collateralValue > usedMargin
+                ? collateralValue - usedMargin
+                : 0;
+        }
+    }
+
+    /** 
+    @notice Calculates the remaining margin the owner of the proxy vault can use.
+    @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
+    @return freeMargin The remaining amount of margin a user can take, 
+                            returned in the decimals of the base currency.
+  */
+    function getFreeMargin(uint256 vaultValue)
+        public
+        view
+        returns (uint256 freeMargin)
+    {
+        uint256 collateralValue = getCollateralValue(vaultValue);
+        uint256 usedMargin = getUsedMargin();
+
+        //gas: explicit check is done to prevent underflow
+        unchecked {
+            freeMargin = collateralValue > usedMargin
+                ? collateralValue - usedMargin
+                : 0;
+        }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                          LENDING LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
     /** 
     @notice Syncs all unrealised debt (= interest) on the proxy vault.
     @dev Public function, can be called by any user to keep the game fair and to allow keeps to
@@ -856,7 +936,7 @@ contract Vault {
             //which is 3.4 million billion *10**18 decimals
 
             unRealisedDebt = uint128(
-                (debt._usedMargin * (LogExpMath.pow(base, exponent) - 1e18)) /
+                (getUsedMargin() * (LogExpMath.pow(base, exponent) - 1e18)) /
                     1e18
             );
         }
@@ -919,7 +999,7 @@ contract Vault {
         uint256 vaultValue = sumElementsOfList(valuesPerCreditRating);
 
         require(
-            vaultValue >= minCollValue,
+            getFreeMargin(vaultValue) >= amount,
             "Cannot take this amount of extra credit!"
         );
 
@@ -954,37 +1034,8 @@ contract Vault {
         //with sensible blocks, can return an open debt up to 3e38 units
         //gas: could go unchecked as well, but might result in opendebt = 0 on overflow
         openDebt = uint128(
-            (debt._usedMargin * LogExpMath.pow(base, exponent)) / 1e18
+            (getUsedMargin() * LogExpMath.pow(base, exponent)) / 1e18
         );
-    }
-
-    /** 
-    @notice Calculates the remaining credit the owner of the proxy vault can take out.
-    @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
-    @return remainingCredit The remaining amount of credit a user can take, 
-                            returned in the decimals of the stablecoin.
-  */
-    function getRemainingCredit()
-        public
-        view
-        returns (uint256 remainingCredit)
-    {
-        uint256 currentValue = getValue(debt._baseCurrency);
-        uint256 openDebt = getOpenDebt();
-
-        uint256 maxAllowedCredit;
-        //gas: cannot overflow unless currentValue is more than
-        // 1.15**57 *10**18 decimals, which is too many billions to write out
-        unchecked {
-            maxAllowedCredit = (currentValue * 100) / debt._collThres;
-        }
-
-        //gas: explicit check is done to prevent underflow
-        unchecked {
-            remainingCredit = maxAllowedCredit > openDebt
-                ? maxAllowedCredit - openDebt
-                : 0;
-        }
     }
 
     /** 
@@ -1000,7 +1051,7 @@ contract Vault {
         // if a user wants to pay more than their open debt
         // we should only take the amount that's needed
         // prevents refunds etc
-        uint256 openDebt = debt._usedMargin;
+        uint256 openDebt = getUsedMargin();
         uint256 transferAmount = openDebt > amount ? amount : openDebt;
         require(
             IERC20(_liquidityPool).transferFrom(

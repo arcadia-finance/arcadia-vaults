@@ -964,7 +964,7 @@ contract VaultV2 {
     @return remainingCredit The remaining amount of credit a user can take, 
                             returned in the decimals of the stablecoin.
   */
-    function getRemainingCredit()
+    function getFreeMargin()
         public
         view
         returns (uint256 remainingCredit)
