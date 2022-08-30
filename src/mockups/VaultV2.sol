@@ -73,7 +73,7 @@ contract VaultV2 {
     uint16 public vaultVersion;
 
     struct debtInfo {
-        uint128 _openDebt;
+        uint128 _usedMargin;
         uint16 _collThres; //2 decimals precision (factor 100)
         uint8 _liqThres; //2 decimals precision (factor 100)
         uint64 _yearlyInterestRate; //18 decimals precision (factor 10**18)
@@ -743,7 +743,7 @@ contract VaultV2 {
         uint256 minCollValue;
         //gas: can't overflow: uint128 * uint16 << uint256
         unchecked {
-            minCollValue = (uint256(debt._openDebt) * debt._collThres) / 100;
+            minCollValue = (uint256(debt._usedMargin) * debt._collThres) / 100;
         }
         (
             address[] memory assetAddresses,
@@ -856,13 +856,13 @@ contract VaultV2 {
             //which is 3.4 million billion *10**18 decimals
 
             unRealisedDebt = uint128(
-                (debt._openDebt * (LogExpMath.pow(base, exponent) - 1e18)) /
+                (debt._usedMargin * (LogExpMath.pow(base, exponent) - 1e18)) /
                     1e18
             );
         }
 
         //gas: could go unchecked as well, but might result in opendebt = 0 on overflow
-        debt._openDebt += unRealisedDebt;
+        debt._usedMargin += unRealisedDebt;
         debt._lastBlock = uint32(block.number);
 
         if (unRealisedDebt > 0) {
@@ -905,7 +905,7 @@ contract VaultV2 {
         //gas: can't overflow: uint129 * uint16 << uint256
         unchecked {
             minCollValue =
-                uint256((uint256(debt._openDebt) + amount) * debt._collThres) /
+                uint256((uint256(debt._usedMargin) + amount) * debt._collThres) /
                 100;
         }
 
@@ -928,7 +928,7 @@ contract VaultV2 {
         //gas: can only overflow when total opendebt is
         //above 340 billion billion *10**18 decimals
         //could go unchecked as well, but might result in opendebt = 0 on overflow
-        debt._openDebt += amount;
+        debt._usedMargin += amount;
         IERC20(_liquidityPool).mint(owner, amount);
     }
 
@@ -954,7 +954,7 @@ contract VaultV2 {
         //with sensible blocks, can return an open debt up to 3e38 units
         //gas: could go unchecked as well, but might result in opendebt = 0 on overflow
         openDebt = uint128(
-            (debt._openDebt * LogExpMath.pow(base, exponent)) / 1e18
+            (debt._usedMargin * LogExpMath.pow(base, exponent)) / 1e18
         );
     }
 
@@ -1000,7 +1000,7 @@ contract VaultV2 {
         // if a user wants to pay more than their open debt
         // we should only take the amount that's needed
         // prevents refunds etc
-        uint256 openDebt = debt._openDebt;
+        uint256 openDebt = debt._usedMargin;
         uint256 transferAmount = openDebt > amount ? amount : openDebt;
         require(
             IERC20(_liquidityPool).transferFrom(
@@ -1013,16 +1013,16 @@ contract VaultV2 {
 
         IERC20(_liquidityPool).burn(transferAmount);
 
-        //gas: transferAmount cannot be larger than debt._openDebt,
+        //gas: transferAmount cannot be larger than debt._usedMargin,
         //which is a uint128, thus can't underflow
         assert(openDebt >= transferAmount);
         unchecked {
-            debt._openDebt -= uint128(transferAmount);
+            debt._usedMargin -= uint128(transferAmount);
         }
 
         // if interest is calculated on a fixed rate, set interest to zero if opendebt is zero
         // todo: can be removed safely?
-        if (debt._openDebt == 0) {
+        if (debt._usedMargin == 0) {
             debt._yearlyInterestRate = 0;
         }
     }
@@ -1050,7 +1050,7 @@ contract VaultV2 {
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
             //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = uint256(debt._liqThres) * uint256(debt._openDebt); //yes, double cast is cheaper than no cast (and equal to one cast)
+            rightHand = uint256(debt._liqThres) * uint256(debt._usedMargin); //yes, double cast is cheaper than no cast (and equal to one cast)
         }
 
         require(leftHand < rightHand, "This vault is healthy");
@@ -1061,7 +1061,7 @@ contract VaultV2 {
                 life,
                 liquidationKeeper,
                 owner,
-                debt._openDebt,
+                debt._usedMargin,
                 debt._liqThres,
                 debt._baseCurrency
             ),
@@ -1073,7 +1073,7 @@ contract VaultV2 {
             ++life;
         }
 
-        debt._openDebt = 0;
+        debt._usedMargin = 0;
         debt._lastBlock = 0;
 
         return true;

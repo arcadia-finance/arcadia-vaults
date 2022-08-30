@@ -1265,7 +1265,7 @@ contract vaultTests is Test {
 
     function testInitializeWithZeroInterest() public {
         (
-            uint256 _openDebt,
+            uint256 _usedMargin,
             ,
             ,
             uint64 _yearlyInterestRate,
@@ -1273,7 +1273,7 @@ contract vaultTests is Test {
 
         ) = vault.debt();
 
-        assertEq(_openDebt, 0);
+        assertEq(_usedMargin, 0);
         assertEq(_yearlyInterestRate, 0);
         assertEq(_lastBlock, 0);
     }
@@ -1294,7 +1294,7 @@ contract vaultTests is Test {
     }
 
     struct debtInfo {
-        uint256 _openDebt;
+        uint256 _usedMargin;
         uint16 _collThres; //factor 100
         uint8 _liqThres; //factor 100
         uint64 _yearlyInterestRate; //factor 10**18
@@ -1304,7 +1304,7 @@ contract vaultTests is Test {
 
     function testMinCollValueUnchecked() public {
         //uint256 minCollValue;
-        //unchecked {minCollValue = uint256(debt._openDebt) * debt._collThres / 100;}
+        //unchecked {minCollValue = uint256(debt._usedMargin) * debt._collThres / 100;}
         assertTrue(
             uint256(type(uint128).max) * type(uint16).max < type(uint256).max
         );
@@ -1427,25 +1427,25 @@ contract vaultTests is Test {
         uint128 unRealisedDebt;
 
         debtInfo memory debtLocal;
-        debtLocal._openDebt = remainingCredit;
+        debtLocal._usedMargin = remainingCredit;
         debtLocal._collThres = _collThres;
         debtLocal._baseCurrency = _baseCurrency;
         debtLocal._lastBlock = uint32(_lastBlock);
         debtLocal._yearlyInterestRate = _yearlyInterestRate;
 
         unRealisedDebt = uint128(
-            (debtLocal._openDebt * (LogExpMath.pow(base, exponent) - 1e18)) /
+            (debtLocal._usedMargin * (LogExpMath.pow(base, exponent) - 1e18)) /
                 1e18
         );
 
-        debtLocal._openDebt += unRealisedDebt;
+        debtLocal._usedMargin += unRealisedDebt;
         debtLocal._lastBlock = uint32(block.number);
 
         vault.syncDebt();
 
-        (uint256 _openDebt, , , , , ) = vault.debt();
+        (uint256 _usedMargin, , , , , ) = vault.debt();
 
-        assertEq(debtLocal._openDebt, _openDebt);
+        assertEq(debtLocal._usedMargin, _usedMargin);
     }
 
     function testGetOpenDebtUnchecked(uint32 blocksToRoll) public {
@@ -1477,7 +1477,7 @@ contract vaultTests is Test {
         uint256 unRealisedDebt;
 
         debtInfo memory debtLocal;
-        debtLocal._openDebt = remainingCredit;
+        debtLocal._usedMargin = remainingCredit;
         debtLocal._collThres = _collThres;
         debtLocal._baseCurrency = _baseCurrency;
         debtLocal._lastBlock = uint32(_lastBlock);
@@ -1497,15 +1497,15 @@ contract vaultTests is Test {
         emit log_named_uint("logExp", LogExpMath.pow(base, exponent));
         emit log_named_uint("unRealisedDebt", unRealisedDebt);
 
-        debtLocal._openDebt =
-            (debtLocal._openDebt * LogExpMath.pow(base, exponent)) /
+        debtLocal._usedMargin =
+            (debtLocal._usedMargin * LogExpMath.pow(base, exponent)) /
             1e18;
 
         vault.syncDebt();
 
-        uint256 _openDebt;
+        uint256 _usedMargin;
         (
-            _openDebt,
+            _usedMargin,
             _collThres,
             ,
             _yearlyInterestRate,
@@ -1513,7 +1513,7 @@ contract vaultTests is Test {
             _baseCurrency
         ) = vault.debt();
 
-        assertEq(debtLocal._openDebt, _openDebt);
+        assertEq(debtLocal._usedMargin, _usedMargin);
     }
 
     function testRemainingCreditUnchecked(uint128 amountEth, uint8 factor)

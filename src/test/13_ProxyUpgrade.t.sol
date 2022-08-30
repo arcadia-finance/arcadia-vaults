@@ -487,7 +487,7 @@ contract VaultV2Test is Test {
     }
 
     struct Debt {
-        uint128 _openDebt;
+        uint128 _usedMargin;
         uint16 _collThres;
         uint8 _liqThres;
         uint64 _yearlyInterestRate;
@@ -524,7 +524,7 @@ contract VaultV2Test is Test {
         checks._irmAddress = proxy._irmAddress();
         checks.life = proxy.life();
         checks.owner = proxy.owner();
-        (debt._openDebt,
+        (debt._usedMargin,
         debt._collThres,
         debt._liqThres,
         debt._yearlyInterestRate,
