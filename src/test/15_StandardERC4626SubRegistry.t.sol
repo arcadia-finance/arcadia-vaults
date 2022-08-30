@@ -12,7 +12,7 @@ import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC4626SolmateMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../AssetRegistry/standardERC4626SubRegistry.sol";
+import "../AssetRegistry/StandardERC4626SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../ArcadiaOracle.sol";
