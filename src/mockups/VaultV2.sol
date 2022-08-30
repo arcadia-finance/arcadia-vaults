@@ -55,7 +55,7 @@ contract VaultV2 {
   ///////////////////////////////////////////////////////////////*/
     address public _registryAddress; /// to be fetched somewhere else?
     address public _liquidityPool;
-    address public _stakeContract;
+    address public _debtToken;
     address public _irmAddress;
 
 
@@ -208,7 +208,7 @@ contract VaultV2 {
         owner = _owner;
         debt._collThres = 150;
         debt._liqThres = 110;
-        _stakeContract = stakeContract;
+        _debtToken = stakeContract;
         _irmAddress = irmAddress;
         (,,,,_liquidityPool,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
@@ -866,7 +866,7 @@ contract VaultV2 {
         debt._lastBlock = uint32(block.number);
 
         if (unRealisedDebt > 0) {
-            IERC20(_liquidityPool).mint(_stakeContract, unRealisedDebt);
+            IERC20(_liquidityPool).mint(_debtToken, unRealisedDebt);
         }
     }
 
