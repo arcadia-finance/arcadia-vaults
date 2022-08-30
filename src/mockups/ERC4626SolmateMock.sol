@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity >=0.8.0;
 
 import {ERC20} from "../../lib/solmate/src/tokens/ERC20.sol";
@@ -13,4 +14,5 @@ contract MockERC4626 is ERC4626 {
     function totalAssets() public view override returns (uint256) {
         return ERC20(asset).balanceOf(address(this));
     }
+
 }

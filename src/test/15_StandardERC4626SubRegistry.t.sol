@@ -8,8 +8,8 @@ pragma solidity >0.8.10;
 
 import "../../lib/forge-std/src/Test.sol";
 
-import "../mockups/ERC20SolmateMock.sol";
-import "../mockups/ERC4626SolmateMock.sol";
+import {ERC4626Mock} from "../mockups/ERC4626Mock.sol";
+import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../AssetRegistry/StandardERC4626SubRegistry.sol";
@@ -25,7 +25,7 @@ contract standardERC4626SubRegistryTest is Test {
     MainRegistry private mainRegistry;
 
     ERC20Mock private eth;
-    MockERC4626 private ybEth;
+    ERC4626Mock private ybEth;
 
     ArcadiaOracle private oracleEthToUsd;
 
@@ -50,7 +50,7 @@ contract standardERC4626SubRegistryTest is Test {
     constructor() {
         vm.startPrank(tokenCreatorAddress);
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        ybEth = new MockERC4626(eth, "ybETH Mock", "mybETH");
+        ybEth = new ERC4626Mock(eth, "ybETH Mock", "mybETH", uint8(Constants.ethDecimals));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -164,6 +164,19 @@ contract standardERC4626SubRegistryTest is Test {
         vm.stopPrank();
     }
 
+    function testRevert_OwnerAddsAssetWithWrongNumberOfDecimals() public {
+        
+        ybEth = new ERC4626Mock(eth, "ybETH Mock", "mybETH", uint8(Constants.ethDecimals) - 1);
+           
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("SR: Decimals of asset and underlying don't match");
+        standardERC4626SubRegistry.setAssetInformation(
+            address(ybEth),
+            emptyList
+        );
+        vm.stopPrank();
+    }
+
     function testSuccess_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
         standardERC4626SubRegistry.setAssetInformation(
@@ -220,59 +233,14 @@ contract standardERC4626SubRegistryTest is Test {
         assertTrue(!standardERC4626SubRegistry.isWhiteListed(randomAsset, 0));
     }
 
-    function testReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
-        //Does not test on overflow, test to check if function correctly returns value in USD
-        vm.startPrank(creatorAddress);
-        standardERC4626SubRegistry.setAssetInformation(
-         address(ybEth),
-            emptyList
-        );
-        vm.stopPrank();
+    function testReturnValueZeroTotalSupply(uint256 rateEthToUsd_, uint256 totalAssets) public {
+        vm.assume(rateEthToUsd_ <= type(uint256).max / Constants.WAD);
 
-        uint256 expectedValueInUsd = (amountEth *
-            rateEthToUsd *
-            Constants.WAD) /
-            10**(Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
+        uint256 expectedValueInUsd = 0;
         uint256 expectedValueInBaseCurrency = 0;
 
-
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(ybEth),
-                assetId: 0,
-                assetAmount: amountEth,
-                baseCurrency: 0
-            });
-
-        (
-            uint256 actualValueInUsd,
-            uint256 actualValueInBaseCurrency
-        ) = standardERC4626SubRegistry.getValue(getValueInput);
-
-        assertEq(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
-    }
-
-    function testReturnValueSucces(uint256 rateEthToUsdNew, uint256 amountEth)
-        public
-    {
-        vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
-        vm.assume(rateEthToUsdNew <= type(uint256).max / Constants.WAD);
-
-        if (rateEthToUsdNew == 0) {
-            vm.assume(uint256(amountEth) <= type(uint256).max / Constants.WAD);
-        } else {
-            vm.assume(
-                uint256(amountEth) <=
-                    type(uint256).max / 
-                        Constants.WAD *
-                        10**Constants.oracleEthToUsdDecimals /
-                        uint256(rateEthToUsdNew)
-            );
-        }
-
         vm.startPrank(oracleOwner);
-        oracleEthToUsd.transmit(int256(rateEthToUsdNew));
+        oracleEthToUsd.transmit(int256(rateEthToUsd_));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -282,16 +250,21 @@ contract standardERC4626SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (((Constants.WAD * rateEthToUsdNew) /
-            10**Constants.oracleEthToUsdDecimals) * amountEth) /
-            10**Constants.ethDecimals;
-        uint256 expectedValueInBaseCurrency = 0;
+        //Cheat balance of
+        uint256 slot2 = stdstore
+            .target(address(eth))
+            .sig(ybEth.balanceOf.selector)
+            .with_key(address(ybEth))
+            .find();
+        bytes32 loc2 = bytes32(slot2);
+        bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
+        vm.store(address(eth), loc2, mockedBalanceOf);
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(ybEth),
                 assetId: 0,
-                assetAmount: amountEth,
+                assetAmount: 0,
                 baseCurrency: 0
             });
         (
@@ -303,39 +276,134 @@ contract standardERC4626SubRegistryTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnValueOverflow(uint256 rateEthToUsdNew, uint256 amountEth)
-        public
-    {
-        vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
-        vm.assume(rateEthToUsdNew <= type(uint256).max / Constants.WAD);
-        vm.assume(rateEthToUsdNew > 0);
+    function testReturnValueSucces(uint256 rateEthToUsd_, uint256 shares, uint256 totalSupply, uint256 totalAssets) public {
+        vm.assume(shares <= totalSupply);
+        vm.assume(totalSupply > 0);
+        
+        vm.assume(rateEthToUsd_ <= type(uint256).max / Constants.WAD);
+        if (totalAssets > 0) {
+            vm.assume(shares <= type(uint256).max / totalAssets);
+        }
+        if (rateEthToUsd_ == 0) {
+            vm.assume(shares * totalAssets / totalSupply <= type(uint256).max / Constants.WAD);
+        } else {
+            vm.assume(
+                shares * totalAssets / totalSupply <=
+                    type(uint256).max / 
+                        Constants.WAD *
+                        10**Constants.oracleEthToUsdDecimals /
+                        uint256(rateEthToUsd_)
+            );
+        }
 
-        vm.assume(
-            uint256(amountEth) >
-                type(uint256).max / 
-                    Constants.WAD *
-                    10**Constants.oracleEthToUsdDecimals /
-                    uint256(rateEthToUsdNew)
-        );
+        uint256 expectedValueInUsd = (shares * totalAssets / totalSupply) * 
+            (Constants.WAD * rateEthToUsd_ / 10**Constants.oracleEthToUsdDecimals) /
+            10**Constants.ethDecimals;
+        uint256 expectedValueInBaseCurrency = 0;
 
         vm.startPrank(oracleOwner);
-        oracleEthToUsd.transmit(int256(rateEthToUsdNew));
+        oracleEthToUsd.transmit(int256(rateEthToUsd_));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
         standardERC4626SubRegistry.setAssetInformation(
-               address(ybEth),
+                  address(ybEth),
             emptyList
         );
         vm.stopPrank();
+
+        //Cheat totalSupply
+        uint256 slot = stdstore
+            .target(address(ybEth))
+            .sig(ybEth.totalSupply.selector)
+            .find();
+        bytes32 loc = bytes32(slot);
+        bytes32 mockedTotalSupply = bytes32(abi.encode(totalSupply));
+        vm.store(address(ybEth), loc, mockedTotalSupply);
+
+        //Cheat balance of
+        uint256 slot2 = stdstore
+            .target(address(eth))
+            .sig(ybEth.balanceOf.selector)
+            .with_key(address(ybEth))
+            .find();
+        bytes32 loc2 = bytes32(slot2);
+        bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
+        vm.store(address(eth), loc2, mockedBalanceOf);
 
         SubRegistry.GetValueInput memory getValueInput = SubRegistry
             .GetValueInput({
                 assetAddress: address(ybEth),
                 assetId: 0,
-                assetAmount: amountEth,
+                assetAmount: shares,
                 baseCurrency: 0
             });
+        (
+            uint256 actualValueInUsd,
+            uint256 actualValueInBaseCurrency
+        ) = standardERC4626SubRegistry.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, expectedValueInUsd);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
+    }
+
+    function testReturnValueOverflow(uint256 rateEthToUsd_, uint256 shares, uint256 totalSupply, uint256 totalAssets)
+        public
+    {
+        vm.assume(shares <= totalSupply);
+        vm.assume(totalSupply > 0);
+        vm.assume(totalAssets > 0);
+        vm.assume(rateEthToUsd_ > 0);
+        
+        vm.assume(rateEthToUsd_ <= type(uint256).max / Constants.WAD);
+        vm.assume(shares <= type(uint256).max / totalAssets);
+
+        vm.assume(
+            shares * totalAssets / totalSupply >
+                type(uint256).max / 
+                    Constants.WAD *
+                    10**Constants.oracleEthToUsdDecimals /
+                    uint256(rateEthToUsd_)
+        );
+
+        vm.startPrank(oracleOwner);
+        oracleEthToUsd.transmit(int256(rateEthToUsd_));
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);
+        standardERC4626SubRegistry.setAssetInformation(
+                  address(ybEth),
+            emptyList
+        );
+        vm.stopPrank();
+
+        //Cheat totalSupply
+        uint256 slot = stdstore
+            .target(address(ybEth))
+            .sig(ybEth.totalSupply.selector)
+            .find();
+        bytes32 loc = bytes32(slot);
+        bytes32 mockedTotalSupply = bytes32(abi.encode(totalSupply));
+        vm.store(address(ybEth), loc, mockedTotalSupply);
+
+        //Cheat balance of
+        uint256 slot2 = stdstore
+            .target(address(eth))
+            .sig(ybEth.balanceOf.selector)
+            .with_key(address(ybEth))
+            .find();
+        bytes32 loc2 = bytes32(slot2);
+        bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
+        vm.store(address(eth), loc2, mockedBalanceOf);
+
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+            .GetValueInput({
+                assetAddress: address(ybEth),
+                assetId: 0,
+                assetAmount: shares,
+                baseCurrency: 0
+            });
+
         //Arithmetic overflow.
         vm.expectRevert(bytes(""));
         standardERC4626SubRegistry.getValue(getValueInput);
