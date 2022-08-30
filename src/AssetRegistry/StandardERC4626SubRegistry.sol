@@ -63,6 +63,8 @@ contract StandardERC4626SubRegistry is SubRegistry {
             address[] memory underlyingAssetOracleAddresses
             ) = ISubRegistry(IMainRegistry(mainRegistry).assetToSubRegistry(underlyingAddress)).getAssetInformation(underlyingAddress);
 
+        require(10 ** IERC4626(assetAddress).decimals() == assetUnit, "SR: Decimals of asset and underlying don't match");
+
         address[] memory tokens = new address[](1);
         tokens[0] = underlyingAssetAddress;
 
