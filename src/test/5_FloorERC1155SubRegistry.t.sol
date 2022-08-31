@@ -484,7 +484,7 @@ stable: 0x0000000000000000000000000000000000000000,
                 baseCurrency: 1
             });
         //Arithmetic overflow.
-        vm.expectRevert(bytes(""));
+        vm.expectRevert(stdError.arithmeticError);
         floorERC1155SubRegistry.getValue(getValueInput);
     }
 }
