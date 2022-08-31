@@ -10,6 +10,7 @@ import "./utils/LogExpMath.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IERC721.sol";
 import "./interfaces/IERC1155.sol";
+import "./interfaces/IERC4626.sol";
 import "./interfaces/ILiquidator.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IRM.sol";
@@ -76,7 +77,7 @@ contract Vault {
     uint16 public vaultVersion;
 
     struct debtInfo {
-        uint128 _usedMargin;
+        uint128 _openDebt;
         uint16 _collThres; //2 decimals precision (factor 100)
         uint8 _liqThres; //2 decimals precision (factor 100)
         uint64 _yearlyInterestRate; //18 decimals precision (factor 10**18)
@@ -216,6 +217,7 @@ contract Vault {
         (,,,,_liquidityPool,_stable,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
         _debtToken = ILiquidityPool(_liquidityPool).debtToken();
+        IERC20(IERC4626(_liquidityPool).asset()).approve(_liquidityPool, type(uint256).max);
     }
 
     /** 
@@ -722,8 +724,6 @@ contract Vault {
     @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
   */
     function setBaseCurrency(uint256 newBaseCurrency) public onlyAuthorized {
-        require(getOpenDebt() == 0, "VL: Can't change baseCurrency when openDebt > 0");
-        require(newBaseCurrency + 1 <= IMainRegistry(_registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
         _setBaseCurrency(newBaseCurrency);
     }
 
@@ -734,6 +734,8 @@ contract Vault {
     function _setBaseCurrency(
         uint256 newBaseCurrency
     ) private {
+        require(getOpenDebt() == 0, "VL: Can't change baseCurrency when openDebt > 0");
+        require(newBaseCurrency + 1 <= IMainRegistry(_registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
         debt._baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
     }
 
@@ -852,8 +854,9 @@ contract Vault {
         }
     }
 
-    function getUsedMargin() public view returns (uint128 usedMargin) {
-        usedMargin = debt._usedMargin;
+    function getUsedMargin() public returns (uint128 usedMargin) {
+        ILiquidityPool(_liquidityPool).syncInterests();
+        usedMargin = uint128(IERC4626(_debtToken).maxWithdraw(address(this))); // ToDo: Check if cast is safe
     }
 
     /** 
@@ -864,7 +867,6 @@ contract Vault {
   */
     function getFreeMargin()
         public
-        view
         returns (uint256 freeMargin)
     {
         uint256 collateralValue = getCollateralValue();
@@ -886,7 +888,6 @@ contract Vault {
   */
     function getFreeMargin(uint256 vaultValue)
         public
-        view
         returns (uint256 freeMargin)
     {
         uint256 collateralValue = getCollateralValue(vaultValue);
@@ -898,6 +899,26 @@ contract Vault {
                 ? collateralValue - usedMargin
                 : 0;
         }
+    }
+
+    /** 
+    @notice Can be called by authorised applications to open or increase a margin position.
+    @param baseCurrency The Base-currency in which the margin position is denominated
+    @param amount The amount the position is increased.
+    @return success boolean indicating if there is sufficient free margin to increase the margin position
+    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency. 
+    */
+    function increaseMarginPosition(uint256 baseCurrency, uint256 amount) public onlyAuthorized returns (bool success) {
+        if (baseCurrency != debt._baseCurrency) _setBaseCurrency(baseCurrency);
+        success = getFreeMargin() >= amount;
+    }
+
+    /** 
+    @notice Can be called by authorised applications to close or decrease a margin position.
+    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency. 
+     */
+    function decreaseMarginPosition(uint256 baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
+        success = baseCurrency == debt._baseCurrency;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -940,18 +961,20 @@ contract Vault {
             //which is 3.4 million billion *10**18 decimals
 
             unRealisedDebt = uint128(
-                (getUsedMargin() * (LogExpMath.pow(base, exponent) - 1e18)) /
+                (debt._openDebt * (LogExpMath.pow(base, exponent) - 1e18)) /
                     1e18
             );
         }
 
         //gas: could go unchecked as well, but might result in opendebt = 0 on overflow
-        debt._usedMargin += unRealisedDebt;
+        debt._openDebt += unRealisedDebt;
         debt._lastBlock = uint32(block.number);
 
         if (unRealisedDebt > 0) {
             IERC20(_stable).mint(_stakeContract, unRealisedDebt);
         }
+
+        ILiquidityPool(_liquidityPool).syncInterests();
     }
 
     /** 
@@ -989,7 +1012,7 @@ contract Vault {
         //gas: can't overflow: uint129 * uint16 << uint256
         unchecked {
             minCollValue =
-                uint256((uint256(debt._usedMargin) + amount) * debt._collThres) /
+                uint256((uint256(debt._openDebt) + amount) * debt._collThres) /
                 100;
         }
 
@@ -1012,8 +1035,12 @@ contract Vault {
         //gas: can only overflow when total opendebt is
         //above 340 billion billion *10**18 decimals
         //could go unchecked as well, but might result in opendebt = 0 on overflow
-        debt._usedMargin += amount;
+        debt._openDebt += amount;
         IERC20(_stable).mint(owner, amount);
+
+        if (amount > 0) {
+            ILiquidityPool(_liquidityPool).borrow(amount, address(this), address(this));
+        }
     }
 
     /** 
@@ -1038,7 +1065,7 @@ contract Vault {
         //with sensible blocks, can return an open debt up to 3e38 units
         //gas: could go unchecked as well, but might result in opendebt = 0 on overflow
         openDebt = uint128(
-            (getUsedMargin() * LogExpMath.pow(base, exponent)) / 1e18
+            (debt._openDebt * LogExpMath.pow(base, exponent)) / 1e18
         );
     }
 
@@ -1055,7 +1082,7 @@ contract Vault {
         // if a user wants to pay more than their open debt
         // we should only take the amount that's needed
         // prevents refunds etc
-        uint256 openDebt = getUsedMargin();
+        uint256 openDebt = debt._openDebt;
         uint256 transferAmount = openDebt > amount ? amount : openDebt;
         require(
             IERC20(_stable).transferFrom(
@@ -1068,18 +1095,20 @@ contract Vault {
 
         IERC20(_stable).burn(transferAmount);
 
-        //gas: transferAmount cannot be larger than debt._usedMargin,
+        //gas: transferAmount cannot be larger than debt._openDebt,
         //which is a uint128, thus can't underflow
         assert(openDebt >= transferAmount);
         unchecked {
-            debt._usedMargin -= uint128(transferAmount);
+            debt._openDebt -= uint128(transferAmount);
         }
 
         // if interest is calculated on a fixed rate, set interest to zero if opendebt is zero
         // todo: can be removed safely?
-        if (debt._usedMargin == 0) {
+        if (debt._openDebt == 0) {
             debt._yearlyInterestRate = 0;
         }
+
+        ILiquidityPool(_liquidityPool).repay(amount, address(this));
     }
 
     /** 
@@ -1105,7 +1134,7 @@ contract Vault {
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
             //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = uint256(debt._liqThres) * uint256(debt._usedMargin); //yes, double cast is cheaper than no cast (and equal to one cast)
+            rightHand = uint256(debt._liqThres) * uint256(debt._openDebt); //yes, double cast is cheaper than no cast (and equal to one cast)
         }
 
         require(leftHand < rightHand, "This vault is healthy");
@@ -1116,7 +1145,7 @@ contract Vault {
                 life,
                 liquidationKeeper,
                 owner,
-                debt._usedMargin,
+                debt._openDebt,
                 debt._liqThres,
                 debt._baseCurrency
             ),
@@ -1128,7 +1157,8 @@ contract Vault {
             ++life;
         }
 
-        debt._usedMargin = 0;
+        ILiquidityPool(_liquidityPool).repay(debt._openDebt, address(this));
+        debt._openDebt = 0;
         debt._lastBlock = 0;
 
         return true;

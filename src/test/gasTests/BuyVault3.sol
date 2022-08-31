@@ -649,6 +649,8 @@ stable: address(stable),
         eth.mint(vaultOwner, 1e18);
 
         vm.startPrank(vaultOwner);
+        proxy.authorize(address(pool), true);
+
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
         dickButs.setApprovalForAll(address(proxy), true);

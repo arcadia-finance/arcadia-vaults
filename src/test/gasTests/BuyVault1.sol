@@ -650,6 +650,8 @@ contract gasBuyVault_1ERC20 is Test {
         vm.roll(1); //increase block for random salt
 
         vm.startPrank(vaultOwner);
+        proxy.authorize(address(pool), true);
+
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
         dickButs.setApprovalForAll(address(proxy), true);

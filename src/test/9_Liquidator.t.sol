@@ -485,6 +485,8 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
+        proxy.authorize(address(pool), true);
+
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
         dickButs.setApprovalForAll(address(proxy), true);
@@ -982,6 +984,7 @@ contract LiquidatorTest is Test {
             assetAmounts,
             assetTypes
         );
+        Vault(proxy2).authorize(address(pool), true);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);

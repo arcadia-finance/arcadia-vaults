@@ -422,7 +422,6 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        factory = new Factory();
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
@@ -470,6 +469,8 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
+        proxy.authorize(address(pool), true);
+
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
         dickButs.setApprovalForAll(address(proxy), true);
@@ -1209,6 +1210,10 @@ contract EndToEndTest is Test {
         );
         vm.stopPrank();
 
+        vm.prank(liquidityProvider);
+        asset.transfer(address(proxy), openDebt - amountCredit);
+
+
         vm.prank(vaultOwner);
         proxy.repayDebt(openDebt);
 
@@ -1244,6 +1249,9 @@ contract EndToEndTest is Test {
 
         vm.prank(address(proxy));
         stable.mint(vaultOwner, factor * amountCredit);
+
+        vm.prank(liquidityProvider);
+        asset.transfer(address(proxy), factor * amountCredit);
 
         vm.roll(block.number + blocksToRoll);
 

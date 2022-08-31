@@ -481,6 +481,8 @@ contract VaultV2Test is Test {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
+        proxy.authorize(address(pool), true);
+
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
         dickButs.setApprovalForAll(address(proxy), true);

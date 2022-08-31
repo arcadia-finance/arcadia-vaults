@@ -304,6 +304,30 @@ contract gasProxyDeploy is Test {
 
         oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
+
+        vm.prank(creatorAddress);
+        factory = new Factory();
+
+        vm.startPrank(tokenCreatorAddress);
+        asset = new Asset("Asset", "ASSET", 18);
+        asset.mint(liquidityProvider, type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);
+        pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factory));
+
+        debt = new DebtToken(pool);
+        pool.setDebtToken(address(debt));
+
+        tranche = new Tranche(pool, "Senior", "SR");
+        pool.addTranche(address(tranche), 50);
+        vm.stopPrank();
+
+        vm.prank(liquidityProvider);
+        asset.approve(address(pool), type(uint256).max);
+
+        vm.prank(address(tranche));
+        pool.deposit(type(uint128).max, liquidityProvider);
     }
 
     //this is a before each
@@ -315,7 +339,7 @@ contract gasProxyDeploy is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: address(pool),
-stable: address(stable),
+                stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -329,7 +353,7 @@ stable: address(stable),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 liquidityPool: address(pool),
-stable: address(stable),
+                stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -437,6 +461,9 @@ stable: address(stable),
             0
         );
         proxy = Vault(proxyAddr);
+
+        vm.prank(vaultOwner);
+        proxy.authorize(address(pool), true);
 
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));

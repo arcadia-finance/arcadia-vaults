@@ -481,7 +481,7 @@ contract gasWithdrawal3_1ERC201ERC721 is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: address(pool),
-stable: address(stable),
+                stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -495,7 +495,7 @@ stable: address(stable),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 liquidityPool: address(pool),
-stable: address(stable),
+                stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -644,6 +644,8 @@ stable: address(stable),
         eth.mint(vaultOwner, 1e18);
 
         vm.startPrank(vaultOwner);
+        proxy.authorize(address(pool), true);
+
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
         dickButs.setApprovalForAll(address(proxy), true);
@@ -683,7 +685,7 @@ stable: address(stable),
         proxy.getValue(uint8(Constants.UsdBaseCurrency));
     }
 
-    function testGetRemainingValue_1_ERC20_1_ERC721() public view {
+    function testGetRemainingValue_1_ERC20_1_ERC721() public {
         proxy.getFreeMargin();
     }
 

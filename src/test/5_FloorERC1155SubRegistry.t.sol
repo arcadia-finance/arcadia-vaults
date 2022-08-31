@@ -445,7 +445,7 @@ stable: 0x0000000000000000000000000000000000000000,
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testFailReturnValueOverflow(
+    function testReturnValueOverflow(
         uint256 amountInterleave,
         uint256 rateInterleaveToEthNew
     ) public {
@@ -454,7 +454,7 @@ stable: 0x0000000000000000000000000000000000000000,
         vm.assume(rateInterleaveToEthNew > 0);
 
         vm.assume(
-            uint256(amountInterleave) >
+            amountInterleave >
                 type(uint256).max /
                     Constants.WAD *
                     10**Constants.oracleInterleaveToEthDecimals /
@@ -462,7 +462,7 @@ stable: 0x0000000000000000000000000000000000000000,
         );
 
         vm.startPrank(oracleOwner);
-        oracleInterleaveToEth.transmit(int192(int256(rateInterleaveToEthNew)));
+        oracleInterleaveToEth.transmit(int256(rateInterleaveToEthNew));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -484,6 +484,7 @@ stable: 0x0000000000000000000000000000000000000000,
                 baseCurrency: 1
             });
         //Arithmetic overflow.
+        vm.expectRevert(bytes(""));
         floorERC1155SubRegistry.getValue(getValueInput);
     }
 }

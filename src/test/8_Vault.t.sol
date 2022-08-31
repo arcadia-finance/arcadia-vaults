@@ -420,6 +420,8 @@ contract vaultTests is Test {
             1
         );
 
+        vault.authorize(address(pool), true);
+
         bayc.setApprovalForAll(address(vault), true);
         mayc.setApprovalForAll(address(vault), true);
         dickButs.setApprovalForAll(address(vault), true);
