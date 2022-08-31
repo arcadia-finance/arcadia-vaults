@@ -27,6 +27,12 @@ import "../../utils/Constants.sol";
 import "../../ArcadiaOracle.sol";
 import "../fixtures/ArcadiaOracleFixture.f.sol";
 
+import {LiquidityPool} from "../../../lib/arcadia-lending/src/LiquidityPool.sol";
+import {DebtToken} from "../../../lib/arcadia-lending/src/DebtToken.sol";
+import {Tranche} from "../../../lib/arcadia-lending/src/Tranche.sol";
+import {Asset} from "../../../lib/arcadia-lending/src/mocks/Asset.sol";
+
+
 contract gasProxyDeploy is Test {
     using stdStorage for StdStorage;
 
@@ -59,12 +65,18 @@ contract gasProxyDeploy is Test {
     Stable private stable;
     Liquidator private liquidator;
 
+    Asset asset;
+    LiquidityPool pool;
+    Tranche tranche;
+    DebtToken debt;
+
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
     address private stakeContract = address(5);
     address private vaultOwner = address(6);
+    address private liquidityProvider = address(9);
 
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
@@ -302,7 +314,7 @@ contract gasProxyDeploy is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
+                liquidityPool: address(pool),
 stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
@@ -316,7 +328,7 @@ stable: address(stable),
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                liquidityPool: 0x0000000000000000000000000000000000000000,
+                liquidityPool: address(pool),
 stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
@@ -392,7 +404,6 @@ stable: address(stable),
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        factory = new Factory();
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),

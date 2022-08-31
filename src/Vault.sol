@@ -14,6 +14,7 @@ import "./interfaces/ILiquidator.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IRM.sol";
 import "./interfaces/IMainRegistry.sol";
+import "./interfaces/ILiquidityPool.sol";
 
 /** 
   * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -56,6 +57,7 @@ contract Vault {
     address public _registryAddress; /// to be fetched somewhere else?
     address public _liquidityPool;
     address public _stable;
+    address public _stakeContract;
     address public _debtToken;
     address public _irmAddress;
 
@@ -209,10 +211,11 @@ contract Vault {
         owner = _owner;
         debt._collThres = 150;
         debt._liqThres = 110;
-        _debtToken = stakeContract;
+        _stakeContract = stakeContract;
         _irmAddress = irmAddress;
         (,,,,_liquidityPool,_stable,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
+        _debtToken = ILiquidityPool(_liquidityPool).debtToken();
     }
 
     /** 
@@ -947,7 +950,7 @@ contract Vault {
         debt._lastBlock = uint32(block.number);
 
         if (unRealisedDebt > 0) {
-            IERC20(_stable).mint(_debtToken, unRealisedDebt);
+            IERC20(_stable).mint(_stakeContract, unRealisedDebt);
         }
     }
 

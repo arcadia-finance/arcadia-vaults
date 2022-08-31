@@ -19,6 +19,11 @@ import "../Liquidator.sol";
 
 import "../utils/Constants.sol";
 
+import {LiquidityPool} from "../../lib/arcadia-lending/src/LiquidityPool.sol";
+import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
+import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import {Asset} from "../../lib/arcadia-lending/src/mocks/Asset.sol";
+
 interface IVaultExtra {
     function life() external view returns (uint256);
 
@@ -35,7 +40,16 @@ contract factoryTest is Test {
     MainRegistry internal registryContr;
     MainRegistry internal registryContr2;
     ERC20Mock internal erc20Contr;
+
+    Asset asset;
+    LiquidityPool pool;
+    Tranche tranche;
+    DebtToken debt;
+
+    address private creatorAddress = address(1);
+    address private tokenCreatorAddress = address(2);
     address internal unprivilegedAddress1 = address(5);
+    address private liquidityProvider = address(7);
 
     uint256[] emptyList = new uint256[](0);
 
@@ -55,13 +69,35 @@ contract factoryTest is Test {
             address(factoryContr),
             0x0000000000000000000000000000000000000000
         );
+
+        vm.startPrank(tokenCreatorAddress);
+        asset = new Asset("Asset", "ASSET", 18);
+        asset.mint(liquidityProvider, type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);
+        pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factoryContr));
+
+        debt = new DebtToken(pool);
+        pool.setDebtToken(address(debt));
+
+        tranche = new Tranche(pool, "Senior", "SR");
+        pool.addTranche(address(tranche), 50);
+        vm.stopPrank();
+
+        vm.prank(liquidityProvider);
+        asset.approve(address(pool), type(uint256).max);
+
+        vm.prank(address(tranche));
+        pool.deposit(type(uint128).max, liquidityProvider);
+
         registryContr = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
-stable: address(erc20Contr),
+                liquidityPool: address(pool),
+                stable: address(erc20Contr),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -385,7 +421,7 @@ stable: address(erc20Contr),
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
+                liquidityPool: address(pool),
                 stable: address(erc20Contr),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
@@ -407,7 +443,7 @@ stable: address(erc20Contr),
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
+                liquidityPool: address(pool),
                 stable: newBaseCurrency,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
@@ -424,7 +460,7 @@ stable: address(erc20Contr),
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
+                liquidityPool: address(pool),
                 stable: newStable,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
@@ -534,7 +570,7 @@ stable: address(erc20Contr),
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
+                liquidityPool: address(pool),
                 stable: randomStable,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
@@ -566,8 +602,8 @@ stable: address(erc20Contr),
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
-stable: newStable,
+                liquidityPool: address(pool),
+                stable: newStable,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -581,8 +617,8 @@ stable: newStable,
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
-stable: address(erc20Contr),
+                liquidityPool: address(pool),
+                stable: address(erc20Contr),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -611,8 +647,8 @@ stable: address(erc20Contr),
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
-stable: newStable,
+                liquidityPool: address(pool),
+                stable: newStable,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -626,8 +662,8 @@ stable: newStable,
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
-stable: address(erc20Contr),
+                liquidityPool: address(pool),
+                stable: address(erc20Contr),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -637,8 +673,8 @@ stable: address(erc20Contr),
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
-stable: newStable,
+                liquidityPool: address(pool),
+                stable: newStable,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -674,8 +710,8 @@ stable: newStable,
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
-stable: address(erc20Contr),
+                liquidityPool: address(pool),
+                stable: address(erc20Contr),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -685,8 +721,8 @@ stable: address(erc20Contr),
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
-stable: newStable,
+                liquidityPool: address(pool),
+                stable: newStable,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),

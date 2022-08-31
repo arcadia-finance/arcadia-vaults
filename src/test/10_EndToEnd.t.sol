@@ -26,6 +26,11 @@ import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
+import {LiquidityPool} from "../../lib/arcadia-lending/src/LiquidityPool.sol";
+import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
+import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import {Asset} from "../../lib/arcadia-lending/src/mocks/Asset.sol";
+
 contract EndToEndTest is Test {
     using stdStorage for StdStorage;
 
@@ -58,12 +63,18 @@ contract EndToEndTest is Test {
     Stable private stable;
     Liquidator private liquidator;
 
+    Asset asset;
+    LiquidityPool pool;
+    Tranche tranche;
+    DebtToken debt;
+
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
     address private stakeContract = address(5);
     address private vaultOwner = address(6);
+    address private liquidityProvider = address(7);
 
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
@@ -285,6 +296,30 @@ contract EndToEndTest is Test {
 
         oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
+
+        vm.prank(creatorAddress);
+        factory = new Factory();
+
+        vm.startPrank(tokenCreatorAddress);
+        asset = new Asset("Asset", "ASSET", 18);
+        asset.mint(liquidityProvider, type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);
+        pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factory));
+
+        debt = new DebtToken(pool);
+        pool.setDebtToken(address(debt));
+
+        tranche = new Tranche(pool, "Senior", "SR");
+        pool.addTranche(address(tranche), 50);
+        vm.stopPrank();
+
+        vm.prank(liquidityProvider);
+        asset.approve(address(pool), type(uint256).max);
+
+        vm.prank(address(tranche));
+        pool.deposit(type(uint128).max, liquidityProvider);
     }
 
     //this is a before each
@@ -297,8 +332,8 @@ contract EndToEndTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
-stable: address(stable),
+                liquidityPool: address(pool),
+                stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -311,8 +346,8 @@ stable: address(stable),
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                liquidityPool: 0x0000000000000000000000000000000000000000,
-stable: address(stable),
+                liquidityPool: address(pool),
+                stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),

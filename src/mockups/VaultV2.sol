@@ -57,6 +57,7 @@ contract VaultV2 {
     address public _liquidityPool;
     address public _stable;
     address public _debtToken;
+    address public _stakeContract;
     address public _irmAddress;
 
 
@@ -867,7 +868,7 @@ contract VaultV2 {
         debt._lastBlock = uint32(block.number);
 
         if (unRealisedDebt > 0) {
-            IERC20(_stable).mint(_debtToken, unRealisedDebt);
+            IERC20(_stable).mint(_stakeContract, unRealisedDebt);
         }
     }
 
