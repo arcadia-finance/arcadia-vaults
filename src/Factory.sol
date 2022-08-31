@@ -41,6 +41,7 @@ contract Factory is ERC721, Ownable {
 
     uint256 public baseCurrencyCounter;
     mapping(uint256 => address) public baseCurrencyToLiquidityPool;
+    mapping(uint256 => address) public baseCurrencyToStable;
 
     event VaultCreated(
         address indexed vaultAddress,
@@ -146,13 +147,13 @@ contract Factory is ERC721, Ownable {
         if (
             vaultDetails[latestVaultVersion].registryAddress != registryAddress
         ) {
-            address liquidityPool;
+            address stable;
             for (uint256 i; i < baseCurrencyCounter; ) {
-                (, , , , liquidityPool, ) = IMainRegistry(
+                (, , , , , stable, ) = IMainRegistry(
                     registryAddress
                 ).baseCurrencyToInformation(i);
                 require(
-                    liquidityPool == baseCurrencyToLiquidityPool[i],
+                    stable == baseCurrencyToStable[i],
                     "FTRY_SNVI:No match baseCurrencies MR"
                 );
                 unchecked {
@@ -168,12 +169,13 @@ contract Factory is ERC721, Ownable {
   @param baseCurrency An identifier (uint256) of the BaseCurrency
   @param liquidityPool The contract address of the corresponding Liquidity Pool
   */
-    function addBaseCurrency(uint256 baseCurrency, address liquidityPool) external {
+    function addBaseCurrency(uint256 baseCurrency, address liquidityPool, address stable) external {
         require(
             vaultDetails[latestVaultVersion].registryAddress == msg.sender,
             "FTRY_AN: Add BaseCurrencies via MR"
         );
         baseCurrencyToLiquidityPool[baseCurrency] = liquidityPool;
+        baseCurrencyToStable[baseCurrency] = stable;
         unchecked {
             ++baseCurrencyCounter;
         }

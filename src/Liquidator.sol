@@ -245,7 +245,7 @@ contract Liquidator is Ownable {
             surplus = 0; //could be skipped
         }
 
-        address stable = IFactory(factoryAddress).baseCurrencyToLiquidityPool(
+        address stable = IFactory(factoryAddress).baseCurrencyToStable(
             uint256(baseCurrency)
         );
         if (surplus != 0) {
@@ -403,7 +403,7 @@ contract Liquidator is Ownable {
         for (uint8 k; k < baseCurrencyCounter; ) {
             if (totalClaimable[k] > 0) {
                 address BaseCurrenciestable = IFactory(factoryAddress)
-                    .baseCurrencyToLiquidityPool(k);
+                    .baseCurrencyToStable(k);
                 uint256 balance = IERC20(BaseCurrenciestable).balanceOf(
                     address(this)
                 );

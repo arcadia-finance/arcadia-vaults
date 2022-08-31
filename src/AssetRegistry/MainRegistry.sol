@@ -45,6 +45,7 @@ contract MainRegistry is Ownable {
         address assetAddress;
         address baseCurrencyToUsdOracle;
         address liquidityPool;
+        address stable;
         string baseCurrencyLabel;
     }
 
@@ -94,7 +95,8 @@ contract MainRegistry is Ownable {
             for (uint256 i = factoryBaseCurrencyCounter; i < baseCurrencyCounter; ) {
                 IFactory(factoryAddress).addBaseCurrency(
                     i,
-                    baseCurrencyToInformation[i].liquidityPool
+                    baseCurrencyToInformation[i].liquidityPool,
+                    baseCurrencyToInformation[i].stable
                 );
                 unchecked {
                     ++i;
@@ -325,7 +327,8 @@ contract MainRegistry is Ownable {
         if (factoryAddress != address(0)) {
             IFactory(factoryAddress).addBaseCurrency(
                 baseCurrencyCounter,
-                baseCurrencyInformation.liquidityPool
+                baseCurrencyInformation.liquidityPool,
+                baseCurrencyInformation.stable
             );
         }
         unchecked {

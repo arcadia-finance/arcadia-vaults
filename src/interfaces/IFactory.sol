@@ -21,9 +21,9 @@ interface IFactory {
 
     function getCurrentRegistry() external view returns (address);
 
-    function addBaseCurrency(uint256 baseCurrency, address stable) external;
+    function addBaseCurrency(uint256 baseCurrency, address liquidityPool, address stable) external;
 
     function baseCurrencyCounter() external view returns (uint256);
 
-    function baseCurrencyToLiquidityPool(uint256) external view returns (address);
+    function baseCurrencyToStable(uint256) external view returns (address);
 }

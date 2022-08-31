@@ -445,7 +445,8 @@ contract gasLiquidate_1ERC201ERC721 is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: address(stable),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -458,7 +459,8 @@ contract gasLiquidate_1ERC201ERC721 is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                liquidityPool: address(stable),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),

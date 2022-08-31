@@ -68,6 +68,7 @@ contract StandardERC20RegistryTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -144,6 +145,7 @@ contract StandardERC20RegistryTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -156,6 +158,7 @@ contract StandardERC20RegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),

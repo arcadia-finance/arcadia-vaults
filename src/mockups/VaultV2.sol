@@ -55,6 +55,7 @@ contract VaultV2 {
   ///////////////////////////////////////////////////////////////*/
     address public _registryAddress; /// to be fetched somewhere else?
     address public _liquidityPool;
+    address public _stable;
     address public _debtToken;
     address public _irmAddress;
 
@@ -210,7 +211,7 @@ contract VaultV2 {
         debt._liqThres = 110;
         _debtToken = stakeContract;
         _irmAddress = irmAddress;
-        (,,,,_liquidityPool,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
+        (,,,,_liquidityPool,_stable,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
     }
 
@@ -866,7 +867,7 @@ contract VaultV2 {
         debt._lastBlock = uint32(block.number);
 
         if (unRealisedDebt > 0) {
-            IERC20(_liquidityPool).mint(_debtToken, unRealisedDebt);
+            IERC20(_stable).mint(_debtToken, unRealisedDebt);
         }
     }
 
@@ -929,7 +930,7 @@ contract VaultV2 {
         //above 340 billion billion *10**18 decimals
         //could go unchecked as well, but might result in opendebt = 0 on overflow
         debt._usedMargin += amount;
-        IERC20(_liquidityPool).mint(owner, amount);
+        IERC20(_stable).mint(owner, amount);
     }
 
     /** 
@@ -1003,7 +1004,7 @@ contract VaultV2 {
         uint256 openDebt = debt._usedMargin;
         uint256 transferAmount = openDebt > amount ? amount : openDebt;
         require(
-            IERC20(_liquidityPool).transferFrom(
+            IERC20(_stable).transferFrom(
                 msg.sender,
                 address(this),
                 transferAmount
@@ -1011,7 +1012,7 @@ contract VaultV2 {
             "Transfer from failed"
         );
 
-        IERC20(_liquidityPool).burn(transferAmount);
+        IERC20(_stable).burn(transferAmount);
 
         //gas: transferAmount cannot be larger than debt._usedMargin,
         //which is a uint128, thus can't underflow

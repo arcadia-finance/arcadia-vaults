@@ -60,7 +60,8 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: address(erc20Contr),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: address(erc20Contr),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -374,7 +375,7 @@ contract factoryTest is Test {
         vm.assume(unprivilegedAddress != address(factoryContr));
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("FTRY_AN: Add BaseCurrencies via MR");
-        factoryContr.addBaseCurrency(2, address(erc20Contr));
+        factoryContr.addBaseCurrency(2, 0x0000000000000000000000000000000000000000, address(erc20Contr));
         vm.stopPrank();
     }
 
@@ -384,7 +385,8 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: address(erc20Contr),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                stable: address(erc20Contr),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -405,7 +407,8 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: newBaseCurrency,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                stable: newBaseCurrency,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -414,22 +417,23 @@ contract factoryTest is Test {
     }
 
     function testLatestRegistryAddsBaseCurrency(address newStable) public {
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
-        assertEq(address(0), factoryContr.baseCurrencyToLiquidityPool(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(address(0), factoryContr.baseCurrencyToStable(1));
         registryContr.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: newStable,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                stable: newStable,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
 
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
-        assertEq(newStable, factoryContr.baseCurrencyToLiquidityPool(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
     }
 
     //Test setNewVaultInfo
@@ -530,7 +534,8 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: randomStable,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                stable: randomStable,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -561,21 +566,23 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: newStable,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: newStable,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
-        assertEq(newStable, factoryContr.baseCurrencyToLiquidityPool(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
 
         registryContr2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: address(erc20Contr),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: address(erc20Contr),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -604,21 +611,23 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: newStable,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: newStable,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
-        assertEq(newStable, factoryContr.baseCurrencyToLiquidityPool(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
 
         registryContr2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: address(erc20Contr),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: address(erc20Contr),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -628,7 +637,8 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: newStable,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: newStable,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -644,8 +654,8 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
 
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
-        assertEq(newStable, factoryContr.baseCurrencyToLiquidityPool(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
     }
 
     function testOwnerSetsNewVaultWithMoreBaseCurrenciesInMainRegistry(
@@ -656,15 +666,16 @@ contract factoryTest is Test {
     ) public {
         vm.assume(logic != address(0));
 
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
-        assertEq(address(0), factoryContr.baseCurrencyToLiquidityPool(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(address(0), factoryContr.baseCurrencyToStable(1));
 
         registryContr2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: address(erc20Contr),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: address(erc20Contr),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -674,7 +685,8 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: newStable,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+stable: newStable,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -690,8 +702,8 @@ contract factoryTest is Test {
         factoryContr.confirmNewVaultInfo();
         registryContr2.setFactory(address(factoryContr));
 
-        assertEq(address(erc20Contr), factoryContr.baseCurrencyToLiquidityPool(0));
-        assertEq(newStable, factoryContr.baseCurrencyToLiquidityPool(1));
+        assertEq(address(erc20Contr), factoryContr.baseCurrencyToStable(0));
+        assertEq(newStable, factoryContr.baseCurrencyToStable(1));
     }
 
     //Test confirmNewVaultInfo
