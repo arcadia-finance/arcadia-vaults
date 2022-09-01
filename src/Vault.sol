@@ -963,6 +963,7 @@ contract Vault {
     {
         //gas: 35 gas cheaper to not take debt into memory
         uint256 totalValue = getValue(debt._baseCurrency);
+        uint128 openDebt = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
 
@@ -971,7 +972,7 @@ contract Vault {
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
             //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = uint256(debt._liqThres) * uint256(debt._openDebt); //yes, double cast is cheaper than no cast (and equal to one cast)
+            rightHand = uint256(debt._liqThres) * uint256(openDebt);
         }
 
         require(leftHand < rightHand, "This vault is healthy");
@@ -982,7 +983,7 @@ contract Vault {
                 life,
                 liquidationKeeper,
                 owner,
-                debt._openDebt,
+                openDebt,
                 debt._liqThres,
                 debt._baseCurrency
             ),
@@ -997,6 +998,7 @@ contract Vault {
         ILiquidityPool(_liquidityPool).repay(debt._openDebt, address(this));
         debt._openDebt = 0;
         debt._lastBlock = 0;
+        //ToDo: What to do with the debttokens, transfer, burn???
 
         return true;
     }
