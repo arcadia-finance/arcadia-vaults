@@ -995,10 +995,9 @@ contract Vault {
             ++life;
         }
 
-        ILiquidityPool(_liquidityPool).repay(debt._openDebt, address(this));
+        ILiquidityPool(_liquidityPool).repay(debt._openDebt, address(this)); //ToDo: What to do with the debttokens, transfer, burn???
         debt._openDebt = 0;
         debt._lastBlock = 0;
-        //ToDo: What to do with the debttokens, transfer, burn???
 
         return true;
     }
