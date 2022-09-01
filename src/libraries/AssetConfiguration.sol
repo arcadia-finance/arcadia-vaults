@@ -264,8 +264,8 @@ library AssetConfiguration {
     * @param assetDetail The asset configuration in struct format
     * @return AssetDetailBitmap
     **/
-    function toBitmap(AssetDetail memory assetDetail) internal pure returns (AssetDetailBitmap) {
-        AssetDetailBitmap config = AssetDetailBitmap({data: 0});
+    function toBitmap(AssetDetail memory assetDetail) internal pure returns (AssetDetailBitmap memory) {
+        AssetDetailBitmap memory config = AssetDetailBitmap({data: 0});
         setCollateralFactor(config, assetDetail.collateralFactor);
         setLiquidationThreshold(config, assetDetail.liquidityThreshold);
         setLiquidationReward(config, assetDetail.liquidityReward);
