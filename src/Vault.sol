@@ -467,7 +467,7 @@ contract Vault {
             }
             require(vaultValue > minCollValue, "V_W: coll. value too low!");
 
-            _setYearlyInterestRate(valuesPerCreditRating, minCollValue);
+            _setYearlyInterestRate();
         }
     }
 
@@ -740,66 +740,10 @@ contract Vault {
     }
 
     /** 
-    @notice Sets the yearly interest rate of the proxy vault, in the form of a 1e18 decimal number.
-    @dev First syncs all debt to realise all unrealised debt. Fetches all the asset data and queries the
-         Registry to obtain an array of values, split up according to the credit rating of the underlying assets.
-  */
-    function setYearlyInterestRate() public onlyOwner {
-        syncDebt();
-        uint256 minCollValue;
-        //gas: can't overflow: uint128 * uint16 << uint256
-        unchecked {
-            minCollValue = (uint256(getUsedMargin()) * debt._collThres) / 100;
-        }
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts
-        ) = generateAssetData();
-        uint256[] memory ValuesPerCreditRating = IRegistry(_registryAddress)
-            .getListOfValuesPerCreditRating(
-                assetAddresses,
-                assetIds,
-                assetAmounts,
-                debt._baseCurrency
-            );
-
-        _setYearlyInterestRate(ValuesPerCreditRating, minCollValue);
-    }
-
-    /** 
     @notice Internal function: sets the yearly interest rate (with 18 decimals precision).
-    @param valuesPerCreditRating An array of values, split per credit rating.
-    @param minCollValue The minimum collateral value based on the amount of open debt on the proxy vault.
   */
-    function _setYearlyInterestRate(
-        uint256[] memory valuesPerCreditRating,
-        uint256 minCollValue
-    ) private {
-        debt._yearlyInterestRate = calculateYearlyInterestRate(
-            valuesPerCreditRating,
-            minCollValue
-        );
-
-        ILiquidityPool(_liquidityPool).updateInterestRate(debt._yearlyInterestRate);
-    }
-
-    /** 
-    @notice Calculates the yearly interest (with 18 decimals precision).
-    @dev Based on an array with values per credit rating (tranches) and the minimum collateral value needed for the debt taken,
-         returns the yearly interest rate in a 1e18 decimal number.
-    @param valuesPerCreditRating An array of values, split per credit rating.
-    @param minCollValue The minimum collateral value based on the amount of open debt on the proxy vault.
-    @return yearlyInterestRate The yearly interest rate in a 1e18 decimal number.
-  */
-    function calculateYearlyInterestRate(
-        uint256[] memory valuesPerCreditRating,
-        uint256 minCollValue
-    ) public view returns (uint64 yearlyInterestRate) {
-        yearlyInterestRate = IRM(_irmAddress).getYearlyInterestRate(
-            valuesPerCreditRating,
-            minCollValue
-        );
+    function _setYearlyInterestRate() private {
+        debt._yearlyInterestRate = ILiquidityPool(_liquidityPool).interestRate();
     }
 
     // https://twitter.com/0x_beans/status/1502420621250105346
@@ -1005,7 +949,7 @@ contract Vault {
             "Cannot take this amount of extra credit!"
         );
 
-        _setYearlyInterestRate(valuesPerCreditRating, minCollValue);
+        _setYearlyInterestRate();
 
         //gas: can only overflow when total opendebt is
         //above 340 billion billion *10**18 decimals

@@ -14,7 +14,7 @@ import "../Vault.sol";
 
 import "../AssetRegistry/MainRegistry.sol";
 import "../mockups/ERC20SolmateMock.sol";
-import "../InterestRateModule.sol";
+
 import "../Liquidator.sol";
 
 import "../utils/Constants.sol";
@@ -35,7 +35,6 @@ contract factoryTest is Test {
 
     Factory internal factoryContr;
     Vault internal vaultContr;
-    InterestRateModule internal interestContr;
     Liquidator internal liquidatorContr;
     MainRegistry internal registryContr;
     MainRegistry internal registryContr2;
@@ -64,7 +63,6 @@ contract factoryTest is Test {
         factoryContr = new Factory();
         vaultContr = new Vault();
         erc20Contr = new ERC20Mock("ERC20 Mock", "mERC20", 18);
-        interestContr = new InterestRateModule();
         liquidatorContr = new Liquidator(
             address(factoryContr),
             0x0000000000000000000000000000000000000000
@@ -77,6 +75,7 @@ contract factoryTest is Test {
 
         vm.startPrank(creatorAddress);
         pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factoryContr));
+        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(pool);
         pool.setDebtToken(address(debt));
@@ -107,7 +106,7 @@ contract factoryTest is Test {
             address(registryContr),
             address(vaultContr),
             0x0000000000000000000000000000000000000000,
-            address(interestContr),
+            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
@@ -431,7 +430,7 @@ contract factoryTest is Test {
             address(registryContr2),
             address(vaultContr),
             0x0000000000000000000000000000000000000000,
-            address(interestContr),
+            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
@@ -483,7 +482,7 @@ contract factoryTest is Test {
             address(registryContr),
             address(vaultContr),
             0x0000000000000000000000000000000000000000,
-            address(interestContr),
+            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         vm.stopPrank();
@@ -866,7 +865,7 @@ contract factoryTest is Test {
                 address(registryContr),
                 address(vaultContr),
                 address(0),
-                address(interestContr),
+                0x0000000000000000000000000000000000000000,
                 Constants.upgradeProof1To2
             );
         }

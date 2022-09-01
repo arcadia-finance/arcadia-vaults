@@ -20,7 +20,7 @@ import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/FloorERC1155SubRegistry.sol";
-import "../InterestRateModule.sol";
+
 import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
@@ -58,7 +58,6 @@ contract vaultTests is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
-    InterestRateModule private interestRateModule;
     Stable private stable;
     Liquidator private liquidator;
 
@@ -272,10 +271,6 @@ contract vaultTests is Test {
         eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);
-        interestRateModule = new InterestRateModule();
-        interestRateModule.setBaseInterestRate(5 * 10**16);
-        vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
         stable = new Stable(
@@ -309,6 +304,7 @@ contract vaultTests is Test {
 
         vm.startPrank(creatorAddress);
         pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factoryContr));
+        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(pool);
         pool.setDebtToken(address(debt));
@@ -365,7 +361,7 @@ contract vaultTests is Test {
             address(mainRegistry),
             address(vault),
             stakeContract,
-            address(interestRateModule),
+            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         vm.prank(creatorAddress);
@@ -416,7 +412,7 @@ contract vaultTests is Test {
             vaultOwner,
             address(mainRegistry),
             address(stakeContract),
-            address(interestRateModule),
+            0x0000000000000000000000000000000000000000,
             1
         );
 
@@ -1433,7 +1429,7 @@ contract vaultTests is Test {
         );
 
         vm.prank(creatorAddress);
-        interestRateModule.setBaseInterestRate(base - 1e18); //note this will not work anymore if any credit-rating is set!!
+        pool.updateInterestRate(base - 1e18);
 
         //uint256 remainingCredit = depositEthAndTakeMaxCredit(10*10**6 * 10**18); //10m ETH
         uint256 remainingCredit = depositEthAndTakeMaxCredit(
@@ -1611,7 +1607,7 @@ contract vaultTests is Test {
             address(this),
             address(mainRegistry),
             address(stakeContract),
-            address(interestRateModule),
+            0x0000000000000000000000000000000000000000,
             1
         );
         assertEq(address(this), vault_m.owner());
@@ -1652,7 +1648,7 @@ contract vaultTests is Test {
             address(this),
             address(mainRegistry),
             address(stakeContract),
-            address(interestRateModule),
+            0x0000000000000000000000000000000000000000,
             1
         );
         assertEq(address(this), vault_m.owner());

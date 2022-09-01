@@ -19,7 +19,6 @@ import "../../AssetRegistry/MainRegistry.sol";
 import "../../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../../AssetRegistry/FloorERC1155SubRegistry.sol";
-import "../../InterestRateModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
 
@@ -63,7 +62,6 @@ contract gasRepay_1ERC201ERC721 is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
-    InterestRateModule private interestRateModule;
     Stable private stable;
     Liquidator private liquidator;
 
@@ -415,10 +413,6 @@ contract gasRepay_1ERC201ERC721 is Test {
         eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);
-        interestRateModule = new InterestRateModule();
-        interestRateModule.setBaseInterestRate(5 * 10**16);
-        vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
         stable = new Stable(
@@ -460,6 +454,7 @@ contract gasRepay_1ERC201ERC721 is Test {
 
         vm.startPrank(creatorAddress);
         pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factory));
+        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(pool);
         pool.setDebtToken(address(debt));
@@ -602,7 +597,7 @@ stable: address(stable),
             address(mainRegistry),
             address(vault),
             stakeContract,
-            address(interestRateModule),
+            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();

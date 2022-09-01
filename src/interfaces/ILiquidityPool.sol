@@ -10,5 +10,7 @@ interface ILiquidityPool {
 
     function debtToken() external returns (address);
 
-    function updateInterestRate(uint64 _interestRate) external;
+    function interestRate() external returns (uint64 interestRate);
+
+    function updateInterestRate(uint64 interestRate) external;
 }
