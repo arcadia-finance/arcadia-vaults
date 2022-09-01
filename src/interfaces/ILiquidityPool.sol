@@ -9,4 +9,6 @@ interface ILiquidityPool {
     function repay(uint256 amount, address vault) external;
 
     function debtToken() external returns (address);
+
+    function updateInterestRate(uint64 _interestRate) external;
 }

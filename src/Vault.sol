@@ -780,6 +780,8 @@ contract Vault {
             valuesPerCreditRating,
             minCollValue
         );
+
+        ILiquidityPool(_liquidityPool).updateInterestRate(debt._yearlyInterestRate);
     }
 
     /** 
@@ -974,7 +976,7 @@ contract Vault {
             IERC20(_stable).mint(_stakeContract, unRealisedDebt);
         }
 
-        ILiquidityPool(_liquidityPool).syncInterests();
+        require(debt._openDebt == getUsedMargin(), "test");
     }
 
     /** 
