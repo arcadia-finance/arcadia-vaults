@@ -942,41 +942,14 @@ contract Vault {
          _yearlyInterestRate = 1 + r expressed as 18 decimals fixed point number
   */
     function syncDebt() public {
-        uint128 base;
-        uint128 exponent;
-        uint128 unRealisedDebt;
-
-        unchecked {
-            //gas: can't overflow: 1e18 + uint64 <<< uint128
-            base = uint128(1e18) + debt._yearlyInterestRate;
-
-            //gas: only overflows when blocks.number > 894262060268226281981748468
-            //in practice: assumption that delta of blocks < 341640000 (150 years)
-            //as foreseen in LogExpMath lib
-            exponent = uint128(
-                ((block.number - debt._lastBlock) * 1e18) / yearlyBlocks
-            );
-
-            //gas: taking an imaginary worst-case D- tier assets with max interest of 1000%
-            //over a period of 5 years
-            //this won't overflow as long as opendebt < 3402823669209384912995114146594816
-            //which is 3.4 million billion *10**18 decimals
-
-            unRealisedDebt = uint128(
-                (debt._openDebt * (LogExpMath.pow(base, exponent) - 1e18)) /
-                    1e18
-            );
-        }
-
-        //gas: could go unchecked as well, but might result in opendebt = 0 on overflow
-        debt._openDebt += unRealisedDebt;
-        debt._lastBlock = uint32(block.number);
+        uint128 newOpenDebt = getUsedMargin();
+        uint128 unRealisedDebt = newOpenDebt - debt._openDebt;
 
         if (unRealisedDebt > 0) {
             IERC20(_stable).mint(_stakeContract, unRealisedDebt);
         }
 
-        require(debt._openDebt == getUsedMargin(), "test");
+        debt._openDebt = newOpenDebt;
     }
 
     /** 
