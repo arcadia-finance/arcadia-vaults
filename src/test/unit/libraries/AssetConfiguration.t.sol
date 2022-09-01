@@ -13,14 +13,6 @@ import "../../../libraries/AssetConfiguration.sol";
 contract AssetConfigurationTest is Test {
     using stdStorage for StdStorage;
 
-    uint8 public decimals = uint8(18);
-
-    address public nonCreator = address(1);
-    address public transmitter = address(32);
-    address public nonTransmitter = address(31);
-
-
-
     function testValidCollateralFactor() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
         AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
