@@ -26,4 +26,6 @@ interface IFactory {
     function baseCurrencyCounter() external view returns (uint256);
 
     function baseCurrencyToStable(uint256) external view returns (address);
+
+    function baseCurrencyToLiquidityPool(uint256) external view returns (address);
 }

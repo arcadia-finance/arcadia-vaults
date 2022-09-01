@@ -13,4 +13,8 @@ interface ILiquidityPool {
     function interestRate() external returns (uint64 interestRate);
 
     function updateInterestRate(uint64 interestRate) external;
+
+    function asset() external returns (address);
+
+    function processDefault(uint256 assets, uint256 deficit) external;
 }
