@@ -325,7 +325,6 @@ contract vaultTests is Test {
     function setUp() public {
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -937,7 +936,7 @@ contract vaultTests is Test {
         emit Transfer(address(0), vaultOwner, amountCredit);
         vault.takeCredit(amountCredit);
 
-        assertEq(stable.balanceOf(vaultOwner), amountCredit);
+        assertEq(asset.balanceOf(vaultOwner), amountCredit);
         assertEq(vault.getUsedMargin(), amountCredit); //no blocks have passed
     }
 

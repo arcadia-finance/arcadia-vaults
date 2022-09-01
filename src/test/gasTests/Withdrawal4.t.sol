@@ -587,7 +587,7 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
 
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
+        stable.transfer(address(0), asset.balanceOf(vaultOwner));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);

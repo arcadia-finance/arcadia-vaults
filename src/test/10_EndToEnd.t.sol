@@ -414,7 +414,6 @@ contract EndToEndTest is Test {
 
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -905,7 +904,7 @@ contract EndToEndTest is Test {
         proxy.takeCredit(amountCredit);
         vm.stopPrank();
 
-        assertEq(stable.balanceOf(vaultOwner), amountCredit);
+        assertEq(asset.balanceOf(vaultOwner), amountCredit);
     }
 
     function testNotAllowTooMuchCreditAfterDeposit(
@@ -928,7 +927,7 @@ contract EndToEndTest is Test {
         proxy.takeCredit(amountCredit);
         vm.stopPrank();
 
-        assertEq(stable.balanceOf(vaultOwner), 0);
+        assertEq(asset.balanceOf(vaultOwner), 0);
     }
 
     function testIncreaseOfDebtPerBlock(
@@ -1201,8 +1200,8 @@ contract EndToEndTest is Test {
         vm.startPrank(address(proxy));
         stable.mint(
             vaultOwner,
-            openDebt > stable.balanceOf(vaultOwner)
-                ? openDebt - stable.balanceOf(vaultOwner)
+            openDebt > asset.balanceOf(vaultOwner)
+                ? openDebt - asset.balanceOf(vaultOwner)
                 : 0
         );
         vm.stopPrank();
@@ -1253,7 +1252,7 @@ contract EndToEndTest is Test {
         vm.roll(block.number + blocksToRoll);
 
         uint128 openDebt = proxy.getUsedMargin();
-        uint256 balanceBefore = stable.balanceOf(vaultOwner);
+        uint256 balanceBefore = asset.balanceOf(vaultOwner);
 
         vm.startPrank(vaultOwner);
         vm.expectEmit(true, true, false, true);
@@ -1261,7 +1260,7 @@ contract EndToEndTest is Test {
         proxy.repayDebt(openDebt * factor);
         vm.stopPrank();
 
-        uint256 balanceAfter = stable.balanceOf(vaultOwner);
+        uint256 balanceAfter = asset.balanceOf(vaultOwner);
 
         assertEq(balanceBefore - openDebt, balanceAfter);
         assertEq(proxy.getUsedMargin(), 0);

@@ -419,7 +419,6 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);

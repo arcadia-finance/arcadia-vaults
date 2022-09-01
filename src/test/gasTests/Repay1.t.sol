@@ -589,7 +589,7 @@ contract gasRepay_1ERC20 is Test {
 
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
+        stable.transfer(address(0), asset.balanceOf(vaultOwner));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
