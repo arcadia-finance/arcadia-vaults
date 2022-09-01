@@ -140,7 +140,7 @@ library AssetConfiguration {
     **/
     function getProtocolLiquidationFee(AssetDetailBitmap memory assetDetail) internal pure returns (uint128)
     {
-        return (assetDetail.data & ~LIQUIDATION_REWARD_MASK) >> PROTOCOL_LIQUIDATION_FEE_MASK;
+        return (assetDetail.data & ~PROTOCOL_LIQUIDATION_FEE_MASK) >> PROTOCOL_LIQUIDATION_FEE_START_BIT_POSITION;
     }
 
     /**
