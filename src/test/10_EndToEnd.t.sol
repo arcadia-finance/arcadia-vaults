@@ -922,7 +922,7 @@ contract EndToEndTest is Test {
         vm.assume(amountCredit > maxCredit);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("Cannot take this amount of extra credit!");
+        vm.expectRevert("LP_TL: Reverted");
         proxy.takeCredit(amountCredit);
         vm.stopPrank();
 
@@ -1007,7 +1007,7 @@ contract EndToEndTest is Test {
         vm.roll(block.number + 10); //
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("Cannot take this amount of extra credit!");
+        vm.expectRevert("LP_TL: Reverted");
         proxy.takeCredit(1);
         vm.stopPrank();
     }

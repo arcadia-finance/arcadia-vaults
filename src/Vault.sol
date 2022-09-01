@@ -903,63 +903,16 @@ contract Vault {
     @param amount The amount of credit to take out, in the form of a pegged stablecoin with 18 decimals.
   */
     function takeCredit(uint128 amount) public onlyOwner {
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts
-        ) = generateAssetData();
-        _takeCredit(amount, assetAddresses, assetIds, assetAmounts);
-    }
-
-    /** 
-    @notice Internal function to take out credit.
-    @dev Syncs debt to cement unrealised debt. 
-         MinCollValue is calculated without unrealised debt since it is zero.
-         Gets the total value of assets per credit rating.
-         Calculates and sets the yearly interest rate based on the values per credit rating and the debt to be taken out.
-         Mints stablecoin to the vault owner.
-  */
-    function _takeCredit(
-        uint128 amount,
-        address[] memory _assetAddresses,
-        uint256[] memory _assetIds,
-        uint256[] memory _assetAmounts
-    ) private {
         syncDebt();
-
-        uint256 minCollValue;
-        //gas: can't overflow: uint129 * uint16 << uint256
-        unchecked {
-            minCollValue =
-                uint256((uint256(debt._openDebt) + amount) * debt._collThres) /
-                100;
-        }
-
-        uint256[] memory valuesPerCreditRating = IRegistry(_registryAddress)
-            .getListOfValuesPerCreditRating(
-                _assetAddresses,
-                _assetIds,
-                _assetAmounts,
-                debt._baseCurrency
-            );
-        uint256 vaultValue = sumElementsOfList(valuesPerCreditRating);
-
-        require(
-            getFreeMargin(vaultValue) >= amount,
-            "Cannot take this amount of extra credit!"
-        );
-
-        _setYearlyInterestRate();
-
-        //gas: can only overflow when total opendebt is
-        //above 340 billion billion *10**18 decimals
-        //could go unchecked as well, but might result in opendebt = 0 on overflow
-        debt._openDebt += amount;
-        IERC20(_stable).mint(owner, amount);
 
         if (amount > 0) {
             ILiquidityPool(_liquidityPool).borrow(amount, address(this), address(this));
         }
+
+        _setYearlyInterestRate();
+
+        debt._openDebt = getUsedMargin();
+        IERC20(_stable).mint(owner, amount);
     }
 
     /** 
