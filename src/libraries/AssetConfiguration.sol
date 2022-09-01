@@ -13,9 +13,21 @@ pragma solidity >=0.4.22 <0.9.0;
  */
 library AssetConfiguration {
 
+    struct AssetDetail {
+        uint16 collateralFactor;
+        uint16 liquidityThreshold;
+        uint16 liquidityReward;
+        uint16 protocolLiquidityFee;
+        uint8 decimals;
+        bool isActive;
+        bool isFrozen;
+        bool isPaused;
+        bool isBorrowing;
+    }
+
     struct AssetDetailBitmap {
         // BITMAP
-        //16 bit (0-15)  : Collateral Ratio
+        //16 bit (0-15)  : Collateral Factor
         //16 bit (16-31) : Liquidity Threshold
         //16 bit (32-47) : Liquidity reward
         //16 bit (48-63) : Protocol liquidation fee
@@ -246,5 +258,24 @@ library AssetConfiguration {
         return (assetDetail.data & ~BORROWING_MASK) != 0;
     }
 
+    /**
+    * @notice Converts struct type to bitmap
+    * @dev Uses the internal functions convert to bitmap after zero config defined
+    * @param assetDetail The asset configuration in struct format
+    * @return AssetDetailBitmap
+    **/
+    function toBitmap(AssetDetail memory assetDetail) internal pure returns (AssetDetailBitmap) {
+        AssetDetailBitmap config = AssetDetailBitmap({data: 0});
+        setCollateralFactor(config, assetDetail.collateralFactor);
+        setLiquidationThreshold(config, assetDetail.liquidityThreshold);
+        setLiquidationReward(config, assetDetail.liquidityReward);
+        setProtocolLiquidationFee(config, assetDetail.protocolLiquidityFee);
+        setDecimals(config, assetDetail.decimals);
+        setActive(config, assetDetail.isActive);
+        setFrozen(config, assetDetail.isFrozen);
+        setPaused(config, assetDetail.isPaused);
+        setBorrowing(config, assetDetail.isBorrowing);
+        return config;
+    }
 
 }
