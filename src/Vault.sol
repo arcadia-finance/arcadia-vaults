@@ -928,7 +928,10 @@ contract Vault {
         // if a user wants to pay more than their open debt
         // we should only take the amount that's needed
         // prevents refunds etc
-        uint256 openDebt = debt._openDebt;
+        uint256 openDebt = getUsedMargin();
+
+        ILiquidityPool(_liquidityPool).repay(amount, address(this));
+
         uint256 transferAmount = openDebt > amount ? amount : openDebt;
         require(
             IERC20(_stable).transferFrom(
@@ -941,20 +944,8 @@ contract Vault {
 
         IERC20(_stable).burn(transferAmount);
 
-        //gas: transferAmount cannot be larger than debt._openDebt,
-        //which is a uint128, thus can't underflow
-        assert(openDebt >= transferAmount);
-        unchecked {
-            debt._openDebt -= uint128(transferAmount);
-        }
+        debt._openDebt = getUsedMargin();
 
-        // if interest is calculated on a fixed rate, set interest to zero if opendebt is zero
-        // todo: can be removed safely?
-        if (debt._openDebt == 0) {
-            debt._yearlyInterestRate = 0;
-        }
-
-        ILiquidityPool(_liquidityPool).repay(amount, address(this));
     }
 
     /** 
