@@ -445,8 +445,8 @@ contract Vault {
             }
         }
 
-        uint256 openDebt = getOpenDebt();
-        if (openDebt != 0) {
+        uint256 usedMargin = getUsedMargin();
+        if (usedMargin != 0) {
             (
                 address[] memory _assetAddresses,
                 uint256[] memory _assetIds,
@@ -463,7 +463,7 @@ contract Vault {
             uint256 minCollValue;
             //gas: can't overflow: uint129 * uint16 << uint256
             unchecked {
-                minCollValue = uint256(openDebt * debt._collThres) / 100;
+                minCollValue = uint256(usedMargin * debt._collThres) / 100;
             }
             require(vaultValue > minCollValue, "V_W: coll. value too low!");
 
@@ -734,7 +734,7 @@ contract Vault {
     function _setBaseCurrency(
         uint256 newBaseCurrency
     ) private {
-        require(getOpenDebt() == 0, "VL: Can't change baseCurrency when openDebt > 0");
+        require(getUsedMargin() == 0, "VL: Can't change baseCurrency when openDebt > 0");
         require(newBaseCurrency + 1 <= IMainRegistry(_registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
         debt._baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
     }
@@ -1043,32 +1043,6 @@ contract Vault {
         if (amount > 0) {
             ILiquidityPool(_liquidityPool).borrow(amount, address(this), address(this));
         }
-    }
-
-    /** 
-    @notice Calculates the total open debt on the proxy vault, including unrealised debt.
-    @dev Debt is expressed in an uint128 as the stored debt is an uint128 as well.
-         _yearlyInterestRate = 1 + r expressed as 18 decimals fixed point number
-    @return openDebt Total open debt, as a uint128.
-  */
-    function getOpenDebt() public view returns (uint128 openDebt) {
-        uint128 base;
-        uint128 exponent;
-        unchecked {
-            //gas: can't overflow as long as interest remains < 1744%/yr
-            base = uint128(1e18) + debt._yearlyInterestRate;
-
-            //gas: only overflows when blocks.number > ~10**20
-            exponent = uint128(
-                ((block.number - debt._lastBlock) * 1e18) / yearlyBlocks
-            );
-        }
-
-        //with sensible blocks, can return an open debt up to 3e38 units
-        //gas: could go unchecked as well, but might result in opendebt = 0 on overflow
-        openDebt = uint128(
-            (debt._openDebt * LogExpMath.pow(base, exponent)) / 1e18
-        );
     }
 
     /** 

@@ -966,11 +966,11 @@ contract EndToEndTest is Test {
         (, , , _yearlyInterestRate, , ) = proxy.debt();
         base = 1e18 + _yearlyInterestRate;
 
-        uint256 debtAtStart = proxy.getOpenDebt();
+        uint256 debtAtStart = proxy.getUsedMargin();
 
         vm.roll(block.number + amountOfBlocksToRoll);
 
-        uint256 actualDebt = proxy.getOpenDebt();
+        uint256 actualDebt = proxy.getUsedMargin();
 
         uint128 expectedDebt = uint128(
             (debtAtStart *
@@ -1200,7 +1200,7 @@ contract EndToEndTest is Test {
 
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getOpenDebt();
+        uint128 openDebt = proxy.getUsedMargin();
         vm.startPrank(address(proxy));
         stable.mint(
             vaultOwner,
@@ -1217,10 +1217,10 @@ contract EndToEndTest is Test {
         vm.prank(vaultOwner);
         proxy.repayDebt(openDebt);
 
-        assertEq(proxy.getOpenDebt(), 0);
+        assertEq(proxy.getUsedMargin(), 0);
 
         vm.roll(block.number + uint256(blocksToRoll) * 2);
-        assertEq(proxy.getOpenDebt(), 0);
+        assertEq(proxy.getUsedMargin(), 0);
     }
 
     function testRepayExessiveDebt(
@@ -1255,7 +1255,7 @@ contract EndToEndTest is Test {
 
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getOpenDebt();
+        uint128 openDebt = proxy.getUsedMargin();
         uint256 balanceBefore = stable.balanceOf(vaultOwner);
 
         vm.startPrank(vaultOwner);
@@ -1267,10 +1267,10 @@ contract EndToEndTest is Test {
         uint256 balanceAfter = stable.balanceOf(vaultOwner);
 
         assertEq(balanceBefore - openDebt, balanceAfter);
-        assertEq(proxy.getOpenDebt(), 0);
+        assertEq(proxy.getUsedMargin(), 0);
 
         vm.roll(block.number + uint256(blocksToRoll) * 2);
-        assertEq(proxy.getOpenDebt(), 0);
+        assertEq(proxy.getUsedMargin(), 0);
     }
 
     function testRepayPartialDebt(
@@ -1302,7 +1302,7 @@ contract EndToEndTest is Test {
 
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getOpenDebt();
+        uint128 openDebt = proxy.getUsedMargin();
         vm.assume(toRepay < openDebt);
 
         vm.prank(vaultOwner);
@@ -1316,7 +1316,7 @@ contract EndToEndTest is Test {
             (amountCredit * (LogExpMath.pow(base, exponent))) / 10**18
         ) - toRepay;
 
-        assertEq(proxy.getOpenDebt(), expectedDebt);
+        assertEq(proxy.getUsedMargin(), expectedDebt);
 
         vm.roll(block.number + uint256(blocksToRoll));
         (, , , _yearlyInterestRate, , ) = proxy.debt();
@@ -1328,7 +1328,7 @@ contract EndToEndTest is Test {
             (expectedDebt * (LogExpMath.pow(base, exponent))) / 10**18
         );
 
-        assertEq(proxy.getOpenDebt(), expectedDebt);
+        assertEq(proxy.getUsedMargin(), expectedDebt);
     }
 
     function sumElementsOfList(uint128[] memory _data)

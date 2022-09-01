@@ -940,7 +940,7 @@ contract vaultTests is Test {
         vault.takeCredit(amountCredit);
 
         assertEq(stable.balanceOf(vaultOwner), amountCredit);
-        assertEq(vault.getOpenDebt(), amountCredit); //no blocks have passed
+        assertEq(vault.getUsedMargin(), amountCredit); //no blocks have passed
     }
 
     struct Assets {
@@ -1202,7 +1202,7 @@ contract vaultTests is Test {
     }
 
     function testGetDebtAtStart() public {
-        uint256 openDebt = vault.getOpenDebt();
+        uint256 openDebt = vault.getUsedMargin();
         assertEq(openDebt, 0);
     }
 
@@ -1562,7 +1562,7 @@ contract vaultTests is Test {
         vault.takeCredit((((amountEth * 100) / 150) * factor) / 255);
 
         uint256 currentValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
-        uint256 openDebt = vault.getOpenDebt();
+        uint256 openDebt = vault.getUsedMargin();
         (, uint16 _collThres, , , , ) = vault.debt();
 
         uint256 maxAllowedCreditLocal;
@@ -1771,21 +1771,37 @@ contract vaultTests is Test {
         );
         Vault vault_m = new Vault();
 
-        uint256 slot2 = stdstore
+        uint256 slot = stdstore
             .target(address(vault_m))
             .sig(vault_m._registryAddress.selector)
             .find();
-        bytes32 loc2 = bytes32(slot2);
+        bytes32 loc = bytes32(slot);
         bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
-        vm.store(address(vault_m), loc2, newReg);
+        vm.store(address(vault_m), loc, newReg);
 
-        uint256 slot3 = stdstore
+        slot = stdstore
             .target(address(vault_m))
             .sig(vault_m.owner.selector)
             .find();
-        bytes32 loc3 = bytes32(slot3);
+        loc = bytes32(slot);
         bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc3, newOwner);
+        vm.store(address(vault_m), loc, newOwner);
+
+        slot = stdstore
+            .target(address(vault_m))
+            .sig(vault_m._debtToken.selector)
+            .find();
+        loc = bytes32(slot);
+        bytes32 debtToken = bytes32(abi.encode(address(debt)));
+        vm.store(address(vault_m), loc, debtToken);
+
+        slot = stdstore
+            .target(address(vault_m))
+            .sig(vault_m._liquidityPool.selector)
+            .find();
+        loc = bytes32(slot);
+        bytes32 pool_ = bytes32(abi.encode(address(pool)));
+        vm.store(address(vault_m), loc, pool_);
 
         vm.startPrank(vaultOwner);
         vault_m.authorize(toAuth, true);
@@ -1821,30 +1837,60 @@ contract vaultTests is Test {
         );
         Vault vault_m = new Vault();
 
-        uint256 slot2 = stdstore
+        uint256 slot = stdstore
             .target(address(vault_m))
             .sig(vault_m._registryAddress.selector)
             .find();
-        bytes32 loc2 = bytes32(slot2);
+        bytes32 loc = bytes32(slot);
         bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
-        vm.store(address(vault_m), loc2, newReg);
+        vm.store(address(vault_m), loc, newReg);
 
-        uint256 slot3 = stdstore
+        slot = stdstore
             .target(address(vault_m))
             .sig(vault_m.owner.selector)
             .find();
-        bytes32 loc3 = bytes32(slot3);
+        loc = bytes32(slot);
         bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc3, newOwner);
+        vm.store(address(vault_m), loc, newOwner);
 
-        uint256 slot4 = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.debt.selector)
-            .depth(0)
+        slot = stdstore
+            .target(address(debt))
+            .sig(debt.totalSupply.selector)
             .find();
-        bytes32 loc4 = bytes32(slot4);
+        loc = bytes32(slot);
         bytes32 addDebt = bytes32(abi.encode(1));
-        vm.store(address(vault_m), loc4, addDebt);
+        vm.store(address(debt), loc, addDebt);
+
+        slot = stdstore
+            .target(address(debt))
+            .sig(debt.totalDebt.selector)
+            .find();
+        loc = bytes32(slot);
+        vm.store(address(debt), loc, addDebt);
+
+        slot = stdstore
+            .target(address(debt))
+            .sig(debt.balanceOf.selector)
+            .with_key(address(vault_m))
+            .find();
+        loc = bytes32(slot);
+        vm.store(address(debt), loc, addDebt);
+
+        slot = stdstore
+            .target(address(vault_m))
+            .sig(vault_m._debtToken.selector)
+            .find();
+        loc = bytes32(slot);
+        bytes32 debtToken = bytes32(abi.encode(address(debt)));
+        vm.store(address(vault_m), loc, debtToken);
+
+        slot = stdstore
+            .target(address(vault_m))
+            .sig(vault_m._liquidityPool.selector)
+            .find();
+        loc = bytes32(slot);
+        bytes32 pool_ = bytes32(abi.encode(address(pool)));
+        vm.store(address(vault_m), loc, pool_);
 
         vm.startPrank(vaultOwner);
         vault_m.authorize(toAuth, true);
