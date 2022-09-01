@@ -907,6 +907,7 @@ contract Vault {
 
         if (amount > 0) {
             ILiquidityPool(_liquidityPool).borrow(amount, address(this), address(this));
+            IERC20(IERC4626(_liquidityPool).asset()).transfer(owner, amount);
         }
 
         _setYearlyInterestRate();
@@ -929,10 +930,11 @@ contract Vault {
         // we should only take the amount that's needed
         // prevents refunds etc
         uint256 openDebt = getUsedMargin();
+        uint256 transferAmount = openDebt > amount ? amount : openDebt;
 
+        IERC20(IERC4626(_liquidityPool).asset()).transferFrom(owner, address(this), transferAmount);
         ILiquidityPool(_liquidityPool).repay(amount, address(this));
 
-        uint256 transferAmount = openDebt > amount ? amount : openDebt;
         require(
             IERC20(_stable).transferFrom(
                 msg.sender,
@@ -995,7 +997,8 @@ contract Vault {
             ++life;
         }
 
-        ILiquidityPool(_liquidityPool).repay(debt._openDebt, address(this)); //ToDo: What to do with the debttokens, transfer, burn???
+        IERC20(IERC4626(_liquidityPool).asset()).transferFrom(owner, address(this), openDebt);
+        ILiquidityPool(_liquidityPool).repay(openDebt, address(this)); //ToDo: What to do with the debttokens, transfer, burn???
         debt._openDebt = 0;
         debt._lastBlock = 0;
 

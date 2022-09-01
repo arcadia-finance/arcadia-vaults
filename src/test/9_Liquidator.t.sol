@@ -320,6 +320,7 @@ contract LiquidatorTest is Test {
         vm.prank(liquidityProvider);
         asset.approve(address(pool), type(uint256).max);
 
+
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
     }
@@ -482,6 +483,7 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(vaultOwner);
         proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
@@ -981,6 +983,7 @@ contract LiquidatorTest is Test {
             assetTypes
         );
         Vault(proxy2).authorize(address(pool), true);
+        asset.approve(proxy2, type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);

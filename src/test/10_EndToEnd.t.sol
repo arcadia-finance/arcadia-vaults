@@ -313,6 +313,7 @@ contract EndToEndTest is Test {
         vm.prank(liquidityProvider);
         asset.approve(address(pool), type(uint256).max);
 
+
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
     }
@@ -465,6 +466,7 @@ contract EndToEndTest is Test {
 
         vm.startPrank(vaultOwner);
         proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
@@ -1206,7 +1208,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
-        asset.transfer(address(proxy), openDebt - amountCredit);
+        asset.transfer(vaultOwner, openDebt - amountCredit);
 
 
         vm.prank(vaultOwner);
@@ -1246,7 +1248,7 @@ contract EndToEndTest is Test {
         stable.mint(vaultOwner, factor * amountCredit);
 
         vm.prank(liquidityProvider);
-        asset.transfer(address(proxy), factor * amountCredit);
+        asset.transfer(vaultOwner, factor * amountCredit);
 
         vm.roll(block.number + blocksToRoll);
 

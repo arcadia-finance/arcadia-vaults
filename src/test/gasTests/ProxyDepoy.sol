@@ -321,6 +321,7 @@ contract gasProxyDeploy is Test {
         vm.prank(liquidityProvider);
         asset.approve(address(pool), type(uint256).max);
 
+
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
     }
@@ -459,6 +460,7 @@ contract gasProxyDeploy is Test {
 
         vm.prank(vaultOwner);
         proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
 
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));

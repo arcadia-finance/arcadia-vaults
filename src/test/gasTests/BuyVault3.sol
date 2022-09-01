@@ -465,6 +465,7 @@ contract gasBuyVault_1ERC201ERC721 is Test {
         vm.prank(liquidityProvider);
         asset.approve(address(pool), type(uint256).max);
 
+
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
     }
@@ -645,6 +646,7 @@ stable: address(stable),
 
         vm.startPrank(vaultOwner);
         proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);

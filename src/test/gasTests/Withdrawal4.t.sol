@@ -463,6 +463,7 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
         vm.prank(liquidityProvider);
         asset.approve(address(pool), type(uint256).max);
 
+
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
     }
@@ -640,6 +641,7 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
 
         vm.startPrank(vaultOwner);
         proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);

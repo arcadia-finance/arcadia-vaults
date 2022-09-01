@@ -465,6 +465,7 @@ contract gasRepay_1ERC20 is Test {
         vm.prank(liquidityProvider);
         asset.approve(address(pool), type(uint256).max);
 
+
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
     }
@@ -478,7 +479,7 @@ contract gasRepay_1ERC20 is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: address(pool),
-stable: address(stable),
+                stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -492,7 +493,7 @@ stable: address(stable),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 liquidityPool: address(pool),
-stable: address(stable),
+                stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -650,6 +651,7 @@ stable: address(stable),
 
         vm.startPrank(vaultOwner);
         proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
