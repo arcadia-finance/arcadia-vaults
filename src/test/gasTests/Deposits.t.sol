@@ -14,12 +14,10 @@ import "../../Vault.sol";
 import "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
-import "../../Stable.sol";
 import "../../AssetRegistry/MainRegistry.sol";
 import "../../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../../AssetRegistry/FloorERC1155SubRegistry.sol";
-import "../../InterestRateModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
 
@@ -63,8 +61,6 @@ contract gasDeposits is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
-    InterestRateModule private interestRateModule;
-    Stable private stable;
     Liquidator private liquidator;
 
     Asset asset;
@@ -76,7 +72,6 @@ contract gasDeposits is Test {
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
-    address private stakeContract = address(5);
     address private vaultOwner = address(6);
     address private liquidityProvider = address(9);
 
@@ -407,20 +402,6 @@ contract gasDeposits is Test {
         eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);
-        interestRateModule = new InterestRateModule();
-        interestRateModule.setBaseInterestRate(5 * 10**16);
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-        vm.stopPrank();
 
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
@@ -446,12 +427,13 @@ contract gasDeposits is Test {
         factory = new Factory();
 
         vm.startPrank(tokenCreatorAddress);
-        asset = new Asset("Asset", "ASSET", 18);
-        asset.mint(liquidityProvider, type(uint256).max);
+        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
+        asset.mint(liquidityProvider, type(uint128).max);
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factory));
+        pool = new LiquidityPool(asset, creatorAddress, address(factory));
+        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(pool);
         pool.setDebtToken(address(debt));
@@ -462,6 +444,7 @@ contract gasDeposits is Test {
 
         vm.prank(liquidityProvider);
         asset.approve(address(pool), type(uint256).max);
+
 
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
@@ -476,7 +459,6 @@ contract gasDeposits is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: address(pool),
-stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -490,7 +472,6 @@ stable: address(stable),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 liquidityPool: address(pool),
-stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -586,26 +567,20 @@ stable: address(stable),
 
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            stakeContract,
-            address(interestRateModule),
+            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
+        pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable.setLiquidator(address(liquidator));
-        stable.setFactory(address(factory));
         vm.stopPrank();
 
         vm.prank(vaultOwner);
@@ -640,6 +615,7 @@ stable: address(stable),
 
         vm.startPrank(vaultOwner);
         proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
@@ -650,8 +626,8 @@ stable: address(stable),
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        stable.approve(address(proxy), type(uint256).max);
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(proxy), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);

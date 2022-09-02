@@ -14,12 +14,10 @@ import "../Vault.sol";
 import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
-import "../Stable.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/FloorERC1155SubRegistry.sol";
-import "../InterestRateModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
@@ -59,8 +57,6 @@ contract EndToEndTest is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
-    InterestRateModule private interestRateModule;
-    Stable private stable;
     Liquidator private liquidator;
 
     Asset asset;
@@ -72,7 +68,6 @@ contract EndToEndTest is Test {
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
-    address private stakeContract = address(5);
     address private vaultOwner = address(6);
     address private liquidityProvider = address(7);
 
@@ -267,20 +262,6 @@ contract EndToEndTest is Test {
         eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);
-        interestRateModule = new InterestRateModule();
-        interestRateModule.setBaseInterestRate(5 * 10**16);
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-        vm.stopPrank();
 
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
@@ -301,12 +282,13 @@ contract EndToEndTest is Test {
         factory = new Factory();
 
         vm.startPrank(tokenCreatorAddress);
-        asset = new Asset("Asset", "ASSET", 18);
+        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
         asset.mint(liquidityProvider, type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factory));
+        pool = new LiquidityPool(asset, creatorAddress, address(factory));
+        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(pool);
         pool.setDebtToken(address(debt));
@@ -317,6 +299,7 @@ contract EndToEndTest is Test {
 
         vm.prank(liquidityProvider);
         asset.approve(address(pool), type(uint256).max);
+
 
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
@@ -333,7 +316,6 @@ contract EndToEndTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -347,7 +329,6 @@ contract EndToEndTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -418,27 +399,24 @@ contract EndToEndTest is Test {
 
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            stakeContract,
-            address(interestRateModule),
+            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
+        pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
-        stable.setLiquidator(address(liquidator));
-        stable.setFactory(address(factory));
         vm.stopPrank();
 
         vm.prank(vaultOwner);
@@ -456,9 +434,6 @@ contract EndToEndTest is Test {
         );
         proxy = Vault(proxyAddr);
 
-        vm.prank(address(proxy));
-        stable.mint(tokenCreatorAddress, 100000 * 10**Constants.stableDecimals);
-
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
@@ -470,6 +445,7 @@ contract EndToEndTest is Test {
 
         vm.startPrank(vaultOwner);
         proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
@@ -479,45 +455,8 @@ contract EndToEndTest is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        stable.approve(address(proxy), type(uint256).max);
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         vm.stopPrank();
-    }
-
-    function testTransferOwnershipStable(address to) public {
-        vm.assume(to != address(0));
-        Stable stable_m = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-
-        assertEq(address(this), stable_m.owner());
-
-        stable_m.transferOwnership(to);
-        assertEq(to, stable_m.owner());
-    }
-
-    function testTransferOwnershipStableByNonOwner(address from) public {
-        vm.assume(from != address(this));
-
-        Stable stable_m = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-        address to = address(12345);
-
-        assertEq(address(this), stable_m.owner());
-
-        vm.startPrank(from);
-        vm.expectRevert("Ownable: caller is not the owner");
-        stable_m.transferOwnership(to);
-        assertEq(address(this), stable_m.owner());
     }
 
     function testReturnUsdValueOfEth(uint128 amount) public {
@@ -903,12 +842,10 @@ contract EndToEndTest is Test {
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
-        vm.expectEmit(true, true, false, true);
-        emit Transfer(address(0), vaultOwner, amountCredit);
         proxy.takeCredit(amountCredit);
         vm.stopPrank();
 
-        assertEq(stable.balanceOf(vaultOwner), amountCredit);
+        assertEq(asset.balanceOf(vaultOwner), amountCredit);
     }
 
     function testNotAllowTooMuchCreditAfterDeposit(
@@ -927,11 +864,11 @@ contract EndToEndTest is Test {
         vm.assume(amountCredit > maxCredit);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("Cannot take this amount of extra credit!");
+        vm.expectRevert("LP_TL: Reverted");
         proxy.takeCredit(amountCredit);
         vm.stopPrank();
 
-        assertEq(stable.balanceOf(vaultOwner), 0);
+        assertEq(asset.balanceOf(vaultOwner), 0);
     }
 
     function testIncreaseOfDebtPerBlock(
@@ -958,19 +895,17 @@ contract EndToEndTest is Test {
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
-        vm.expectEmit(true, true, false, true);
-        emit Transfer(address(0), vaultOwner, amountCredit);
         proxy.takeCredit(amountCredit);
         vm.stopPrank();
 
         (, , , _yearlyInterestRate, , ) = proxy.debt();
         base = 1e18 + _yearlyInterestRate;
 
-        uint256 debtAtStart = proxy.getOpenDebt();
+        uint256 debtAtStart = proxy.getUsedMargin();
 
         vm.roll(block.number + amountOfBlocksToRoll);
 
-        uint256 actualDebt = proxy.getOpenDebt();
+        uint256 actualDebt = proxy.getUsedMargin();
 
         uint128 expectedDebt = uint128(
             (debtAtStart *
@@ -1012,7 +947,7 @@ contract EndToEndTest is Test {
         vm.roll(block.number + 10); //
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("Cannot take this amount of extra credit!");
+        vm.expectRevert("LP_TL: Reverted");
         proxy.takeCredit(1);
         vm.stopPrank();
     }
@@ -1131,7 +1066,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testIncreaseBalanceStakeContractSyncDebt(
+    function testIncreaseBalanceDebtContractSyncDebt(
         uint128 amountEth,
         uint128 amountCredit,
         uint16 blocksToRoll
@@ -1155,11 +1090,11 @@ contract EndToEndTest is Test {
 
         (, , , uint64 _yearlyInterestRate, , ) = proxy.debt();
 
-        uint256 balanceBefore = stable.balanceOf(stakeContract);
+        uint256 balanceBefore = debt.totalAssets();
 
         vm.roll(block.number + blocksToRoll);
         proxy.syncDebt();
-        uint256 balanceAfter = stable.balanceOf(stakeContract);
+        uint256 balanceAfter = debt.totalAssets();
 
         uint128 base = _yearlyInterestRate + 10**18;
         uint128 exponent = uint128(
@@ -1195,32 +1130,21 @@ contract EndToEndTest is Test {
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
 
-        vm.prank(tokenCreatorAddress);
-        stable.transfer(vaultOwner, 1000 * 10**18);
-
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getOpenDebt();
-        vm.startPrank(address(proxy));
-        stable.mint(
-            vaultOwner,
-            openDebt > stable.balanceOf(vaultOwner)
-                ? openDebt - stable.balanceOf(vaultOwner)
-                : 0
-        );
-        vm.stopPrank();
+        uint128 openDebt = proxy.getUsedMargin();
 
         vm.prank(liquidityProvider);
-        asset.transfer(address(proxy), openDebt - amountCredit);
+        asset.transfer(vaultOwner, openDebt - amountCredit);
 
 
         vm.prank(vaultOwner);
         proxy.repayDebt(openDebt);
 
-        assertEq(proxy.getOpenDebt(), 0);
+        assertEq(proxy.getUsedMargin(), 0);
 
         vm.roll(block.number + uint256(blocksToRoll) * 2);
-        assertEq(proxy.getOpenDebt(), 0);
+        assertEq(proxy.getUsedMargin(), 0);
     }
 
     function testRepayExessiveDebt(
@@ -1247,30 +1171,25 @@ contract EndToEndTest is Test {
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
 
-        vm.prank(address(proxy));
-        stable.mint(vaultOwner, factor * amountCredit);
-
         vm.prank(liquidityProvider);
-        asset.transfer(address(proxy), factor * amountCredit);
+        asset.transfer(vaultOwner, factor * amountCredit);
 
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getOpenDebt();
-        uint256 balanceBefore = stable.balanceOf(vaultOwner);
+        uint128 openDebt = proxy.getUsedMargin();
+        uint256 balanceBefore = asset.balanceOf(vaultOwner);
 
         vm.startPrank(vaultOwner);
-        vm.expectEmit(true, true, false, true);
-        emit Transfer(address(proxy), address(0), openDebt);
         proxy.repayDebt(openDebt * factor);
         vm.stopPrank();
 
-        uint256 balanceAfter = stable.balanceOf(vaultOwner);
+        uint256 balanceAfter = asset.balanceOf(vaultOwner);
 
         assertEq(balanceBefore - openDebt, balanceAfter);
-        assertEq(proxy.getOpenDebt(), 0);
+        assertEq(proxy.getUsedMargin(), 0);
 
         vm.roll(block.number + uint256(blocksToRoll) * 2);
-        assertEq(proxy.getOpenDebt(), 0);
+        assertEq(proxy.getUsedMargin(), 0);
     }
 
     function testRepayPartialDebt(
@@ -1297,12 +1216,9 @@ contract EndToEndTest is Test {
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
 
-        vm.prank(address(proxy));
-        stable.mint(vaultOwner, 1000 * 10**18);
-
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getOpenDebt();
+        uint128 openDebt = proxy.getUsedMargin();
         vm.assume(toRepay < openDebt);
 
         vm.prank(vaultOwner);
@@ -1316,7 +1232,7 @@ contract EndToEndTest is Test {
             (amountCredit * (LogExpMath.pow(base, exponent))) / 10**18
         ) - toRepay;
 
-        assertEq(proxy.getOpenDebt(), expectedDebt);
+        assertEq(proxy.getUsedMargin(), expectedDebt);
 
         vm.roll(block.number + uint256(blocksToRoll));
         (, , , _yearlyInterestRate, , ) = proxy.debt();
@@ -1328,7 +1244,7 @@ contract EndToEndTest is Test {
             (expectedDebt * (LogExpMath.pow(base, exponent))) / 10**18
         );
 
-        assertEq(proxy.getOpenDebt(), expectedDebt);
+        assertEq(proxy.getUsedMargin(), expectedDebt);
     }
 
     function sumElementsOfList(uint128[] memory _data)

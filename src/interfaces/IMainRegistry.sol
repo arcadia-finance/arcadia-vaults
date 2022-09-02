@@ -27,7 +27,6 @@ interface IMainRegistry {
             address,
             address,
             address,
-            address,
             string memory
         );
 

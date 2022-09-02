@@ -14,12 +14,11 @@ import "../Vault.sol";
 import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
-import "../Stable.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/FloorERC1155SubRegistry.sol";
-import "../InterestRateModule.sol";
+
 import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
@@ -59,8 +58,6 @@ contract LiquidatorTest is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
-    InterestRateModule private interestRateModule;
-    Stable private stable;
     Liquidator private liquidator;
 
     Asset asset;
@@ -72,7 +69,6 @@ contract LiquidatorTest is Test {
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
-    address private stakeContract = address(5);
     address private vaultOwner = address(6);
     address private liquidatorBot = address(7);
     address private auctionBuyer = address(8);
@@ -273,20 +269,6 @@ contract LiquidatorTest is Test {
         eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);
-        interestRateModule = new InterestRateModule();
-        interestRateModule.setBaseInterestRate(5 * 10**16);
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-        vm.stopPrank();
 
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
@@ -307,12 +289,13 @@ contract LiquidatorTest is Test {
         factory = new Factory();
 
         vm.startPrank(tokenCreatorAddress);
-        asset = new Asset("Asset", "ASSET", 18);
-        asset.mint(liquidityProvider, type(uint256).max);
+        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
+        asset.mint(liquidityProvider, type(uint128).max);
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factory));
+        pool = new LiquidityPool(asset, creatorAddress, address(factory));
+        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(pool);
         pool.setDebtToken(address(debt));
@@ -337,7 +320,6 @@ contract LiquidatorTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -351,7 +333,6 @@ contract LiquidatorTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -422,29 +403,20 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable.setLiquidator(address(liquidator));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            stakeContract,
-            address(interestRateModule),
+            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
+        pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable.setFactory(address(factory));
         vm.stopPrank();
 
         vm.prank(vaultOwner);
@@ -472,8 +444,8 @@ contract LiquidatorTest is Test {
         bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
         vm.store(address(factory), loc, mockedCurrentTokenId);
 
-        vm.prank(address(proxy));
-        stable.mint(tokenCreatorAddress, 100000 * 10**Constants.stableDecimals);
+        vm.prank(tokenCreatorAddress);
+        asset.mint(tokenCreatorAddress, 100000 * 10**18);
 
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
@@ -486,6 +458,7 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(vaultOwner);
         proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
@@ -495,12 +468,12 @@ contract LiquidatorTest is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        stable.approve(address(proxy), type(uint256).max);
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(proxy), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         vm.stopPrank();
 
         vm.prank(auctionBuyer);
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
     }
 
     function testTransferOwnership(address to) public {
@@ -708,8 +681,7 @@ contract LiquidatorTest is Test {
             address(proxy),
             0
         );
-        vm.prank(address(proxy));
-        stable.mint(auctionBuyer, priceOfVault);
+        giveAsset(auctionBuyer, priceOfVault);
 
         vm.prank(auctionBuyer);
         liquidator.buyVault(address(proxy), 0);
@@ -755,8 +727,7 @@ contract LiquidatorTest is Test {
             address(proxy),
             0
         );
-        vm.prank(address(proxy));
-        stable.mint(auctionBuyer, priceOfVault);
+        giveAsset(auctionBuyer, priceOfVault);
 
         vm.prank(auctionBuyer);
         liquidator.buyVault(address(proxy), 0);
@@ -811,11 +782,11 @@ contract LiquidatorTest is Test {
         vm.prank(address(1110));
         factory.liquidate(address(proxy));
 
-        giveStable(address(2000), remainingCred * 2);
-        giveStable(address(1111), remainingCred * 2);
+        giveAsset(address(2000), remainingCred * 2);
+        giveAsset(address(1111), remainingCred * 2);
         (uint256 price, , ) = liquidator.getPriceOfVault(address(proxy), 0);
         vm.startPrank(address(2000));
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         liquidator.buyVault(address(proxy), 0);
         vm.stopPrank();
 
@@ -825,7 +796,7 @@ contract LiquidatorTest is Test {
         lives[0] = 0;
 
         Liquidator.auctionInformation memory auction;
-        auction.stablePaid = uint128(price);
+        auction.assetPaid = uint128(price);
         auction.openDebt = uint128(remainingCred);
         auction.originalOwner = vaultOwner;
         auction.liquidationKeeper = address(1110);
@@ -833,7 +804,7 @@ contract LiquidatorTest is Test {
 
         liquidator.claimable(auction, address(proxy), 0);
 
-        Balances memory pre = getBalances(stable, vaultOwner);
+        Balances memory pre = getBalances(asset, vaultOwner);
 
         liquidator.claimProceeds(address(1110), vaultAddresses, lives);
         liquidator.claimProceeds(address(1000), vaultAddresses, lives);
@@ -841,7 +812,7 @@ contract LiquidatorTest is Test {
 
         Rewards memory rewards = getRewards(price, remainingCred);
 
-        Balances memory post = getBalances(stable, vaultOwner);
+        Balances memory post = getBalances(asset, vaultOwner);
 
         assertEq(pre.keeper + rewards.expectedKeeperReward, post.keeper);
         assertEq(pre.protocol + rewards.expectedProtocolReward, post.protocol);
@@ -864,11 +835,11 @@ contract LiquidatorTest is Test {
         uint256 price;
         Rewards[] memory rewards = new Rewards[](amountsEth.length);
         Rewards memory rewardsSum;
-        giveStable(address(2000), type(uint256).max);
-        giveStable(address(1111), type(uint256).max);
+        giveAsset(address(2000), type(uint256).max);
+        giveAsset(address(1111), type(uint256).max);
         emit log_named_uint(
             "bal of buyer pre",
-            stable.balanceOf(address(2000))
+            asset.balanceOf(address(2000))
         );
 
         for (uint256 i; i < amountsEth.length; ++i) {
@@ -908,10 +879,10 @@ contract LiquidatorTest is Test {
             (price, , ) = liquidator.getPriceOfVault(address(proxy), i);
 
             vm.startPrank(address(2000));
-            stable.approve(address(liquidator), type(uint256).max);
+            asset.approve(address(liquidator), type(uint256).max);
             emit log_named_uint(
                 "bal of buyer",
-                stable.balanceOf(address(2000))
+                asset.balanceOf(address(2000))
             );
             emit log_named_uint("priceToPay", price);
             liquidator.buyVault(address(proxy), i);
@@ -938,13 +909,13 @@ contract LiquidatorTest is Test {
             vm.stopPrank();
         }
 
-        Balances memory pre = getBalances(stable, vaultOwner);
+        Balances memory pre = getBalances(asset, vaultOwner);
 
         liquidator.claimProceeds(address(1110), vaultAddresses, lives);
         liquidator.claimProceeds(address(1000), vaultAddresses, lives);
         liquidator.claimProceeds(vaultOwner, vaultAddresses, lives);
 
-        Balances memory post = getBalances(stable, vaultOwner);
+        Balances memory post = getBalances(asset, vaultOwner);
 
         assertEq(pre.keeper + rewardsSum.expectedKeeperReward, post.keeper);
         assertEq(
@@ -985,6 +956,7 @@ contract LiquidatorTest is Test {
             assetTypes
         );
         Vault(proxy2).authorize(address(pool), true);
+        asset.approve(proxy2, type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
@@ -1009,11 +981,11 @@ contract LiquidatorTest is Test {
         factory.liquidate(proxy2);
         vm.stopPrank();
 
-        giveStable(address(2000), remainingCred * 10);
-        giveStable(address(1111), remainingCred * 10);
+        giveAsset(address(2000), remainingCred * 10);
+        giveAsset(address(1111), remainingCred * 10);
         (uint256 price, , ) = liquidator.getPriceOfVault(address(proxy), 0);
         vm.startPrank(address(2000));
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         liquidator.buyVault(address(proxy), 0);
         liquidator.buyVault(address(proxy2), 0);
         vm.stopPrank();
@@ -1025,7 +997,7 @@ contract LiquidatorTest is Test {
         lives[0] = 0;
         lives[1] = 0;
 
-        Balances memory pre = getBalances(stable, vaultOwner);
+        Balances memory pre = getBalances(asset, vaultOwner);
 
         Liquidator.auctionInformation memory auction1;
         Liquidator.auctionInformation memory auction2;
@@ -1034,8 +1006,8 @@ contract LiquidatorTest is Test {
         auction2.openDebt = uint128(remainingCred);
         auction1.liquidationKeeper = address(1110);
         auction2.liquidationKeeper = address(1110);
-        auction1.stablePaid = uint128(price);
-        auction2.stablePaid = uint128(price);
+        auction1.assetPaid = uint128(price);
+        auction2.assetPaid = uint128(price);
         auction1.originalOwner = vaultOwner;
         auction2.originalOwner = vaultOwner;
 
@@ -1048,7 +1020,7 @@ contract LiquidatorTest is Test {
 
         Rewards memory rewards = getRewards(price, remainingCred);
 
-        Balances memory post = getBalances(stable, vaultOwner);
+        Balances memory post = getBalances(asset, vaultOwner);
 
         assertEq(pre.keeper + 2 * rewards.expectedKeeperReward, post.keeper);
         assertEq(
@@ -1092,14 +1064,14 @@ contract LiquidatorTest is Test {
         vm.prank(address(1110));
         factory.liquidate(address(proxy));
 
-        giveStable(address(2000), remainingCred * 2);
-        giveStable(address(1111), remainingCred * 2);
+        giveAsset(address(2000), remainingCred * 2);
+        giveAsset(address(1111), remainingCred * 2);
         (uint256 price, , ) = liquidator.getPriceOfVault(
             address(proxy),
             newLife
         );
         vm.startPrank(address(2000));
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         liquidator.buyVault(address(proxy), newLife);
         vm.stopPrank();
 
@@ -1109,7 +1081,7 @@ contract LiquidatorTest is Test {
         lives[0] = newLife;
 
         Liquidator.auctionInformation memory auction;
-        auction.stablePaid = uint128(price);
+        auction.assetPaid = uint128(price);
         auction.openDebt = uint128(remainingCred);
         auction.originalOwner = vaultOwner;
         auction.liquidationKeeper = address(1110);
@@ -1117,7 +1089,7 @@ contract LiquidatorTest is Test {
 
         liquidator.claimable(auction, address(proxy), newLife);
 
-        Balances memory pre = getBalances(stable, vaultOwner);
+        Balances memory pre = getBalances(asset, vaultOwner);
 
         liquidator.claimProceeds(address(1110), vaultAddresses, lives);
         liquidator.claimProceeds(address(1000), vaultAddresses, lives);
@@ -1125,7 +1097,7 @@ contract LiquidatorTest is Test {
 
         Rewards memory rewards = getRewards(price, remainingCred);
 
-        Balances memory post = getBalances(stable, vaultOwner);
+        Balances memory post = getBalances(asset, vaultOwner);
 
         assertEq(pre.keeper + rewards.expectedKeeperReward, post.keeper);
         assertEq(pre.protocol + rewards.expectedProtocolReward, post.protocol);
@@ -1171,12 +1143,12 @@ contract LiquidatorTest is Test {
         vm.prank(address(1110));
         factory.liquidate(address(proxy));
 
-        giveStable(address(2000), remainingCred * 2);
-        giveStable(address(1111), remainingCred * 2);
+        giveAsset(address(2000), remainingCred * 2);
+        giveAsset(address(1111), remainingCred * 2);
         //liquidator.getPriceOfVault(address(proxy), newLife);
         liquidator.getPriceOfVault(address(proxy), lifeToBuy);
         vm.startPrank(address(2000));
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         vm.expectRevert("LQ_BV: Not for sale");
         liquidator.buyVault(address(proxy), lifeToBuy);
         vm.stopPrank();
@@ -1238,15 +1210,15 @@ contract LiquidatorTest is Test {
         assertEq(vaultPriceAfter, expectedPrice);
     }
 
-    function getBalances(Stable stableAddr, address _vaultOwner)
+    function getBalances(Asset assetAddr, address _vaultOwner)
         public
         view
         returns (Balances memory)
     {
         Balances memory bal;
-        bal.keeper = stableAddr.balanceOf(address(1110));
-        bal.protocol = stableAddr.balanceOf(address(1000));
-        bal.originalOwner = stableAddr.balanceOf(_vaultOwner);
+        bal.keeper = assetAddr.balanceOf(address(1110));
+        bal.protocol = assetAddr.balanceOf(address(1000));
+        bal.originalOwner = assetAddr.balanceOf(_vaultOwner);
 
         return bal;
     }
@@ -1306,15 +1278,15 @@ contract LiquidatorTest is Test {
         vm.store(address(vaultAddr), loc, newLife_b);
     }
 
-    function giveStable(address addr, uint256 amount) public {
+    function giveAsset(address addr, uint256 amount) public {
         uint256 slot = stdstore
-            .target(address(stable))
-            .sig(stable.balanceOf.selector)
+            .target(address(asset))
+            .sig(asset.balanceOf.selector)
             .with_key(addr)
             .find();
         bytes32 loc = bytes32(slot);
         bytes32 newBalance = bytes32(abi.encode(amount));
-        vm.store(address(stable), loc, newBalance);
+        vm.store(address(asset), loc, newBalance);
     }
 
     function depositERC20InVault(
