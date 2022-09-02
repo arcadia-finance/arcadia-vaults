@@ -14,7 +14,6 @@ import "../../Vault.sol";
 import "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
-import "../../Stable.sol";
 import "../../AssetRegistry/MainRegistry.sol";
 import "../../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../../AssetRegistry/StandardERC20SubRegistry.sol";
@@ -60,7 +59,6 @@ contract gasDeploys is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
-    Stable private stable;
     Liquidator private liquidator;
 
     Asset asset;
@@ -274,16 +272,6 @@ contract gasDeploys is Test {
         vm.stopPrank();
 
 
-        vm.startPrank(tokenCreatorAddress);
-        stable = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-        vm.stopPrank();
-
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
         oracleLinkToUsdArr[0] = address(oracleLinkToUsd);
@@ -303,7 +291,7 @@ contract gasDeploys is Test {
         factory = new Factory();
 
         vm.startPrank(tokenCreatorAddress);
-        asset = new Asset("Asset", "ASSET", 18);
+        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
         asset.mint(liquidityProvider, type(uint128).max);
         vm.stopPrank();
 
@@ -335,7 +323,6 @@ contract gasDeploys is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -349,7 +336,6 @@ contract gasDeploys is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -437,11 +423,6 @@ contract gasDeploys is Test {
         mainRegistry.setFactory(address(factory));
         vm.stopPrank();
 
-        vm.startPrank(tokenCreatorAddress);
-        stable.setLiquidator(address(liquidator));
-        stable.setFactory(address(factory));
-        vm.stopPrank();
-
         vm.prank(vaultOwner);
         proxyAddr = factory.createVault(
             uint256(
@@ -483,8 +464,6 @@ contract gasDeploys is Test {
         safemoon.approve(address(proxy), type(uint256).max);
         asset.approve(address(proxy), type(uint256).max);
         asset.approve(address(liquidator), type(uint256).max);
-        stable.approve(address(proxy), type(uint256).max);
-        stable.approve(address(liquidator), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -503,7 +482,6 @@ contract gasDeploys is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })

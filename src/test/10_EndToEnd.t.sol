@@ -14,7 +14,6 @@ import "../Vault.sol";
 import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
-import "../Stable.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
@@ -58,7 +57,6 @@ contract EndToEndTest is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
-    Stable private stable;
     Liquidator private liquidator;
 
     Asset asset;
@@ -266,16 +264,6 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
 
-        vm.startPrank(tokenCreatorAddress);
-        stable = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-        vm.stopPrank();
-
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
         oracleLinkToUsdArr[0] = address(oracleLinkToUsd);
@@ -295,7 +283,7 @@ contract EndToEndTest is Test {
         factory = new Factory();
 
         vm.startPrank(tokenCreatorAddress);
-        asset = new Asset("Asset", "ASSET", 18);
+        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
         asset.mint(liquidityProvider, type(uint256).max);
         vm.stopPrank();
 
@@ -329,7 +317,6 @@ contract EndToEndTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -343,7 +330,6 @@ contract EndToEndTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -433,8 +419,6 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
-        stable.setLiquidator(address(liquidator));
-        stable.setFactory(address(factory));
         vm.stopPrank();
 
         vm.prank(vaultOwner);
@@ -473,45 +457,8 @@ contract EndToEndTest is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        stable.approve(address(proxy), type(uint256).max);
         asset.approve(address(liquidator), type(uint256).max);
         vm.stopPrank();
-    }
-
-    function testTransferOwnershipStable(address to) public {
-        vm.assume(to != address(0));
-        Stable stable_m = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-
-        assertEq(address(this), stable_m.owner());
-
-        stable_m.transferOwnership(to);
-        assertEq(to, stable_m.owner());
-    }
-
-    function testTransferOwnershipStableByNonOwner(address from) public {
-        vm.assume(from != address(this));
-
-        Stable stable_m = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-        address to = address(12345);
-
-        assertEq(address(this), stable_m.owner());
-
-        vm.startPrank(from);
-        vm.expectRevert("Ownable: caller is not the owner");
-        stable_m.transferOwnership(to);
-        assertEq(address(this), stable_m.owner());
     }
 
     function testReturnUsdValueOfEth(uint128 amount) public {
@@ -1188,14 +1135,6 @@ contract EndToEndTest is Test {
         vm.roll(block.number + blocksToRoll);
 
         uint128 openDebt = proxy.getUsedMargin();
-        vm.startPrank(address(proxy));
-        stable.mint(
-            vaultOwner,
-            openDebt > asset.balanceOf(vaultOwner)
-                ? openDebt - asset.balanceOf(vaultOwner)
-                : 0
-        );
-        vm.stopPrank();
 
         vm.prank(liquidityProvider);
         asset.transfer(vaultOwner, openDebt - amountCredit);
@@ -1233,9 +1172,6 @@ contract EndToEndTest is Test {
 
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
-
-        vm.prank(address(proxy));
-        stable.mint(vaultOwner, factor * amountCredit);
 
         vm.prank(liquidityProvider);
         asset.transfer(vaultOwner, factor * amountCredit);
@@ -1281,9 +1217,6 @@ contract EndToEndTest is Test {
 
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
-
-        vm.prank(address(proxy));
-        stable.mint(vaultOwner, 1000 * 10**18);
 
         vm.roll(block.number + blocksToRoll);
 

@@ -62,7 +62,6 @@ contract AbstractSubRegistryTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: 0x0000000000000000000000000000000000000000,
-                stable: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })

@@ -15,7 +15,6 @@ import "../Vault.sol";
 import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
-import "../Stable.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
@@ -58,7 +57,6 @@ contract vaultTests is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
-    Stable private stable;
     Liquidator private liquidator;
 
     Asset asset;
@@ -271,17 +269,6 @@ contract vaultTests is Test {
         eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
         vm.stopPrank();
 
-
-        vm.startPrank(tokenCreatorAddress);
-        stable = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            address(factoryContr)
-        );
-        vm.stopPrank();
-
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
         oracleLinkToUsdArr[0] = address(oracleLinkToUsd);
@@ -298,7 +285,7 @@ contract vaultTests is Test {
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
 
         vm.startPrank(tokenCreatorAddress);
-        asset = new Asset("Asset", "ASSET", 18);
+        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
         asset.mint(liquidityProvider, type(uint256).max);
         vm.stopPrank();
 
@@ -315,7 +302,6 @@ contract vaultTests is Test {
 
         vm.prank(liquidityProvider);
         asset.approve(address(pool), type(uint256).max);
-
 
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
@@ -334,7 +320,6 @@ contract vaultTests is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -348,7 +333,6 @@ contract vaultTests is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 liquidityPool: address(pool),
-                stable: address(stable),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -400,12 +384,6 @@ contract vaultTests is Test {
         bytes32 loc = bytes32(slot);
         bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
         vm.store(address(factoryContr), loc, mockedCurrentTokenId);
-
-        vm.prank(address(vault));
-        stable.mint(tokenCreatorAddress, 100000 * 10**Constants.stableDecimals);
-
-        vm.prank(tokenCreatorAddress);
-        stable.setLiquidator(address(liquidator));
 
         vm.startPrank(vaultOwner);
         vault.initialize(
@@ -953,7 +931,7 @@ contract vaultTests is Test {
         uint256 valueDeposit = ((Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals) * baseAmountDeposit;
         uint128 amountCredit = uint128(
-            baseAmountCredit * 10**Constants.stableDecimals
+            baseAmountCredit * 10**Constants.assetDecimals
         );
         uint256 amountWithdraw = baseAmountWithdraw * 10**Constants.ethDecimals;
         uint256 valueWithdraw = ((Constants.WAD * rateEthToUsd) /
@@ -998,7 +976,7 @@ contract vaultTests is Test {
 
         uint256 valueDeposit = ((Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals) * baseAmountDeposit;
-        uint256 amountCredit = baseAmountCredit * 10**Constants.stableDecimals;
+        uint256 amountCredit = baseAmountCredit * 10**Constants.assetDecimals;
         uint256 amountWithdraw = baseAmountWithdraw * 10**Constants.ethDecimals;
         uint256 ValueWithdraw = ((Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals) * baseAmountWithdraw;
@@ -1033,7 +1011,7 @@ contract vaultTests is Test {
     ) public {
         vm.assume(tokenIdsDeposit.length < 50); //test speed
         uint128 amountCredit = uint128(
-            baseAmountCredit * 10**Constants.stableDecimals
+            baseAmountCredit * 10**Constants.assetDecimals
         );
 
         (, uint256[] memory assetIds, , ) = depositBaycInVault(

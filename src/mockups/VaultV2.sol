@@ -56,7 +56,6 @@ contract VaultV2 {
   ///////////////////////////////////////////////////////////////*/
     address public _registryAddress; /// to be fetched somewhere else?
     address public _liquidityPool;
-    address public _stable;
     address public _stakeContract;
     address public _debtToken;
     address public _irmAddress;
@@ -213,7 +212,7 @@ contract VaultV2 {
         debt._liqThres = 110;
         _stakeContract = stakeContract;
         _irmAddress = irmAddress;
-        (,,,,_liquidityPool,_stable,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
+        (,,,,_liquidityPool,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
         _debtToken = ILiquidityPool(_liquidityPool).debtToken();
         IERC20(IERC4626(_liquidityPool).asset()).approve(_liquidityPool, type(uint256).max);
@@ -880,26 +879,17 @@ contract VaultV2 {
          The exponent of the exponential: x, is a 18 decimals fixed point number.
          The exponent x is calculated as: the amount of blocks since last sync divided by the average of 
          blocks produced over a year (using a 12s average block time).
-         Any debt being realised will be accompanied by a mint of stablecoin of equal amounts.
-         Bookkeeping requires total open (realised) debt of the system = totalsupply of stablecoin.
          _yearlyInterestRate = 1 + r expressed as 18 decimals fixed point number
   */
     function syncDebt() public {
-        uint128 newOpenDebt = getUsedMargin();
-        uint128 unRealisedDebt = newOpenDebt - debt._openDebt;
-
-        if (unRealisedDebt > 0) {
-            IERC20(_stable).mint(_stakeContract, unRealisedDebt);
-        }
-
-        debt._openDebt = newOpenDebt;
+        debt._openDebt = getUsedMargin();
     }
 
     /** 
     @notice Can be called by the proxy vault owner to take out (additional) credit against
             his assets stored on the proxy vault.
-    @dev amount to be provided in stablecoin decimals. 
-    @param amount The amount of credit to take out, in the form of a pegged stablecoin with 18 decimals.
+    @dev amount to be provided in asset decimals. 
+    @param amount The amount of credit to take out, in the form of an asset.
   */
     function takeCredit(uint128 amount) public onlyOwner {
         syncDebt();
@@ -912,12 +902,11 @@ contract VaultV2 {
         _setYearlyInterestRate();
 
         debt._openDebt = getUsedMargin();
-        IERC20(_stable).mint(owner, amount);
     }
 
     /** 
     @notice Function used by owner of the proxy vault to repay any open debt.
-    @dev Amount of debt to repay in same decimals as the stablecoin decimals.
+    @dev Amount of debt to repay in same decimals as the asset decimals.
          Amount given can be greater than open debt. Will only transfer the required
          amount from the user's balance.
     @param amount Amount of debt to repay.
@@ -933,17 +922,6 @@ contract VaultV2 {
 
         IERC20(IERC4626(_liquidityPool).asset()).transferFrom(owner, address(this), transferAmount);
         ILiquidityPool(_liquidityPool).repay(amount, address(this));
-
-        require(
-            IERC20(_stable).transferFrom(
-                msg.sender,
-                address(this),
-                transferAmount
-            ),
-            "Transfer from failed"
-        );
-
-        IERC20(_stable).burn(transferAmount);
 
         debt._openDebt = getUsedMargin();
 

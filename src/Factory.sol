@@ -41,7 +41,6 @@ contract Factory is ERC721, Ownable {
 
     uint256 public baseCurrencyCounter;
     mapping(uint256 => address) public baseCurrencyToLiquidityPool;
-    mapping(uint256 => address) public baseCurrencyToStable;
 
     event VaultCreated(
         address indexed vaultAddress,
@@ -119,7 +118,7 @@ contract Factory is ERC721, Ownable {
          Changing any of the logic contracts with this function does NOT immediately take effect,
          only after the function 'confirmNewVaultInfo' is called.
          If a new Main Registry contract is set, all the BaseCurrencies currently stored in the Factory 
-         (and the corresponding Stable Contracts) must also be stored in the new Main registry contract.
+         (and the corresponding Liquidity Pool Contracts) must also be stored in the new Main registry contract.
     @param registryAddress The contract addres of the Main Registry
     @param logic The contract address of the Vault logic
     @param stakeContract The contract addres of the Staking Contract
@@ -147,13 +146,13 @@ contract Factory is ERC721, Ownable {
         if (
             vaultDetails[latestVaultVersion].registryAddress != registryAddress
         ) {
-            address stable;
+            address liquidityPool;
             for (uint256 i; i < baseCurrencyCounter; ) {
-                (, , , , , stable, ) = IMainRegistry(
+                (, , , , liquidityPool, ) = IMainRegistry(
                     registryAddress
                 ).baseCurrencyToInformation(i);
                 require(
-                    stable == baseCurrencyToStable[i],
+                    liquidityPool == baseCurrencyToLiquidityPool[i],
                     "FTRY_SNVI:No match baseCurrencies MR"
                 );
                 unchecked {
@@ -164,18 +163,17 @@ contract Factory is ERC721, Ownable {
     }
 
     /** 
-  @notice Function adds baseCurrency and corresponding stable contract to the factory
+  @notice Function adds baseCurrency and corresponding Liquidity Pool contract to the factory
   @dev BaseCurrencies can only be added by the latest Main Registry
   @param baseCurrency An identifier (uint256) of the BaseCurrency
   @param liquidityPool The contract address of the corresponding Liquidity Pool
   */
-    function addBaseCurrency(uint256 baseCurrency, address liquidityPool, address stable) external {
+    function addBaseCurrency(uint256 baseCurrency, address liquidityPool) external {
         require(
             vaultDetails[latestVaultVersion].registryAddress == msg.sender,
             "FTRY_AN: Add BaseCurrencies via MR"
         );
         baseCurrencyToLiquidityPool[baseCurrency] = liquidityPool;
-        baseCurrencyToStable[baseCurrency] = stable;
         unchecked {
             ++baseCurrencyCounter;
         }

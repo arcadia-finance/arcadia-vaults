@@ -45,7 +45,6 @@ contract MainRegistry is Ownable {
         address assetAddress;
         address baseCurrencyToUsdOracle;
         address liquidityPool;
-        address stable;
         string baseCurrencyLabel;
     }
 
@@ -79,7 +78,7 @@ contract MainRegistry is Ownable {
     /**
      * @notice Sets the new Factory address
      * @dev The factory can only be set on the Main Registry AFTER the Main registry is set in the Factory.
-     *      This ensures that the allowed BaseCurrencies and corresponding stable contracts in both contract are equal.
+     *      This ensures that the allowed BaseCurrencies and corresponding liquidity pool contracts in both contract are equal.
      * @param _factoryAddress The address of the Factory
      */
     function setFactory(address _factoryAddress) external onlyOwner {
@@ -95,8 +94,7 @@ contract MainRegistry is Ownable {
             for (uint256 i = factoryBaseCurrencyCounter; i < baseCurrencyCounter; ) {
                 IFactory(factoryAddress).addBaseCurrency(
                     i,
-                    baseCurrencyToInformation[i].liquidityPool,
-                    baseCurrencyToInformation[i].stable
+                    baseCurrencyToInformation[i].liquidityPool
                 );
                 unchecked {
                     ++i;
@@ -327,8 +325,7 @@ contract MainRegistry is Ownable {
         if (factoryAddress != address(0)) {
             IFactory(factoryAddress).addBaseCurrency(
                 baseCurrencyCounter,
-                baseCurrencyInformation.liquidityPool,
-                baseCurrencyInformation.stable
+                baseCurrencyInformation.liquidityPool
             );
         }
         unchecked {
