@@ -36,11 +36,13 @@ contract RiskModule is Ownable {
     mapping(address => AssetConfiguration.AssetDetailBitmap) public assetConfigurationDetails;
 
     function addAsset(address assetAddress) external onlyOwner{
+        require(!(assetConfigurationDetails[assetAddress].data > 0), "RM: Asset is already added");
         AssetConfiguration.AssetDetailBitmap memory config = AssetConfiguration.toBitmap(defaultConfig);
         assetConfigurationDetails[assetAddress] = config;
     }
 
     function addAsset(address assetAddress, AssetConfiguration.AssetDetail memory assetDetail) external onlyOwner {
+        require(!(assetConfigurationDetails[assetAddress].data > 0), "RM: Asset is already added");
         AssetConfiguration.AssetDetailBitmap memory config = AssetConfiguration.toBitmap(assetDetail);
         assetConfigurationDetails[assetAddress] = config;
     }
