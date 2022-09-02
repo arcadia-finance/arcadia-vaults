@@ -68,7 +68,6 @@ contract vaultTests is Test {
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
-    address private stakeContract = address(5);
     address private vaultOwner = address(6);
     address private liquidityProvider = address(7);
 
@@ -344,7 +343,6 @@ contract vaultTests is Test {
         factoryContr.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            stakeContract,
             0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
@@ -389,7 +387,6 @@ contract vaultTests is Test {
         vault.initialize(
             vaultOwner,
             address(mainRegistry),
-            address(stakeContract),
             0x0000000000000000000000000000000000000000,
             1
         );
@@ -1583,7 +1580,6 @@ contract vaultTests is Test {
         vault_m.initialize(
             address(this),
             address(mainRegistry),
-            address(stakeContract),
             0x0000000000000000000000000000000000000000,
             1
         );
@@ -1624,7 +1620,6 @@ contract vaultTests is Test {
         vault_m.initialize(
             address(this),
             address(mainRegistry),
-            address(stakeContract),
             0x0000000000000000000000000000000000000000,
             1
         );

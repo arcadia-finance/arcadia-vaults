@@ -56,7 +56,6 @@ contract Vault {
   ///////////////////////////////////////////////////////////////*/
     address public _registryAddress; /// to be fetched somewhere else?
     address public _liquidityPool;
-    address public _stakeContract;
     address public _debtToken;
     address public _irmAddress;
 
@@ -192,15 +191,12 @@ contract Vault {
          Costly function (156k gas)
     @param _owner The tx.origin: the sender of the 'createVault' on the factory
     @param registryAddress The 'beacon' contract to which should be looked at for external logic.
-    @param stakeContract The stake contract in which stablecoin can be staked. 
-                         Used when syncing debt: interest in stable is minted to stakecontract.
     @param irmAddress The contract address of the InterestRateModule, which calculates the interest rate
                       for a credit line, based on the underlying assets.
   */
     function initialize(
         address _owner,
         address registryAddress,
-        address stakeContract,
         address irmAddress,
         uint16 _vaultVersion
     ) external payable {
@@ -210,7 +206,6 @@ contract Vault {
         owner = _owner;
         debt._collThres = 150;
         debt._liqThres = 110;
-        _stakeContract = stakeContract;
         _irmAddress = irmAddress;
         (,,,,_liquidityPool,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;

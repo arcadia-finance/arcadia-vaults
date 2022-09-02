@@ -72,7 +72,6 @@ contract gasDeposits is Test {
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
-    address private stakeContract = address(5);
     address private vaultOwner = address(6);
     address private liquidityProvider = address(9);
 
@@ -574,7 +573,6 @@ contract gasDeposits is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            stakeContract,
             0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );

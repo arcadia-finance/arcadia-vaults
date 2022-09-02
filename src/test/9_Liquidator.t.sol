@@ -69,7 +69,6 @@ contract LiquidatorTest is Test {
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
-    address private stakeContract = address(5);
     address private vaultOwner = address(6);
     address private liquidatorBot = address(7);
     address private auctionBuyer = address(8);
@@ -410,7 +409,6 @@ contract LiquidatorTest is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            stakeContract,
             0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );

@@ -72,7 +72,6 @@ contract VaultV2Test is Test {
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
-    address private stakeContract = address(5);
     address private vaultOwner = address(6);
     address private liquidityProvider = address(7);
 
@@ -418,7 +417,6 @@ contract VaultV2Test is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            stakeContract,
             0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
@@ -482,7 +480,6 @@ contract VaultV2Test is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vaultV2),
-            stakeContract,
             0x0000000000000000000000000000000000000000,
             Constants.upgradeRoot1To2
         );
@@ -567,7 +564,6 @@ contract VaultV2Test is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vaultV2),
-            stakeContract,
             0x0000000000000000000000000000000000000000,
             Constants.upgradeRoot1To2
         );
@@ -609,7 +605,6 @@ contract VaultV2Test is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vaultV2),
-            stakeContract,
             0x0000000000000000000000000000000000000000,
             Constants.upgradeRoot1To2
         );
@@ -647,7 +642,6 @@ contract VaultV2Test is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vaultV2),
-            stakeContract,
             0x0000000000000000000000000000000000000000,
             Constants.upgradeRoot1To2
         );

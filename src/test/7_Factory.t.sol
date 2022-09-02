@@ -99,7 +99,6 @@ contract factoryTest is Test {
             address(registryContr),
             address(vaultContr),
             0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
@@ -422,7 +421,6 @@ contract factoryTest is Test {
             address(registryContr2),
             address(vaultContr),
             0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
@@ -472,7 +470,6 @@ contract factoryTest is Test {
             address(registryContr),
             address(vaultContr),
             0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         vm.stopPrank();
@@ -481,7 +478,6 @@ contract factoryTest is Test {
     function testOwnerSetsVaultInfoForFirstTime(
         address registry,
         address logic,
-        address stakeContract,
         address interestModule
     ) public {
         vm.assume(logic != address(0));
@@ -493,7 +489,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             registry,
             logic,
-            stakeContract,
             interestModule,
             Constants.upgradeProof1To2
         );
@@ -503,7 +498,6 @@ contract factoryTest is Test {
 
     function testOwnerSetsNewVaultInfoWithIdenticalMainRegistry(
         address logic,
-        address stakeContract,
         address interestModule
     ) public {
         vm.assume(logic != address(0));
@@ -512,7 +506,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr),
             logic,
-            stakeContract,
             interestModule,
             Constants.upgradeProof1To2
         );
@@ -521,7 +514,6 @@ contract factoryTest is Test {
 
     function testOwnerSetsNewVaultInfoSecondTimeWithIdenticalMainRegistry(
         address logic,
-        address stakeContract,
         address interestModule
     ) public {
         vm.assume(logic != address(0));
@@ -530,7 +522,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr),
             logic,
-            stakeContract,
             interestModule,
             Constants.upgradeProof1To2
         );
@@ -538,7 +529,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr),
             logic,
-            stakeContract,
             interestModule,
             Constants.upgradeProof1To2
         );
@@ -548,7 +538,6 @@ contract factoryTest is Test {
     function testOwnerSetsNewVaultInfoWithDifferentLiquidityPoolContractInMainRegistry(
         address randomLiquidityPool,
         address logic,
-        address stakeContract,
         address interestModule
     ) public {
         vm.assume(logic != address(0));
@@ -568,7 +557,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
-            stakeContract,
             interestModule,
             Constants.upgradeProof1To2
         );
@@ -578,7 +566,6 @@ contract factoryTest is Test {
     function testOwnerSetsNewVaultWithInfoMissingBaseCurrencyInMainRegistry(
         address newLiquidityPool,
         address logic,
-        address stakeContract,
         address interestModule
     ) public {
         vm.assume(logic != address(0));
@@ -613,7 +600,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
-            stakeContract,
             interestModule,
             Constants.upgradeProof1To2
         );
@@ -622,7 +608,6 @@ contract factoryTest is Test {
     function testOwnerSetsNewVaultWithIdenticalBaseCurrenciesInMainRegistry(
         address newLiquidityPool,
         address logic,
-        address stakeContract,
         address interestModule
     ) public {
 
@@ -666,7 +651,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
-            stakeContract,
             interestModule,
             Constants.upgradeProof1To2
         );
@@ -680,7 +664,6 @@ contract factoryTest is Test {
     function testOwnerSetsNewVaultWithMoreBaseCurrenciesInMainRegistry(
         address newLiquidityPool,
         address logic,
-        address stakeContract,
         address interestModule
     ) public {
         vm.assume(logic != address(0));
@@ -712,7 +695,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
-            stakeContract,
             interestModule,
             Constants.upgradeProof1To2
         );
@@ -740,7 +722,6 @@ contract factoryTest is Test {
     function testOwnerConfirmsVaultInfoForFirstTime(
         address registry,
         address logic,
-        address stakeContract,
         address interestModule
     ) public {
         vm.assume(logic != address(0));
@@ -752,7 +733,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             registry,
             logic,
-            stakeContract,
             interestModule,
             Constants.upgradeProof1To2
         );
@@ -766,7 +746,6 @@ contract factoryTest is Test {
 
     function testOwnerConfirmsNewVaultInfoWithIdenticalMainRegistry(
         address logic,
-        address stakeContract,
         address interestModule
     ) public {
         vm.assume(logic != address(0));
@@ -777,7 +756,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr),
             logic,
-            stakeContract,
             interestModule,
             Constants.upgradeProof1To2
         );
@@ -847,7 +825,6 @@ contract factoryTest is Test {
                 address(registryContr),
                 address(vaultContr),
                 address(0),
-                0x0000000000000000000000000000000000000000,
                 Constants.upgradeProof1To2
             );
         }
