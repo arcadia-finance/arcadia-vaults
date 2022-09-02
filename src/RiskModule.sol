@@ -57,4 +57,14 @@ contract RiskModule is Ownable {
         return AssetConfiguration.getCollateralFactor(assetConfigurationDetails[assetAddress]);
     }
 
+    function setLiquidationThreshold(address assetAddress, uint16 liquidationThreshold) external onlyOwner {
+        AssetConfiguration.AssetDetailBitmap memory config = assetConfigurationDetails[assetAddress];
+        AssetConfiguration.setLiquidationThreshold(config, liquidationThreshold);
+        assetConfigurationDetails[assetAddress] = config;
+    }
+
+    function getLiquidationThreshold(address assetAddress) external returns (uint128) {
+        return AssetConfiguration.getLiquidationThreshold(assetConfigurationDetails[assetAddress]);
+    }
+
 }

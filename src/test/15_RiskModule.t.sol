@@ -8,6 +8,7 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "../../lib/forge-std/src/Test.sol";
 import "../RiskModule.sol";
+import "./gasTests/BuyVault1.sol";
 
 
 contract RiskModuleTest is Test {
@@ -24,7 +25,7 @@ contract RiskModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testValidAddAssetWDefaults() public {
+    function testAddAssetWDefaultsSuccess() public {
         // Given: assetAddress and riskModule
         address assetAddress = address(41);
 
@@ -39,7 +40,7 @@ contract RiskModuleTest is Test {
 
     }
 
-    function testInvalidAddAssetWDefaults() public {
+    function testAddAssetWDefaultsFail() public {
         // Given: assetAddress and riskModule
         address assetAddress = address(31);
 
@@ -51,7 +52,7 @@ contract RiskModuleTest is Test {
 
     }
 
-    function testAddingSameAddressAssetShouldRevert() public {
+    function testAddingSameAddressAssetShouldRevertFail() public {
         // Given: assetAddress and riskModule
         address assetAddress = address(41);
 
@@ -67,4 +68,52 @@ contract RiskModuleTest is Test {
         vm.stopPrank();
 
     }
+
+    function testSetNewCollateralFactorSuccess() public {
+        // Given: assetAddress and riskModule
+        address assetAddress = address(41);
+
+        // Given: Asset is added with address by contract creator
+        vm.startPrank(creator);
+        riskModule.addAsset(assetAddress);
+        vm.stopPrank();
+
+        // Given: new collateral factor
+        uint16 collateralFactorNew = 100 * 10e1;
+
+        // When: Asset collateral factor is changed
+        vm.startPrank(creator);
+        riskModule.setCollateralFactor(assetAddress, collateralFactorNew);
+        vm.stopPrank();
+
+        // Then: The collateral factor should be new value
+        uint collateralFactorReturned = riskModule.getCollateralFactor(assetAddress);
+        assertEq(collateralFactorNew, collateralFactorReturned);
+
+    }
+
+    function testSetNewLiquidationThresholdSuccess() public {
+        // Given: assetAddress and riskModule
+        address assetAddress = address(41);
+
+        // Given: Asset is added with address by contract creator
+        vm.startPrank(creator);
+        riskModule.addAsset(assetAddress);
+        vm.stopPrank();
+
+        // Given: new liquidation threshold
+        uint16 liquidationThresholdNew = 80 * 10e1;
+
+        // When: Asset liquidation threshold is changed
+        vm.startPrank(creator);
+        riskModule.setLiquidationThreshold(assetAddress, liquidationThresholdNew);
+        vm.stopPrank();
+
+        // Then: The liquidation threshold should be new value
+        uint liquidationThresholdReturned = riskModule.getLiquidationThreshold(assetAddress);
+        assertEq(liquidationThresholdNew, liquidationThresholdReturned);
+
+    }
+
+
 }
