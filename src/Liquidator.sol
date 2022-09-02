@@ -8,7 +8,6 @@ pragma solidity ^0.8.13;
 
 import "./interfaces/IFactory.sol";
 import "./interfaces/IMainRegistry.sol";
-import "./interfaces/IStable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IVault.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";

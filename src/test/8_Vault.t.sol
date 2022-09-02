@@ -932,8 +932,6 @@ contract vaultTests is Test {
         depositEthInVault(baseAmountDeposit, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), vaultOwner, amountCredit);
         vault.takeCredit(amountCredit);
 
         assertEq(asset.balanceOf(vaultOwner), amountCredit);

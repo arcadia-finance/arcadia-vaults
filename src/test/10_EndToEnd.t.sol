@@ -897,8 +897,6 @@ contract EndToEndTest is Test {
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
-        vm.expectEmit(true, true, false, true);
-        emit Transfer(address(0), vaultOwner, amountCredit);
         proxy.takeCredit(amountCredit);
         vm.stopPrank();
 
@@ -952,8 +950,6 @@ contract EndToEndTest is Test {
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
-        vm.expectEmit(true, true, false, true);
-        emit Transfer(address(0), vaultOwner, amountCredit);
         proxy.takeCredit(amountCredit);
         vm.stopPrank();
 
@@ -1125,7 +1121,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testIncreaseBalanceStakeContractSyncDebt(
+    function testIncreaseBalanceDebtContractSyncDebt(
         uint128 amountEth,
         uint128 amountCredit,
         uint16 blocksToRoll
@@ -1149,11 +1145,11 @@ contract EndToEndTest is Test {
 
         (, , , uint64 _yearlyInterestRate, , ) = proxy.debt();
 
-        uint256 balanceBefore = stable.balanceOf(stakeContract);
+        uint256 balanceBefore = debt.totalAssets();
 
         vm.roll(block.number + blocksToRoll);
         proxy.syncDebt();
-        uint256 balanceAfter = stable.balanceOf(stakeContract);
+        uint256 balanceAfter = debt.totalAssets();
 
         uint128 base = _yearlyInterestRate + 10**18;
         uint128 exponent = uint128(
@@ -1250,8 +1246,6 @@ contract EndToEndTest is Test {
         uint256 balanceBefore = asset.balanceOf(vaultOwner);
 
         vm.startPrank(vaultOwner);
-        vm.expectEmit(true, true, false, true);
-        emit Transfer(address(proxy), address(0), openDebt);
         proxy.repayDebt(openDebt * factor);
         vm.stopPrank();
 

@@ -885,14 +885,7 @@ contract Vault {
          _yearlyInterestRate = 1 + r expressed as 18 decimals fixed point number
   */
     function syncDebt() public {
-        uint128 newOpenDebt = getUsedMargin();
-        uint128 unRealisedDebt = newOpenDebt - debt._openDebt;
-
-        if (unRealisedDebt > 0) {
-            IERC20(_stable).mint(_stakeContract, unRealisedDebt);
-        }
-
-        debt._openDebt = newOpenDebt;
+        debt._openDebt = getUsedMargin();
     }
 
     /** 
@@ -912,7 +905,6 @@ contract Vault {
         _setYearlyInterestRate();
 
         debt._openDebt = getUsedMargin();
-        IERC20(_stable).mint(owner, amount);
     }
 
     /** 
@@ -933,17 +925,6 @@ contract Vault {
 
         IERC20(IERC4626(_liquidityPool).asset()).transferFrom(owner, address(this), transferAmount);
         ILiquidityPool(_liquidityPool).repay(amount, address(this));
-
-        require(
-            IERC20(_stable).transferFrom(
-                msg.sender,
-                address(this),
-                transferAmount
-            ),
-            "Transfer from failed"
-        );
-
-        IERC20(_stable).burn(transferAmount);
 
         debt._openDebt = getUsedMargin();
 
