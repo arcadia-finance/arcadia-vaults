@@ -1092,7 +1092,7 @@ contract EndToEndTest is Test {
         uint256 balanceBefore = debt.totalAssets();
 
         vm.roll(block.number + blocksToRoll);
-        proxy.syncDebt();
+        pool.syncInterests();
         uint256 balanceAfter = debt.totalAssets();
 
         uint128 base = _yearlyInterestRate + 10**18;

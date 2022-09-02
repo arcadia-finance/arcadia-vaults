@@ -1434,7 +1434,7 @@ contract vaultTests is Test {
         debtLocal._usedMargin += unRealisedDebt;
         debtLocal._lastBlock = uint32(block.number);
 
-        vault.syncDebt();
+        pool.syncInterests();
 
         (uint256 _usedMargin, , , , , ) = vault.debt();
 
@@ -1494,7 +1494,7 @@ contract vaultTests is Test {
             (debtLocal._usedMargin * LogExpMath.pow(base, exponent)) /
             1e18;
 
-        vault.syncDebt();
+        pool.syncInterests();
 
         uint256 _usedMargin;
         (

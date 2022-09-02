@@ -861,66 +861,8 @@ contract Vault {
     }
 
     /*///////////////////////////////////////////////////////////////
-                          LENDING LOGIC
+                          LIQUIDATION LOGIC
     ///////////////////////////////////////////////////////////////*/
-
-    /** 
-    @notice Syncs all unrealised debt (= interest) on the proxy vault.
-    @dev Public function, can be called by any user to keep the game fair and to allow keeps to
-         sync the debt before in case a liquidation can be triggered.
-         To Find the unrealised debt over an amount of time, you need to calculate D[(1+r)^x-1].
-         The base of the exponential: 1 + r, is a 18 decimals fixed point number
-         with r the yearly interest rate.
-         The exponent of the exponential: x, is a 18 decimals fixed point number.
-         The exponent x is calculated as: the amount of blocks since last sync divided by the average of 
-         blocks produced over a year (using a 12s average block time).
-         _yearlyInterestRate = 1 + r expressed as 18 decimals fixed point number
-  */
-    function syncDebt() public {
-        debt._openDebt = getUsedMargin();
-    }
-
-    /** 
-    @notice Can be called by the proxy vault owner to take out (additional) credit against
-            his assets stored on the proxy vault.
-    @dev amount to be provided in asset decimals. 
-    @param amount The amount of credit to take out, in the form of an asset.
-  */
-    function takeCredit(uint128 amount) public onlyOwner {
-        syncDebt();
-
-        if (amount > 0) {
-            ILiquidityPool(_liquidityPool).borrow(amount, address(this), address(this));
-            IERC20(IERC4626(_liquidityPool).asset()).transfer(owner, amount);
-        }
-
-        _setYearlyInterestRate();
-
-        debt._openDebt = getUsedMargin();
-    }
-
-    /** 
-    @notice Function used by owner of the proxy vault to repay any open debt.
-    @dev Amount of debt to repay in same decimals as the asset decimals.
-         Amount given can be greater than open debt. Will only transfer the required
-         amount from the user's balance.
-    @param amount Amount of debt to repay.
-  */
-    function repayDebt(uint256 amount) public onlyOwner {
-        syncDebt();
-
-        // if a user wants to pay more than their open debt
-        // we should only take the amount that's needed
-        // prevents refunds etc
-        uint256 openDebt = getUsedMargin();
-        uint256 transferAmount = openDebt > amount ? amount : openDebt;
-
-        IERC20(IERC4626(_liquidityPool).asset()).transferFrom(owner, address(this), transferAmount);
-        ILiquidityPool(_liquidityPool).repay(amount, address(this));
-
-        debt._openDebt = getUsedMargin();
-
-    }
 
     /** 
     @notice Function called to start a vault liquidation.
