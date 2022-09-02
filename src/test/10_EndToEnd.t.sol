@@ -445,7 +445,7 @@ contract EndToEndTest is Test {
 
         vm.startPrank(vaultOwner);
         proxy.authorize(address(pool), true);
-        asset.approve(address(proxy), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
@@ -455,7 +455,6 @@ contract EndToEndTest is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        asset.approve(address(liquidator), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -842,7 +841,7 @@ contract EndToEndTest is Test {
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
         vm.stopPrank();
 
         assertEq(asset.balanceOf(vaultOwner), amountCredit);
@@ -865,7 +864,7 @@ contract EndToEndTest is Test {
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("LP_TL: Reverted");
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
         vm.stopPrank();
 
         assertEq(asset.balanceOf(vaultOwner), 0);
@@ -876,7 +875,7 @@ contract EndToEndTest is Test {
         uint128 amountCredit,
         uint32 amountOfBlocksToRoll
     ) public {
-        (, , , uint64 _yearlyInterestRate, , ) = proxy.debt();
+        uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
         uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) /
             uint128(proxy.yearlyBlocks());
@@ -895,10 +894,10 @@ contract EndToEndTest is Test {
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
         vm.stopPrank();
 
-        (, , , _yearlyInterestRate, , ) = proxy.debt();
+        _yearlyInterestRate = pool.interestRate();
         base = 1e18 + _yearlyInterestRate;
 
         uint256 debtAtStart = proxy.getUsedMargin();
@@ -941,14 +940,14 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
         vm.stopPrank();
 
         vm.roll(block.number + 10); //
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("LP_TL: Reverted");
-        proxy.takeCredit(1);
+        pool.borrow(1, address(proxy), vaultOwner);
         vm.stopPrank();
     }
 
@@ -974,7 +973,7 @@ contract EndToEndTest is Test {
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
         vm.stopPrank();
 
         vm.prank(oracleOwner);
@@ -1018,7 +1017,7 @@ contract EndToEndTest is Test {
         uint128 amountCredit = uint128(proxy.getFreeMargin() - 1);
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         assetAmounts[0] = amountEthWithdrawal;
         vm.startPrank(vaultOwner);
@@ -1057,7 +1056,7 @@ contract EndToEndTest is Test {
         );
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         assetAmounts[0] = amountEthWithdrawal;
         vm.startPrank(vaultOwner);
@@ -1086,9 +1085,9 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
-        (, , , uint64 _yearlyInterestRate, , ) = proxy.debt();
+        uint64 _yearlyInterestRate = pool.interestRate();
 
         uint256 balanceBefore = debt.totalAssets();
 
@@ -1128,7 +1127,7 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.roll(block.number + blocksToRoll);
 
@@ -1139,7 +1138,7 @@ contract EndToEndTest is Test {
 
 
         vm.prank(vaultOwner);
-        proxy.repayDebt(openDebt);
+        pool.repay(openDebt, address(proxy));
 
         assertEq(proxy.getUsedMargin(), 0);
 
@@ -1169,7 +1168,7 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(liquidityProvider);
         asset.transfer(vaultOwner, factor * amountCredit);
@@ -1180,7 +1179,7 @@ contract EndToEndTest is Test {
         uint256 balanceBefore = asset.balanceOf(vaultOwner);
 
         vm.startPrank(vaultOwner);
-        proxy.repayDebt(openDebt * factor);
+        pool.repay(openDebt * factor, address(proxy));
         vm.stopPrank();
 
         uint256 balanceAfter = asset.balanceOf(vaultOwner);
@@ -1214,7 +1213,7 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.roll(block.number + blocksToRoll);
 
@@ -1222,8 +1221,8 @@ contract EndToEndTest is Test {
         vm.assume(toRepay < openDebt);
 
         vm.prank(vaultOwner);
-        proxy.repayDebt(toRepay);
-        (, , , uint64 _yearlyInterestRate, , ) = proxy.debt();
+        pool.repay(toRepay, address(proxy));
+        uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = _yearlyInterestRate + 10**18;
         uint128 exponent = uint128(
             (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()
@@ -1235,7 +1234,7 @@ contract EndToEndTest is Test {
         assertEq(proxy.getUsedMargin(), expectedDebt);
 
         vm.roll(block.number + uint256(blocksToRoll));
-        (, , , _yearlyInterestRate, , ) = proxy.debt();
+        _yearlyInterestRate = pool.interestRate();
         base = _yearlyInterestRate + 10**18;
         exponent = uint128(
             (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()

@@ -626,8 +626,7 @@ contract gasDeposits is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        asset.approve(address(proxy), type(uint256).max);
-        asset.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);

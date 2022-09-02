@@ -636,8 +636,7 @@ contract gasRepay_1ERC20 is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        asset.approve(address(proxy), type(uint256).max);
-        asset.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
@@ -667,21 +666,21 @@ contract gasRepay_1ERC20 is Test {
             10**Constants.oracleEthToUsdDecimals) * s_assetAmounts[0]) /
             10**Constants.ethDecimals;
         maxCredit = uint128((valueEth * 100) / 150);
-        proxy.takeCredit(maxCredit);
+        pool.borrow(maxCredit , address(proxy), vaultOwner);
     }
 
     function testRepay_partly() public {
         vm.prank(vaultOwner);
-        proxy.repayDebt(maxCredit / 2);
+        pool.repay(maxCredit / 2, address(proxy));
     }
 
     function testRepay_exact() public {
         vm.prank(vaultOwner);
-        proxy.repayDebt(maxCredit);
+        pool.repay(maxCredit, address(proxy));
     }
 
     function testRepay_surplus() public {
         vm.prank(vaultOwner);
-        proxy.repayDebt(maxCredit * 2);
+        pool.repay(maxCredit * 2, address(proxy));
     }
 }

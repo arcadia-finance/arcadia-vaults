@@ -894,7 +894,7 @@ contract vaultTests is Test {
         vm.stopPrank();
     }
 
-    function testTakeCredit(uint8 baseAmountDeposit, uint8 baseAmountCredit)
+    function testBorrow(uint8 baseAmountDeposit, uint8 baseAmountCredit)
         public
     {
         uint256 amountDeposit = baseAmountDeposit * Constants.WAD;
@@ -907,7 +907,7 @@ contract vaultTests is Test {
         depositEthInVault(baseAmountDeposit, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        vault.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(vault), vaultOwner);
 
         assertEq(asset.balanceOf(vaultOwner), amountCredit);
         assertEq(vault.getUsedMargin(), amountCredit); //no blocks have passed
@@ -946,7 +946,7 @@ contract vaultTests is Test {
             vaultOwner
         );
         vm.startPrank(vaultOwner);
-        vault.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(vault), vaultOwner);
         assetInfo.assetAmounts[0] = amountWithdraw;
         vault.withdraw(
             assetInfo.assetAddresses,
@@ -990,7 +990,7 @@ contract vaultTests is Test {
             vaultOwner
         );
         vm.startPrank(vaultOwner);
-        vault.takeCredit(uint128(amountCredit));
+        pool.borrow(amountCredit, address(vault), vaultOwner);
         assetInfo.assetAmounts[0] = amountWithdraw;
         vm.expectRevert("V_W: coll. value too low!");
         vault.withdraw(
@@ -1047,7 +1047,7 @@ contract vaultTests is Test {
         );
 
         vm.startPrank(vaultOwner);
-        vault.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(vault), vaultOwner);
 
         uint256[] memory withdrawalIds = new uint256[](randomAmounts);
         address[] memory withdrawalAddresses = new address[](randomAmounts);
@@ -1100,7 +1100,7 @@ contract vaultTests is Test {
         );
 
         vm.startPrank(vaultOwner);
-        vault.takeCredit(maxAmountCredit + 1);
+        pool.borrow(maxAmountCredit + 1, address(vault), vaultOwner);
 
         uint256[] memory withdrawalIds = new uint256[](amountsWithdrawn);
         address[] memory withdrawalAddresses = new address[](amountsWithdrawn);
@@ -1246,7 +1246,7 @@ contract vaultTests is Test {
         depositEthInVault(amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        vault.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(vault), vaultOwner);
 
         uint256 actualRemainingCredit = vault.getFreeMargin();
         uint256 expectedRemainingCredit = (depositValue * 100) /
@@ -1271,9 +1271,10 @@ contract vaultTests is Test {
         assertEq(_lastBlock, 0);
     }
 
-    function testTakeCreditAsNonOwner(uint8 amountEth, uint128 amountCredit)
+    function testBorrowAsNonOwner(uint8 amountEth, uint128 amountCredit)
         public
     {
+        vm.assume(amountCredit > 0);
         vm.assume(unprivilegedAddress != vaultOwner);
         uint256 depositValue = ((Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals) * amountEth;
@@ -1282,8 +1283,8 @@ contract vaultTests is Test {
         depositEthInVault(amountEth, vaultOwner);
 
         vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("VL: You are not the owner");
-        vault.takeCredit(amountCredit);
+        vm.expectRevert(stdError.arithmeticError);
+        pool.borrow(amountCredit, address(vault), vaultOwner);
     }
 
     struct debtInfo {
@@ -1413,7 +1414,6 @@ contract vaultTests is Test {
         uint256 _lastBlock = block.number;
 
         (, _collThres, , _yearlyInterestRate, , _baseCurrency) = vault.debt();
-        assertTrue(_yearlyInterestRate == base - 1e18);
 
         vm.roll(block.number + deltaBlocks);
 
@@ -1424,7 +1424,7 @@ contract vaultTests is Test {
         debtLocal._collThres = _collThres;
         debtLocal._baseCurrency = _baseCurrency;
         debtLocal._lastBlock = uint32(_lastBlock);
-        debtLocal._yearlyInterestRate = _yearlyInterestRate;
+        debtLocal._yearlyInterestRate = base - 1e18;
 
         unRealisedDebt = uint128(
             (debtLocal._usedMargin * (LogExpMath.pow(base, exponent) - 1e18)) /
@@ -1529,7 +1529,7 @@ contract vaultTests is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
         vm.prank(vaultOwner);
-        vault.takeCredit((((amountEth * 100) / 150) * factor) / 255);
+        pool.borrow((((amountEth * 100) / 150) * factor) / 255, address(vault), vaultOwner);
 
         uint256 currentValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
         uint256 openDebt = vault.getUsedMargin();
@@ -1970,7 +1970,7 @@ contract vaultTests is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
         vm.startPrank(vaultOwner);
         uint256 remainingCredit = vault.getFreeMargin();
-        vault.takeCredit(uint128(remainingCredit));
+        pool.borrow(uint128(remainingCredit), address(vault), vaultOwner);
         vm.stopPrank();
 
         return remainingCredit;

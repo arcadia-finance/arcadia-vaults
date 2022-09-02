@@ -631,8 +631,7 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        asset.approve(address(proxy), type(uint256).max);
-        asset.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
@@ -673,9 +672,9 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
         proxy.getFreeMargin();
     }
 
-    function testTakeCredit() public {
+    function testBorrow() public {
         vm.prank(vaultOwner);
-        proxy.takeCredit(1);
+        pool.borrow(1 , address(proxy), vaultOwner);
     }
 
     function testGenerateAssetData() public view {

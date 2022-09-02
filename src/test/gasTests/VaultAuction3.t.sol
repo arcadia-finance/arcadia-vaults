@@ -632,8 +632,7 @@ contract gasVaultAuction_1ERC201ERC721 is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        asset.approve(address(proxy), type(uint256).max);
-        asset.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
@@ -665,7 +664,7 @@ contract gasVaultAuction_1ERC201ERC721 is Test {
             10 **
                 (Constants.oracleWbaycToEthDecimals +
                     Constants.oracleEthToUsdDecimals)) * s_3[1];
-        proxy.takeCredit(uint128(((valueEth + valueBayc) * 100) / 150));
+        pool.borrow(uint128(((valueEth + valueBayc) * 100) / 150), address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd) / 2);
