@@ -51,28 +51,20 @@ contract RiskModuleTest is Test {
 
     }
 
-    function testAddingSameAddressAssetResetToDefault() public {
+    function testAddingSameAddressAssetShouldRevert() public {
         // Given: assetAddress and riskModule
         address assetAddress = address(41);
 
-        // When: Asset is added with default values and collateral factor is changed
-        vm.startPrank(creator);
-        riskModule.addAsset(assetAddress);
-        riskModule.setCollateralFactor(assetAddress, 2500);
-        vm.stopPrank();
-
-        // Then: Collateral factor has to be new value
-        uint128 collateralFactor = riskModule.getCollateralFactor(assetAddress);
-        assertEq(collateralFactor, 2500);
-
-        // When: Same asset with same address is added
+        // When: Asset is added with address. It should revert
         vm.startPrank(creator);
         riskModule.addAsset(assetAddress);
         vm.stopPrank();
 
-        // Then: Collateral factor is not the new value, instead default value
-        uint128 collateralFactor2 = riskModule.getCollateralFactor(assetAddress);
-        assertTrue(collateralFactor2 != 2500);
-        assertEq(collateralFactor2, 2000);
+        // Then: Asset with the same address is added, it should revert
+        vm.startPrank(creator);
+        vm.expectRevert("RM: Asset is already added");
+        riskModule.addAsset(assetAddress);
+        vm.stopPrank();
+
     }
 }
