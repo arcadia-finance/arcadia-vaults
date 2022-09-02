@@ -16,5 +16,7 @@ interface ILiquidityPool {
 
     function asset() external returns (address);
 
-    function processDefault(uint256 assets, uint256 deficit) external;
+    function liquidateVault(address vault, uint256 debt) external;
+
+    function settleLiquidation(uint256 default_, uint256 deficit) external;
 }

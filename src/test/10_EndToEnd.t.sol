@@ -300,7 +300,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factory));
+        pool = new LiquidityPool(asset, creatorAddress, address(factory));
         pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(pool);
@@ -426,6 +426,7 @@ contract EndToEndTest is Test {
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
+        pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
@@ -451,9 +452,6 @@ contract EndToEndTest is Test {
         );
         proxy = Vault(proxyAddr);
 
-        vm.prank(address(proxy));
-        stable.mint(tokenCreatorAddress, 100000 * 10**Constants.stableDecimals);
-
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
@@ -476,7 +474,7 @@ contract EndToEndTest is Test {
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
         stable.approve(address(proxy), type(uint256).max);
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -1190,9 +1188,6 @@ contract EndToEndTest is Test {
 
         vm.prank(vaultOwner);
         proxy.takeCredit(amountCredit);
-
-        vm.prank(tokenCreatorAddress);
-        stable.transfer(vaultOwner, 1000 * 10**18);
 
         vm.roll(block.number + blocksToRoll);
 

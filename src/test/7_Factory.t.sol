@@ -74,7 +74,7 @@ contract factoryTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factoryContr));
+        pool = new LiquidityPool(asset, creatorAddress, address(factoryContr));
         pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(pool);

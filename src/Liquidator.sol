@@ -11,7 +11,6 @@ import "./interfaces/IMainRegistry.sol";
 import "./interfaces/IStable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IVault.sol";
-import "./interfaces/IReserveFund.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./interfaces/ILiquidityPool.sol";
 
@@ -132,6 +131,8 @@ contract Liquidator is Ownable {
             auctionInfo[vaultAddress][life].startBlock == 0,
             "Liquidation already ongoing"
         );
+
+        ILiquidityPool(IFactory(factoryAddress).baseCurrencyToLiquidityPool(uint256(baseCurrency))).liquidateVault(vaultAddress, openDebt);
 
         auctionInfo[vaultAddress][life].startBlock = uint128(block.number);
         auctionInfo[vaultAddress][life].liquidationKeeper = liquidationKeeper;
@@ -256,15 +257,14 @@ contract Liquidator is Ownable {
         if (priceOfVault < openDebt + keeperReward) {
             uint256 default_ = openDebt + keeperReward - priceOfVault;
             uint256 deficit = priceOfVault < keeperReward ? keeperReward - openDebt : 0;
-            //ToDo: create separate function to liquidate vaults
-            ILiquidityPool(liquidityPool).repay(priceOfVault, vaultAddress); //ToDo: This will result in two transfers, implement repayFrom
-            ILiquidityPool(liquidityPool).processDefault(default_, deficit);
+            if (deficit == 0) IERC20(asset).transfer(liquidityPool, openDebt - default_); //ToDo do one transfer from msg.sender directly to liquiditypool?
+            ILiquidityPool(liquidityPool).settleLiquidation(default_, deficit);
         } else {
-            ILiquidityPool(liquidityPool).repay(openDebt, vaultAddress);
+            IERC20(asset).transfer(liquidityPool, openDebt);
+            //ToDo: transfer protocolReward to Liquidity Pool
             //uint256 protocolReward = openDebt * ratios.protocol / 100;
             //uint256 surplus = priceOfVault - auctionInfo[vaultAddress][life].openDebt;
             //protocolReward = surplus > protocolReward ? protocolReward  : surplus;
-            //ToDo: transfer protocolReward to Liquidity Pool
         }
 
         auctionInfo[vaultAddress][life].assetPaid = uint128(priceOfVault);

@@ -446,11 +446,11 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
 
         vm.startPrank(tokenCreatorAddress);
         asset = new Asset("Asset", "ASSET", 18);
-        asset.mint(liquidityProvider, type(uint256).max);
+        asset.mint(liquidityProvider, type(uint128).max);
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LiquidityPool(asset, 0x0000000000000000000000000000000000000000, creatorAddress, address(factory));
+        pool = new LiquidityPool(asset, creatorAddress, address(factory));
         pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(pool);
@@ -587,7 +587,6 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
 
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), asset.balanceOf(vaultOwner));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -600,6 +599,7 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
+        pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
         vm.stopPrank();
@@ -652,6 +652,8 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
+        asset.approve(address(proxy), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         stable.approve(address(proxy), type(uint256).max);
         stable.approve(address(liquidator), type(uint256).max);
         vm.stopPrank();

@@ -13,7 +13,6 @@ import "./interfaces/IERC1155.sol";
 import "./interfaces/IERC4626.sol";
 import "./interfaces/ILiquidator.sol";
 import "./interfaces/IRegistry.sol";
-import "./interfaces/IRM.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILiquidityPool.sol";
 
@@ -997,8 +996,6 @@ contract Vault {
             ++life;
         }
 
-        IERC20(IERC4626(_liquidityPool).asset()).transferFrom(owner, address(this), openDebt);
-        ILiquidityPool(_liquidityPool).repay(openDebt, address(this)); //ToDo: What to do with the debttokens, transfer, burn???
         debt._openDebt = 0;
         debt._lastBlock = 0;
 
