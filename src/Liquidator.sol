@@ -8,11 +8,10 @@ pragma solidity ^0.8.13;
 
 import "./interfaces/IFactory.sol";
 import "./interfaces/IMainRegistry.sol";
-import "./interfaces/IStable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IVault.sol";
-import "./interfaces/IReserveFund.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./interfaces/ILiquidityPool.sol";
 
 /**
  * @title The liquidator holds the execution logic and storage or all things related to liquidating Arcadia Vaults
@@ -45,7 +44,7 @@ contract Liquidator is Ownable {
         uint128 startBlock;
         uint8 liqThres;
         uint8 baseCurrency;
-        uint128 stablePaid;
+        uint128 assetPaid;
         bool stopped;
         address liquidationKeeper;
         address originalOwner;
@@ -131,6 +130,8 @@ contract Liquidator is Ownable {
             auctionInfo[vaultAddress][life].startBlock == 0,
             "Liquidation already ongoing"
         );
+
+        ILiquidityPool(IFactory(factoryAddress).baseCurrencyToLiquidityPool(uint256(baseCurrency))).liquidateVault(vaultAddress, openDebt);
 
         auctionInfo[vaultAddress][life].startBlock = uint128(block.number);
         auctionInfo[vaultAddress][life].liquidationKeeper = liquidationKeeper;
@@ -229,7 +230,6 @@ contract Liquidator is Ownable {
     @param life the life of the vault for which the price has to be fetched.
   */
     function buyVault(address vaultAddress, uint256 life) public {
-        // it's 3683 gas cheaper to look up the struct 6x in the mapping than to take it into memory
         (uint256 priceOfVault, uint8 baseCurrency, bool forSale) = getPriceOfVault(
             vaultAddress,
             life
@@ -237,41 +237,36 @@ contract Liquidator is Ownable {
 
         require(forSale, "LQ_BV: Not for sale");
 
-        // todo: can be given in getPriceOfVault()
-        uint256 surplus;
-        if (priceOfVault > auctionInfo[vaultAddress][life].openDebt) {
-            surplus = priceOfVault - auctionInfo[vaultAddress][life].openDebt;
-        } else {
-            surplus = 0; //could be skipped
-        }
+        address liquidityPool = IFactory(factoryAddress).baseCurrencyToLiquidityPool(uint256(baseCurrency));
+        address asset = ILiquidityPool(liquidityPool).asset();
 
-        address stable = IFactory(factoryAddress).baseCurrencyToStable(
-            uint256(baseCurrency)
+        require(
+            IERC20(asset).transferFrom(
+                msg.sender,
+                address(this),
+                priceOfVault
+            ),
+            "LQ_BV: transfer failed"
         );
-        if (surplus != 0) {
-            require(
-                IStable(stable).safeBurn(
-                    msg.sender,
-                    auctionInfo[vaultAddress][life].openDebt
-                ),
-                "LQ_BV: Burn failed"
-            );
-            require(
-                IStable(stable).transferFrom(
-                    msg.sender,
-                    address(this),
-                    surplus
-                ),
-                "LQ_BV: Surplus transfer failed"
-            );
+
+        uint256 openDebt = auctionInfo[vaultAddress][life].openDebt;
+        claimRatios memory ratios = claimRatio;
+        uint256 keeperReward = openDebt * ratios.liquidationKeeper / 100;
+
+        if (priceOfVault < openDebt + keeperReward) {
+            uint256 default_ = openDebt + keeperReward - priceOfVault;
+            uint256 deficit = priceOfVault < keeperReward ? keeperReward - openDebt : 0;
+            if (deficit == 0) IERC20(asset).transfer(liquidityPool, openDebt - default_); //ToDo do one transfer from msg.sender directly to liquiditypool?
+            ILiquidityPool(liquidityPool).settleLiquidation(default_, deficit);
         } else {
-            require(
-                IStable(stable).safeBurn(msg.sender, priceOfVault),
-                "LQ_BV: Burn failed"
-            );
+            IERC20(asset).transfer(liquidityPool, openDebt);
+            //ToDo: transfer protocolReward to Liquidity Pool
+            //uint256 protocolReward = openDebt * ratios.protocol / 100;
+            //uint256 surplus = priceOfVault - auctionInfo[vaultAddress][life].openDebt;
+            //protocolReward = surplus > protocolReward ? protocolReward  : surplus;
         }
 
-        auctionInfo[vaultAddress][life].stablePaid = uint128(priceOfVault);
+        auctionInfo[vaultAddress][life].assetPaid = uint128(priceOfVault);
         auctionInfo[vaultAddress][life].stopped = true;
 
         IFactory(factoryAddress).safeTransferFrom(
@@ -317,13 +312,13 @@ contract Liquidator is Ownable {
         claimableBy[0] = auction.liquidationKeeper;
 
         if (
-            auction.stablePaid < auction.openDebt ||
-            auction.stablePaid <= keeperReward + auction.openDebt
+            auction.assetPaid < auction.openDebt ||
+            auction.assetPaid <= keeperReward + auction.openDebt
         ) {
             return (claimables, claimableBy);
         }
 
-        uint256 leftover = auction.stablePaid - auction.openDebt - keeperReward;
+        uint256 leftover = auction.assetPaid - auction.openDebt - keeperReward;
 
         claimables[1] = claimableBitmapMem & (1 << (4 * life + 1)) == 0
             ? (leftover >= protocolReward ? protocolReward : leftover)
@@ -402,29 +397,13 @@ contract Liquidator is Ownable {
     ) internal {
         for (uint8 k; k < baseCurrencyCounter; ) {
             if (totalClaimable[k] > 0) {
-                address BaseCurrenciestable = IFactory(factoryAddress)
-                    .baseCurrencyToStable(k);
-                uint256 balance = IERC20(BaseCurrenciestable).balanceOf(
-                    address(this)
+                address asset = ILiquidityPool(IFactory(factoryAddress).baseCurrencyToLiquidityPool(uint256(k))).asset();
+                require(
+                    IERC20(asset).transfer(
+                        claimer,
+                        totalClaimable[k]
+                    )
                 );
-
-                if (balance >= totalClaimable[k]) {
-                    require(
-                        IERC20(BaseCurrenciestable).transfer(
-                            claimer,
-                            totalClaimable[k]
-                        )
-                    );
-                } else {
-                    require(IERC20(BaseCurrenciestable).transfer(claimer, balance));
-                    require(
-                        IReserveFund(reserveFund).withdraw(
-                            totalClaimable[k] - balance,
-                            BaseCurrenciestable,
-                            claimer
-                        )
-                    );
-                }
             }
             unchecked {
                 ++k;

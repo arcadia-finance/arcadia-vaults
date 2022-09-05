@@ -23,62 +23,6 @@ contract ArcadiaOracleFixture is Test {
         defaultTransmitter = transmitter;
     }
 
-    function initStableOracle(
-        uint8 decimals,
-        string memory description,
-        address asset_address
-    ) public returns (ArcadiaOracle) {
-        vm.startPrank(defaultCreatorAddress);
-        ArcadiaOracle oracle = new ArcadiaOracle(
-            uint8(decimals),
-            description,
-            asset_address
-        );
-        oracle.setOffchainTransmitter(defaultTransmitter);
-        vm.stopPrank();
-        vm.startPrank(defaultTransmitter);
-        oracle.transmit(int256(10**decimals));
-        vm.stopPrank();
-        return oracle;
-    }
-
-    function initStableOracle(uint8 decimals, string memory description)
-        public
-        returns (ArcadiaOracle)
-    {
-        vm.startPrank(defaultCreatorAddress);
-        ArcadiaOracle oracle = new ArcadiaOracle(
-            uint8(decimals),
-            description,
-            address(73)
-        );
-        oracle.setOffchainTransmitter(defaultTransmitter);
-        vm.stopPrank();
-        vm.startPrank(defaultTransmitter);
-        oracle.transmit(int256(10**decimals));
-        vm.stopPrank();
-        return oracle;
-    }
-
-    function initStableOracle(
-        address creatorAddress,
-        uint8 decimals,
-        string memory description
-    ) public returns (ArcadiaOracle) {
-        vm.startPrank(creatorAddress);
-        ArcadiaOracle oracle = new ArcadiaOracle(
-            uint8(decimals),
-            description,
-            address(73)
-        );
-        oracle.setOffchainTransmitter(defaultTransmitter);
-        vm.stopPrank();
-        vm.startPrank(defaultTransmitter);
-        oracle.transmit(int256(10**decimals));
-        vm.stopPrank();
-        return oracle;
-    }
-
     function initOracle(
         uint8 decimals,
         string memory description,

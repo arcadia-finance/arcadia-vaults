@@ -20,7 +20,6 @@ contract Factory is ERC721, Ownable {
     struct vaultVersionInfo {
         address registryAddress;
         address logic;
-        address stakeContract;
         address interestModule;
         bytes32 versionRoot;
     }
@@ -40,7 +39,7 @@ contract Factory is ERC721, Ownable {
     address public liquidatorAddress;
 
     uint256 public baseCurrencyCounter;
-    mapping(uint256 => address) public baseCurrencyToStable;
+    mapping(uint256 => address) public baseCurrencyToLiquidityPool;
 
     event VaultCreated(
         address indexed vaultAddress,
@@ -118,17 +117,15 @@ contract Factory is ERC721, Ownable {
          Changing any of the logic contracts with this function does NOT immediately take effect,
          only after the function 'confirmNewVaultInfo' is called.
          If a new Main Registry contract is set, all the BaseCurrencies currently stored in the Factory 
-         (and the corresponding Stable Contracts) must also be stored in the new Main registry contract.
+         (and the corresponding Liquidity Pool Contracts) must also be stored in the new Main registry contract.
     @param registryAddress The contract addres of the Main Registry
     @param logic The contract address of the Vault logic
-    @param stakeContract The contract addres of the Staking Contract
     @param interestModule The contract address of the Interest Rate Module
     @param versionRoot The root of the merkle tree of all the compatible vault versions
   */
     function setNewVaultInfo(
         address registryAddress,
         address logic,
-        address stakeContract,
         address interestModule,
         bytes32 versionRoot
     ) external onlyOwner {
@@ -137,7 +134,6 @@ contract Factory is ERC721, Ownable {
 
         vaultDetails[latestVaultVersion + 1].registryAddress = registryAddress;
         vaultDetails[latestVaultVersion + 1].logic = logic;
-        vaultDetails[latestVaultVersion + 1].stakeContract = stakeContract;
         vaultDetails[latestVaultVersion + 1].interestModule = interestModule;
         vaultDetails[latestVaultVersion + 1].versionRoot = versionRoot;
         newVaultInfoSet = true;
@@ -146,13 +142,13 @@ contract Factory is ERC721, Ownable {
         if (
             vaultDetails[latestVaultVersion].registryAddress != registryAddress
         ) {
-            address mainRegistryStableAddress;
+            address liquidityPool;
             for (uint256 i; i < baseCurrencyCounter; ) {
-                (, , , , mainRegistryStableAddress, ) = IMainRegistry(
+                (, , , , liquidityPool, ) = IMainRegistry(
                     registryAddress
                 ).baseCurrencyToInformation(i);
                 require(
-                    mainRegistryStableAddress == baseCurrencyToStable[i],
+                    liquidityPool == baseCurrencyToLiquidityPool[i],
                     "FTRY_SNVI:No match baseCurrencies MR"
                 );
                 unchecked {
@@ -163,17 +159,17 @@ contract Factory is ERC721, Ownable {
     }
 
     /** 
-  @notice Function adds baseCurrency and corresponding stable contract to the factory
+  @notice Function adds baseCurrency and corresponding Liquidity Pool contract to the factory
   @dev BaseCurrencies can only be added by the latest Main Registry
   @param baseCurrency An identifier (uint256) of the BaseCurrency
-  @param stable The contract address of the corresponding ERC20 token pegged to the baseCurrency
+  @param liquidityPool The contract address of the corresponding Liquidity Pool
   */
-    function addBaseCurrency(uint256 baseCurrency, address stable) external {
+    function addBaseCurrency(uint256 baseCurrency, address liquidityPool) external {
         require(
             vaultDetails[latestVaultVersion].registryAddress == msg.sender,
             "FTRY_AN: Add BaseCurrencies via MR"
         );
-        baseCurrencyToStable[baseCurrency] = stable;
+        baseCurrencyToLiquidityPool[baseCurrency] = liquidityPool;
         unchecked {
             ++baseCurrencyCounter;
         }
@@ -218,8 +214,7 @@ contract Factory is ERC721, Ownable {
         IVault(vault).initialize(
             msg.sender,
             vaultDetails[vaultVersion].registryAddress,
-            vaultDetails[vaultVersion].stakeContract,
-            vaultDetails[vaultVersion].interestModule, 
+            vaultDetails[vaultVersion].interestModule,
             uint16(vaultVersion)
         );
 
