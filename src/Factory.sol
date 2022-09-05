@@ -20,7 +20,6 @@ contract Factory is ERC721, Ownable {
     struct vaultVersionInfo {
         address registryAddress;
         address logic;
-        address interestModule;
         bytes32 versionRoot;
     }
 
@@ -120,13 +119,11 @@ contract Factory is ERC721, Ownable {
          (and the corresponding Liquidity Pool Contracts) must also be stored in the new Main registry contract.
     @param registryAddress The contract addres of the Main Registry
     @param logic The contract address of the Vault logic
-    @param interestModule The contract address of the Interest Rate Module
     @param versionRoot The root of the merkle tree of all the compatible vault versions
   */
     function setNewVaultInfo(
         address registryAddress,
         address logic,
-        address interestModule,
         bytes32 versionRoot
     ) external onlyOwner {
         require(versionRoot != bytes32(0), "FTRY_SNVI: version root is zero");
@@ -134,7 +131,6 @@ contract Factory is ERC721, Ownable {
 
         vaultDetails[latestVaultVersion + 1].registryAddress = registryAddress;
         vaultDetails[latestVaultVersion + 1].logic = logic;
-        vaultDetails[latestVaultVersion + 1].interestModule = interestModule;
         vaultDetails[latestVaultVersion + 1].versionRoot = versionRoot;
         newVaultInfoSet = true;
 
@@ -214,7 +210,6 @@ contract Factory is ERC721, Ownable {
         IVault(vault).initialize(
             msg.sender,
             vaultDetails[vaultVersion].registryAddress,
-            vaultDetails[vaultVersion].interestModule,
             uint16(vaultVersion)
         );
 

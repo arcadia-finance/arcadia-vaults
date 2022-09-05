@@ -578,7 +578,6 @@ contract gasWithdrawal1_1ERC20 is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();

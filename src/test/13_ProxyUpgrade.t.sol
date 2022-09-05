@@ -19,7 +19,6 @@ import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/FloorERC1155SubRegistry.sol";
-
 import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
@@ -417,7 +416,6 @@ contract VaultV2Test is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
@@ -480,7 +478,6 @@ contract VaultV2Test is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vaultV2),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeRoot1To2
         );
         factory.confirmNewVaultInfo();
@@ -496,12 +493,9 @@ contract VaultV2Test is Test {
         vm.stopPrank();
     }
 
-    struct Debt {
-        uint128 _usedMargin;
+    struct VaultInfo {
         uint16 _collThres;
         uint8 _liqThres;
-        uint64 _yearlyInterestRate;
-        uint32 _lastBlock;
         uint8 _baseCurrency;
     }
     struct Checks {
@@ -513,15 +507,14 @@ contract VaultV2Test is Test {
         address _registryAddress;
         address _liquidityPool;
         address _debtToken;
-        address _irmAddress;
         uint256 life;
         address owner;
-        Debt debt;
+        VaultInfo vaultVar;
     }
 
     function createCompareStruct() public view returns (Checks memory) {
         Checks memory checks;
-        Debt memory debtVar;
+        VaultInfo memory vaultVar;
 
         checks._erc20Stored = proxy._erc20Stored(0); //to be improved for whole list
         checks._erc721Stored = proxy._erc721Stored(0);
@@ -531,16 +524,12 @@ contract VaultV2Test is Test {
         checks._registryAddress = proxy._registryAddress();
         checks._liquidityPool = proxy._liquidityPool();
         checks._debtToken = proxy._debtToken();
-        checks._irmAddress = proxy._irmAddress();
         checks.life = proxy.life();
         checks.owner = proxy.owner();
-        (debtVar._usedMargin,
-        debtVar._collThres,
-        debtVar._liqThres,
-        debtVar._yearlyInterestRate,
-        debtVar._lastBlock,
-        debtVar._baseCurrency) = proxy.debt();
-        checks.debt = debtVar;
+        (vaultVar._collThres,
+        vaultVar._liqThres,
+        vaultVar._baseCurrency) = proxy.vault();
+        checks.vaultVar = vaultVar;
 
         return checks;
     }
@@ -564,7 +553,6 @@ contract VaultV2Test is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vaultV2),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeRoot1To2
         );
         factory.confirmNewVaultInfo();
@@ -605,7 +593,6 @@ contract VaultV2Test is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vaultV2),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeRoot1To2
         );
         factory.confirmNewVaultInfo();
@@ -642,7 +629,6 @@ contract VaultV2Test is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vaultV2),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeRoot1To2
         );
         factory.confirmNewVaultInfo();
