@@ -733,6 +733,17 @@ contract Vault {
                           MARGIN REQUIREMENTS
     ///////////////////////////////////////////////////////////////*/
 
+    /** 
+    @notice Calculates the total collateral value of the vault.
+    @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+    @return collateralValue The collateral value, returned in the decimals of the base currency.
+    @dev The collateral value of the vault is equal to the spot value of the underlying assets,
+         discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
+         collateralised assets can fluctuate, the haircut guarantees that the vault 
+         remains over-collateralised with a high confidence level (99,9%+). The size of the
+         haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
+         or the smaller the on-chain liquidity, the biggert the haircut will be.
+  */
     function getCollateralValue()
         public
         view
@@ -745,6 +756,18 @@ contract Vault {
         }
     }
 
+    /** 
+    @notice Calculates the total collateral value of the vault.
+    @param vaultValue The total spot value of all the assets in the vault.
+    @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+    @return collateralValue The collateral value, returned in the decimals of the base currency.
+    @dev The collateral value of the vault is equal to the spot value of the underlying assets,
+         discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
+         collateralised assets can fluctuate, the haircut guarantees that the vault 
+         remains over-collateralised with a high confidence level (99,9%+). The size of the
+         haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
+         or the smaller the on-chain liquidity, the biggert the haircut will be.
+  */
     function getCollateralValue(uint256 vaultValue)
         public
         view
@@ -785,6 +808,7 @@ contract Vault {
 
     /** 
     @notice Calculates the remaining margin the owner of the proxy vault can use.
+    @param vaultValue The total spot value of all the assets in the vault.
     @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
     @return freeMargin The remaining amount of margin a user can take, 
                             returned in the decimals of the base currency.
@@ -808,8 +832,8 @@ contract Vault {
     @notice Can be called by authorised applications to open or increase a margin position.
     @param baseCurrency The Base-currency in which the margin position is denominated
     @param amount The amount the position is increased.
-    @return success boolean indicating if there is sufficient free margin to increase the margin position
-    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency. 
+    @return success Boolean indicating if there is sufficient free margin to increase the margin position
+    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
     */
     function increaseMarginPosition(uint256 baseCurrency, uint256 amount) public onlyAuthorized returns (bool success) {
         if (baseCurrency != vault._baseCurrency) _setBaseCurrency(baseCurrency);
@@ -818,7 +842,9 @@ contract Vault {
 
     /** 
     @notice Can be called by authorised applications to close or decrease a margin position.
-    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency. 
+    @param baseCurrency The Base-currency in which the margin position is denominated.
+    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
+    @return success Boolean indicating if there the margin position is successfully decreased.
      */
     function decreaseMarginPosition(uint256 baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
         success = baseCurrency == vault._baseCurrency;
@@ -835,6 +861,9 @@ contract Vault {
          Increases the life of the vault to indicate a liquidation has happened.
          Sets debtInfo todo: needed?
          Transfers ownership of the proxy vault to the liquidator!
+    @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
+    @param liquidator Contract Address of the liquidation logic.
+    @return success Boolean returning if the liquidation process is successfully started.
   */
     function liquidateVault(address liquidationKeeper, address liquidator)
         public
