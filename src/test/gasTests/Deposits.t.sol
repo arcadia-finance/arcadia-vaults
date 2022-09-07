@@ -573,7 +573,6 @@ contract gasDeposits is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
@@ -626,8 +625,7 @@ contract gasDeposits is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        asset.approve(address(proxy), type(uint256).max);
-        asset.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);

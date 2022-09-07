@@ -409,7 +409,6 @@ contract LiquidatorTest is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
@@ -468,8 +467,7 @@ contract LiquidatorTest is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        asset.approve(address(proxy), type(uint256).max);
-        asset.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.prank(auctionBuyer);
@@ -521,7 +519,7 @@ contract LiquidatorTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.startPrank(liquidatorBot);
         vm.expectRevert("This vault is healthy");
@@ -532,7 +530,7 @@ contract LiquidatorTest is Test {
     }
 
     function testStartAuction(uint128 amountEth, uint256 newPrice) public {
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -544,7 +542,7 @@ contract LiquidatorTest is Test {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -561,7 +559,7 @@ contract LiquidatorTest is Test {
     function testShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice)
         public
     {
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -573,7 +571,7 @@ contract LiquidatorTest is Test {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -605,7 +603,7 @@ contract LiquidatorTest is Test {
             blocksToRoll <
                 liquidator.hourlyBlocks() * liquidator.breakevenTime()
         );
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -617,7 +615,7 @@ contract LiquidatorTest is Test {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -657,7 +655,7 @@ contract LiquidatorTest is Test {
             blocksToRoll >
                 liquidator.hourlyBlocks() * liquidator.breakevenTime()
         );
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -669,7 +667,7 @@ contract LiquidatorTest is Test {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -698,7 +696,7 @@ contract LiquidatorTest is Test {
             blocksToRoll >
                 liquidator.hourlyBlocks() * liquidator.breakevenTime()
         );
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -715,7 +713,7 @@ contract LiquidatorTest is Test {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -765,7 +763,7 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(vaultOwner);
         uint256 remainingCred = uint128(proxy.getFreeMargin());
-        proxy.takeCredit(uint128(remainingCred));
+        pool.borrow(remainingCred, address(proxy), vaultOwner);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -861,7 +859,7 @@ contract LiquidatorTest is Test {
 
             vm.startPrank(vaultOwner);
             remainingCred = uint128(proxy.getFreeMargin());
-            proxy.takeCredit(uint128(remainingCred));
+            pool.borrow(remainingCred, address(proxy), vaultOwner);
             vm.stopPrank();
 
             vm.startPrank(oracleOwner);
@@ -961,8 +959,8 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(vaultOwner);
         uint256 remainingCred = uint128(proxy.getFreeMargin());
-        proxy.takeCredit(uint128(remainingCred));
-        Vault(proxy2).takeCredit(uint128(remainingCred));
+        pool.borrow(remainingCred, address(proxy), vaultOwner);
+        pool.borrow(remainingCred, proxy2, vaultOwner);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -1047,7 +1045,7 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(vaultOwner);
         uint256 remainingCred = uint128(proxy.getFreeMargin());
-        proxy.takeCredit(uint128(remainingCred));
+        pool.borrow(remainingCred, address(proxy), vaultOwner);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -1126,7 +1124,7 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(vaultOwner);
         uint256 remainingCred = uint128(proxy.getFreeMargin());
-        proxy.takeCredit(uint128(remainingCred));
+        pool.borrow(remainingCred, address(proxy), vaultOwner);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -1164,7 +1162,7 @@ contract LiquidatorTest is Test {
             blocksToRoll <
                 liquidator.hourlyBlocks() * breakevenTime
         );
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -1176,7 +1174,7 @@ contract LiquidatorTest is Test {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(creatorAddress);
         liquidator.setBreakevenTime(breakevenTime);

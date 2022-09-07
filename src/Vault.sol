@@ -57,9 +57,6 @@ contract Vault {
     address public _registryAddress; /// to be fetched somewhere else?
     address public _liquidityPool;
     address public _debtToken;
-    address public _irmAddress;
-
-
 
     // ACCESS CONTROL
     address public owner;
@@ -73,16 +70,13 @@ contract Vault {
     bool public initialized;
     uint16 public vaultVersion;
 
-    struct debtInfo {
-        uint128 _openDebt;
+    struct VaultInfo {
         uint16 _collThres; //2 decimals precision (factor 100)
         uint8 _liqThres; //2 decimals precision (factor 100)
-        uint64 _yearlyInterestRate; //18 decimals precision (factor 10**18)
-        uint32 _lastBlock;
         uint8 _baseCurrency;
     }
 
-    debtInfo public debt;
+    VaultInfo public vault;
 
     struct AddressSlot {
         address value;
@@ -191,22 +185,19 @@ contract Vault {
          Costly function (156k gas)
     @param _owner The tx.origin: the sender of the 'createVault' on the factory
     @param registryAddress The 'beacon' contract to which should be looked at for external logic.
-    @param irmAddress The contract address of the InterestRateModule, which calculates the interest rate
-                      for a credit line, based on the underlying assets.
+    @param _vaultVersion The version of the vault logic.
   */
     function initialize(
         address _owner,
         address registryAddress,
-        address irmAddress,
         uint16 _vaultVersion
     ) external payable {
         require(vaultVersion == 0, "V_I: Already initialized!");
         require(_vaultVersion != 0, "V_I: Invalid vault version");
         _registryAddress = registryAddress;
         owner = _owner;
-        debt._collThres = 150;
-        debt._liqThres = 110;
-        _irmAddress = irmAddress;
+        vault._collThres = 150;
+        vault._liqThres = 110;
         (,,,,_liquidityPool,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
         _debtToken = ILiquidityPool(_liquidityPool).debtToken();
@@ -440,27 +431,7 @@ contract Vault {
 
         uint256 usedMargin = getUsedMargin();
         if (usedMargin != 0) {
-            (
-                address[] memory _assetAddresses,
-                uint256[] memory _assetIds,
-                uint256[] memory _assetAmounts
-            ) = generateAssetData();
-            uint256[] memory valuesPerCreditRating = IRegistry(_registryAddress)
-                .getListOfValuesPerCreditRating(
-                    _assetAddresses,
-                    _assetIds,
-                    _assetAmounts,
-                    debt._baseCurrency
-                );
-            uint256 vaultValue = sumElementsOfList(valuesPerCreditRating);
-            uint256 minCollValue;
-            //gas: can't overflow: uint129 * uint16 << uint256
-            unchecked {
-                minCollValue = uint256(usedMargin * debt._collThres) / 100;
-            }
-            require(vaultValue > minCollValue, "V_W: coll. value too low!");
-
-            _setYearlyInterestRate();
+            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }
 
@@ -729,14 +700,7 @@ contract Vault {
     ) private {
         require(getUsedMargin() == 0, "VL: Can't change baseCurrency when openDebt > 0");
         require(newBaseCurrency + 1 <= IMainRegistry(_registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
-        debt._baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
-    }
-
-    /** 
-    @notice Internal function: sets the yearly interest rate (with 18 decimals precision).
-  */
-    function _setYearlyInterestRate() private {
-        debt._yearlyInterestRate = ILiquidityPool(_liquidityPool).interestRate();
+        vault._baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
     }
 
     // https://twitter.com/0x_beans/status/1502420621250105346
@@ -769,6 +733,17 @@ contract Vault {
                           MARGIN REQUIREMENTS
     ///////////////////////////////////////////////////////////////*/
 
+    /** 
+    @notice Calculates the total collateral value of the vault.
+    @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+    @return collateralValue The collateral value, returned in the decimals of the base currency.
+    @dev The collateral value of the vault is equal to the spot value of the underlying assets,
+         discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
+         collateralised assets can fluctuate, the haircut guarantees that the vault 
+         remains over-collateralised with a high confidence level (99,9%+). The size of the
+         haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
+         or the smaller the on-chain liquidity, the biggert the haircut will be.
+  */
     function getCollateralValue()
         public
         view
@@ -777,10 +752,22 @@ contract Vault {
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
         unchecked {
-            collateralValue = getValue(debt._baseCurrency) * 100 / debt._collThres;
+            collateralValue = getValue(vault._baseCurrency) * 100 / vault._collThres;
         }
     }
 
+    /** 
+    @notice Calculates the total collateral value of the vault.
+    @param vaultValue The total spot value of all the assets in the vault.
+    @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+    @return collateralValue The collateral value, returned in the decimals of the base currency.
+    @dev The collateral value of the vault is equal to the spot value of the underlying assets,
+         discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
+         collateralised assets can fluctuate, the haircut guarantees that the vault 
+         remains over-collateralised with a high confidence level (99,9%+). The size of the
+         haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
+         or the smaller the on-chain liquidity, the biggert the haircut will be.
+  */
     function getCollateralValue(uint256 vaultValue)
         public
         view
@@ -789,7 +776,7 @@ contract Vault {
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
         unchecked {
-            collateralValue = vaultValue * 100 / debt._collThres;
+            collateralValue = vaultValue * 100 / vault._collThres;
         }
     }
 
@@ -821,6 +808,7 @@ contract Vault {
 
     /** 
     @notice Calculates the remaining margin the owner of the proxy vault can use.
+    @param vaultValue The total spot value of all the assets in the vault.
     @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
     @return freeMargin The remaining amount of margin a user can take, 
                             returned in the decimals of the base currency.
@@ -844,83 +832,27 @@ contract Vault {
     @notice Can be called by authorised applications to open or increase a margin position.
     @param baseCurrency The Base-currency in which the margin position is denominated
     @param amount The amount the position is increased.
-    @return success boolean indicating if there is sufficient free margin to increase the margin position
-    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency. 
+    @return success Boolean indicating if there is sufficient free margin to increase the margin position
+    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
     */
     function increaseMarginPosition(uint256 baseCurrency, uint256 amount) public onlyAuthorized returns (bool success) {
-        if (baseCurrency != debt._baseCurrency) _setBaseCurrency(baseCurrency);
+        if (baseCurrency != vault._baseCurrency) _setBaseCurrency(baseCurrency);
         success = getFreeMargin() >= amount;
     }
 
     /** 
     @notice Can be called by authorised applications to close or decrease a margin position.
-    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency. 
+    @param baseCurrency The Base-currency in which the margin position is denominated.
+    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
+    @return success Boolean indicating if there the margin position is successfully decreased.
      */
     function decreaseMarginPosition(uint256 baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
-        success = baseCurrency == debt._baseCurrency;
+        success = baseCurrency == vault._baseCurrency;
     }
 
     /*///////////////////////////////////////////////////////////////
-                          LENDING LOGIC
+                          LIQUIDATION LOGIC
     ///////////////////////////////////////////////////////////////*/
-
-    /** 
-    @notice Syncs all unrealised debt (= interest) on the proxy vault.
-    @dev Public function, can be called by any user to keep the game fair and to allow keeps to
-         sync the debt before in case a liquidation can be triggered.
-         To Find the unrealised debt over an amount of time, you need to calculate D[(1+r)^x-1].
-         The base of the exponential: 1 + r, is a 18 decimals fixed point number
-         with r the yearly interest rate.
-         The exponent of the exponential: x, is a 18 decimals fixed point number.
-         The exponent x is calculated as: the amount of blocks since last sync divided by the average of 
-         blocks produced over a year (using a 12s average block time).
-         _yearlyInterestRate = 1 + r expressed as 18 decimals fixed point number
-  */
-    function syncDebt() public {
-        debt._openDebt = getUsedMargin();
-    }
-
-    /** 
-    @notice Can be called by the proxy vault owner to take out (additional) credit against
-            his assets stored on the proxy vault.
-    @dev amount to be provided in asset decimals. 
-    @param amount The amount of credit to take out, in the form of an asset.
-  */
-    function takeCredit(uint128 amount) public onlyOwner {
-        syncDebt();
-
-        if (amount > 0) {
-            ILiquidityPool(_liquidityPool).borrow(amount, address(this), address(this));
-            IERC20(IERC4626(_liquidityPool).asset()).transfer(owner, amount);
-        }
-
-        _setYearlyInterestRate();
-
-        debt._openDebt = getUsedMargin();
-    }
-
-    /** 
-    @notice Function used by owner of the proxy vault to repay any open debt.
-    @dev Amount of debt to repay in same decimals as the asset decimals.
-         Amount given can be greater than open debt. Will only transfer the required
-         amount from the user's balance.
-    @param amount Amount of debt to repay.
-  */
-    function repayDebt(uint256 amount) public onlyOwner {
-        syncDebt();
-
-        // if a user wants to pay more than their open debt
-        // we should only take the amount that's needed
-        // prevents refunds etc
-        uint256 openDebt = getUsedMargin();
-        uint256 transferAmount = openDebt > amount ? amount : openDebt;
-
-        IERC20(IERC4626(_liquidityPool).asset()).transferFrom(owner, address(this), transferAmount);
-        ILiquidityPool(_liquidityPool).repay(amount, address(this));
-
-        debt._openDebt = getUsedMargin();
-
-    }
 
     /** 
     @notice Function called to start a vault liquidation.
@@ -929,6 +861,9 @@ contract Vault {
          Increases the life of the vault to indicate a liquidation has happened.
          Sets debtInfo todo: needed?
          Transfers ownership of the proxy vault to the liquidator!
+    @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
+    @param liquidator Contract Address of the liquidation logic.
+    @return success Boolean returning if the liquidation process is successfully started.
   */
     function liquidateVault(address liquidationKeeper, address liquidator)
         public
@@ -936,7 +871,7 @@ contract Vault {
         returns (bool success)
     {
         //gas: 35 gas cheaper to not take debt into memory
-        uint256 totalValue = getValue(debt._baseCurrency);
+        uint256 totalValue = getValue(vault._baseCurrency);
         uint128 openDebt = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
@@ -946,7 +881,7 @@ contract Vault {
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
             //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = uint256(debt._liqThres) * uint256(openDebt);
+            rightHand = uint256(vault._liqThres) * uint256(openDebt);
         }
 
         require(leftHand < rightHand, "This vault is healthy");
@@ -958,8 +893,8 @@ contract Vault {
                 liquidationKeeper,
                 owner,
                 openDebt,
-                debt._liqThres,
-                debt._baseCurrency
+                vault._liqThres,
+                vault._baseCurrency
             ),
             "Failed to start auction!"
         );
@@ -968,9 +903,6 @@ contract Vault {
         unchecked {
             ++life;
         }
-
-        debt._openDebt = 0;
-        debt._lastBlock = 0;
 
         return true;
     }

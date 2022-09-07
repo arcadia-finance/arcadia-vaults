@@ -581,7 +581,6 @@ contract gasRepay_1ERC201ERC721 is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
@@ -634,8 +633,7 @@ contract gasRepay_1ERC201ERC721 is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        asset.approve(address(proxy), type(uint256).max);
-        asset.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
@@ -668,21 +666,21 @@ contract gasRepay_1ERC201ERC721 is Test {
                 (Constants.oracleWbaycToEthDecimals +
                     Constants.oracleEthToUsdDecimals)) * s_3[1];
         maxCredit = uint128(((valueEth + valueBayc) * 100) / 150);
-        proxy.takeCredit(maxCredit);
+        pool.borrow(maxCredit , address(proxy), vaultOwner);
     }
 
     function testRepay_partly() public {
         vm.prank(vaultOwner);
-        proxy.repayDebt(maxCredit / 2);
+        pool.repay(maxCredit / 2, address(proxy));
     }
 
     function testRepay_exact() public {
         vm.prank(vaultOwner);
-        proxy.repayDebt(maxCredit);
+        pool.repay(maxCredit, address(proxy));
     }
 
     function testRepay_surplus() public {
         vm.prank(vaultOwner);
-        proxy.repayDebt(maxCredit * 2);
+        pool.repay(maxCredit * 2, address(proxy));
     }
 }

@@ -579,7 +579,6 @@ contract gasVaultAuction_2ERC20 is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
@@ -632,8 +631,7 @@ contract gasVaultAuction_2ERC20 is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        asset.approve(address(proxy), type(uint256).max);
-        asset.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
@@ -664,7 +662,7 @@ contract gasVaultAuction_2ERC20 is Test {
         uint256 valueLink = (((10**18 * rateLinkToUsd) /
             10**Constants.oracleLinkToUsdDecimals) * s_3[1]) /
             10**Constants.linkDecimals;
-        proxy.takeCredit(uint128(((valueEth + valueLink) * 100) / 150));
+        pool.borrow(uint128(((valueEth + valueLink) * 100) / 150), address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd) / 2);

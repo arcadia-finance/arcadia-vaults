@@ -7,14 +7,12 @@
 pragma solidity >0.8.10;
 
 import "../../lib/forge-std/src/Test.sol";
-
 import "../Factory.sol";
 import "../Proxy.sol";
 import "../Vault.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../Liquidator.sol";
 import "../utils/Constants.sol";
-
 import {LiquidityPool} from "../../lib/arcadia-lending/src/LiquidityPool.sol";
 import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
@@ -98,7 +96,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr),
             address(vaultContr),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
@@ -420,7 +417,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             address(vaultContr),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
@@ -469,7 +465,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr),
             address(vaultContr),
-            0x0000000000000000000000000000000000000000,
             Constants.upgradeProof1To2
         );
         vm.stopPrank();
@@ -477,8 +472,7 @@ contract factoryTest is Test {
 
     function testOwnerSetsVaultInfoForFirstTime(
         address registry,
-        address logic,
-        address interestModule
+        address logic
     ) public {
         vm.assume(logic != address(0));
 
@@ -489,7 +483,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             registry,
             logic,
-            interestModule,
             Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.getVaultVersionRoot() == bytes32(0));
@@ -497,8 +490,7 @@ contract factoryTest is Test {
     }
 
     function testOwnerSetsNewVaultInfoWithIdenticalMainRegistry(
-        address logic,
-        address interestModule
+        address logic
     ) public {
         vm.assume(logic != address(0));
 
@@ -506,15 +498,13 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr),
             logic,
-            interestModule,
             Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
     }
 
     function testOwnerSetsNewVaultInfoSecondTimeWithIdenticalMainRegistry(
-        address logic,
-        address interestModule
+        address logic
     ) public {
         vm.assume(logic != address(0));
 
@@ -522,14 +512,12 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr),
             logic,
-            interestModule,
             Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
         factoryContr.setNewVaultInfo(
             address(registryContr),
             logic,
-            interestModule,
             Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
@@ -537,8 +525,7 @@ contract factoryTest is Test {
 
     function testOwnerSetsNewVaultInfoWithDifferentLiquidityPoolContractInMainRegistry(
         address randomLiquidityPool,
-        address logic,
-        address interestModule
+        address logic
     ) public {
         vm.assume(logic != address(0));
 
@@ -557,7 +544,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
-            interestModule,
             Constants.upgradeProof1To2
         );
         vm.stopPrank();
@@ -565,8 +551,7 @@ contract factoryTest is Test {
 
     function testOwnerSetsNewVaultWithInfoMissingBaseCurrencyInMainRegistry(
         address newLiquidityPool,
-        address logic,
-        address interestModule
+        address logic
     ) public {
         vm.assume(logic != address(0));
 
@@ -600,15 +585,13 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
-            interestModule,
             Constants.upgradeProof1To2
         );
     }
 
     function testOwnerSetsNewVaultWithIdenticalBaseCurrenciesInMainRegistry(
         address newLiquidityPool,
-        address logic,
-        address interestModule
+        address logic
     ) public {
 
         vm.assume(logic != address(0));
@@ -651,7 +634,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
-            interestModule,
             Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
@@ -663,8 +645,7 @@ contract factoryTest is Test {
 
     function testOwnerSetsNewVaultWithMoreBaseCurrenciesInMainRegistry(
         address newLiquidityPool,
-        address logic,
-        address interestModule
+        address logic
     ) public {
         vm.assume(logic != address(0));
 
@@ -695,7 +676,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr2),
             logic,
-            interestModule,
             Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
@@ -721,8 +701,7 @@ contract factoryTest is Test {
 
     function testOwnerConfirmsVaultInfoForFirstTime(
         address registry,
-        address logic,
-        address interestModule
+        address logic
     ) public {
         vm.assume(logic != address(0));
 
@@ -733,7 +712,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             registry,
             logic,
-            interestModule,
             Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
@@ -745,8 +723,7 @@ contract factoryTest is Test {
     }
 
     function testOwnerConfirmsNewVaultInfoWithIdenticalMainRegistry(
-        address logic,
-        address interestModule
+        address logic
     ) public {
         vm.assume(logic != address(0));
 
@@ -756,7 +733,6 @@ contract factoryTest is Test {
         factoryContr.setNewVaultInfo(
             address(registryContr),
             logic,
-            interestModule,
             Constants.upgradeProof1To2
         );
         assertTrue(factoryContr.newVaultInfoSet());
@@ -824,7 +800,6 @@ contract factoryTest is Test {
             factoryContr.setNewVaultInfo(
                 address(registryContr),
                 address(vaultContr),
-                address(0),
                 Constants.upgradeProof1To2
             );
         }
