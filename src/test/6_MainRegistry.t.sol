@@ -140,67 +140,67 @@ contract MainRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetNumeraire: 0,
+                baseAssetBaseCurrency: 0,
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
                 quoteAssetAddress: address(wmayc),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetNumeraire: 1,
+                baseAssetBaseCurrency: 1,
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
-                baseAssetIsNumeraire: true
+                baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
@@ -225,13 +225,13 @@ contract MainRegistryTest is Test {
     function setUp() public {
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: 0,
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
-                numeraireToUsdOracle: 0x0000000000000000000000000000000000000000,
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "USD",
-                numeraireUnit: 1
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnit: 1
             })
         );
 
@@ -250,37 +250,37 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testMainRegistryInitialisedWithUsdAsNumeraire() public {
-        (, , , , , string memory numeraireLabel) = mainRegistry
-            .numeraireToInformation(0);
-        assertTrue(StringHelpers.compareStrings("USD", numeraireLabel));
+    function testMainRegistryInitialisedWithUsdAsBaseCurrency() public {
+        (, , , , , string memory baseCurrencyLabel) = mainRegistry
+            .baseCurrencyToInformation(0);
+        assertTrue(StringHelpers.compareStrings("USD", baseCurrencyLabel));
     }
 
-    function testMainRegistryInitialisedWithNumeraireCounterOfZero() public {
-        assertEq(1, mainRegistry.numeraireCounter());
+    function testMainRegistryInitialisedWithBaseCurrencyCounterOfZero() public {
+        assertEq(1, mainRegistry.baseCurrencyCounter());
     }
 
-    function testNonOwnerAddsNumeraire(address unprivilegedAddress) public {
+    function testNonOwnerAddsBaseCurrency(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
         vm.stopPrank();
     }
 
-    function testOwnerAddsNumeraireWithWrongNumberOfCreditRatings() public {
+    function testOwnerAddsBaseCurrencyWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addSubRegistry(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
@@ -302,24 +302,24 @@ contract MainRegistryTest is Test {
 
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
-        vm.expectRevert("MR_AN: lenght");
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        vm.expectRevert("MR_AN: length");
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             assetCreditRatings
         );
         vm.stopPrank();
     }
 
-    function testOwnerAddsNumeraireWithNonExistingCreditRatingCategory()
+    function testOwnerAddsBaseCurrencyWithNonExistingCreditRatingCategory()
         public
     {
         vm.startPrank(creatorAddress);
@@ -345,23 +345,23 @@ contract MainRegistryTest is Test {
         assetCreditRatings[0] = mainRegistry.CREDIT_RATING_CATOGERIES();
         assetCreditRatings[1] = 0;
         vm.expectRevert("MR_AN: non existing credRat");
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             assetCreditRatings
         );
         vm.stopPrank();
     }
 
-    function testOwnerAddsNumeraireWithEmptyListOfCreditRatings() public {
+    function testOwnerAddsBaseCurrencyWithEmptyListOfCreditRatings() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addSubRegistry(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
@@ -381,25 +381,25 @@ contract MainRegistryTest is Test {
             emptyList
         );
 
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
         vm.stopPrank();
 
-        assertEq(2, mainRegistry.numeraireCounter());
+        assertEq(2, mainRegistry.baseCurrencyCounter());
     }
 
-    function testOwnerAddsNumeraireWithFullListOfCreditRatings() public {
+    function testOwnerAddsBaseCurrencyWithFullListOfCreditRatings() public {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
@@ -423,22 +423,22 @@ contract MainRegistryTest is Test {
             emptyList
         );
 
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             assetCreditRatings
         );
         vm.stopPrank();
 
-        assertEq(2, mainRegistry.numeraireCounter());
+        assertEq(2, mainRegistry.baseCurrencyCounter());
     }
 
     function testNonOwnerAddsSubRegistry(address unprivilegedAddress) public {
@@ -496,16 +496,16 @@ contract MainRegistryTest is Test {
 
     function testSubregistryAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -525,16 +525,16 @@ contract MainRegistryTest is Test {
         public
     {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -553,16 +553,16 @@ contract MainRegistryTest is Test {
 
     function testSubregistryAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -578,16 +578,16 @@ contract MainRegistryTest is Test {
 
     function testSubregistryAddsAssetWithFullListCreditRatings() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -607,16 +607,16 @@ contract MainRegistryTest is Test {
 
     function testSubregistryOverwritesAssetPositive() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -645,16 +645,16 @@ contract MainRegistryTest is Test {
 
     function testSubregistryOverwritesAssetNegative() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -685,16 +685,16 @@ contract MainRegistryTest is Test {
 
     function testIsBatchWhitelistedPositive() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -732,16 +732,16 @@ contract MainRegistryTest is Test {
 
     function testIsBatchWhitelistedNegativeNonEqualInputLists() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -779,16 +779,16 @@ contract MainRegistryTest is Test {
 
     function testIsBatchWhitelistedNegativeAssetNotWhitelisted() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -826,16 +826,16 @@ contract MainRegistryTest is Test {
 
     function testIsBatchWhitelistedNegativeAssetNotInMainregistry() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -873,16 +873,16 @@ contract MainRegistryTest is Test {
 
     function testGetWhitelistWithMultipleAssets() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -928,16 +928,16 @@ contract MainRegistryTest is Test {
 
     function testGetWhitelistWithAfterRemovalOfAsset() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -983,16 +983,16 @@ contract MainRegistryTest is Test {
 
     function testGetWhitelistWithAfterRemovalAndReaddingOfAsset() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1038,7 +1038,7 @@ contract MainRegistryTest is Test {
         );
     }
 
-    function testGetTotalValueCalculateValueInNumeraireFromValueInUsdSucces(
+    function testGetTotalValueCalculateValueInBaseCurrencyFromValueInUsdSucces(
         uint256 rateEthToUsdNew,
         uint256 amountLink,
         uint8 linkDecimals
@@ -1064,16 +1064,16 @@ contract MainRegistryTest is Test {
         );
 
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1106,7 +1106,7 @@ contract MainRegistryTest is Test {
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.EthNumeraire
+            Constants.EthBaseCurrency
         );
 
         uint256 linkValueInUsd = (assetAmounts[0] *
@@ -1122,7 +1122,7 @@ contract MainRegistryTest is Test {
         assertEq(expectedTotalValue, actualTotalValue);
     }
 
-    function testGetTotalValueCalculateValueInNumeraireFromValueInUsdOverflow(
+    function testGetTotalValueCalculateValueInBaseCurrencyFromValueInUsdOverflow(
         uint256 rateEthToUsdNew,
         uint256 amountLink,
         uint8 linkDecimals
@@ -1138,16 +1138,16 @@ contract MainRegistryTest is Test {
         );
 
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1182,26 +1182,26 @@ contract MainRegistryTest is Test {
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.EthNumeraire
+            Constants.EthBaseCurrency
         );
     }
 
-    function testGetTotalValueCalculateValueInNumeraireFromValueInUsdWithRateZero(
+    function testGetTotalValueCalculateValueInBaseCurrencyFromValueInUsdWithRateZero(
         uint256 amountLink
     ) public {
         vm.assume(amountLink > 0);
 
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1236,23 +1236,23 @@ contract MainRegistryTest is Test {
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.EthNumeraire
+            Constants.EthBaseCurrency
         );
     }
 
     function testGetTotalValueNegativeNonEqualInputLists() public {
-        //Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1293,7 +1293,7 @@ contract MainRegistryTest is Test {
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.UsdNumeraire
+            Constants.UsdBaseCurrency
         );
 
         assetIds = new uint256[](2);
@@ -1308,22 +1308,22 @@ contract MainRegistryTest is Test {
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.UsdNumeraire
+            Constants.UsdBaseCurrency
         );
     }
 
     function testGetListOfValuesPerAssetNegativeNonEqualInputLists() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1364,7 +1364,7 @@ contract MainRegistryTest is Test {
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.UsdNumeraire
+            Constants.UsdBaseCurrency
         );
 
         assetIds = new uint256[](2);
@@ -1379,23 +1379,23 @@ contract MainRegistryTest is Test {
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.UsdNumeraire
+            Constants.UsdBaseCurrency
         );
     }
 
-    function testGetTotalValueNegativeUnknownNumeraire() public {
-        //Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
+    function testGetTotalValueNegativeUnknownBaseCurrency() public {
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1432,28 +1432,28 @@ contract MainRegistryTest is Test {
         assetAmounts[0] = 10;
         assetAmounts[1] = 10;
 
-        vm.expectRevert("MR_GTV: Unknown Numeraire");
+        vm.expectRevert("MR_GTV: Unknown BaseCurrency");
         mainRegistry.getTotalValue(
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.SafemoonNumeraire
+            Constants.SafemoonBaseCurrency
         );
     }
 
-    function testGetListOfValuesPerAsseteNegativeUnknownNumeraire() public {
-        //Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
+    function testGetListOfValuesPerAsseteNegativeUnknownBaseCurrency() public {
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1490,28 +1490,28 @@ contract MainRegistryTest is Test {
         assetAmounts[0] = 10;
         assetAmounts[1] = 10;
 
-        vm.expectRevert("MR_GLV: Unknown Numeraire");
+        vm.expectRevert("MR_GLV: Unknown BaseCurrency");
         mainRegistry.getListOfValuesPerAsset(
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.SafemoonNumeraire
+            Constants.SafemoonBaseCurrency
         );
     }
 
     function testGetTotalValueNegativeUnknownAsset() public {
-        //Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1553,23 +1553,23 @@ contract MainRegistryTest is Test {
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.UsdNumeraire
+            Constants.UsdBaseCurrency
         );
     }
 
     function testGetListOfValuesPerAsseteNegativeUnknownAsset() public {
-        //Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1611,23 +1611,23 @@ contract MainRegistryTest is Test {
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.UsdNumeraire
+            Constants.UsdBaseCurrency
         );
     }
 
     function testGetTotalValueSucces() public {
-        //Does not test on overflow, test to check if function correctly returns value in Numeraire or USD
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1685,7 +1685,7 @@ contract MainRegistryTest is Test {
             assetAddresses,
             assetIds,
             assetAmounts,
-            Constants.EthNumeraire
+            Constants.EthBaseCurrency
         );
 
         uint256 ethValueInEth = (Constants.WAD * assetAmounts[0]) /
@@ -1709,16 +1709,16 @@ contract MainRegistryTest is Test {
 
     function testGetListOfValuesPerAssetSucces() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1777,7 +1777,7 @@ contract MainRegistryTest is Test {
                 assetAddresses,
                 assetIds,
                 assetAmounts,
-                Constants.EthNumeraire
+                Constants.EthBaseCurrency
             );
 
         uint256 ethValueInEth = (Constants.WAD * assetAmounts[0]) /
@@ -1807,16 +1807,16 @@ contract MainRegistryTest is Test {
 
     function testGetListOfValuesPerCreditRatingSucces() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1885,7 +1885,7 @@ contract MainRegistryTest is Test {
                 assetAddresses,
                 assetIds,
                 assetAmounts,
-                Constants.EthNumeraire
+                Constants.EthBaseCurrency
             );
 
         uint256 ethValueInEth = (Constants.WAD * assetAmounts[0]) /
@@ -1924,16 +1924,16 @@ contract MainRegistryTest is Test {
     function testNonOwnerSetsCreditRatings(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -1970,9 +1970,9 @@ contract MainRegistryTest is Test {
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
 
-        uint256[] memory numeraires = new uint256[](2);
-        numeraires[0] = Constants.UsdNumeraire;
-        numeraires[1] = Constants.EthNumeraire;
+        uint256[] memory baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
 
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
@@ -1982,7 +1982,7 @@ contract MainRegistryTest is Test {
         vm.expectRevert("Ownable: caller is not the owner");
         mainRegistry.batchSetCreditRating(
             assetAddresses,
-            numeraires,
+            baseCurrencies,
             assetCreditRatings
         );
         vm.stopPrank();
@@ -1990,16 +1990,16 @@ contract MainRegistryTest is Test {
 
     function testOwnerSetsCreditRatingsNonEqualInputLists() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -2036,8 +2036,8 @@ contract MainRegistryTest is Test {
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
 
-        uint256[] memory numeraires = new uint256[](1);
-        numeraires[0] = Constants.UsdNumeraire;
+        uint256[] memory baseCurrencies = new uint256[](1);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
 
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
@@ -2047,14 +2047,14 @@ contract MainRegistryTest is Test {
         vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
         mainRegistry.batchSetCreditRating(
             assetAddresses,
-            numeraires,
+            baseCurrencies,
             assetCreditRatings
         );
         vm.stopPrank();
 
-        numeraires = new uint256[](2);
-        numeraires[0] = Constants.UsdNumeraire;
-        numeraires[1] = Constants.EthNumeraire;
+        baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
 
         assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
@@ -2063,7 +2063,7 @@ contract MainRegistryTest is Test {
         vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
         mainRegistry.batchSetCreditRating(
             assetAddresses,
-            numeraires,
+            baseCurrencies,
             assetCreditRatings
         );
         vm.stopPrank();
@@ -2071,16 +2071,16 @@ contract MainRegistryTest is Test {
 
     function testOwnerSetsCreditRatingsSucces() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -2117,9 +2117,9 @@ contract MainRegistryTest is Test {
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
 
-        uint256[] memory numeraires = new uint256[](2);
-        numeraires[0] = Constants.UsdNumeraire;
-        numeraires[1] = Constants.EthNumeraire;
+        uint256[] memory baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
 
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
@@ -2128,23 +2128,23 @@ contract MainRegistryTest is Test {
         vm.startPrank(creatorAddress);
         mainRegistry.batchSetCreditRating(
             assetAddresses,
-            numeraires,
+            baseCurrencies,
             assetCreditRatings
         );
         vm.stopPrank();
 
         assertEq(
             Constants.ethCreditRatingUsd,
-            mainRegistry.assetToNumeraireToCreditRating(
+            mainRegistry.assetToBaseCurrencyToCreditRating(
                 address(eth),
-                Constants.UsdNumeraire
+                Constants.UsdBaseCurrency
             )
         );
         assertEq(
             Constants.ethCreditRatingEth,
-            mainRegistry.assetToNumeraireToCreditRating(
+            mainRegistry.assetToBaseCurrencyToCreditRating(
                 address(eth),
-                Constants.EthNumeraire
+                Constants.EthBaseCurrency
             )
         );
     }
@@ -2153,16 +2153,16 @@ contract MainRegistryTest is Test {
         public
     {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -2199,9 +2199,9 @@ contract MainRegistryTest is Test {
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
 
-        uint256[] memory numeraires = new uint256[](2);
-        numeraires[0] = Constants.UsdNumeraire;
-        numeraires[1] = Constants.EthNumeraire;
+        uint256[] memory baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
 
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = mainRegistry.CREDIT_RATING_CATOGERIES();
@@ -2211,7 +2211,7 @@ contract MainRegistryTest is Test {
         vm.expectRevert("MR_BSCR: non-existing creditRat");
         mainRegistry.batchSetCreditRating(
             assetAddresses,
-            numeraires,
+            baseCurrencies,
             assetCreditRatings
         );
         vm.stopPrank();
@@ -2225,8 +2225,6 @@ contract MainRegistryTest is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             0x0000000000000000000000000000001234567890,
-            0x0000000000000000000000000000001234567891,
-            0x0000000000000000000000000000001234567892,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
@@ -2252,8 +2250,6 @@ contract MainRegistryTest is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             0x0000000000000000000000000000001234567890,
-            0x0000000000000000000000000000001234567891,
-            0x0000000000000000000000000000001234567892,
             Constants.upgradeProof1To2
         );
         vm.expectRevert("MR_AA: MR not set in factory");
@@ -2261,18 +2257,18 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerSetsFactoryWithMultipleNumeraires() public {
+    function testOwnerSetsFactoryWithMultipleBaseCurrencies() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addNumeraire(
-            MainRegistry.NumeraireInformation({
-                numeraireToUsdOracleUnit: uint64(
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
-                numeraireToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
-                numeraireLabel: "ETH",
-                numeraireUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                liquidityPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
             emptyList
         );
@@ -2280,8 +2276,6 @@ contract MainRegistryTest is Test {
         factory.setNewVaultInfo(
             address(mainRegistry),
             0x0000000000000000000000000000001234567890,
-            0x0000000000000000000000000000001234567891,
-            0x0000000000000000000000000000001234567892,
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();

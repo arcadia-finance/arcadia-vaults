@@ -27,8 +27,8 @@ contract OracleHub is Ownable {
 
     struct OracleInformation {
         uint64 oracleUnit;
-        uint8 baseAssetNumeraire;
-        bool baseAssetIsNumeraire;
+        uint8 baseAssetBaseCurrency;
+        bool baseAssetIsBaseCurrency;
         string quoteAsset;
         string baseAsset;
         address oracleAddress;
@@ -47,9 +47,9 @@ contract OracleHub is Ownable {
      * @notice Add a new oracle to the Oracle Hub
      * @param oracleInformation A Struct with information about the Oracle:
      *    - oracleUnit: the unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
-     *    - baseAssetNumeraire: a unique identifier if the base asset can be used as numeraire of a vault,
-     *      0 by default if the base asset cannot be used as numeraire
-     *    - baseAssetIsNumeraire: boolean indicating if the base asset can be used as numeraire of a vault
+     *    - baseAssetBaseCurrency: a unique identifier if the base asset can be used as baseCurrency of a vault,
+     *      0 by default if the base asset cannot be used as baseCurrency
+     *    - baseAssetIsBaseCurrency: boolean indicating if the base asset can be used as baseCurrency of a vault
      *    - quoteAsset: The symbol of the quote assets (only used for readability purpose)
      *    - baseAsset: The symbol of the base assets (only used for readability purpose)
      *    - oracleAddress: The contract address of the oracle
@@ -132,11 +132,11 @@ contract OracleHub is Ownable {
     }
 
     /**
-     * @notice Returns the exchange rate of a certain asset, denominated in USD or in another Numeraire
+     * @notice Returns the exchange rate of a certain asset, denominated in USD or in another BaseCurrency
      * @param oracleAdresses An array of addresses of oracle contracts
-     * @param numeraire The Numeraire (base-asset) in which the exchange rate is ideally expressed
+     * @param baseCurrency The BaseCurrency (base-asset) in which the exchange rate is ideally expressed
      * @return rateInUsd The exchange rate of the asset denominated in USD, integer with 18 Decimals precision
-     * @return rateInNumeraire The exchange rate of the asset denominated in a Numeraire different from USD, integer with 18 Decimals precision
+     * @return rateInBaseCurrency The exchange rate of the asset denominated in a BaseCurrency different from USD, integer with 18 Decimals precision
      * @dev The Function will loop over all oracles-addresses and find the total exchange rate of the asset by
      *      multiplying the intermediate exchangerates (max 3) with eachother. Oracles can have any Decimals precision smaller than 18.
      *      All intermediate exchange rates are calculated with a precision of 18 decimals and rounded down.
@@ -146,18 +146,18 @@ contract OracleHub is Ownable {
      *       - First intermediate rate will overflow when R1 * 10**18 > MAXUINT256
      *       - Second rate will overflow when R1 * R2 * 10**(18 - D1) > MAXUINT256
      *       - Third and final exchange rate will overflow when R1 * R2 * R3 * 10**(18 - D1 - D2) > MAXUINT256
-     * @dev The exchange rate of an asset will be denominated in a numeraire different from USD if and only if
-     *      the given numeraire is different from USD (numeraire is not 0) and one of the intermediate oracles to price the asset has
-     *      the given numeraire as base-asset.
-     *      The exchange rate of an asset will be denominated in USD if the numeraire is USD (numeraire equals 0) or
-     *      the given numeraire is different from USD (numeraire is not 0) but none of the oracles to price the asset has
-     *      the given numeraire as base-asset.
+     * @dev The exchange rate of an asset will be denominated in a baseCurrency different from USD if and only if
+     *      the given baseCurrency is different from USD (baseCurrency is not 0) and one of the intermediate oracles to price the asset has
+     *      the given baseCurrency as base-asset.
+     *      The exchange rate of an asset will be denominated in USD if the baseCurrency is USD (baseCurrency equals 0) or
+     *      the given baseCurrency is different from USD (baseCurrency is not 0) but none of the oracles to price the asset has
+     *      the given baseCurrency as base-asset.
      *      Only one of the two values can be different from 0.
      */
-    function getRate(address[] memory oracleAdresses, uint256 numeraire)
+    function getRate(address[] memory oracleAdresses, uint256 baseCurrency)
         public
         view
-        returns (uint256 rateInUsd, uint256 rateInNumeraire)
+        returns (uint256 rateInUsd, uint256 rateInBaseCurrency)
     {
         //Scalar 1 with 18 decimals (internal precision for)
         uint256 rate = FixedPointMathLib.WAD;
@@ -178,22 +178,22 @@ contract OracleHub is Ownable {
 
             if (
                 oracleToOracleInformation[oracleAddressAtIndex]
-                    .baseAssetIsNumeraire
+                    .baseAssetIsBaseCurrency
             ) {
                 if (
                     oracleToOracleInformation[oracleAddressAtIndex]
-                        .baseAssetNumeraire == 0
+                        .baseAssetBaseCurrency == 0
                 ) {
                     //If rate is expressed in USD, return rate expressed in USD
                     rateInUsd = rate;
-                    return (rateInUsd, rateInNumeraire);
+                    return (rateInUsd, rateInBaseCurrency);
                 } else if (
                     oracleToOracleInformation[oracleAddressAtIndex]
-                        .baseAssetNumeraire == numeraire
+                        .baseAssetBaseCurrency == baseCurrency
                 ) {
-                    //If rate is expressed in numeraire, return rate expressed in numeraire
-                    rateInNumeraire = rate;
-                    return (rateInUsd, rateInNumeraire);
+                    //If rate is expressed in baseCurrency, return rate expressed in baseCurrency
+                    rateInBaseCurrency = rate;
+                    return (rateInUsd, rateInBaseCurrency);
                 }
             }
 
@@ -202,6 +202,6 @@ contract OracleHub is Ownable {
             }
         }
         //Since all series of oracles must end with USD, it should be impossible to arrive at this point
-        revert("No oracle with USD or numeraire as bAsset");
+        revert("No oracle with USD or baseCurrency as bAsset");
     }
 }

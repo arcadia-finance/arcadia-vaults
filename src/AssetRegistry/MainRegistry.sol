@@ -26,7 +26,7 @@ contract MainRegistry is Ownable {
     bool public assetsUpdatable = true;
 
     uint256 public constant CREDIT_RATING_CATOGERIES = 10;
-    uint256 public numeraireCounter;
+    uint256 public baseCurrencyCounter;
 
     address public factoryAddress;
     address[] private subRegistries;
@@ -35,17 +35,17 @@ contract MainRegistry is Ownable {
     mapping(address => bool) public inMainRegistry;
     mapping(address => bool) public isSubRegistry;
     mapping(address => address) public assetToSubRegistry;
-    mapping(uint256 => NumeraireInformation) public numeraireToInformation;
+    mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
     mapping(address => mapping(uint256 => uint256))
-        public assetToNumeraireToCreditRating;
+        public assetToBaseCurrencyToCreditRating;
 
-    struct NumeraireInformation {
-        uint64 numeraireToUsdOracleUnit;
-        uint64 numeraireUnit;
+    struct BaseCurrencyInformation {
+        uint64 baseCurrencyToUsdOracleUnit;
+        uint64 baseCurrencyUnit;
         address assetAddress;
-        address numeraireToUsdOracle;
-        address stableAddress;
-        string numeraireLabel;
+        address baseCurrencyToUsdOracle;
+        address liquidityPool;
+        string baseCurrencyLabel;
     }
 
     /**
@@ -57,28 +57,28 @@ contract MainRegistry is Ownable {
     }
 
     /**
-     * @notice The Main Registry must always be initialised with the Numeraire USD
-     * @dev Since the Numeraire USD has no native token, numeraireDecimals should be set to 0 and assetAddress to the null address.
-     * @param _numeraireInformation A Struct with information about the Numeraire USD
-     *                              - numeraireToUsdOracleUnit: Since there is no price oracle for usd to USD, this is 0 by default for USD
-     *                              - numeraireUnit: Since there is no native token for USD, this is 0 by default for USD
+     * @notice The Main Registry must always be initialised with the BaseCurrency USD
+     * @dev Since the BaseCurrency USD has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
+     * @param _baseCurrencyInformation A Struct with information about the BaseCurrency USD
+     *                              - baseCurrencyToUsdOracleUnit: Since there is no price oracle for usd to USD, this is 0 by default for USD
+     *                              - baseCurrencyUnit: Since there is no native token for USD, this is 0 by default for USD
      *                              - assetAddress: Since there is no native token for usd, this is 0 address by default for USD
-     *                              - numeraireToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
-     *                              - stableAddress: The contract address of the Arcadia issued token, pegged to the numeraire
-     *                              - numeraireLabel: The symbol of the numeraire (only used for readability purpose)
+     *                              - baseCurrencyToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
+     *                              - liquidityPool: The contract of the Liquidity Pool, correspo,nding to the baseCurrency
+     *                              - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      */
-    constructor(NumeraireInformation memory _numeraireInformation) {
+    constructor(BaseCurrencyInformation memory _baseCurrencyInformation) {
         //Main registry must be initialised with usd
-        numeraireToInformation[numeraireCounter] = _numeraireInformation;
+        baseCurrencyToInformation[baseCurrencyCounter] = _baseCurrencyInformation;
         unchecked {
-            ++numeraireCounter;
+            ++baseCurrencyCounter;
         }
     }
 
     /**
      * @notice Sets the new Factory address
      * @dev The factory can only be set on the Main Registry AFTER the Main registry is set in the Factory.
-     *      This ensures that the allowed Numeraires and corresponding stable contracts in both contract are equal.
+     *      This ensures that the allowed BaseCurrencies and corresponding liquidity pool contracts in both contract are equal.
      * @param _factoryAddress The address of the Factory
      */
     function setFactory(address _factoryAddress) external onlyOwner {
@@ -88,13 +88,13 @@ contract MainRegistry is Ownable {
         );
         factoryAddress = _factoryAddress;
 
-        uint256 factoryNumeraireCounter = IFactory(_factoryAddress)
-            .numeraireCounter();
-        if (numeraireCounter > factoryNumeraireCounter) {
-            for (uint256 i = factoryNumeraireCounter; i < numeraireCounter; ) {
-                IFactory(factoryAddress).addNumeraire(
+        uint256 factoryBaseCurrencyCounter = IFactory(_factoryAddress)
+            .baseCurrencyCounter();
+        if (baseCurrencyCounter > factoryBaseCurrencyCounter) {
+            for (uint256 i = factoryBaseCurrencyCounter; i < baseCurrencyCounter; ) {
+                IFactory(factoryAddress).addBaseCurrency(
                     i,
-                    numeraireToInformation[i].stableAddress
+                    baseCurrencyToInformation[i].liquidityPool
                 );
                 unchecked {
                     ++i;
@@ -187,9 +187,9 @@ contract MainRegistry is Ownable {
     /**
      * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
      * @param assetAddress The address of the asset
-     * @param assetCreditRatings The List of Credit Rating Categories for the asset for the different Numeraires
-     * @dev The list of Credit Ratings should or be as long as the number of numeraires added to the Main Registry,
-     *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all numeraires
+     * @param assetCreditRatings The List of Credit Rating Categories for the asset for the different BaseCurrencies
+     * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
+     *      or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies
      *      is initiated as credit rating with index 0 by default (worst credit rating).
      *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
      *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
@@ -212,8 +212,9 @@ contract MainRegistry is Ownable {
         assetToSubRegistry[assetAddress] = msg.sender;
 
         uint256 assetCreditRatingsLength = assetCreditRatings.length;
+
         require(
-            assetCreditRatingsLength == numeraireCounter ||
+            assetCreditRatingsLength == baseCurrencyCounter ||
                 assetCreditRatingsLength == 0,
             "MR_AA: LENGTH_MISMATCH"
         );
@@ -222,7 +223,7 @@ contract MainRegistry is Ownable {
                 assetCreditRatings[i] < CREDIT_RATING_CATOGERIES,
                 "MR_AA: non-existing"
             );
-            assetToNumeraireToCreditRating[assetAddress][
+            assetToBaseCurrencyToCreditRating[assetAddress][
                 i
             ] = assetCreditRatings[i];
             unchecked {
@@ -232,11 +233,11 @@ contract MainRegistry is Ownable {
     }
 
     /**
-     * @notice Change the Credit Rating Category for one or more assets for one or more numeraires
+     * @notice Change the Credit Rating Category for one or more assets for one or more baseCurrencies
      * @param assets The List of addresses of the assets
-     * @param numeraires The corresponding List of Numeraires
+     * @param baseCurrencies The corresponding List of BaseCurrencies
      * @param newCreditRating The corresponding List of new Credit Ratings
-     * @dev The function loops over all indexes, and changes for each index the Credit Rating Category of the combination of asset and numeraire.
+     * @dev The function loops over all indexes, and changes for each index the Credit Rating Category of the combination of asset and baseCurrency.
      *      In case multiple Credit Rating Categories for the same assets need to be changed, the address must be repeated in the assets.
      *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
      *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
@@ -244,12 +245,12 @@ contract MainRegistry is Ownable {
      */
     function batchSetCreditRating(
         address[] calldata assets,
-        uint256[] calldata numeraires,
+        uint256[] calldata baseCurrencies,
         uint256[] calldata newCreditRating
     ) external onlyOwner {
         uint256 assetsLength = assets.length;
         require(
-            assetsLength == numeraires.length &&
+            assetsLength == baseCurrencies.length &&
                 assetsLength == newCreditRating.length,
             "MR_BSCR: LENGTH_MISMATCH"
         );
@@ -259,8 +260,8 @@ contract MainRegistry is Ownable {
                 newCreditRating[i] < CREDIT_RATING_CATOGERIES,
                 "MR_BSCR: non-existing creditRat"
             );
-            assetToNumeraireToCreditRating[assets[i]][
-                numeraires[i]
+            assetToBaseCurrencyToCreditRating[assets[i]][
+                baseCurrencies[i]
             ] = newCreditRating[i];
             unchecked {
                 ++i;
@@ -276,45 +277,45 @@ contract MainRegistry is Ownable {
     }
 
     /**
-     * @notice Add a new numeraire (a unit in which price is measured, like USD or ETH) to the Main Registry, or overwrite an existing one
-     * @param numeraireInformation A Struct with information about the Numeraire
-     *                              - numeraireToUsdOracleUnit: The unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
-     *                              - numeraireUnit: The unit of the numeraire, equal to 10 to the power of the number of decimals of the numeraire
-     *                              - assetAddress: The contract address of the numeraire,
-     *                              - numeraireToUsdOracle: The contract address of the price oracle of the numeraire in USD
-     *                              - stableAddress: The contract address of the Arcadia issued token, pegged to the numeraire
-     *                              - numeraireLabel: The symbol of the numeraire (only used for readability purpose)
-     * @param assetCreditRatings The List of the Credit Rating Categories of the numeraire, for all the different assets in the Main registry
-     * @dev If the Numeraire has no native token, numeraireDecimals should be set to 0 and assetAddress to the null address.
+     * @notice Add a new baseCurrency (a unit in which price is measured, like USD or ETH) to the Main Registry, or overwrite an existing one
+     * @param baseCurrencyInformation A Struct with information about the BaseCurrency
+     *                              - baseCurrencyToUsdOracleUnit: The unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
+     *                              - baseCurrencyUnit: The unit of the baseCurrency, equal to 10 to the power of the number of decimals of the baseCurrency
+     *                              - assetAddress: The contract address of the baseCurrency,
+     *                              - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
+     *                              - liquidityPool: The contract address of the Arcadia issued token, pegged to the baseCurrency
+     *                              - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
+     * @param assetCreditRatings The List of the Credit Rating Categories of the baseCurrency, for all the different assets in the Main registry
+     * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
      *      Tokens pegged to the native token do not count as native tokens
-     *      - USDC is not a native token for USD as Numeraire
-     *      - WETH is a native token for ETH as Numeraire
+     *      - USDC is not a native token for USD as BaseCurrency
+     *      - WETH is a native token for ETH as BaseCurrency
      * @dev The list of Credit Rating Categories should or be as long as the number of assets added to the Main Registry,
-     *      or the list must have length 0. If the list has length zero, the credit ratings of the numeraire for all assets
+     *      or the list must have length 0. If the list has length zero, the credit ratings of the baseCurrency for all assets
      *      is initiated as credit rating with index 0 by default (worst credit rating).
      *      Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
      *      Category from 1 to 9 will be used to label groups of assets with similar risk profiles
      *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
      */
-    function addNumeraire(
-        NumeraireInformation calldata numeraireInformation,
+    function addBaseCurrency(
+        BaseCurrencyInformation calldata baseCurrencyInformation,
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
-        numeraireToInformation[numeraireCounter] = numeraireInformation;
+        baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
 
         uint256 assetCreditRatingsLength = assetCreditRatings.length;
         require(
             assetCreditRatingsLength == assetsInMainRegistry.length ||
                 assetCreditRatingsLength == 0,
-            "MR_AN: lenght"
+            "MR_AN: length"
         );
         for (uint256 i; i < assetCreditRatingsLength; ) {
             require(
                 assetCreditRatings[i] < CREDIT_RATING_CATOGERIES,
                 "MR_AN: non existing credRat"
             );
-            assetToNumeraireToCreditRating[assetsInMainRegistry[i]][
-                numeraireCounter
+            assetToBaseCurrencyToCreditRating[assetsInMainRegistry[i]][
+                baseCurrencyCounter
             ] = assetCreditRatings[i];
             unchecked {
                 ++i;
@@ -322,36 +323,36 @@ contract MainRegistry is Ownable {
         }
 
         if (factoryAddress != address(0)) {
-            IFactory(factoryAddress).addNumeraire(
-                numeraireCounter,
-                numeraireInformation.stableAddress
+            IFactory(factoryAddress).addBaseCurrency(
+                baseCurrencyCounter,
+                baseCurrencyInformation.liquidityPool
             );
         }
         unchecked {
-            ++numeraireCounter;
+            ++baseCurrencyCounter;
         }
     }
 
     /**
-     * @notice Calculate the total value of a list of assets denominated in a given Numeraire
+     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
      * @param _assetAddresses The List of token addresses of the assets
      * @param _assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      *      for tokens without Id (ERC20 for instance), the Id should be set to 0
      * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param numeraire An identifier (uint256) of the Numeraire
-     * @return valueInNumeraire The total value of the list of assets denominated in Numeraire
+     * @param baseCurrency An identifier (uint256) of the BaseCurrency
+     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
      * @dev ToDo: value sum unchecked. Cannot overflow on 1e18 decimals
      */
     function getTotalValue(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
-        uint256 numeraire
-    ) public view returns (uint256 valueInNumeraire) {
+        uint256 baseCurrency
+    ) public view returns (uint256 valueInBaseCurrency) {
         uint256 valueInUsd;
 
-        require(numeraire <= numeraireCounter - 1, "MR_GTV: Unknown Numeraire");
+        require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
 
         uint256 assetAddressesLength = _assetAddresses.length;
         require(
@@ -360,7 +361,7 @@ contract MainRegistry is Ownable {
             "MR_GTV: LENGTH_MISMATCH"
         );
         ISubRegistry.GetValueInput memory getValueInput;
-        getValueInput.numeraire = numeraire;
+        getValueInput.baseCurrency = baseCurrency;
 
         for (uint256 i; i < assetAddressesLength; ) {
             address assetAddress = _assetAddresses[i];
@@ -371,69 +372,69 @@ contract MainRegistry is Ownable {
             getValueInput.assetAmount = _assetAmounts[i];
 
             if (
-                assetAddress == numeraireToInformation[numeraire].assetAddress
+                assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress
             ) {
-                //Should only be allowed if the numeraire is ETH, not for stablecoins or wrapped tokens
-                valueInNumeraire =
-                    valueInNumeraire +
+                //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
+                valueInBaseCurrency =
+                    valueInBaseCurrency +
                     _assetAmounts[i].mulDivDown(
                         FixedPointMathLib.WAD,
-                        numeraireToInformation[numeraire].numeraireUnit
+                        baseCurrencyToInformation[baseCurrency].baseCurrencyUnit
                     ); //_assetAmounts can have a variable decimal precision -> bring to 18 decimals
             } else {
-                //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInNumeraire can be non-zero
+                //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
                 (
                     uint256 tempValueInUsd,
-                    uint256 tempValueInNumeraire
+                    uint256 tempValueInBaseCurrency
                 ) = ISubRegistry(assetToSubRegistry[assetAddress]).getValue(
                         getValueInput
                     );
                 valueInUsd = valueInUsd + tempValueInUsd;
-                valueInNumeraire = valueInNumeraire + tempValueInNumeraire;
+                valueInBaseCurrency = valueInBaseCurrency + tempValueInBaseCurrency;
             }
             unchecked {
                 ++i;
             }
         }
 
-        if (numeraire == 0) {
-            //Check if numeraire is USD
+        if (baseCurrency == 0) {
+            //Check if baseCurrency is USD
             return valueInUsd;
         } else if (valueInUsd > 0) {
-            //Get the Numeraire-USD rate
+            //Get the BaseCurrency-USD rate
             (, int256 rate, , , ) = IChainLinkData(
-                numeraireToInformation[numeraire].numeraireToUsdOracle
+                baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
             ).latestRoundData();
-            //Add valueInUsd to valueInNumeraire
-            valueInNumeraire =
-                valueInNumeraire +
+            //Add valueInUsd to valueInBaseCurrency
+            valueInBaseCurrency =
+                valueInBaseCurrency +
                 valueInUsd.mulDivDown(
-                    numeraireToInformation[numeraire].numeraireToUsdOracleUnit,
+                    baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
                     uint256(rate)
                 );
         }
-        return valueInNumeraire;
+        return valueInBaseCurrency;
     }
 
     /**
-     * @notice Calculate the value per asset of a list of assets denominated in a given Numeraire
+     * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
      * @param _assetAddresses The List of token addresses of the assets
      * @param _assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      *      for tokens without Id (ERC20 for instance), the Id should be set to 0
      * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param numeraire An identifier (uint256) of the Numeraire
-     * @return valuesPerAsset The list of values per assets denominated in Numeraire
+     * @param baseCurrency An identifier (uint256) of the BaseCurrency
+     * @return valuesPerAsset The list of values per assets denominated in BaseCurrency
      */
     function getListOfValuesPerAsset(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
-        uint256 numeraire
+        uint256 baseCurrency
     ) public view returns (uint256[] memory valuesPerAsset) {
         valuesPerAsset = new uint256[](_assetAddresses.length);
 
-        require(numeraire <= numeraireCounter - 1, "MR_GLV: Unknown Numeraire");
+        require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
 
         uint256 assetAddressesLength = _assetAddresses.length;
         require(
@@ -442,9 +443,9 @@ contract MainRegistry is Ownable {
             "MR_GLV: LENGTH_MISMATCH"
         );
         ISubRegistry.GetValueInput memory getValueInput;
-        getValueInput.numeraire = numeraire;
+        getValueInput.baseCurrency = baseCurrency;
 
-        int256 rateNumeraireToUsd;
+        int256 rateBaseCurrencyToUsd;
 
         for (uint256 i; i < assetAddressesLength; ) {
             address assetAddress = _assetAddresses[i];
@@ -455,36 +456,36 @@ contract MainRegistry is Ownable {
             getValueInput.assetAmount = _assetAmounts[i];
 
             if (
-                assetAddress == numeraireToInformation[numeraire].assetAddress
+                assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress
             ) {
-                //Should only be allowed if the numeraire is ETH, not for stablecoins or wrapped tokens
+                //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
                 valuesPerAsset[i] = _assetAmounts[i].mulDivDown(
                     FixedPointMathLib.WAD,
-                    numeraireToInformation[numeraire].numeraireUnit
+                    baseCurrencyToInformation[baseCurrency].baseCurrencyUnit
                 ); //_assetAmounts must be a with 18 decimals precision
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault
-                (uint256 valueInUsd, uint256 valueInNumeraire) = ISubRegistry(
+                (uint256 valueInUsd, uint256 valueInBaseCurrency) = ISubRegistry(
                     assetToSubRegistry[assetAddress]
                 ).getValue(getValueInput);
-                if (numeraire == 0) {
-                    //Check if numeraire is USD
+                if (baseCurrency == 0) {
+                    //Check if baseCurrency is USD
                     valuesPerAsset[i] = valueInUsd;
-                } else if (valueInNumeraire > 0) {
-                    valuesPerAsset[i] = valueInNumeraire;
+                } else if (valueInBaseCurrency > 0) {
+                    valuesPerAsset[i] = valueInBaseCurrency;
                 } else {
-                    //Check if the Numeraire-USD rate is already fetched
-                    if (rateNumeraireToUsd == 0) {
-                        //Get the Numeraire-USD rate ToDo: Ask via the OracleHub?
-                        (, rateNumeraireToUsd, , , ) = IChainLinkData(
-                            numeraireToInformation[numeraire]
-                                .numeraireToUsdOracle
+                    //Check if the BaseCurrency-USD rate is already fetched
+                    if (rateBaseCurrencyToUsd == 0) {
+                        //Get the BaseCurrency-USD rate ToDo: Ask via the OracleHub?
+                        (, rateBaseCurrencyToUsd, , , ) = IChainLinkData(
+                            baseCurrencyToInformation[baseCurrency]
+                                .baseCurrencyToUsdOracle
                         ).latestRoundData();
                     }
                     valuesPerAsset[i] = valueInUsd.mulDivDown(
-                        numeraireToInformation[numeraire]
-                            .numeraireToUsdOracleUnit,
-                        uint256(rateNumeraireToUsd)
+                        baseCurrencyToInformation[baseCurrency]
+                            .baseCurrencyToUsdOracleUnit,
+                        uint256(rateBaseCurrencyToUsd)
                     );
                 }
             }
@@ -496,14 +497,14 @@ contract MainRegistry is Ownable {
     }
 
     /**
-     * @notice Calculate the value per Credit Rating Category of a list of assets denominated in a given Numeraire
+     * @notice Calculate the value per Credit Rating Category of a list of assets denominated in a given BaseCurrency
      * @param _assetAddresses The List of token addresses of the assets
      * @param _assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      *      for tokens without Id (ERC20 for instance), the Id should be set to 0
      * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param numeraire An identifier (uint256) of the Numeraire
-     * @return valuesPerCreditRating The list of values per Credit Rating Category denominated in Numeraire
+     * @param baseCurrency An identifier (uint256) of the BaseCurrency
+     * @return valuesPerCreditRating The list of values per Credit Rating Category denominated in BaseCurrency
      * @dev Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
      *      Category from 1 to 10 will be used to label groups of assets with similar risk profiles
      *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
@@ -512,21 +513,21 @@ contract MainRegistry is Ownable {
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
-        uint256 numeraire
+        uint256 baseCurrency
     ) public view returns (uint256[] memory valuesPerCreditRating) {
         valuesPerCreditRating = new uint256[](CREDIT_RATING_CATOGERIES);
         uint256[] memory valuesPerAsset = getListOfValuesPerAsset(
             _assetAddresses,
             _assetIds,
             _assetAmounts,
-            numeraire
+            baseCurrency
         );
 
         uint256 valuesPerAssetLength = valuesPerAsset.length;
         for (uint256 i; i < valuesPerAssetLength; ) {
             address assetAdress = _assetAddresses[i];
             valuesPerCreditRating[
-                assetToNumeraireToCreditRating[assetAdress][numeraire]
+                assetToBaseCurrencyToCreditRating[assetAdress][baseCurrency]
             ] += valuesPerAsset[i];
             unchecked {
                 ++i;
