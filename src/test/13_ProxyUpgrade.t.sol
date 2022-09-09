@@ -494,19 +494,19 @@ contract VaultV2Test is Test {
     }
 
     struct VaultInfo {
-        uint16 _collThres;
-        uint8 _liqThres;
-        uint8 _baseCurrency;
+        uint16 collThres;
+        uint8 liqThres;
+        uint8 baseCurrency;
     }
     struct Checks {
-        address _erc20Stored;
-        address _erc721Stored;
-        address _erc1155Stored;
-        uint256 _erc721TokenIds;
-        uint256 _erc1155TokenIds;
-        address _registryAddress;
-        address _liquidityPool;
-        address _debtToken;
+        address erc20Stored;
+        address erc721Stored;
+        address erc1155Stored;
+        uint256 erc721TokenIds;
+        uint256 erc1155TokenIds;
+        address registryAddress;
+        address liquidityPool;
+        address debtToken;
         uint256 life;
         address owner;
         VaultInfo vaultVar;
@@ -516,19 +516,19 @@ contract VaultV2Test is Test {
         Checks memory checks;
         VaultInfo memory vaultVar;
 
-        checks._erc20Stored = proxy._erc20Stored(0); //to be improved for whole list
-        checks._erc721Stored = proxy._erc721Stored(0);
-        checks._erc1155Stored = proxy._erc1155Stored(0);
-        checks._erc721TokenIds = proxy._erc721TokenIds(0);
-        checks._erc1155TokenIds = proxy._erc1155TokenIds(0);
-        checks._registryAddress = proxy._registryAddress();
-        checks._liquidityPool = proxy._liquidityPool();
-        checks._debtToken = proxy._debtToken();
+        checks.erc20Stored = proxy.erc20Stored(0); //to be improved for whole list
+        checks.erc721Stored = proxy.erc721Stored(0);
+        checks.erc1155Stored = proxy.erc1155Stored(0);
+        checks.erc721TokenIds = proxy.erc721TokenIds(0);
+        checks.erc1155TokenIds = proxy.erc1155TokenIds(0);
+        checks.registryAddress = proxy.registryAddress();
+        checks.liquidityPool = proxy.liquidityPool();
+        checks.debtToken = proxy.debtToken();
         checks.life = proxy.life();
         checks.owner = proxy.owner();
-        (vaultVar._collThres,
-        vaultVar._liqThres,
-        vaultVar._baseCurrency) = proxy.vault();
+        (vaultVar.collThres,
+        vaultVar.liqThres,
+        vaultVar.baseCurrency) = proxy.vault();
         checks.vaultVar = vaultVar;
 
         return checks;

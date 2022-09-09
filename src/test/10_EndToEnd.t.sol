@@ -815,10 +815,10 @@ contract EndToEndTest is Test {
             10**Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        (uint16 _collThres, , ) = proxy.vault();
+        (uint16 collThres, , ) = proxy.vault();
 
         uint256 expectedValue = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         uint256 actualValue = proxy.getFreeMargin();
 
         assertEq(actualValue, expectedValue);
@@ -828,15 +828,15 @@ contract EndToEndTest is Test {
         uint128 amountEth,
         uint128 amountCredit
     ) public {
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(uint256(amountCredit) * _collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(uint256(amountCredit) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -850,15 +850,15 @@ contract EndToEndTest is Test {
         uint128 amountEth,
         uint128 amountCredit
     ) public {
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(uint256(amountCredit) * _collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(uint256(amountCredit) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit > maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -886,10 +886,10 @@ contract EndToEndTest is Test {
             10**Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        (uint16 _collThres, , ) = proxy.vault();
+        (uint16 collThres, , ) = proxy.vault();
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -922,8 +922,8 @@ contract EndToEndTest is Test {
     function testNotAllowCreditAfterLargeUnrealizedDebt(uint128 amountEth)
         public
     {
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(uint256(amountEth) * _collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(uint256(amountEth) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         vm.assume(amountEth > 1e15);
         uint128 valueOfOneEth = uint128(
             (Constants.WAD * rateEthToUsd) /
@@ -933,7 +933,7 @@ contract EndToEndTest is Test {
 
         uint128 amountCredit = uint128(
             (((valueOfOneEth * amountEth) / 10**Constants.ethDecimals) * 100) /
-                _collThres
+                collThres
         ) - 1;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -958,8 +958,8 @@ contract EndToEndTest is Test {
         vm.assume(
             newPrice * 10**Constants.oracleEthToUsdDecimals > rateEthToUsd
         );
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres); //prevent overflow in takecredit with absurd values
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = uint128(
             (Constants.WAD * rateEthToUsd) /
                 10**Constants.oracleEthToUsdDecimals
@@ -968,7 +968,7 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -984,7 +984,7 @@ contract EndToEndTest is Test {
             10**Constants.oracleEthToUsdDecimals;
         uint256 expectedAvailableCredit = (((newValueOfOneEth * amountEth) /
             10**Constants.ethDecimals) * 100) /
-            _collThres -
+            collThres -
             amountCredit;
 
         uint256 actualAvailableCredit = proxy.getFreeMargin();
@@ -997,8 +997,8 @@ contract EndToEndTest is Test {
         uint128 amountEthWithdrawal
     ) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
         vm.assume(amountEth >= amountEthWithdrawal);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -1031,8 +1031,8 @@ contract EndToEndTest is Test {
         uint128 amountCredit
     ) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
         vm.assume(amountEth >= amountEthWithdrawal);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -1070,15 +1070,15 @@ contract EndToEndTest is Test {
         uint16 blocksToRoll
     ) public {
         vm.assume(amountEth > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1112,15 +1112,15 @@ contract EndToEndTest is Test {
         uint16 blocksToRoll
     ) public {
         vm.assume(amountEth > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1153,15 +1153,15 @@ contract EndToEndTest is Test {
     ) public {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1198,15 +1198,15 @@ contract EndToEndTest is Test {
     ) public {
         // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
         vm.assume(amountEth > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
