@@ -1659,100 +1659,38 @@ contract vaultTests is Test {
     }
 
     function testSetBaseCurrency(address toAuth) public {
-        vm.assume(
-            toAuth != address(this) &&
-                toAuth != address(0) &&
-                toAuth != address(factoryContr)
-        );
-        Vault vault_m = new Vault();
-
-        uint256 slot = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.registryAddress.selector)
-            .find();
-        bytes32 loc = bytes32(slot);
-        bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
-        vm.store(address(vault_m), loc, newReg);
-
-        slot = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.owner.selector)
-            .find();
-        loc = bytes32(slot);
-        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc, newOwner);
-
-        slot = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.debtToken.selector)
-            .find();
-        loc = bytes32(slot);
-        bytes32 debtToken = bytes32(abi.encode(address(debt)));
-        vm.store(address(vault_m), loc, debtToken);
-
-        slot = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.lendingPool.selector)
-            .find();
-        loc = bytes32(slot);
-        bytes32 pool_ = bytes32(abi.encode(address(pool)));
-        vm.store(address(vault_m), loc, pool_);
-
         vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth, true);
+        vault.authorize(toAuth, true);
         vm.stopPrank();
 
         vm.startPrank(toAuth);
-        vault_m.setBaseCurrency(address(eth));
+        vault.setBaseCurrency(address(eth));
         vm.stopPrank();
 
-        (, , address baseCurrency) = vault_m.vault();
+        (, , address baseCurrency) = vault.vault();
         assertEq(baseCurrency, address(eth));
     }
 
-    function testSetBaseCurrencyByNonAuthorized() public {
-        Vault vault_m = new Vault();
-        address nonAuthorized = address(789);
+    function testSetBaseCurrencyByNonAuthorized(address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != vaultOwner);
 
-        vm.startPrank(nonAuthorized);
+        vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("VL: You are not authorized");
-        vault_m.setBaseCurrency(address(eth));
+        vault.setBaseCurrency(address(eth));
         vm.stopPrank();
 
-        (, , address baseCurrency) = vault_m.vault();
-        assertEq(baseCurrency, 0x0000000000000000000000000000000000000000);
+        (, , address baseCurrency) = vault.vault();
+        assertEq(baseCurrency, address(asset));
     }
 
     //SIMON DO THIS WITH CHEATXCODE
     function testSetBaseCurrencyWithDebt(address toAuth) public {
-        vm.assume(
-            toAuth != address(this) &&
-                toAuth != address(0) &&
-                toAuth != address(factoryContr)
-        );
-        Vault vault_m = new Vault();
 
         uint256 slot = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.registryAddress.selector)
-            .find();
-        bytes32 loc = bytes32(slot);
-        bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
-        vm.store(address(vault_m), loc, newReg);
-
-        slot = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.owner.selector)
-            .find();
-        loc = bytes32(slot);
-        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc, newOwner);
-
-        slot = stdstore
             .target(address(debt))
             .sig(debt.totalSupply.selector)
             .find();
-        loc = bytes32(slot);
+        bytes32 loc = bytes32(slot);
         bytes32 addDebt = bytes32(abi.encode(1));
         vm.store(address(debt), loc, addDebt);
 
@@ -1766,38 +1704,22 @@ contract vaultTests is Test {
         slot = stdstore
             .target(address(debt))
             .sig(debt.balanceOf.selector)
-            .with_key(address(vault_m))
+            .with_key(address(vault))
             .find();
         loc = bytes32(slot);
         vm.store(address(debt), loc, addDebt);
 
-        slot = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.debtToken.selector)
-            .find();
-        loc = bytes32(slot);
-        bytes32 debtToken = bytes32(abi.encode(address(debt)));
-        vm.store(address(vault_m), loc, debtToken);
-
-        slot = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.lendingPool.selector)
-            .find();
-        loc = bytes32(slot);
-        bytes32 pool_ = bytes32(abi.encode(address(pool)));
-        vm.store(address(vault_m), loc, pool_);
-
         vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth, true);
+        vault.authorize(toAuth, true);
         vm.stopPrank();
 
         vm.startPrank(toAuth);
         vm.expectRevert("VL: Can't change baseCurrency when openDebt > 0");
-        vault_m.setBaseCurrency(address(eth));
+        vault.setBaseCurrency(address(eth));
         vm.stopPrank();
 
-        (, , address baseCurrency) = vault_m.vault();
-        assertEq(baseCurrency, 0x0000000000000000000000000000000000000000);
+        (, , address baseCurrency) = vault.vault();
+        assertEq(baseCurrency, address(asset));
     }
 
     function testLiquidateVaultFactory(address liquidationKeeper) public {

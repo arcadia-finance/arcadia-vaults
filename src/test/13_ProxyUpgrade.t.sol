@@ -505,8 +505,7 @@ contract VaultV2Test is Test {
         uint256 erc721TokenIds;
         uint256 erc1155TokenIds;
         address registryAddress;
-        address lendingPool;
-        address debtToken;
+        address trustedProtocol;
         uint256 life;
         address owner;
         VaultInfo vaultVar;
@@ -522,8 +521,7 @@ contract VaultV2Test is Test {
         checks.erc721TokenIds = proxy.erc721TokenIds(0);
         checks.erc1155TokenIds = proxy.erc1155TokenIds(0);
         checks.registryAddress = proxy.registryAddress();
-        checks.lendingPool = proxy.lendingPool();
-        checks.debtToken = proxy.debtToken();
+        checks.trustedProtocol = proxy.trustedProtocol();
         checks.life = proxy.life();
         checks.owner = proxy.owner();
         (vaultVar.collThres,

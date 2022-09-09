@@ -15,6 +15,7 @@ import "./interfaces/ILiquidator.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILendingPool.sol";
+import "./interfaces/ITrustedProtocol.sol";
 
 /** 
   * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -55,8 +56,7 @@ contract Vault {
                           EXTERNAL CONTRACTS
   ///////////////////////////////////////////////////////////////*/
     address public registryAddress; /// to be fetched somewhere else?
-    address public lendingPool;
-    address public debtToken;
+    address public liquidator;
 
     // ACCESS CONTROL
     address public owner;
@@ -199,10 +199,9 @@ contract Vault {
         owner = _owner;
         vault.collThres = 150;
         vault.liqThres = 110;
-        (,,,,lendingPool,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
+        (,,,,trustedProtocol,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
-        debtToken = ILendingPool(lendingPool).debtToken();
-        IERC20(IERC4626(lendingPool).asset()).approve(lendingPool, type(uint256).max);
+        openTrustedMarginAccount(trustedProtocol);
     }
 
     /** 
@@ -660,31 +659,6 @@ contract Vault {
     }
 
     /** 
-    @notice Returns the total value of the vault in a specific baseCurrency (0 = USD, 1 = ETH, more can be added)
-    @dev Fetches all stored assets with their amounts on the proxy vault.
-         Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
-    @param baseCurrency BaseCurrency to return the value in. For example, 0 (USD) or 1 (ETH).
-    @return vaultValue Total value stored on the vault, expressed in baseCurrency.
-  */
-    function getVaultValue(address baseCurrency)
-        public
-        view
-        returns (uint256 vaultValue)
-    {
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts
-        ) = generateAssetData();
-        vaultValue = IRegistry(registryAddress).getTotalValue(
-            assetAddresses,
-            assetIds,
-            assetAmounts,
-            baseCurrency
-        );
-    }
-
-    /** 
     @notice Sets the baseCurrency of a vault.
     @param baseCurrency the new baseCurrency for the vault.
   */
@@ -732,8 +706,65 @@ contract Vault {
     }
 
     /*///////////////////////////////////////////////////////////////
+                    MARGIN ACCOUNT SETTINGS
+    ///////////////////////////////////////////////////////////////*/
+
+    bool isTrustedProtocolSet;
+    address public trustedProtocol;
+
+    function openTrustedMarginAccount(address protocol) public {
+        require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
+        //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
+
+        (bool success, address baseCurrency, address liquidator_) = ITrustedProtocol(protocol).openMarginAccount();
+
+        require(success, "V_OMA: OPENING ACCOUNT REVERTED");
+
+        if (vault.baseCurrency != baseCurrency) _setBaseCurrency(baseCurrency);
+        IERC20(baseCurrency).approve(protocol, type(uint256).max);
+        liquidator = liquidator_;
+        trustedProtocol = protocol;
+        isTrustedProtocolSet = true;
+        allowed[protocol] = true;
+    }
+
+    function closeTrustedMarginAccount() public onlyOwner {
+        require(isTrustedProtocolSet, "V_CMA: NOT SET");
+
+        require(ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) == 0, "NON-ZERO OPEN POSITION");
+
+        isTrustedProtocolSet = false;
+        allowed[trustedProtocol] = false;
+    }
+
+    /*///////////////////////////////////////////////////////////////
                           MARGIN REQUIREMENTS
     ///////////////////////////////////////////////////////////////*/
+
+    /** 
+    @notice Returns the total value of the vault in a specific baseCurrency
+    @dev Fetches all stored assets with their amounts on the proxy vault.
+         Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
+    @param baseCurrency The asset to return the value in.
+    @return vaultValue Total value stored on the vault, expressed in baseCurrency.
+  */
+    function getVaultValue(address baseCurrency)
+        public
+        view
+        returns (uint256 vaultValue)
+    {
+        (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts
+        ) = generateAssetData();
+        vaultValue = IRegistry(registryAddress).getTotalValue(
+            assetAddresses,
+            assetIds,
+            assetAmounts,
+            baseCurrency
+        );
+    }
 
     /** 
     @notice Calculates the total collateral value of the vault.
@@ -783,8 +814,7 @@ contract Vault {
     }
 
     function getUsedMargin() public returns (uint128 usedMargin) {
-        ILendingPool(lendingPool).syncInterests();
-        usedMargin = uint128(IERC4626(debtToken).maxWithdraw(address(this))); // ToDo: Check if cast is safe
+        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)); // ToDo: Check if cast is safe
     }
 
     /** 
@@ -864,10 +894,10 @@ contract Vault {
          Sets debtInfo todo: needed?
          Transfers ownership of the proxy vault to the liquidator!
     @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
-    @param liquidator Contract Address of the liquidation logic.
+    @param _liquidator Contract Address of the liquidation logic.
     @return success Boolean returning if the liquidation process is successfully started.
   */
-    function liquidateVault(address liquidationKeeper, address liquidator)
+    function liquidateVault(address liquidationKeeper, address _liquidator)
         public
         onlyFactory
         returns (bool success)
@@ -891,7 +921,7 @@ contract Vault {
         uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
 
         require(
-            ILiquidator(liquidator).startAuction(
+            ILiquidator(_liquidator).startAuction(
                 address(this),
                 life,
                 liquidationKeeper,
