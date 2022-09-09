@@ -657,7 +657,7 @@ contract gasWithdrawal1_1ERC20 is Test {
     }
 
     function testGetValue_1_ERC20() public view {
-        proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        proxy.getVaultValue(0x0000000000000000000000000000000000000000);
     }
 
     function testGetRemainingValue_1_ERC20() public {

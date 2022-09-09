@@ -464,7 +464,7 @@ contract EndToEndTest is Test {
             10**Constants.ethDecimals;
 
         depositERC20InVault(eth, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
 
         assertEq(actualValue, expectedValue);
     }
@@ -476,7 +476,7 @@ contract EndToEndTest is Test {
             10**Constants.linkDecimals;
 
         depositERC20InVault(link, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
 
         assertEq(actualValue, expectedValue);
     }
@@ -490,7 +490,7 @@ contract EndToEndTest is Test {
             10**Constants.snxDecimals;
 
         depositERC20InVault(snx, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
 
         assertEq(actualValue, expectedValue);
     }
@@ -501,7 +501,7 @@ contract EndToEndTest is Test {
             10**Constants.ethDecimals;
 
         depositERC20InVault(eth, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
 
         assertEq(actualValue, expectedValue);
     }
@@ -514,7 +514,7 @@ contract EndToEndTest is Test {
             10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
 
         depositERC20InVault(link, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
 
         assertEq(actualValue, expectedValue);
     }
@@ -526,7 +526,7 @@ contract EndToEndTest is Test {
             10**Constants.snxDecimals;
 
         depositERC20InVault(snx, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
 
         assertEq(actualValue, expectedValue);
     }
@@ -538,7 +538,7 @@ contract EndToEndTest is Test {
         uint256 expectedValue = valueOfOneBayc * tokenIds.length;
 
         depositERC721InVault(bayc, tokenIds, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
 
         assertEq(actualValue, expectedValue);
     }
@@ -567,7 +567,7 @@ contract EndToEndTest is Test {
         );
 
         depositERC1155InVault(interleave, tokenId, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
 
         assertEq(actualValue, expectedValue);
     }
@@ -583,14 +583,14 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amount1, vaultOwner);
         uint256 expectedValue = (valueOfOneEth * amount1) /
             10**Constants.ethDecimals;
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValue);
 
         depositERC20InVault(eth, amount2, vaultOwner);
         expectedValue =
             (valueOfOneEth * (uint256(amount1) + uint256(amount2))) /
             10**Constants.ethDecimals;
-        actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValue);
     }
 
@@ -602,7 +602,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueLink = (valueOfOneLink * amountLink) /
             10**Constants.linkDecimals;
         depositERC20InVault(link, amountLink, vaultOwner);
-        uint256 actualValueLink = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValueLink = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValueLink, expectedValueLink);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -611,7 +611,7 @@ contract EndToEndTest is Test {
             (valueOfOneEth * amountEth) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValue);
     }
 
@@ -625,7 +625,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx, vaultOwner);
-        uint256 actualValueSnx = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValueSnx = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValueSnx, expectedValueSnx);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -634,7 +634,7 @@ contract EndToEndTest is Test {
             (valueOfOneEth * amountEth) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValue);
     }
 
@@ -646,7 +646,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueLink = (valueOfOneLink * amountLink) /
             10**Constants.linkDecimals;
         depositERC20InVault(link, amountLink, vaultOwner);
-        uint256 actualValueLink = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValueLink = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValueLink, expectedValueLink);
 
         uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
@@ -657,7 +657,7 @@ contract EndToEndTest is Test {
             (valueOfOneSnx * amountSnx) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValue);
     }
 
@@ -671,7 +671,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueEth = (valueOfOneEth * amountEth) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValueEth);
 
         uint256 valueOfOneLink = (Constants.WAD * rateLinkToUsd) /
@@ -679,7 +679,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueLink = (valueOfOneLink * amountLink) /
             10**Constants.linkDecimals;
         depositERC20InVault(link, amountLink, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValueEth + expectedValueLink);
 
         uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
@@ -689,7 +689,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(
             actualValue,
             expectedValueEth + expectedValueLink + expectedValueSnx
@@ -708,7 +708,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueSnx1 = (valueOfOneSnx * amountSnx1) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx1, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValueSnx1);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -716,13 +716,13 @@ contract EndToEndTest is Test {
         uint256 expectedValueEth = (valueOfOneEth * amountEth) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValueSnx1 + expectedValueEth);
 
         uint256 expectedValueSnx2 = (valueOfOneSnx * amountSnx2) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx2, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(
             actualValue,
             expectedValueSnx1 + expectedValueEth + expectedValueSnx2
@@ -736,13 +736,13 @@ contract EndToEndTest is Test {
         uint256 expectedValueEth1 = (valueOfOneEth * amountEth1) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth1, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueEth1);
 
         uint256 expectedValueEth2 = (valueOfOneEth * amountEth2) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth2, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueEth1 + expectedValueEth2);
     }
 
@@ -753,7 +753,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueEth = (valueOfOneEth * amountEth) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueEth);
 
         uint256 valueOfOneLinkInUsd = (Constants.WAD * rateLinkToUsd) /
@@ -762,7 +762,7 @@ contract EndToEndTest is Test {
             10**Constants.linkDecimals) *
             10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
         depositERC20InVault(link, amountLink, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueEth + expectedValueLink);
     }
 
@@ -774,7 +774,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueSnx);
 
         uint256 valueOfOneLinkInUsd = (Constants.WAD * rateLinkToUsd) /
@@ -783,7 +783,7 @@ contract EndToEndTest is Test {
             10**Constants.linkDecimals) *
             10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
         depositERC20InVault(link, amountLink, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueSnx + expectedValueLink);
     }
     
@@ -805,7 +805,7 @@ contract EndToEndTest is Test {
             10**Constants.ethDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
 
         assertEq(actualValue, expectedValue);
     }

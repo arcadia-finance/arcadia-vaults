@@ -871,7 +871,7 @@ contract vaultTests is Test {
             vaultOwner
         );
 
-        uint256 vaultValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 vaultValue = vault.getVaultValue(0x0000000000000000000000000000000000000000);
 
         assertEq(vaultValue, valueAmount);
 
@@ -885,9 +885,7 @@ contract vaultTests is Test {
             assetInfo.assetTypes
         );
 
-        uint256 vaultValueAfter = vault.getValue(
-            uint8(Constants.UsdBaseCurrency)
-        );
+        uint256 vaultValueAfter = vault.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(vaultValueAfter, 0);
         vm.stopPrank();
     }
@@ -954,7 +952,7 @@ contract vaultTests is Test {
         );
         vm.stopPrank();
 
-        uint256 actualValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = vault.getVaultValue(0x0000000000000000000000000000000000000000);
         uint256 expectedValue = valueDeposit - valueWithdraw;
 
         assertEq(expectedValue, actualValue);
@@ -1065,7 +1063,7 @@ contract vaultTests is Test {
             withdrawalTypes
         );
 
-        uint256 actualValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = vault.getVaultValue(0x0000000000000000000000000000000000000000);
         uint256 expectedValue = valueOfDeposit - valueOfWithdrawal;
 
         assertEq(expectedValue, actualValue);
@@ -1147,7 +1145,7 @@ contract vaultTests is Test {
 
         uint256 expectedValue = ((Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals) * depositAmount;
-        uint256 actualValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = vault.getVaultValue(0x0000000000000000000000000000000000000000);
 
         assertEq(expectedValue, actualValue);
     }
@@ -1163,7 +1161,7 @@ contract vaultTests is Test {
         depositBaycInVault(tokenIds, vaultOwner);
 
         uint256 gasStart = gasleft();
-        vault.getValue(uint8(Constants.UsdBaseCurrency));
+        vault.getVaultValue(0x0000000000000000000000000000000000000000);
         uint256 gasAfter = gasleft();
         emit log_int(int256(gasStart - gasAfter));
         assertLt(gasStart - gasAfter, 200000);
@@ -1462,7 +1460,7 @@ contract vaultTests is Test {
         vm.prank(vaultOwner);
         pool.borrow((((amountEth * 100) / 150) * factor) / 255, address(vault), vaultOwner);
 
-        uint256 currentValue = vault.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 currentValue = vault.getVaultValue(0x0000000000000000000000000000000000000000);
         uint256 openDebt = vault.getUsedMargin();
         (uint16 collThres, , ) = vault.vault();
 
@@ -1705,11 +1703,11 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         vm.startPrank(toAuth);
-        vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
+        vault_m.setBaseCurrency(address(eth));
         vm.stopPrank();
 
-        (, , uint256 baseCurrency) = vault_m.vault();
-        assertEq(baseCurrency, Constants.EthBaseCurrency);
+        (, , address baseCurrency) = vault_m.vault();
+        assertEq(baseCurrency, address(eth));
     }
 
     function testSetBaseCurrencyByNonAuthorized() public {
@@ -1718,11 +1716,11 @@ contract vaultTests is Test {
 
         vm.startPrank(nonAuthorized);
         vm.expectRevert("VL: You are not authorized");
-        vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
+        vault_m.setBaseCurrency(address(eth));
         vm.stopPrank();
 
-        (, , uint256 baseCurrency) = vault_m.vault();
-        assertEq(baseCurrency, Constants.UsdBaseCurrency);
+        (, , address baseCurrency) = vault_m.vault();
+        assertEq(baseCurrency, 0x0000000000000000000000000000000000000000);
     }
 
     //SIMON DO THIS WITH CHEATXCODE
@@ -1795,11 +1793,11 @@ contract vaultTests is Test {
 
         vm.startPrank(toAuth);
         vm.expectRevert("VL: Can't change baseCurrency when openDebt > 0");
-        vault_m.setBaseCurrency(uint8(Constants.EthBaseCurrency));
+        vault_m.setBaseCurrency(address(eth));
         vm.stopPrank();
 
-        (, , uint256 baseCurrency) = vault_m.vault();
-        assertEq(baseCurrency, Constants.UsdBaseCurrency);
+        (, , address baseCurrency) = vault_m.vault();
+        assertEq(baseCurrency, 0x0000000000000000000000000000000000000000);
     }
 
     function testLiquidateVaultFactory(address liquidationKeeper) public {

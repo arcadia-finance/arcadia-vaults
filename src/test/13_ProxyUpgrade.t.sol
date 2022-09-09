@@ -496,7 +496,7 @@ contract VaultV2Test is Test {
     struct VaultInfo {
         uint16 collThres;
         uint8 liqThres;
-        uint8 baseCurrency;
+        address baseCurrency;
     }
     struct Checks {
         address erc20Stored;

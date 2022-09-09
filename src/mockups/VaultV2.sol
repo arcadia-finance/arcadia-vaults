@@ -73,7 +73,8 @@ contract VaultV2 {
     struct VaultInfo {
         uint16 collThres; //2 decimals precision (factor 100)
         uint8 liqThres; //2 decimals precision (factor 100)
-        uint8 baseCurrency;
+        address baseCurrency;
+        //address baseCurrencyAddress;
     }
 
     VaultInfo public vault;
@@ -665,7 +666,7 @@ contract VaultV2 {
     @param baseCurrency BaseCurrency to return the value in. For example, 0 (USD) or 1 (ETH).
     @return vaultValue Total value stored on the vault, expressed in baseCurrency.
   */
-    function getValue(uint8 baseCurrency)
+    function getVaultValue(address baseCurrency)
         public
         view
         returns (uint256 vaultValue)
@@ -685,22 +686,23 @@ contract VaultV2 {
 
     /** 
     @notice Sets the baseCurrency of a vault.
-    @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
+    @param baseCurrency the new baseCurrency for the vault.
   */
-    function setBaseCurrency(uint256 newBaseCurrency) public onlyAuthorized {
-        _setBaseCurrency(newBaseCurrency);
+    function setBaseCurrency(address baseCurrency) public onlyAuthorized {
+        _setBaseCurrency(baseCurrency);
     }
 
     /** 
     @notice Internal function: sets baseCurrency.
-    @param newBaseCurrency the new baseCurrency for the vault.
+    @param _baseCurrency the new baseCurrency for the vault.
+    @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
   */
     function _setBaseCurrency(
-        uint256 newBaseCurrency
+        address _baseCurrency
     ) private {
         require(getUsedMargin() == 0, "VL: Can't change baseCurrency when openDebt > 0");
-        require(newBaseCurrency + 1 <= IMainRegistry(registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
-        vault.baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
+        //require(_baseCurrency + 1 <= IMainRegistry(registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
+        vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
     }
 
     // https://twitter.com/0x_beans/status/1502420621250105346
@@ -733,6 +735,17 @@ contract VaultV2 {
                           MARGIN REQUIREMENTS
     ///////////////////////////////////////////////////////////////*/
 
+    /** 
+    @notice Calculates the total collateral value of the vault.
+    @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+    @return collateralValue The collateral value, returned in the decimals of the base currency.
+    @dev The collateral value of the vault is equal to the spot value of the underlying assets,
+         discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
+         collateralised assets can fluctuate, the haircut guarantees that the vault 
+         remains over-collateralised with a high confidence level (99,9%+). The size of the
+         haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
+         or the smaller the on-chain liquidity, the biggert the haircut will be.
+  */
     function getCollateralValue()
         public
         view
@@ -741,10 +754,22 @@ contract VaultV2 {
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
         unchecked {
-            collateralValue = getValue(vault.baseCurrency) * 100 / vault.collThres;
+            collateralValue = getVaultValue(vault.baseCurrency) * 100 / vault.collThres;
         }
     }
 
+    /** 
+    @notice Calculates the total collateral value of the vault.
+    @param vaultValue The total spot value of all the assets in the vault.
+    @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+    @return collateralValue The collateral value, returned in the decimals of the base currency.
+    @dev The collateral value of the vault is equal to the spot value of the underlying assets,
+         discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
+         collateralised assets can fluctuate, the haircut guarantees that the vault 
+         remains over-collateralised with a high confidence level (99,9%+). The size of the
+         haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
+         or the smaller the on-chain liquidity, the biggert the haircut will be.
+  */
     function getCollateralValue(uint256 vaultValue)
         public
         view
@@ -785,6 +810,7 @@ contract VaultV2 {
 
     /** 
     @notice Calculates the remaining margin the owner of the proxy vault can use.
+    @param vaultValue The total spot value of all the assets in the vault.
     @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
     @return freeMargin The remaining amount of margin a user can take, 
                             returned in the decimals of the base currency.
@@ -808,19 +834,21 @@ contract VaultV2 {
     @notice Can be called by authorised applications to open or increase a margin position.
     @param baseCurrency The Base-currency in which the margin position is denominated
     @param amount The amount the position is increased.
-    @return success boolean indicating if there is sufficient free margin to increase the margin position
-    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency. 
+    @return success Boolean indicating if there is sufficient free margin to increase the margin position
+    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
     */
-    function increaseMarginPosition(uint256 baseCurrency, uint256 amount) public onlyAuthorized returns (bool success) {
+    function increaseMarginPosition(address baseCurrency, uint256 amount) public onlyAuthorized returns (bool success) {
         if (baseCurrency != vault.baseCurrency) _setBaseCurrency(baseCurrency);
         success = getFreeMargin() >= amount;
     }
 
     /** 
     @notice Can be called by authorised applications to close or decrease a margin position.
-    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency. 
+    @param baseCurrency The Base-currency in which the margin position is denominated.
+    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
+    @return success Boolean indicating if there the margin position is successfully decreased.
      */
-    function decreaseMarginPosition(uint256 baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
+    function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
         success = baseCurrency == vault.baseCurrency;
     }
 
@@ -835,6 +863,9 @@ contract VaultV2 {
          Increases the life of the vault to indicate a liquidation has happened.
          Sets debtInfo todo: needed?
          Transfers ownership of the proxy vault to the liquidator!
+    @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
+    @param liquidator Contract Address of the liquidation logic.
+    @return success Boolean returning if the liquidation process is successfully started.
   */
     function liquidateVault(address liquidationKeeper, address liquidator)
         public
@@ -842,7 +873,7 @@ contract VaultV2 {
         returns (bool success)
     {
         //gas: 35 gas cheaper to not take debt into memory
-        uint256 totalValue = getValue(vault.baseCurrency);
+        uint256 totalValue = getVaultValue(vault.baseCurrency);
         uint128 openDebt = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
@@ -857,6 +888,8 @@ contract VaultV2 {
 
         require(leftHand < rightHand, "This vault is healthy");
 
+        uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
+
         require(
             ILiquidator(liquidator).startAuction(
                 address(this),
@@ -865,7 +898,7 @@ contract VaultV2 {
                 owner,
                 openDebt,
                 vault.liqThres,
-                vault.baseCurrency
+                baseCurrencyIdentifier
             ),
             "Failed to start auction!"
         );

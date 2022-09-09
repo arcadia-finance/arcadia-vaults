@@ -38,6 +38,7 @@ contract MainRegistry is Ownable {
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
     mapping(address => mapping(uint256 => uint256))
         public assetToBaseCurrencyToCreditRating;
+    mapping(address => uint256) public assetToBaseCurrency;
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
@@ -70,6 +71,7 @@ contract MainRegistry is Ownable {
     constructor(BaseCurrencyInformation memory _baseCurrencyInformation) {
         //Main registry must be initialised with usd
         baseCurrencyToInformation[baseCurrencyCounter] = _baseCurrencyInformation;
+        assetToBaseCurrency[_baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         unchecked {
             ++baseCurrencyCounter;
         }
@@ -302,6 +304,7 @@ contract MainRegistry is Ownable {
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
+        assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
 
         uint256 assetCreditRatingsLength = assetCreditRatings.length;
         require(
@@ -331,6 +334,21 @@ contract MainRegistry is Ownable {
         unchecked {
             ++baseCurrencyCounter;
         }
+    }
+
+    function getTotalValue(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        address baseCurrency
+    ) public view returns (uint256 valueInBaseCurrency) {
+        valueInBaseCurrency = 
+            getTotalValue(
+                _assetAddresses,
+                _assetIds,
+                _assetAmounts,
+                assetToBaseCurrency[baseCurrency]
+            );
     }
 
     /**
@@ -416,6 +434,21 @@ contract MainRegistry is Ownable {
         return valueInBaseCurrency;
     }
 
+    function getListOfValuesPerAsset(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        address baseCurrency
+    ) public view returns (uint256[] memory valuesPerAsset) {
+        valuesPerAsset = 
+            getListOfValuesPerAsset(
+                _assetAddresses,
+                _assetIds,
+                _assetAmounts,
+                assetToBaseCurrency[baseCurrency]
+            );
+    }
+
     /**
      * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
      * @param _assetAddresses The List of token addresses of the assets
@@ -494,6 +527,21 @@ contract MainRegistry is Ownable {
             }
         }
         return valuesPerAsset;
+    }
+
+    function getListOfValuesPerCreditRating(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        address baseCurrency
+    ) public view returns (uint256[] memory valuesPerCreditRating) {
+        valuesPerCreditRating = 
+            getListOfValuesPerCreditRating(
+                _assetAddresses,
+                _assetIds,
+                _assetAmounts,
+                assetToBaseCurrency[baseCurrency]
+            );
     }
 
     /**

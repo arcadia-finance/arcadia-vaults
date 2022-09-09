@@ -73,7 +73,8 @@ contract Vault {
     struct VaultInfo {
         uint16 collThres; //2 decimals precision (factor 100)
         uint8 liqThres; //2 decimals precision (factor 100)
-        uint8 baseCurrency;
+        address baseCurrency;
+        //address baseCurrencyAddress;
     }
 
     VaultInfo public vault;
@@ -665,7 +666,7 @@ contract Vault {
     @param baseCurrency BaseCurrency to return the value in. For example, 0 (USD) or 1 (ETH).
     @return vaultValue Total value stored on the vault, expressed in baseCurrency.
   */
-    function getValue(uint8 baseCurrency)
+    function getVaultValue(address baseCurrency)
         public
         view
         returns (uint256 vaultValue)
@@ -685,22 +686,23 @@ contract Vault {
 
     /** 
     @notice Sets the baseCurrency of a vault.
-    @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
+    @param baseCurrency the new baseCurrency for the vault.
   */
-    function setBaseCurrency(uint256 newBaseCurrency) public onlyAuthorized {
-        _setBaseCurrency(newBaseCurrency);
+    function setBaseCurrency(address baseCurrency) public onlyAuthorized {
+        _setBaseCurrency(baseCurrency);
     }
 
     /** 
     @notice Internal function: sets baseCurrency.
-    @param newBaseCurrency the new baseCurrency for the vault.
+    @param _baseCurrency the new baseCurrency for the vault.
+    @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
   */
     function _setBaseCurrency(
-        uint256 newBaseCurrency
+        address _baseCurrency
     ) private {
         require(getUsedMargin() == 0, "VL: Can't change baseCurrency when openDebt > 0");
-        require(newBaseCurrency + 1 <= IMainRegistry(registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
-        vault.baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
+        //require(_baseCurrency + 1 <= IMainRegistry(registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
+        vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
     }
 
     // https://twitter.com/0x_beans/status/1502420621250105346
@@ -752,7 +754,7 @@ contract Vault {
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
         unchecked {
-            collateralValue = getValue(vault.baseCurrency) * 100 / vault.collThres;
+            collateralValue = getVaultValue(vault.baseCurrency) * 100 / vault.collThres;
         }
     }
 
@@ -835,7 +837,7 @@ contract Vault {
     @return success Boolean indicating if there is sufficient free margin to increase the margin position
     @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
     */
-    function increaseMarginPosition(uint256 baseCurrency, uint256 amount) public onlyAuthorized returns (bool success) {
+    function increaseMarginPosition(address baseCurrency, uint256 amount) public onlyAuthorized returns (bool success) {
         if (baseCurrency != vault.baseCurrency) _setBaseCurrency(baseCurrency);
         success = getFreeMargin() >= amount;
     }
@@ -846,7 +848,7 @@ contract Vault {
     @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
     @return success Boolean indicating if there the margin position is successfully decreased.
      */
-    function decreaseMarginPosition(uint256 baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
+    function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
         success = baseCurrency == vault.baseCurrency;
     }
 
@@ -871,7 +873,7 @@ contract Vault {
         returns (bool success)
     {
         //gas: 35 gas cheaper to not take debt into memory
-        uint256 totalValue = getValue(vault.baseCurrency);
+        uint256 totalValue = getVaultValue(vault.baseCurrency);
         uint128 openDebt = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
@@ -886,6 +888,8 @@ contract Vault {
 
         require(leftHand < rightHand, "This vault is healthy");
 
+        uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
+
         require(
             ILiquidator(liquidator).startAuction(
                 address(this),
@@ -894,7 +898,7 @@ contract Vault {
                 owner,
                 openDebt,
                 vault.liqThres,
-                vault.baseCurrency
+                baseCurrencyIdentifier
             ),
             "Failed to start auction!"
         );
