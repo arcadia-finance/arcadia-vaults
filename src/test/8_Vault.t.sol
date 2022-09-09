@@ -389,7 +389,7 @@ contract vaultTests is Test {
             1
         );
 
-        vault.authorize(address(pool), true);
+        vault.openTrustedMarginAccount(address(pool));
         asset.approve(address(vault), type(uint256).max);
 
         bayc.setApprovalForAll(address(vault), true);

@@ -620,7 +620,7 @@ contract gasBuyVault_2ERC20 is Test {
         vm.roll(1); //increase block for random salt
 
         vm.startPrank(vaultOwner);
-        proxy.authorize(address(pool), true);
+        proxy.openTrustedMarginAccount(address(pool));
         asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);

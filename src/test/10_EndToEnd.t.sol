@@ -443,7 +443,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        proxy.authorize(address(pool), true);
+        proxy.openTrustedMarginAccount(address(pool));
         asset.approve(address(pool), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);

@@ -452,7 +452,7 @@ contract VaultV2Test is Test {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        proxy.authorize(address(pool), true);
+        proxy.openTrustedMarginAccount(address(pool));
         asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);

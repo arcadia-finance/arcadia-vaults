@@ -195,13 +195,12 @@ contract Vault {
     ) external payable {
         require(vaultVersion == 0, "V_I: Already initialized!");
         require(_vaultVersion != 0, "V_I: Invalid vault version");
-        registryAddress = _registryAddress;
         owner = _owner;
+        registryAddress = _registryAddress;
+        vaultVersion = _vaultVersion;
+        //ToDo: riskmodule
         vault.collThres = 150;
         vault.liqThres = 110;
-        (,,,,trustedProtocol,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
-        vaultVersion = _vaultVersion;
-        openTrustedMarginAccount(trustedProtocol);
     }
 
     /** 
@@ -717,13 +716,12 @@ contract Vault {
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
         (bool success, address baseCurrency, address liquidator_) = ITrustedProtocol(protocol).openMarginAccount();
-
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
-        if (vault.baseCurrency != baseCurrency) _setBaseCurrency(baseCurrency);
-        IERC20(baseCurrency).approve(protocol, type(uint256).max);
         liquidator = liquidator_;
         trustedProtocol = protocol;
+        if (vault.baseCurrency != baseCurrency) _setBaseCurrency(baseCurrency);
+        IERC20(baseCurrency).approve(protocol, type(uint256).max);
         isTrustedProtocolSet = true;
         allowed[protocol] = true;
     }

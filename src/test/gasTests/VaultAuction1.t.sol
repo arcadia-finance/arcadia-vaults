@@ -622,7 +622,7 @@ contract gasVaultAuction_1ERC20 is Test {
         eth.mint(vaultOwner, 1e18);
 
         vm.startPrank(vaultOwner);
-        proxy.authorize(address(pool), true);
+        proxy.openTrustedMarginAccount(address(pool));
         asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);

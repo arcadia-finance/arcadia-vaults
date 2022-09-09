@@ -437,7 +437,7 @@ contract gasProxyDeploy is Test {
         proxy = Vault(proxyAddr);
 
         vm.prank(vaultOwner);
-        proxy.authorize(address(pool), true);
+        proxy.openTrustedMarginAccount(address(pool));
         asset.approve(address(proxy), type(uint256).max);
 
         vm.startPrank(oracleOwner);

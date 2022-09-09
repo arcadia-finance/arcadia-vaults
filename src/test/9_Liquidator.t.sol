@@ -456,7 +456,7 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        proxy.authorize(address(pool), true);
+        proxy.openTrustedMarginAccount(address(pool));
         asset.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
@@ -953,7 +953,7 @@ contract LiquidatorTest is Test {
             assetAmounts,
             assetTypes
         );
-        Vault(proxy2).authorize(address(pool), true);
+        Vault(proxy2).openTrustedMarginAccount(address(pool));
         asset.approve(proxy2, type(uint256).max);
         vm.stopPrank();
 
