@@ -25,7 +25,7 @@ import "../../utils/Constants.sol";
 import "../../ArcadiaOracle.sol";
 import "../fixtures/ArcadiaOracleFixture.f.sol";
 
-import {LiquidityPool} from "../../../lib/arcadia-lending/src/LiquidityPool.sol";
+import {LendingPool} from "../../../lib/arcadia-lending/src/LendingPool.sol";
 import {DebtToken} from "../../../lib/arcadia-lending/src/DebtToken.sol";
 import {Tranche} from "../../../lib/arcadia-lending/src/Tranche.sol";
 import {Asset} from "../../../lib/arcadia-lending/src/mocks/Asset.sol";
@@ -64,7 +64,7 @@ contract gasRepay_2ERC202ERC721 is Test {
     Liquidator private liquidator;
 
     Asset asset;
-    LiquidityPool pool;
+    LendingPool pool;
     Tranche tranche;
     DebtToken debt;
 
@@ -439,13 +439,13 @@ contract gasRepay_2ERC202ERC721 is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LiquidityPool(asset, creatorAddress, address(factory));
+        pool = new LendingPool(asset, creatorAddress, address(factory));
         pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
-        debt = new DebtToken(pool);
+        debt = new DebtToken(address(pool));
         pool.setDebtToken(address(debt));
 
-        tranche = new Tranche(pool, "Senior", "SR");
+        tranche = new Tranche(address(pool), "Senior", "SR");
         pool.addTranche(address(tranche), 50);
         vm.stopPrank();
 
@@ -465,7 +465,7 @@ contract gasRepay_2ERC202ERC721 is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: address(pool),
+                lendingPool: address(pool),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -478,7 +478,7 @@ contract gasRepay_2ERC202ERC721 is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                liquidityPool: address(pool),
+                lendingPool: address(pool),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),

@@ -14,7 +14,7 @@ import "./interfaces/IERC4626.sol";
 import "./interfaces/ILiquidator.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
-import "./interfaces/ILiquidityPool.sol";
+import "./interfaces/ILendingPool.sol";
 
 /** 
   * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -55,7 +55,7 @@ contract Vault {
                           EXTERNAL CONTRACTS
   ///////////////////////////////////////////////////////////////*/
     address public registryAddress; /// to be fetched somewhere else?
-    address public liquidityPool;
+    address public lendingPool;
     address public debtToken;
 
     // ACCESS CONTROL
@@ -199,10 +199,10 @@ contract Vault {
         owner = _owner;
         vault.collThres = 150;
         vault.liqThres = 110;
-        (,,,,liquidityPool,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
+        (,,,,lendingPool,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
-        debtToken = ILiquidityPool(liquidityPool).debtToken();
-        IERC20(IERC4626(liquidityPool).asset()).approve(liquidityPool, type(uint256).max);
+        debtToken = ILendingPool(lendingPool).debtToken();
+        IERC20(IERC4626(lendingPool).asset()).approve(lendingPool, type(uint256).max);
     }
 
     /** 
@@ -783,7 +783,7 @@ contract Vault {
     }
 
     function getUsedMargin() public returns (uint128 usedMargin) {
-        ILiquidityPool(liquidityPool).syncInterests();
+        ILendingPool(lendingPool).syncInterests();
         usedMargin = uint128(IERC4626(debtToken).maxWithdraw(address(this))); // ToDo: Check if cast is safe
     }
 
