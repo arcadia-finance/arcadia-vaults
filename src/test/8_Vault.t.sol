@@ -1673,6 +1673,7 @@ contract vaultTests is Test {
 
     function testSetBaseCurrencyByNonAuthorized(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != vaultOwner);
+        vm.assume(unprivilegedAddress_ != address(pool));
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("VL: You are not authorized");
@@ -1714,7 +1715,7 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         vm.startPrank(toAuth);
-        vm.expectRevert("VL: Can't change baseCurrency when openDebt > 0");
+        vm.expectRevert("VL: Can't change baseCurrency when Used Margin > 0");
         vault.setBaseCurrency(address(eth));
         vm.stopPrank();
 

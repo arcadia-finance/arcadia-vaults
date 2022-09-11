@@ -33,37 +33,11 @@ import "./interfaces/ITrustedProtocol.sol";
  */
 contract Vault {
 
-    uint256 public constant yearlyBlocks = 2628000;
-
-    /*///////////////////////////////////////////////////////////////
-                INTERNAL BOOKKEEPING OF DEPOSITED ASSETS
-    ///////////////////////////////////////////////////////////////*/
-    address[] public erc20Stored;
-    address[] public erc721Stored;
-    address[] public erc1155Stored;
-
-    uint256[] public erc721TokenIds;
-    uint256[] public erc1155TokenIds;
-
-    /*///////////////////////////////////////////////////////////////
-                          EXTERNAL CONTRACTS
-    ///////////////////////////////////////////////////////////////*/
-    address public registryAddress; /// to be fetched somewhere else?
-    address public liquidator;
-
-    // ACCESS CONTROL
-    address public owner;
-    mapping(address => bool) public allowed;
+    constructor() {}
 
     /*///////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
-
-    // set the vault logic implementation to the msg.sender
-    // NOTE: this does not represent the owner of the proxy vault!
-    //       The owner of this contract (not the derived proxies)
-    //       should not have any privilages!
-    constructor() {}
 
     /**
      * @dev Storage slot with the address of the current implementation.
@@ -75,9 +49,10 @@ contract Vault {
     // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
     // Used by the liquidator contract for proceed claims
     uint256 public life;
-
     bool public initialized;
     uint16 public vaultVersion;
+    address public registryAddress;
+    address public liquidator;
 
     struct VaultInfo {
         uint16 collThres; //2 decimals precision (factor 100)
@@ -141,6 +116,9 @@ contract Vault {
     /*///////////////////////////////////////////////////////////////
                           ACCESS MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
+
+    address public owner;
+    mapping(address => bool) public allowed;
 
     event OwnershipTransferred(
         address indexed previousOwner,
@@ -208,6 +186,13 @@ contract Vault {
     /*///////////////////////////////////////////////////////////////
                     ASSET DEPOSIT/WITHDRAWN LOGIC
     ///////////////////////////////////////////////////////////////*/
+
+    address[] public erc20Stored;
+    address[] public erc721Stored;
+    address[] public erc1155Stored;
+
+    uint256[] public erc721TokenIds;
+    uint256[] public erc1155TokenIds;
 
     /** 
     @notice Deposits assets into the proxy vault by the proxy vault owner.
@@ -683,7 +668,7 @@ contract Vault {
     function _setBaseCurrency(
         address _baseCurrency
     ) private {
-        require(getUsedMargin() == 0, "VL: Can't change baseCurrency when openDebt > 0");
+        require(getUsedMargin() == 0, "VL: Can't change baseCurrency when Used Margin > 0");
         //require(_baseCurrency + 1 <= IMainRegistry(registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
         vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
     }
