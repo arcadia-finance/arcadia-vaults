@@ -33,18 +33,11 @@ import "./interfaces/ITrustedProtocol.sol";
  */
 contract Vault {
 
-    /**
-     * @dev Storage slot with the address of the current implementation.
-     *      This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
-     */
-    bytes32 internal constant _IMPLEMENTATION_SLOT =
-        0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
-
     uint256 public constant yearlyBlocks = 2628000;
 
     /*///////////////////////////////////////////////////////////////
                 INTERNAL BOOKKEEPING OF DEPOSITED ASSETS
-  ///////////////////////////////////////////////////////////////*/
+    ///////////////////////////////////////////////////////////////*/
     address[] public erc20Stored;
     address[] public erc721Stored;
     address[] public erc1155Stored;
@@ -54,7 +47,7 @@ contract Vault {
 
     /*///////////////////////////////////////////////////////////////
                           EXTERNAL CONTRACTS
-  ///////////////////////////////////////////////////////////////*/
+    ///////////////////////////////////////////////////////////////*/
     address public registryAddress; /// to be fetched somewhere else?
     address public liquidator;
 
@@ -62,6 +55,22 @@ contract Vault {
     address public owner;
     mapping(address => bool) public allowed;
 
+    /*///////////////////////////////////////////////////////////////
+                          VAULT MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    // set the vault logic implementation to the msg.sender
+    // NOTE: this does not represent the owner of the proxy vault!
+    //       The owner of this contract (not the derived proxies)
+    //       should not have any privilages!
+    constructor() {}
+
+    /**
+     * @dev Storage slot with the address of the current implementation.
+     *      This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
+     */
+    bytes32 internal constant _IMPLEMENTATION_SLOT =
+        0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
     // Used by the liquidator contract for proceed claims
@@ -83,59 +92,6 @@ contract Vault {
         address value;
     }
 
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
-
-    // set the vault logic implementation to the msg.sender
-    // NOTE: this does not represent the owner of the proxy vault!
-    //       The owner of this contract (not the derived proxies)
-    //       should not have any privilages!
-    constructor() {}
-
-    /**
-     * @dev Throws if called by any account other than the factory adress.
-     */
-    modifier onlyFactory() {
-        require(
-            msg.sender == IMainRegistry(registryAddress).factoryAddress(),
-            "VL: You are not the factory"
-        );
-        _;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the factory adress.
-     */
-    modifier onlyAuthorized() {
-        require(
-            allowed[msg.sender],
-            "VL: You are not authorized"
-        );
-        _;
-    }
-
-    function authorize(address user, bool isAuthorized) external onlyOwner {
-        allowed[user] = isAuthorized;
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                  REDUCED & MODIFIED OPENZEPPELIN OWNABLE
-      Reduced to functions needed, while modified to allow
-      a transfer of ownership of this vault by a transfer
-      of ownership of the accompanying ERC721 Vault NFT
-      issued by the factory. Owner of Vault NFT = owner of vault
-  ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner, "VL: You are not the owner");
-        _;
-    }
-
      /**
      * @dev Returns an `AddressSlot` with member `value` located at `slot`.
      */
@@ -147,35 +103,6 @@ contract Vault {
         assembly {
             r.slot := slot
         }
-    }
-
-    /**
-     * @dev Stores a new address in the EIP1967 implementation slot & updates the vault version.
-     */
-    function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
-        vaultVersion = newVersion;
-        getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public onlyFactory {
-        if (newOwner == address(0)) {
-            revert("New owner cannot be zero address upon liquidation");
-        }
-        _transferOwnership(newOwner);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Internal function without access restriction.
-     */
-    function _transferOwnership(address newOwner) internal virtual {
-        address oldOwner = owner;
-        owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
     }
 
     /** 
@@ -202,6 +129,85 @@ contract Vault {
         vault.collThres = 150;
         vault.liqThres = 110;
     }
+
+    /**
+     * @dev Stores a new address in the EIP1967 implementation slot & updates the vault version.
+     */
+    function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
+        vaultVersion = newVersion;
+        getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                          ACCESS MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
+
+    /**
+     * @dev Throws if called by any account other than the factory adress.
+     */
+    modifier onlyFactory() {
+        require(
+            msg.sender == IMainRegistry(registryAddress).factoryAddress(),
+            "VL: You are not the factory"
+        );
+        _;
+    }
+
+    /**
+     * @dev Throws if called by any account other than an authorised adress.
+     */
+    modifier onlyAuthorized() {
+        require(
+            allowed[msg.sender],
+            "VL: You are not authorized"
+        );
+        _;
+    }
+
+    function authorize(address user, bool isAuthorized) external onlyOwner {
+        allowed[user] = isAuthorized;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(msg.sender == owner, "VL: You are not the owner");
+        _;
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner via the factory.
+     * A transfer of ownership of this vault by a transfer
+     * of ownership of the accompanying ERC721 Vault NFT
+     * issued by the factory. Owner of Vault NFT = owner of vault
+     */
+    function transferOwnership(address newOwner) public onlyFactory {
+        if (newOwner == address(0)) {
+            revert("New owner cannot be zero address upon liquidation");
+        }
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = owner;
+        owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                    ASSET DEPOSIT/WITHDRAWN LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /** 
     @notice Deposits assets into the proxy vault by the proxy vault owner.
@@ -657,6 +663,10 @@ contract Vault {
         }
     }
 
+    /*///////////////////////////////////////////////////////////////
+                        BASE CURRENCY LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
     /** 
     @notice Sets the baseCurrency of a vault.
     @param baseCurrency the new baseCurrency for the vault.
@@ -676,32 +686,6 @@ contract Vault {
         require(getUsedMargin() == 0, "VL: Can't change baseCurrency when openDebt > 0");
         //require(_baseCurrency + 1 <= IMainRegistry(registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
         vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
-    }
-
-    // https://twitter.com/0x_beans/status/1502420621250105346
-    /** 
-    @notice Returns the sum of all uints in an array.
-    @param _data An uint256 array.
-    @return sum The combined sum of uints in the array.
-  */
-    function sumElementsOfList(uint256[] memory _data)
-        public
-        payable
-        returns (uint256 sum)
-    {
-        //cache
-        uint256 len = _data.length;
-
-        for (uint256 i = 0; i < len; ) {
-            // optimizooooor
-            assembly {
-                sum := add(sum, mload(add(add(_data, 0x20), mul(i, 0x20))))
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -937,6 +921,36 @@ contract Vault {
         }
 
         return true;
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        HELPER FUNCTIONS
+    ///////////////////////////////////////////////////////////////*/
+
+    // https://twitter.com/0x_beans/status/1502420621250105346
+    /** 
+    @notice Returns the sum of all uints in an array.
+    @param _data An uint256 array.
+    @return sum The combined sum of uints in the array.
+  */
+    function sumElementsOfList(uint256[] memory _data)
+        public
+        payable
+        returns (uint256 sum)
+    {
+        //cache
+        uint256 len = _data.length;
+
+        for (uint256 i = 0; i < len; ) {
+            // optimizooooor
+            assembly {
+                sum := add(sum, mload(add(add(_data, 0x20), mul(i, 0x20))))
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     function onERC721Received(
