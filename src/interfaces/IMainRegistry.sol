@@ -26,7 +26,6 @@ interface IMainRegistry {
             uint64,
             address,
             address,
-            address,
             string memory
         );
 

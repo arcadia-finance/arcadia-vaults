@@ -475,7 +475,6 @@ contract gasRepay_1ERC201ERC721 is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -488,7 +487,6 @@ contract gasRepay_1ERC201ERC721 is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: address(pool),
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -501,7 +499,6 @@ contract gasRepay_1ERC201ERC721 is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),

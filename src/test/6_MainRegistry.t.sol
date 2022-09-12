@@ -241,7 +241,6 @@ contract MainRegistryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -263,7 +262,7 @@ contract MainRegistryTest is Test {
     }
 
     function testMainRegistryInitialisedWithUsdAsBaseCurrency() public {
-        (, , , , , string memory baseCurrencyLabel) = mainRegistry
+        (, , , , string memory baseCurrencyLabel) = mainRegistry
             .baseCurrencyToInformation(0);
         assertTrue(StringHelpers.compareStrings("USD", baseCurrencyLabel));
     }
@@ -283,7 +282,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -322,7 +320,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -364,7 +361,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -400,7 +396,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -413,7 +408,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -455,7 +449,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -528,7 +521,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -541,7 +533,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -570,7 +561,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -583,7 +573,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -612,7 +601,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -625,7 +613,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -650,7 +637,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -663,7 +649,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -693,7 +678,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -706,7 +690,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -744,7 +727,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -757,7 +739,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -797,7 +778,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -810,7 +790,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -857,7 +836,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -870,7 +848,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -917,7 +894,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -930,7 +906,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -977,7 +952,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -990,7 +964,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1037,7 +1010,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1050,7 +1022,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1105,7 +1076,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1118,7 +1088,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1173,7 +1142,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1186,7 +1154,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1267,7 +1234,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1280,7 +1246,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1354,7 +1319,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1367,7 +1331,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1421,7 +1384,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1434,7 +1396,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1485,7 +1446,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1498,7 +1458,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1569,7 +1528,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1582,7 +1540,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1654,7 +1611,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1667,7 +1623,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1725,7 +1680,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1738,7 +1692,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1796,7 +1749,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1809,7 +1761,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1867,7 +1818,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1880,7 +1830,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -1938,7 +1887,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -1951,7 +1899,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -2042,7 +1989,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -2055,7 +2001,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -2153,7 +2098,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -2166,7 +2110,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -2286,7 +2229,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -2299,7 +2241,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -2366,7 +2307,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -2379,7 +2319,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -2461,7 +2400,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -2474,7 +2412,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -2556,7 +2493,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -2569,7 +2505,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -2654,7 +2589,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
@@ -2667,7 +2601,6 @@ contract MainRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
