@@ -11,7 +11,7 @@ import "../../lib/forge-std/src/Test.sol";
 import "../Factory.sol";
 import "../Proxy.sol";
 import "../Vault.sol";
-import "../mockups/ERC20SolmateMock.sol";
+import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
 import "../AssetRegistry/MainRegistry.sol";
@@ -24,10 +24,9 @@ import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-import {LendingPool} from "../../lib/arcadia-lending/src/LendingPool.sol";
+import {LendingPool, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
-import {Asset} from "../../lib/arcadia-lending/src/mocks/Asset.sol";
 
 contract EndToEndTest is Test {
     using stdStorage for StdStorage;
@@ -36,6 +35,7 @@ contract EndToEndTest is Test {
     Vault private vault;
     Vault private proxy;
     address private proxyAddr;
+    ERC20Mock private dai;
     ERC20Mock private eth;
     ERC20Mock private snx;
     ERC20Mock private link;
@@ -47,6 +47,7 @@ contract EndToEndTest is Test {
     ERC20Mock private wmayc;
     ERC1155Mock private interleave;
     OracleHub private oracleHub;
+    ArcadiaOracle private oracleDaiToUsd;
     ArcadiaOracle private oracleEthToUsd;
     ArcadiaOracle private oracleLinkToUsd;
     ArcadiaOracle private oracleSnxToEth;
@@ -59,7 +60,6 @@ contract EndToEndTest is Test {
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
     Liquidator private liquidator;
 
-    Asset asset;
     LendingPool pool;
     Tranche tranche;
     DebtToken debt;
@@ -71,6 +71,7 @@ contract EndToEndTest is Test {
     address private vaultOwner = address(6);
     address private liquidityProvider = address(7);
 
+    uint256 rateDaiToUsd = 1 * 10**Constants.oracleDaiToUsdDecimals;
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
@@ -79,6 +80,7 @@ contract EndToEndTest is Test {
     uint256 rateInterleaveToEth =
         1 * 10**(Constants.oracleInterleaveToEthDecimals - 2);
 
+    address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
     address[] public oracleLinkToUsdArr = new address[](1);
     address[] public oracleSnxToEthEthToUsd = new address[](2);
@@ -97,6 +99,7 @@ contract EndToEndTest is Test {
     constructor() {
         vm.startPrank(tokenCreatorAddress);
 
+        dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
         eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
@@ -147,6 +150,10 @@ contract EndToEndTest is Test {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
+        oracleDaiToUsd = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleDaiToUsdDecimals),
+            "DAI / USD"
+        );
         oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleEthToUsdDecimals),
             "ETH / USD"
@@ -176,7 +183,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -187,7 +194,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
@@ -198,7 +205,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
@@ -209,7 +216,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
@@ -220,7 +227,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
@@ -231,7 +238,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
@@ -263,6 +270,8 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
 
+        oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
+
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
         oracleLinkToUsdArr[0] = address(oracleLinkToUsd);
@@ -282,12 +291,11 @@ contract EndToEndTest is Test {
         factory = new Factory();
 
         vm.startPrank(tokenCreatorAddress);
-        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
-        asset.mint(liquidityProvider, type(uint256).max);
+        dai.mint(liquidityProvider, type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LendingPool(asset, creatorAddress, address(factory));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(address(pool));
@@ -298,7 +306,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
-        asset.approve(address(pool), type(uint256).max);
+        dai.approve(address(pool), type(uint256).max);
 
 
         vm.prank(address(tranche));
@@ -324,11 +332,24 @@ contract EndToEndTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: address(pool),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: address(pool),
+                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -352,9 +373,10 @@ contract EndToEndTest is Test {
         mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
         mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
 
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
+        assetCreditRatings[2] = 0;
 
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
@@ -434,6 +456,7 @@ contract EndToEndTest is Test {
         proxy = Vault(proxyAddr);
 
         vm.startPrank(oracleOwner);
+        oracleDaiToUsd.transmit(int256(rateDaiToUsd));
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
         oracleSnxToEth.transmit(int256(rateSnxToEth));
@@ -444,7 +467,7 @@ contract EndToEndTest is Test {
 
         vm.startPrank(vaultOwner);
         proxy.openTrustedMarginAccount(address(pool));
-        asset.approve(address(pool), type(uint256).max);
+        dai.approve(address(pool), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
@@ -552,9 +575,10 @@ contract EndToEndTest is Test {
         vm.assume(valueOfOneIL < type(uint256).max / amount);
         uint256 expectedValue = valueOfOneIL * amount;
 
-        uint256[] memory assetCreditRatingsInterleave = new uint256[](2);
+        uint256[] memory assetCreditRatingsInterleave = new uint256[](3);
         assetCreditRatingsInterleave[0] = Constants.interleaveCreditRatingUsd;
-        assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingEth;
+        assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingDai;
+        assetCreditRatingsInterleave[2] = Constants.interleaveCreditRatingEth;
 
         vm.prank(creatorAddress);
         floorERC1155SubRegistry.setAssetInformation(
@@ -843,7 +867,7 @@ contract EndToEndTest is Test {
         pool.borrow(amountCredit, address(proxy), vaultOwner);
         vm.stopPrank();
 
-        assertEq(asset.balanceOf(vaultOwner), amountCredit);
+        assertEq(dai.balanceOf(vaultOwner), amountCredit);
     }
 
     function testNotAllowTooMuchCreditAfterDeposit(
@@ -866,7 +890,7 @@ contract EndToEndTest is Test {
         pool.borrow(amountCredit, address(proxy), vaultOwner);
         vm.stopPrank();
 
-        assertEq(asset.balanceOf(vaultOwner), 0);
+        assertEq(dai.balanceOf(vaultOwner), 0);
     }
 
     function testIncreaseOfDebtPerBlock(
@@ -877,7 +901,7 @@ contract EndToEndTest is Test {
         uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
         uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) /
-            uint128(proxy.yearlyBlocks());
+            uint128(pool.YEARLY_BLOCKS());
         vm.assume(
             amountCredit < type(uint128).max / LogExpMath.pow(base, exponent)
         );
@@ -911,7 +935,7 @@ contract EndToEndTest is Test {
                     LogExpMath.pow(
                         _yearlyInterestRate + 10**18,
                         (uint256(amountOfBlocksToRoll) * 10**18) /
-                            proxy.yearlyBlocks()
+                            pool.YEARLY_BLOCKS()
                     )
                 )) / 10**18
         );
@@ -1096,7 +1120,7 @@ contract EndToEndTest is Test {
 
         uint128 base = _yearlyInterestRate + 10**18;
         uint128 exponent = uint128(
-            (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()
+            (uint128(blocksToRoll) * 10**18) / pool.YEARLY_BLOCKS()
         );
         uint128 expectedDebt = uint128(
             (amountCredit * (LogExpMath.pow(base, exponent))) / 10**18
@@ -1133,7 +1157,7 @@ contract EndToEndTest is Test {
         uint128 openDebt = proxy.getUsedMargin();
 
         vm.prank(liquidityProvider);
-        asset.transfer(vaultOwner, openDebt - amountCredit);
+        dai.transfer(vaultOwner, openDebt - amountCredit);
 
 
         vm.prank(vaultOwner);
@@ -1170,18 +1194,18 @@ contract EndToEndTest is Test {
         pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(liquidityProvider);
-        asset.transfer(vaultOwner, factor * amountCredit);
+        dai.transfer(vaultOwner, factor * amountCredit);
 
         vm.roll(block.number + blocksToRoll);
 
         uint128 openDebt = proxy.getUsedMargin();
-        uint256 balanceBefore = asset.balanceOf(vaultOwner);
+        uint256 balanceBefore = dai.balanceOf(vaultOwner);
 
         vm.startPrank(vaultOwner);
         pool.repay(openDebt * factor, address(proxy));
         vm.stopPrank();
 
-        uint256 balanceAfter = asset.balanceOf(vaultOwner);
+        uint256 balanceAfter = dai.balanceOf(vaultOwner);
 
         assertEq(balanceBefore - openDebt, balanceAfter);
         assertEq(proxy.getUsedMargin(), 0);
@@ -1224,7 +1248,7 @@ contract EndToEndTest is Test {
         uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = _yearlyInterestRate + 10**18;
         uint128 exponent = uint128(
-            (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()
+            (uint128(blocksToRoll) * 10**18) / pool.YEARLY_BLOCKS()
         );
         uint128 expectedDebt = uint128(
             (amountCredit * (LogExpMath.pow(base, exponent))) / 10**18
@@ -1236,7 +1260,7 @@ contract EndToEndTest is Test {
         _yearlyInterestRate = pool.interestRate();
         base = _yearlyInterestRate + 10**18;
         exponent = uint128(
-            (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()
+            (uint128(blocksToRoll) * 10**18) / pool.YEARLY_BLOCKS()
         );
         expectedDebt = uint128(
             (expectedDebt * (LogExpMath.pow(base, exponent))) / 10**18

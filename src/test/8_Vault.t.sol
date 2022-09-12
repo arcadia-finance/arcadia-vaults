@@ -12,7 +12,7 @@ import "../utils/Constants.sol";
 import "../Factory.sol";
 import "../Proxy.sol";
 import "../Vault.sol";
-import "../mockups/ERC20SolmateMock.sol";
+import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
 import "../AssetRegistry/MainRegistry.sol";
@@ -25,16 +25,16 @@ import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-import {LendingPool} from "../../lib/arcadia-lending/src/LendingPool.sol";
+import {LendingPool, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
-import {Asset} from "../../lib/arcadia-lending/src/mocks/Asset.sol";
 
 contract vaultTests is Test {
     using stdStorage for StdStorage;
 
     Factory private factoryContr;
     Vault private vault;
+    ERC20Mock private dai;
     ERC20Mock private eth;
     ERC20Mock private snx;
     ERC20Mock private link;
@@ -46,6 +46,7 @@ contract vaultTests is Test {
     ERC20Mock private wmayc;
     ERC1155Mock private interleave;
     OracleHub private oracleHub;
+    ArcadiaOracle private oracleDaiToUsd;
     ArcadiaOracle private oracleEthToUsd;
     ArcadiaOracle private oracleLinkToUsd;
     ArcadiaOracle private oracleSnxToEth;
@@ -58,7 +59,6 @@ contract vaultTests is Test {
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
     Liquidator private liquidator;
 
-    Asset asset;
     LendingPool pool;
     Tranche tranche;
     DebtToken debt;
@@ -70,12 +70,14 @@ contract vaultTests is Test {
     address private vaultOwner = address(6);
     address private liquidityProvider = address(7);
 
+    uint256 rateDaiToUsd = 1 * 10**Constants.oracleDaiToUsdDecimals;
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
     uint256 rateWbaycToEth = 85 * 10**Constants.oracleWbaycToEthDecimals;
     uint256 rateWmaycToUsd = 50000 * 10**Constants.oracleWmaycToUsdDecimals;
 
+    address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
     address[] public oracleLinkToUsdArr = new address[](1);
     address[] public oracleSnxToEthEthToUsd = new address[](2);
@@ -97,6 +99,7 @@ contract vaultTests is Test {
 
         vm.startPrank(tokenCreatorAddress);
 
+        dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
         eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
@@ -147,6 +150,11 @@ contract vaultTests is Test {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
+        oracleDaiToUsd = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleDaiToUsdDecimals),
+            "DAI / USD",
+            rateDaiToUsd
+        );
         oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleEthToUsdDecimals),
             "ETH / USD",
@@ -181,7 +189,7 @@ contract vaultTests is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -192,7 +200,7 @@ contract vaultTests is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
@@ -203,7 +211,7 @@ contract vaultTests is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
@@ -214,7 +222,7 @@ contract vaultTests is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
@@ -225,7 +233,7 @@ contract vaultTests is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
@@ -236,7 +244,7 @@ contract vaultTests is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
@@ -267,6 +275,8 @@ contract vaultTests is Test {
         eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
         vm.stopPrank();
 
+        oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
+
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
         oracleLinkToUsdArr[0] = address(oracleLinkToUsd);
@@ -283,12 +293,11 @@ contract vaultTests is Test {
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
 
         vm.startPrank(tokenCreatorAddress);
-        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
-        asset.mint(liquidityProvider, type(uint256).max);
+        dai.mint(liquidityProvider, type(uint128).max);
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LendingPool(asset, creatorAddress, address(factoryContr));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factoryContr));
         pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
         debt = new DebtToken(address(pool));
@@ -299,7 +308,7 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
-        asset.approve(address(pool), type(uint256).max);
+        dai.approve(address(pool), type(uint256).max);
 
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
@@ -326,11 +335,24 @@ contract vaultTests is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: address(pool),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                lendingPool: address(pool),
+                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -390,7 +412,7 @@ contract vaultTests is Test {
         );
 
         vault.openTrustedMarginAccount(address(pool));
-        asset.approve(address(vault), type(uint256).max);
+        dai.approve(address(vault), type(uint256).max);
 
         bayc.setApprovalForAll(address(vault), true);
         mayc.setApprovalForAll(address(vault), true);
@@ -486,9 +508,10 @@ contract vaultTests is Test {
     }
 
     function testSingleERC20Deposit(uint16 amount) public {
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingEth;
+        assetCreditRatings[1] = Constants.ethCreditRatingDai;
+        assetCreditRatings[2] = Constants.ethCreditRatingEth;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -520,9 +543,10 @@ contract vaultTests is Test {
 
     function testMultipleSameERC20Deposits(uint16 amount) public {
         vm.assume(amount <= 50000);
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.linkCreditRatingUsd;
-        assetCreditRatings[1] = Constants.linkCreditRatingEth;
+        assetCreditRatings[1] = Constants.linkCreditRatingDai;
+        assetCreditRatings[2] = Constants.linkCreditRatingEth;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -559,9 +583,10 @@ contract vaultTests is Test {
     }
 
     function testSingleERC721Deposit() public {
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatings[1] = Constants.baycCreditRatingEth;
+        assetCreditRatings[1] = Constants.baycCreditRatingDai;
+        assetCreditRatings[2] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
@@ -593,9 +618,10 @@ contract vaultTests is Test {
     }
 
     function testMultipleERC721Deposits() public {
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatings[1] = Constants.baycCreditRatingEth;
+        assetCreditRatings[1] = Constants.baycCreditRatingDai;
+        assetCreditRatings[2] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(
@@ -640,9 +666,10 @@ contract vaultTests is Test {
     }
 
     function testSingleERC1155Deposit() public {
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.interleaveCreditRatingUsd;
-        assetCreditRatings[1] = Constants.interleaveCreditRatingEth;
+        assetCreditRatings[1] = Constants.interleaveCreditRatingDai;
+        assetCreditRatings[2] = Constants.interleaveCreditRatingEth;
 
         vm.prank(creatorAddress);
         floorERC1155SubRegistry.setAssetInformation(
@@ -697,17 +724,20 @@ contract vaultTests is Test {
         assetTypes[2] = 1;
 
         vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatingsERC721 = new uint256[](2);
+        uint256[] memory assetCreditRatingsERC721 = new uint256[](3);
         assetCreditRatingsERC721[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatingsERC721[1] = Constants.baycCreditRatingEth;
+        assetCreditRatingsERC721[1] = Constants.baycCreditRatingDai;
+        assetCreditRatingsERC721[2] = Constants.baycCreditRatingEth;
 
-        uint256[] memory assetCreditRatingsLink = new uint256[](2);
+        uint256[] memory assetCreditRatingsLink = new uint256[](3);
         assetCreditRatingsLink[0] = Constants.linkCreditRatingUsd;
-        assetCreditRatingsLink[1] = Constants.linkCreditRatingEth;
+        assetCreditRatingsLink[1] = Constants.linkCreditRatingDai;
+        assetCreditRatingsLink[2] = Constants.linkCreditRatingEth;
 
-        uint256[] memory assetCreditRatingsEth = new uint256[](2);
+        uint256[] memory assetCreditRatingsEth = new uint256[](3);
         assetCreditRatingsEth[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatingsEth[1] = Constants.ethCreditRatingEth;
+        assetCreditRatingsEth[1] = Constants.ethCreditRatingDai;
+        assetCreditRatingsEth[2] = Constants.ethCreditRatingEth;
 
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
@@ -770,21 +800,25 @@ contract vaultTests is Test {
         assetTypes[3] = 2;
 
         vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatingsERC721 = new uint256[](2);
+        uint256[] memory assetCreditRatingsERC721 = new uint256[](3);
         assetCreditRatingsERC721[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatingsERC721[1] = Constants.baycCreditRatingEth;
+        assetCreditRatingsERC721[1] = Constants.baycCreditRatingDai;
+        assetCreditRatingsERC721[2] = Constants.baycCreditRatingEth;
 
-        uint256[] memory assetCreditRatingsLink = new uint256[](2);
+        uint256[] memory assetCreditRatingsLink = new uint256[](3);
         assetCreditRatingsLink[0] = Constants.linkCreditRatingUsd;
-        assetCreditRatingsLink[1] = Constants.linkCreditRatingEth;
+        assetCreditRatingsLink[1] = Constants.linkCreditRatingDai;
+        assetCreditRatingsLink[2] = Constants.linkCreditRatingEth;
 
-        uint256[] memory assetCreditRatingsEth = new uint256[](2);
+        uint256[] memory assetCreditRatingsEth = new uint256[](3);
         assetCreditRatingsEth[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatingsEth[1] = Constants.ethCreditRatingEth;
+        assetCreditRatingsEth[1] = Constants.ethCreditRatingDai;
+        assetCreditRatingsEth[2] = Constants.ethCreditRatingEth;
 
-        uint256[] memory assetCreditRatingsInterleave = new uint256[](2);
+        uint256[] memory assetCreditRatingsInterleave = new uint256[](3);
         assetCreditRatingsInterleave[0] = Constants.interleaveCreditRatingUsd;
-        assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingEth;
+        assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingDai;
+        assetCreditRatingsInterleave[2] = Constants.interleaveCreditRatingEth;
 
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
@@ -830,9 +864,10 @@ contract vaultTests is Test {
 
         vm.startPrank(sender);
 
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingEth;
+        assetCreditRatings[1] = Constants.ethCreditRatingDai;
+        assetCreditRatings[2] = Constants.ethCreditRatingEth;
         vm.stopPrank();
 
         vm.prank(creatorAddress);
@@ -905,7 +940,7 @@ contract vaultTests is Test {
         vm.startPrank(vaultOwner);
         pool.borrow(amountCredit, address(vault), vaultOwner);
 
-        assertEq(asset.balanceOf(vaultOwner), amountCredit);
+        assertEq(dai.balanceOf(vaultOwner), amountCredit);
         assertEq(vault.getUsedMargin(), amountCredit); //no blocks have passed
     }
 
@@ -924,7 +959,7 @@ contract vaultTests is Test {
         uint256 valueDeposit = ((Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals) * baseAmountDeposit;
         uint128 amountCredit = uint128(
-            baseAmountCredit * 10**Constants.assetDecimals
+            baseAmountCredit * 10**Constants.daiDecimals
         );
         uint256 amountWithdraw = baseAmountWithdraw * 10**Constants.ethDecimals;
         uint256 valueWithdraw = ((Constants.WAD * rateEthToUsd) /
@@ -969,7 +1004,7 @@ contract vaultTests is Test {
 
         uint256 valueDeposit = ((Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals) * baseAmountDeposit;
-        uint256 amountCredit = baseAmountCredit * 10**Constants.assetDecimals;
+        uint256 amountCredit = baseAmountCredit * 10**Constants.daiDecimals;
         uint256 amountWithdraw = baseAmountWithdraw * 10**Constants.ethDecimals;
         uint256 ValueWithdraw = ((Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals) * baseAmountWithdraw;
@@ -1004,7 +1039,7 @@ contract vaultTests is Test {
     ) public {
         vm.assume(tokenIdsDeposit.length < 50); //test speed
         uint128 amountCredit = uint128(
-            baseAmountCredit * 10**Constants.assetDecimals
+            baseAmountCredit * 10**Constants.daiDecimals
         );
 
         (, uint256[] memory assetIds, , ) = depositBaycInVault(
@@ -1425,7 +1460,7 @@ contract vaultTests is Test {
         //gas: only overflows when blocks.number > ~10**20
         exponent =
             ((block.number - uint32(_lastBlock)) * 1e18) /
-            vault.yearlyBlocks();
+            pool.YEARLY_BLOCKS();
 
         uint256 usedMarginExpected =
             (remainingCredit * LogExpMath.pow(base, exponent)) /
@@ -1443,9 +1478,10 @@ contract vaultTests is Test {
     {
         vm.assume(amountEth < 10 * 10**9 * 10**18);
 
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingEth;
+        assetCreditRatings[1] = Constants.ethCreditRatingDai;
+        assetCreditRatings[2] = Constants.ethCreditRatingEth;
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
@@ -1490,72 +1526,23 @@ contract vaultTests is Test {
 
     function testTransferOwnership(address to) public {
         vm.assume(to != address(0));
-        Vault vault_m = new Vault();
 
-        uint256 slot2 = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.registryAddress.selector)
-            .find();
-        bytes32 loc2 = bytes32(slot2);
-        bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
-        vm.store(address(vault_m), loc2, newReg);
-
-        assertEq(address(0), vault_m.owner());
-        vm.prank(address(factoryContr));
-        vault_m.transferOwnership(to);
-        assertEq(to, vault_m.owner());
-
-        vault_m = new Vault();
-        vault_m.initialize(
-            address(this),
-            address(mainRegistry),
-            1
-        );
-        assertEq(address(this), vault_m.owner());
+        assertEq(vaultOwner, vault.owner());
 
         vm.prank(address(factoryContr));
-        vault_m.transferOwnership(to);
-        assertEq(to, vault_m.owner());
+        vault.transferOwnership(to);
+        assertEq(to, vault.owner());
     }
 
     function testTransferOwnershipByNonOwner(address from) public {
-        vm.assume(
-            from != address(this) &&
-                from != address(0) &&
-                from != address(factoryContr)
-        );
-        Vault vault_m = new Vault();
-        address to = address(123456);
+        vm.assume(from != address(factoryContr));
 
-        uint256 slot2 = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.registryAddress.selector)
-            .find();
-        bytes32 loc2 = bytes32(slot2);
-        bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
-        vm.store(address(vault_m), loc2, newReg);
-
-        assertEq(address(0), vault_m.owner());
+        assertEq(vaultOwner, vault.owner());
 
         vm.startPrank(from);
         vm.expectRevert("VL: You are not the factory");
-        vault_m.transferOwnership(to);
-        vm.stopPrank();
-
-        assertEq(address(0), vault_m.owner());
-
-        vault_m = new Vault();
-        vault_m.initialize(
-            address(this),
-            address(mainRegistry),
-            1
-        );
-        assertEq(address(this), vault_m.owner());
-
-        vm.startPrank(from);
-        vm.expectRevert("VL: You are not the factory");
-        vault_m.transferOwnership(to);
-        assertEq(address(this), vault_m.owner());
+        vault.transferOwnership(from);
+        assertEq(vaultOwner, vault.owner());
     }
 
     function testAuthorizeAddress(address toAuth) public {
@@ -1681,7 +1668,7 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         (, , address baseCurrency) = vault.vault();
-        assertEq(baseCurrency, address(asset));
+        assertEq(baseCurrency, address(dai));
     }
 
     //SIMON DO THIS WITH CHEATXCODE
@@ -1720,7 +1707,7 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         (, , address baseCurrency) = vault.vault();
-        assertEq(baseCurrency, address(asset));
+        assertEq(baseCurrency, address(dai));
     }
 
     function testLiquidateVaultFactory(address liquidationKeeper) public {
@@ -1761,35 +1748,14 @@ contract vaultTests is Test {
     }
 
     function testLiquidateVaultNonFactory(address liquidationKeeper) public {
-        vm.assume(
-            liquidationKeeper != address(this) &&
-                liquidationKeeper != address(0) &&
-                liquidationKeeper != address(factoryContr)
-        );
-        Vault vault_m = new Vault();
+        vm.assume(liquidationKeeper != address(factoryContr));
 
-        uint256 slot2 = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.registryAddress.selector)
-            .find();
-        bytes32 loc2 = bytes32(slot2);
-        bytes32 newReg = bytes32(abi.encode(address(mainRegistry)));
-        vm.store(address(vault_m), loc2, newReg);
-
-        uint256 slot3 = stdstore
-            .target(address(vault_m))
-            .sig(vault_m.owner.selector)
-            .find();
-        bytes32 loc3 = bytes32(slot3);
-        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc3, newOwner);
-
-        assertEq(vault_m.owner(), vaultOwner);
+        assertEq(vault.owner(), vaultOwner);
 
         vm.expectRevert("VL: You are not the factory");
-        vault_m.liquidateVault(liquidationKeeper, address(liquidator));
+        vault.liquidateVault(liquidationKeeper, address(liquidator));
 
-       assertEq(vault_m.owner(), vaultOwner);
+       assertEq(vault.owner(), vaultOwner);
        
     }
 
@@ -1797,9 +1763,10 @@ contract vaultTests is Test {
         public
         returns (uint256)
     {
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingEth;
+        assetCreditRatings[1] = Constants.ethCreditRatingDai;
+        assetCreditRatings[2] = Constants.ethCreditRatingEth;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -1859,9 +1826,10 @@ contract vaultTests is Test {
         public
         returns (Assets memory assetInfo)
     {
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingEth;
+        assetCreditRatings[1] = Constants.ethCreditRatingDai;
+        assetCreditRatings[2] = Constants.ethCreditRatingEth;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -1906,9 +1874,10 @@ contract vaultTests is Test {
             uint256[] memory assetTypes
         )
     {
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.linkCreditRatingUsd;
-        assetCreditRatings[1] = Constants.linkCreditRatingEth;
+        assetCreditRatings[1] = Constants.linkCreditRatingDai;
+        assetCreditRatings[2] = Constants.linkCreditRatingEth;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -1946,9 +1915,10 @@ contract vaultTests is Test {
             uint256[] memory assetTypes
         )
     {
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatings[1] = Constants.baycCreditRatingEth;
+        assetCreditRatings[1] = Constants.baycCreditRatingDai;
+        assetCreditRatings[2] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
         floorERC721SubRegistry.setAssetInformation(

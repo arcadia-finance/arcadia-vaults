@@ -81,7 +81,7 @@ contract FloorERC1155SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -92,7 +92,7 @@ contract FloorERC1155SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
@@ -298,7 +298,7 @@ contract FloorERC1155SubRegistryTest is Test {
                 assetAddress: address(interleave),
                 assetId: 1,
                 assetAmount: amountInterleave,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -334,7 +334,7 @@ contract FloorERC1155SubRegistryTest is Test {
                 assetAddress: address(interleave),
                 assetId: 1,
                 assetAmount: amountInterleave,
-                baseCurrency: 1
+                baseCurrency: uint8(Constants.EthBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -374,7 +374,7 @@ contract FloorERC1155SubRegistryTest is Test {
                 assetAddress: address(interleave),
                 assetId: 1,
                 assetAmount: amountInterleave,
-                baseCurrency: 2
+                baseCurrency: uint8(Constants.SafemoonBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -431,7 +431,7 @@ contract FloorERC1155SubRegistryTest is Test {
                 assetAddress: address(interleave),
                 assetId: 1,
                 assetAmount: amountInterleave,
-                baseCurrency: 1
+                baseCurrency: uint8(Constants.EthBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -478,7 +478,7 @@ contract FloorERC1155SubRegistryTest is Test {
                 assetAddress: address(interleave),
                 assetId: 1,
                 assetAmount: amountInterleave,
-                baseCurrency: 1
+                baseCurrency: uint8(Constants.EthBaseCurrency)
             });
         //Arithmetic overflow.
         vm.expectRevert(stdError.arithmeticError);

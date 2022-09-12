@@ -77,7 +77,7 @@ contract aTokenSubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -241,7 +241,7 @@ contract aTokenSubRegistryTest is Test {
                 assetAddress: address(aEth),
                 assetId: 0,
                 assetAmount: amountEth,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
 
         (
@@ -292,7 +292,7 @@ contract aTokenSubRegistryTest is Test {
                 assetAddress: address(aEth),
                 assetId: 0,
                 assetAmount: amountEth,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -334,7 +334,7 @@ contract aTokenSubRegistryTest is Test {
                 assetAddress: address(aEth),
                 assetId: 0,
                 assetAmount: amountEth,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
         //Arithmetic overflow.
         vm.expectRevert(bytes(""));

@@ -26,6 +26,7 @@ import "./fixtures/ArcadiaOracleFixture.f.sol";
 contract MainRegistryTest is Test {
     using stdStorage for StdStorage;
 
+    ERC20Mock private dai;
     ERC20Mock private eth;
     ERC20Mock private snx;
     ERC20Mock private link;
@@ -37,6 +38,7 @@ contract MainRegistryTest is Test {
     ERC20Mock private wmayc;
     ERC1155Mock private interleave;
     OracleHub private oracleHub;
+    ArcadiaOracle private oracleDaiToUsd;
     ArcadiaOracle private oracleEthToUsd;
     ArcadiaOracle private oracleLinkToUsd;
     ArcadiaOracle private oracleSnxToEth;
@@ -53,6 +55,7 @@ contract MainRegistryTest is Test {
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
 
+    uint256 rateDaiToUsd = 1 * 10**Constants.oracleDaiToUsdDecimals;
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
@@ -61,6 +64,7 @@ contract MainRegistryTest is Test {
     uint256 rateInterleaveToEth =
         1 * 10**(Constants.oracleInterleaveToEthDecimals - 2);
 
+    address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
     address[] public oracleLinkToUsdArr = new address[](1);
     address[] public oracleSnxToEthEthToUsd = new address[](2);
@@ -78,6 +82,7 @@ contract MainRegistryTest is Test {
     constructor() {
         vm.startPrank(tokenCreatorAddress);
 
+        dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
         snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
         link = new ERC20Mock(
@@ -105,6 +110,11 @@ contract MainRegistryTest is Test {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
+        oracleDaiToUsd = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleDaiToUsdDecimals),
+            "DAI / USD",
+            rateDaiToUsd
+        );
         oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleEthToUsdDecimals),
             "ETH / USD",
@@ -140,7 +150,7 @@ contract MainRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -151,7 +161,7 @@ contract MainRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
@@ -162,7 +172,7 @@ contract MainRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
@@ -173,7 +183,7 @@ contract MainRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
@@ -184,7 +194,7 @@ contract MainRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
@@ -195,7 +205,7 @@ contract MainRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
@@ -204,6 +214,8 @@ contract MainRegistryTest is Test {
             })
         );
         vm.stopPrank();
+
+        oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
 
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
@@ -267,13 +279,13 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
-                    10**Constants.oracleEthToUsdDecimals
+                    10**Constants.oracleDaiToUsdDecimals
                 ),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 lendingPool: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
             }),
             emptyList
         );
@@ -384,6 +396,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -396,7 +421,7 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertEq(2, mainRegistry.baseCurrencyCounter());
+        assertEq(3, mainRegistry.baseCurrencyCounter());
     }
 
     function testOwnerAddsBaseCurrencyWithFullListOfCreditRatings() public {
@@ -499,6 +524,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -528,6 +566,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -541,9 +592,10 @@ contract MainRegistryTest is Test {
         mainRegistry.addSubRegistry(address(standardERC20Registry));
         vm.stopPrank();
 
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = mainRegistry.CREDIT_RATING_CATOGERIES();
         assetCreditRatings[1] = 0;
+        assetCreditRatings[2] = 0;
 
         vm.startPrank(address(standardERC20Registry));
         vm.expectRevert("MR_AA: non-existing");
@@ -553,6 +605,19 @@ contract MainRegistryTest is Test {
 
     function testSubregistryAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -581,6 +646,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -594,9 +672,10 @@ contract MainRegistryTest is Test {
         mainRegistry.addSubRegistry(address(standardERC20Registry));
         vm.stopPrank();
 
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
+        assetCreditRatings[2] = 0;
 
         vm.startPrank(address(standardERC20Registry));
         mainRegistry.addAsset(address(eth), assetCreditRatings);
@@ -607,6 +686,19 @@ contract MainRegistryTest is Test {
 
     function testSubregistryOverwritesAssetPositive() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -648,6 +740,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -685,6 +790,19 @@ contract MainRegistryTest is Test {
 
     function testIsBatchWhitelistedPositive() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -735,6 +853,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -779,6 +910,19 @@ contract MainRegistryTest is Test {
 
     function testIsBatchWhitelistedNegativeAssetNotWhitelisted() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -829,6 +973,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -873,6 +1030,19 @@ contract MainRegistryTest is Test {
 
     function testGetWhitelistWithMultipleAssets() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -931,6 +1101,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -983,6 +1166,19 @@ contract MainRegistryTest is Test {
 
     function testGetWhitelistWithAfterRemovalAndReaddingOfAsset() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -1067,6 +1263,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -1141,6 +1350,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -1195,6 +1417,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -1243,6 +1478,19 @@ contract MainRegistryTest is Test {
     function testGetTotalValueNegativeNonEqualInputLists() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -1314,6 +1562,19 @@ contract MainRegistryTest is Test {
 
     function testGetListOfValuesPerAssetNegativeNonEqualInputLists() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -1389,6 +1650,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -1444,6 +1718,19 @@ contract MainRegistryTest is Test {
     function testGetListOfValuesPerAsseteNegativeUnknownBaseCurrency() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -1505,6 +1792,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -1563,6 +1863,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -1618,6 +1931,19 @@ contract MainRegistryTest is Test {
     function testGetTotalValueSucces() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -1709,6 +2035,19 @@ contract MainRegistryTest is Test {
 
     function testGetListOfValuesPerAssetSucces() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -1810,6 +2149,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -1823,9 +2175,10 @@ contract MainRegistryTest is Test {
         mainRegistry.addSubRegistry(address(standardERC20Registry));
         mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
 
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingEth;
+        assetCreditRatings[1] = Constants.ethCreditRatingDai;
+        assetCreditRatings[2] = Constants.ethCreditRatingEth;
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1836,7 +2189,8 @@ contract MainRegistryTest is Test {
         );
 
         assetCreditRatings[0] = Constants.linkCreditRatingUsd;
-        assetCreditRatings[1] = Constants.linkCreditRatingEth;
+        assetCreditRatings[1] = Constants.linkCreditRatingDai;
+        assetCreditRatings[2] = Constants.linkCreditRatingEth;
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
@@ -1847,7 +2201,8 @@ contract MainRegistryTest is Test {
         );
 
         assetCreditRatings[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatings[1] = Constants.baycCreditRatingEth;
+        assetCreditRatings[1] = Constants.baycCreditRatingDai;
+        assetCreditRatings[2] = Constants.baycCreditRatingEth;
         floorERC721SubRegistry.setAssetInformation(
             FloorERC721SubRegistry.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -1927,6 +2282,19 @@ contract MainRegistryTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
@@ -1974,9 +2342,10 @@ contract MainRegistryTest is Test {
         baseCurrencies[0] = Constants.UsdBaseCurrency;
         baseCurrencies[1] = Constants.EthBaseCurrency;
 
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingEth;
+        assetCreditRatings[1] = Constants.ethCreditRatingDai;
+        assetCreditRatings[2] = Constants.ethCreditRatingEth;
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -1990,6 +2359,19 @@ contract MainRegistryTest is Test {
 
     function testOwnerSetsCreditRatingsNonEqualInputLists() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -2039,9 +2421,10 @@ contract MainRegistryTest is Test {
         uint256[] memory baseCurrencies = new uint256[](1);
         baseCurrencies[0] = Constants.UsdBaseCurrency;
 
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingEth;
+        assetCreditRatings[1] = Constants.ethCreditRatingDai;
+        assetCreditRatings[2] = Constants.ethCreditRatingEth;
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
@@ -2071,6 +2454,19 @@ contract MainRegistryTest is Test {
 
     function testOwnerSetsCreditRatingsSucces() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -2153,6 +2549,19 @@ contract MainRegistryTest is Test {
         public
     {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
@@ -2259,6 +2668,19 @@ contract MainRegistryTest is Test {
 
     function testOwnerSetsFactoryWithMultipleBaseCurrencies() public {
         vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(

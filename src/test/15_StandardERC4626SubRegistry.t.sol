@@ -77,7 +77,7 @@ contract standardERC4626SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -265,7 +265,7 @@ contract standardERC4626SubRegistryTest is Test {
                 assetAddress: address(ybEth),
                 assetId: 0,
                 assetAmount: 0,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -336,7 +336,7 @@ contract standardERC4626SubRegistryTest is Test {
                 assetAddress: address(ybEth),
                 assetId: 0,
                 assetAmount: shares,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -401,7 +401,7 @@ contract standardERC4626SubRegistryTest is Test {
                 assetAddress: address(ybEth),
                 assetId: 0,
                 assetAmount: shares,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
 
         //Arithmetic overflow.
