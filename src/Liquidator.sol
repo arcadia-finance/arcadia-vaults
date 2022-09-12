@@ -8,11 +8,10 @@ pragma solidity ^0.8.13;
 
 import "./interfaces/IFactory.sol";
 import "./interfaces/IMainRegistry.sol";
-import "./interfaces/IStable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IVault.sol";
-import "./interfaces/IReserveFund.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./interfaces/ILiquidityPool.sol";
 
 /**
  * @title The liquidator holds the execution logic and storage or all things related to liquidating Arcadia Vaults
@@ -44,8 +43,8 @@ contract Liquidator is Ownable {
         uint128 openDebt;
         uint128 startBlock;
         uint8 liqThres;
-        uint8 numeraire;
-        uint128 stablePaid;
+        uint8 baseCurrency;
+        uint128 assetPaid;
         bool stopped;
         address liquidationKeeper;
         address originalOwner;
@@ -115,7 +114,7 @@ contract Liquidator is Ownable {
     @param originalOwner the original owner of this vault, at `life`.
     @param openDebt the open debt taken by `originalOwner` at `life`.
     @param liqThres the liquidation threshold of the vault, in factor 100.
-    @param numeraire the numeraire in which the vault is denominated.
+    @param baseCurrency the baseCurrency in which the vault is denominated.
     @return success auction has started -> true.
   */
     function startAuction(
@@ -125,19 +124,21 @@ contract Liquidator is Ownable {
         address originalOwner,
         uint128 openDebt,
         uint8 liqThres,
-        uint8 numeraire
+        uint8 baseCurrency
     ) public elevated returns (bool success) {
         require(
             auctionInfo[vaultAddress][life].startBlock == 0,
             "Liquidation already ongoing"
         );
 
+        ILiquidityPool(IFactory(factoryAddress).baseCurrencyToLiquidityPool(uint256(baseCurrency))).liquidateVault(vaultAddress, openDebt);
+
         auctionInfo[vaultAddress][life].startBlock = uint128(block.number);
         auctionInfo[vaultAddress][life].liquidationKeeper = liquidationKeeper;
         auctionInfo[vaultAddress][life].originalOwner = originalOwner;
         auctionInfo[vaultAddress][life].openDebt = openDebt;
         auctionInfo[vaultAddress][life].liqThres = liqThres;
-        auctionInfo[vaultAddress][life].numeraire = numeraire;
+        auctionInfo[vaultAddress][life].baseCurrency = baseCurrency;
 
         return true;
     }
@@ -154,13 +155,13 @@ contract Liquidator is Ownable {
         address[] memory assetAddresses,
         uint256[] memory assetIds,
         uint256[] memory assetAmounts,
-        uint8 numeraireOfDebt
+        uint8 baseCurrencyOfDebt
     ) public view returns (uint256 totalValue) {
         totalValue = IMainRegistry(registryAddress).getTotalValue(
             assetAddresses,
             assetIds,
             assetAmounts,
-            numeraireOfDebt
+            baseCurrencyOfDebt
         );
     }
 
@@ -183,7 +184,7 @@ contract Liquidator is Ownable {
     @param vaultAddress the vaultAddress.
     @param life the life of the vault for which the price has to be fetched.
     @return totalPrice the total price for which the vault can be purchased.
-    @return numeraireOfVault the numeraire in which the vault (and totalPrice) is denominaetd.
+    @return baseCurrencyOfVault the baseCurrency in which the vault (and totalPrice) is denominaetd.
     @return forSale returns false when the vault is not for sale.
   */
     function getPriceOfVault(address vaultAddress, uint256 life)
@@ -191,7 +192,7 @@ contract Liquidator is Ownable {
         view
         returns (
             uint256 totalPrice,
-            uint8 numeraireOfVault,
+            uint8 baseCurrencyOfVault,
             bool forSale
         )
     {
@@ -219,7 +220,7 @@ contract Liquidator is Ownable {
             totalPrice = startPrice - priceDecrease;
         }
 
-        return (totalPrice, auctionInfo[vaultAddress][life].numeraire, forSale);
+        return (totalPrice, auctionInfo[vaultAddress][life].baseCurrency, forSale);
     }
 
     /** 
@@ -229,49 +230,43 @@ contract Liquidator is Ownable {
     @param life the life of the vault for which the price has to be fetched.
   */
     function buyVault(address vaultAddress, uint256 life) public {
-        // it's 3683 gas cheaper to look up the struct 6x in the mapping than to take it into memory
-        (uint256 priceOfVault, uint8 numeraire, bool forSale) = getPriceOfVault(
+        (uint256 priceOfVault, uint8 baseCurrency, bool forSale) = getPriceOfVault(
             vaultAddress,
             life
         );
 
         require(forSale, "LQ_BV: Not for sale");
 
-        // todo: can be given in getPriceOfVault()
-        uint256 surplus;
-        if (priceOfVault > auctionInfo[vaultAddress][life].openDebt) {
-            surplus = priceOfVault - auctionInfo[vaultAddress][life].openDebt;
-        } else {
-            surplus = 0; //could be skipped
-        }
+        address liquidityPool = IFactory(factoryAddress).baseCurrencyToLiquidityPool(uint256(baseCurrency));
+        address asset = ILiquidityPool(liquidityPool).asset();
 
-        address stable = IFactory(factoryAddress).numeraireToStable(
-            uint256(numeraire)
+        require(
+            IERC20(asset).transferFrom(
+                msg.sender,
+                address(this),
+                priceOfVault
+            ),
+            "LQ_BV: transfer failed"
         );
-        if (surplus != 0) {
-            require(
-                IStable(stable).safeBurn(
-                    msg.sender,
-                    auctionInfo[vaultAddress][life].openDebt
-                ),
-                "LQ_BV: Burn failed"
-            );
-            require(
-                IStable(stable).transferFrom(
-                    msg.sender,
-                    address(this),
-                    surplus
-                ),
-                "LQ_BV: Surplus transfer failed"
-            );
+
+        uint256 openDebt = auctionInfo[vaultAddress][life].openDebt;
+        claimRatios memory ratios = claimRatio;
+        uint256 keeperReward = openDebt * ratios.liquidationKeeper / 100;
+
+        if (priceOfVault < openDebt + keeperReward) {
+            uint256 default_ = openDebt + keeperReward - priceOfVault;
+            uint256 deficit = priceOfVault < keeperReward ? keeperReward - openDebt : 0;
+            if (deficit == 0) IERC20(asset).transfer(liquidityPool, openDebt - default_); //ToDo do one transfer from msg.sender directly to liquiditypool?
+            ILiquidityPool(liquidityPool).settleLiquidation(default_, deficit);
         } else {
-            require(
-                IStable(stable).safeBurn(msg.sender, priceOfVault),
-                "LQ_BV: Burn failed"
-            );
+            IERC20(asset).transfer(liquidityPool, openDebt);
+            //ToDo: transfer protocolReward to Liquidity Pool
+            //uint256 protocolReward = openDebt * ratios.protocol / 100;
+            //uint256 surplus = priceOfVault - auctionInfo[vaultAddress][life].openDebt;
+            //protocolReward = surplus > protocolReward ? protocolReward  : surplus;
         }
 
-        auctionInfo[vaultAddress][life].stablePaid = uint128(priceOfVault);
+        auctionInfo[vaultAddress][life].assetPaid = uint128(priceOfVault);
         auctionInfo[vaultAddress][life].stopped = true;
 
         IFactory(factoryAddress).safeTransferFrom(
@@ -290,7 +285,7 @@ contract Liquidator is Ownable {
     @param auction the auction
     @param vaultAddress the vaultAddress of the vault the user want to buy.
     @param life the lifeIndex of vault, the keeper wants to claim their reward from
-    @return claimables The amounts claimable for a certain auction (in the numeraire of the vault).
+    @return claimables The amounts claimable for a certain auction (in the baseCurrency of the vault).
     @return claimableBy The user that can claim the liquidation reward or surplus.
   */
     function claimable(
@@ -317,13 +312,13 @@ contract Liquidator is Ownable {
         claimableBy[0] = auction.liquidationKeeper;
 
         if (
-            auction.stablePaid < auction.openDebt ||
-            auction.stablePaid <= keeperReward + auction.openDebt
+            auction.assetPaid < auction.openDebt ||
+            auction.assetPaid <= keeperReward + auction.openDebt
         ) {
             return (claimables, claimableBy);
         }
 
-        uint256 leftover = auction.stablePaid - auction.openDebt - keeperReward;
+        uint256 leftover = auction.assetPaid - auction.openDebt - keeperReward;
 
         claimables[1] = claimableBitmapMem & (1 << (4 * life + 1)) == 0
             ? (leftover >= protocolReward ? protocolReward : leftover)
@@ -358,9 +353,9 @@ contract Liquidator is Ownable {
     ) public {
         uint256 len = vaultAddresses.length;
         require(len == lives.length, "Arrays must be of same length");
-        uint256 numeraireCounter = IFactory(factoryAddress).numeraireCounter();
+        uint256 baseCurrencyCounter = IFactory(factoryAddress).baseCurrencyCounter();
 
-        uint256[] memory totalClaimable = new uint256[](numeraireCounter);
+        uint256[] memory totalClaimable = new uint256[](baseCurrencyCounter);
         uint256 claimableBitmapMem;
 
         uint256[] memory claimables;
@@ -373,15 +368,15 @@ contract Liquidator is Ownable {
             claimableBitmapMem = claimableBitmap[vaultAddress][(life >> 6)];
 
             if (claimer == claimableBy[0]) {
-                totalClaimable[auction.numeraire] += claimables[0];
+                totalClaimable[auction.baseCurrency] += claimables[0];
                 claimableBitmapMem = claimableBitmapMem | (1 << (4 * life + 0));
             }
             if (claimer == claimableBy[1]) {
-                totalClaimable[auction.numeraire] += claimables[1];
+                totalClaimable[auction.baseCurrency] += claimables[1];
                 claimableBitmapMem = claimableBitmapMem | (1 << (4 * life + 1));
             }
             if (claimer == claimableBy[2]) {
-                totalClaimable[auction.numeraire] += claimables[2];
+                totalClaimable[auction.baseCurrency] += claimables[2];
                 claimableBitmapMem = claimableBitmapMem | (1 << (4 * life + 2));
             }
 
@@ -392,39 +387,23 @@ contract Liquidator is Ownable {
             }
         }
 
-        _doTransfers(numeraireCounter, totalClaimable, claimer);
+        _doTransfers(baseCurrencyCounter, totalClaimable, claimer);
     }
 
     function _doTransfers(
-        uint256 numeraireCounter,
+        uint256 baseCurrencyCounter,
         uint256[] memory totalClaimable,
         address claimer
     ) internal {
-        for (uint8 k; k < numeraireCounter; ) {
+        for (uint8 k; k < baseCurrencyCounter; ) {
             if (totalClaimable[k] > 0) {
-                address numeraireStable = IFactory(factoryAddress)
-                    .numeraireToStable(k);
-                uint256 balance = IERC20(numeraireStable).balanceOf(
-                    address(this)
+                address asset = ILiquidityPool(IFactory(factoryAddress).baseCurrencyToLiquidityPool(uint256(k))).asset();
+                require(
+                    IERC20(asset).transfer(
+                        claimer,
+                        totalClaimable[k]
+                    )
                 );
-
-                if (balance >= totalClaimable[k]) {
-                    require(
-                        IERC20(numeraireStable).transfer(
-                            claimer,
-                            totalClaimable[k]
-                        )
-                    );
-                } else {
-                    require(IERC20(numeraireStable).transfer(claimer, balance));
-                    require(
-                        IReserveFund(reserveFund).withdraw(
-                            totalClaimable[k] - balance,
-                            numeraireStable,
-                            claimer
-                        )
-                    );
-                }
             }
             unchecked {
                 ++k;

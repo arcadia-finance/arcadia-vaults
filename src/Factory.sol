@@ -20,8 +20,6 @@ contract Factory is ERC721, Ownable {
     struct vaultVersionInfo {
         address registryAddress;
         address logic;
-        address stakeContract;
-        address interestModule;
         bytes32 versionRoot;
     }
 
@@ -39,8 +37,8 @@ contract Factory is ERC721, Ownable {
 
     address public liquidatorAddress;
 
-    uint256 public numeraireCounter;
-    mapping(uint256 => address) public numeraireToStable;
+    uint256 public baseCurrencyCounter;
+    mapping(uint256 => address) public baseCurrencyToLiquidityPool;
 
     event VaultCreated(
         address indexed vaultAddress,
@@ -117,19 +115,15 @@ contract Factory is ERC721, Ownable {
          ToDo Add a time lock between setting a new vault version, and confirming a new vault version
          Changing any of the logic contracts with this function does NOT immediately take effect,
          only after the function 'confirmNewVaultInfo' is called.
-         If a new Main Registry contract is set, all the Numeraires currently stored in the Factory 
-         (and the corresponding Stable Contracts) must also be stored in the new Main registry contract.
+         If a new Main Registry contract is set, all the BaseCurrencies currently stored in the Factory 
+         (and the corresponding Liquidity Pool Contracts) must also be stored in the new Main registry contract.
     @param registryAddress The contract addres of the Main Registry
     @param logic The contract address of the Vault logic
-    @param stakeContract The contract addres of the Staking Contract
-    @param interestModule The contract address of the Interest Rate Module
     @param versionRoot The root of the merkle tree of all the compatible vault versions
   */
     function setNewVaultInfo(
         address registryAddress,
         address logic,
-        address stakeContract,
-        address interestModule,
         bytes32 versionRoot
     ) external onlyOwner {
         require(versionRoot != bytes32(0), "FTRY_SNVI: version root is zero");
@@ -137,23 +131,21 @@ contract Factory is ERC721, Ownable {
 
         vaultDetails[latestVaultVersion + 1].registryAddress = registryAddress;
         vaultDetails[latestVaultVersion + 1].logic = logic;
-        vaultDetails[latestVaultVersion + 1].stakeContract = stakeContract;
-        vaultDetails[latestVaultVersion + 1].interestModule = interestModule;
         vaultDetails[latestVaultVersion + 1].versionRoot = versionRoot;
         newVaultInfoSet = true;
 
-        //If there is a new Main Registry Contract, Check that numeraires in factory and main registry match
+        //If there is a new Main Registry Contract, Check that baseCurrencies in factory and main registry match
         if (
             vaultDetails[latestVaultVersion].registryAddress != registryAddress
         ) {
-            address mainRegistryStableAddress;
-            for (uint256 i; i < numeraireCounter; ) {
-                (, , , , mainRegistryStableAddress, ) = IMainRegistry(
+            address liquidityPool;
+            for (uint256 i; i < baseCurrencyCounter; ) {
+                (, , , , liquidityPool, ) = IMainRegistry(
                     registryAddress
-                ).numeraireToInformation(i);
+                ).baseCurrencyToInformation(i);
                 require(
-                    mainRegistryStableAddress == numeraireToStable[i],
-                    "FTRY_SNVI:No match numeraires MR"
+                    liquidityPool == baseCurrencyToLiquidityPool[i],
+                    "FTRY_SNVI:No match baseCurrencies MR"
                 );
                 unchecked {
                     ++i;
@@ -163,19 +155,19 @@ contract Factory is ERC721, Ownable {
     }
 
     /** 
-  @notice Function adds numeraire and corresponding stable contract to the factory
-  @dev Numeraires can only be added by the latest Main Registry
-  @param numeraire An identifier (uint256) of the Numeraire
-  @param stable The contract address of the corresponding ERC20 token pegged to the numeraire
+  @notice Function adds baseCurrency and corresponding Liquidity Pool contract to the factory
+  @dev BaseCurrencies can only be added by the latest Main Registry
+  @param baseCurrency An identifier (uint256) of the BaseCurrency
+  @param liquidityPool The contract address of the corresponding Liquidity Pool
   */
-    function addNumeraire(uint256 numeraire, address stable) external {
+    function addBaseCurrency(uint256 baseCurrency, address liquidityPool) external {
         require(
             vaultDetails[latestVaultVersion].registryAddress == msg.sender,
-            "FTRY_AN: Add Numeraires via MR"
+            "FTRY_AN: Add BaseCurrencies via MR"
         );
-        numeraireToStable[numeraire] = stable;
+        baseCurrencyToLiquidityPool[baseCurrency] = liquidityPool;
         unchecked {
-            ++numeraireCounter;
+            ++baseCurrencyCounter;
         }
     }
 
@@ -191,17 +183,13 @@ contract Factory is ERC721, Ownable {
   @notice Function used to create a Vault
   @dev This is the starting point of the Vault creation process. Safe to cast a uint256 to a bytes32 since the space of both is 2^256.
   @param salt A salt to be used to generate the hash.
-  @param numeraire An identifier (uint256) of the Numeraire
-  @param vaultVersion The version of the Vault logic to be used. This version can be changed after deployment.
+  @param vaultVersion The Vault version.
+  @return vault The contract address of the proxy contract of the newly deployed vault.
   */
-    function createVault(uint256 salt, uint256 numeraire, uint256 vaultVersion)
+    function createVault(uint256 salt, uint256 vaultVersion)
         external
         returns (address vault)
     {
-        require(
-            numeraire <= numeraireCounter - 1,
-            "FTRY_CV: Unknown Numeraire"
-        );
 
         vaultVersion = vaultVersion == 0 ? latestVaultVersion : vaultVersion;
 
@@ -224,10 +212,6 @@ contract Factory is ERC721, Ownable {
         IVault(vault).initialize(
             msg.sender,
             vaultDetails[vaultVersion].registryAddress,
-            numeraire,
-            numeraireToStable[numeraire],
-            vaultDetails[vaultVersion].stakeContract,
-            vaultDetails[vaultVersion].interestModule, 
             uint16(vaultVersion)
         );
 
