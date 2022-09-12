@@ -31,7 +31,7 @@ interface IMainRegistry {
         );
 
     function baseCurrencyCounter() external view returns (uint256);
-
+    
     function batchIsWhiteListed(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds

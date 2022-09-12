@@ -58,7 +58,7 @@ contract FloorERC1155SubRegistryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                stableAddress: 0x0000000000000000000000000000000000000000,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -114,7 +114,7 @@ contract FloorERC1155SubRegistryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                stableAddress: 0x0000000000000000000000000000000000000000,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -126,7 +126,7 @@ contract FloorERC1155SubRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
+                liquidityPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -442,7 +442,7 @@ contract FloorERC1155SubRegistryTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testFailReturnValueOverflow(
+    function testReturnValueOverflow(
         uint256 amountInterleave,
         uint256 rateInterleaveToEthNew
     ) public {
@@ -451,7 +451,7 @@ contract FloorERC1155SubRegistryTest is Test {
         vm.assume(rateInterleaveToEthNew > 0);
 
         vm.assume(
-            uint256(amountInterleave) >
+            amountInterleave >
                 type(uint256).max /
                     Constants.WAD *
                     10**Constants.oracleInterleaveToEthDecimals /
@@ -459,7 +459,7 @@ contract FloorERC1155SubRegistryTest is Test {
         );
 
         vm.startPrank(oracleOwner);
-        oracleInterleaveToEth.transmit(int192(int256(rateInterleaveToEthNew)));
+        oracleInterleaveToEth.transmit(int256(rateInterleaveToEthNew));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -481,6 +481,7 @@ contract FloorERC1155SubRegistryTest is Test {
                 baseCurrency: 1
             });
         //Arithmetic overflow.
+        vm.expectRevert(stdError.arithmeticError);
         floorERC1155SubRegistry.getValue(getValueInput);
     }
 }

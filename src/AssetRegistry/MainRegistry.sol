@@ -44,7 +44,7 @@ contract MainRegistry is Ownable {
         uint64 baseCurrencyUnit;
         address assetAddress;
         address baseCurrencyToUsdOracle;
-        address stableAddress;
+        address liquidityPool;
         string baseCurrencyLabel;
     }
 
@@ -64,7 +64,7 @@ contract MainRegistry is Ownable {
      *                              - baseCurrencyUnit: Since there is no native token for USD, this is 0 by default for USD
      *                              - assetAddress: Since there is no native token for usd, this is 0 address by default for USD
      *                              - baseCurrencyToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
-     *                              - stableAddress: The contract address of the Arcadia issued token, pegged to the baseCurrency
+     *                              - liquidityPool: The contract of the Liquidity Pool, correspo,nding to the baseCurrency
      *                              - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      */
     constructor(BaseCurrencyInformation memory _baseCurrencyInformation) {
@@ -78,7 +78,7 @@ contract MainRegistry is Ownable {
     /**
      * @notice Sets the new Factory address
      * @dev The factory can only be set on the Main Registry AFTER the Main registry is set in the Factory.
-     *      This ensures that the allowed BaseCurrencies and corresponding stable contracts in both contract are equal.
+     *      This ensures that the allowed BaseCurrencies and corresponding liquidity pool contracts in both contract are equal.
      * @param _factoryAddress The address of the Factory
      */
     function setFactory(address _factoryAddress) external onlyOwner {
@@ -94,7 +94,7 @@ contract MainRegistry is Ownable {
             for (uint256 i = factoryBaseCurrencyCounter; i < baseCurrencyCounter; ) {
                 IFactory(factoryAddress).addBaseCurrency(
                     i,
-                    baseCurrencyToInformation[i].stableAddress
+                    baseCurrencyToInformation[i].liquidityPool
                 );
                 unchecked {
                     ++i;
@@ -283,7 +283,7 @@ contract MainRegistry is Ownable {
      *                              - baseCurrencyUnit: The unit of the baseCurrency, equal to 10 to the power of the number of decimals of the baseCurrency
      *                              - assetAddress: The contract address of the baseCurrency,
      *                              - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
-     *                              - stableAddress: The contract address of the Arcadia issued token, pegged to the baseCurrency
+     *                              - liquidityPool: The contract address of the Arcadia issued token, pegged to the baseCurrency
      *                              - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      * @param assetCreditRatings The List of the Credit Rating Categories of the baseCurrency, for all the different assets in the Main registry
      * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
@@ -325,7 +325,7 @@ contract MainRegistry is Ownable {
         if (factoryAddress != address(0)) {
             IFactory(factoryAddress).addBaseCurrency(
                 baseCurrencyCounter,
-                baseCurrencyInformation.stableAddress
+                baseCurrencyInformation.liquidityPool
             );
         }
         unchecked {

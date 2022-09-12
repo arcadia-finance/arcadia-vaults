@@ -14,8 +14,6 @@ interface IVault {
     function initialize(
         address _owner,
         address registryAddress,
-        address stakeContract,
-        address interestModule,
         uint16 latestVaultVersion
     ) external;
 

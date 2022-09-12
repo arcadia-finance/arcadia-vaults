@@ -14,17 +14,21 @@ import "../Vault.sol";
 import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
-import "../Stable.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../AssetRegistry/FloorERC1155SubRegistry.sol";
-import "../InterestRateModule.sol";
+
 import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
+
+import {LiquidityPool} from "../../lib/arcadia-lending/src/LiquidityPool.sol";
+import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
+import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import {Asset} from "../../lib/arcadia-lending/src/mocks/Asset.sol";
 
 contract LiquidatorTest is Test {
     using stdStorage for StdStorage;
@@ -54,18 +58,21 @@ contract LiquidatorTest is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
-    InterestRateModule private interestRateModule;
-    Stable private stable;
     Liquidator private liquidator;
+
+    Asset asset;
+    LiquidityPool pool;
+    Tranche tranche;
+    DebtToken debt;
 
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
-    address private stakeContract = address(5);
     address private vaultOwner = address(6);
     address private liquidatorBot = address(7);
     address private auctionBuyer = address(8);
+    address private liquidityProvider = address(9);
 
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
@@ -262,20 +269,6 @@ contract LiquidatorTest is Test {
         eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);
-        interestRateModule = new InterestRateModule();
-        interestRateModule.setBaseInterestRate(5 * 10**16);
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-        vm.stopPrank();
 
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
@@ -291,6 +284,31 @@ contract LiquidatorTest is Test {
 
         oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
+
+        vm.prank(creatorAddress);
+        factory = new Factory();
+
+        vm.startPrank(tokenCreatorAddress);
+        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
+        asset.mint(liquidityProvider, type(uint128).max);
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);
+        pool = new LiquidityPool(asset, creatorAddress, address(factory));
+        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
+
+        debt = new DebtToken(pool);
+        pool.setDebtToken(address(debt));
+
+        tranche = new Tranche(pool, "Senior", "SR");
+        pool.addTranche(address(tranche), 50);
+        vm.stopPrank();
+
+        vm.prank(liquidityProvider);
+        asset.approve(address(pool), type(uint256).max);
+
+        vm.prank(address(tranche));
+        pool.deposit(type(uint128).max, liquidityProvider);
     }
 
     //this is a before each
@@ -301,7 +319,7 @@ contract LiquidatorTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                stableAddress: address(stable),
+                liquidityPool: address(pool),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -314,7 +332,7 @@ contract LiquidatorTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                stableAddress: address(stable),
+                liquidityPool: address(pool),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -385,30 +403,19 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable.setLiquidator(address(liquidator));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        factory = new Factory();
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            stakeContract,
-            address(interestRateModule),
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
+        pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable.setFactory(address(factory));
         vm.stopPrank();
 
         vm.prank(vaultOwner);
@@ -436,8 +443,8 @@ contract LiquidatorTest is Test {
         bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
         vm.store(address(factory), loc, mockedCurrentTokenId);
 
-        vm.prank(address(proxy));
-        stable.mint(tokenCreatorAddress, 100000 * 10**Constants.stableDecimals);
+        vm.prank(tokenCreatorAddress);
+        asset.mint(tokenCreatorAddress, 100000 * 10**18);
 
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
@@ -449,6 +456,9 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
+        proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
+
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
         dickButs.setApprovalForAll(address(proxy), true);
@@ -457,12 +467,11 @@ contract LiquidatorTest is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        stable.approve(address(proxy), type(uint256).max);
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.prank(auctionBuyer);
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
     }
 
     function testTransferOwnership(address to) public {
@@ -510,7 +519,7 @@ contract LiquidatorTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.startPrank(liquidatorBot);
         vm.expectRevert("This vault is healthy");
@@ -521,7 +530,7 @@ contract LiquidatorTest is Test {
     }
 
     function testStartAuction(uint128 amountEth, uint256 newPrice) public {
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -530,10 +539,10 @@ contract LiquidatorTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
         assertEq(proxy.life(), 0);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -550,7 +559,7 @@ contract LiquidatorTest is Test {
     function testShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice)
         public
     {
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -559,10 +568,10 @@ contract LiquidatorTest is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -594,7 +603,7 @@ contract LiquidatorTest is Test {
             blocksToRoll <
                 liquidator.hourlyBlocks() * liquidator.breakevenTime()
         );
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -603,10 +612,10 @@ contract LiquidatorTest is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -646,7 +655,7 @@ contract LiquidatorTest is Test {
             blocksToRoll >
                 liquidator.hourlyBlocks() * liquidator.breakevenTime()
         );
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -655,10 +664,10 @@ contract LiquidatorTest is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -670,8 +679,7 @@ contract LiquidatorTest is Test {
             address(proxy),
             0
         );
-        vm.prank(address(proxy));
-        stable.mint(auctionBuyer, priceOfVault);
+        giveAsset(auctionBuyer, priceOfVault);
 
         vm.prank(auctionBuyer);
         liquidator.buyVault(address(proxy), 0);
@@ -688,7 +696,7 @@ contract LiquidatorTest is Test {
             blocksToRoll >
                 liquidator.hourlyBlocks() * liquidator.breakevenTime()
         );
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -702,10 +710,10 @@ contract LiquidatorTest is Test {
             uint256[] memory assetTypes
         ) = depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -717,8 +725,7 @@ contract LiquidatorTest is Test {
             address(proxy),
             0
         );
-        vm.prank(address(proxy));
-        stable.mint(auctionBuyer, priceOfVault);
+        giveAsset(auctionBuyer, priceOfVault);
 
         vm.prank(auctionBuyer);
         liquidator.buyVault(address(proxy), 0);
@@ -755,8 +762,8 @@ contract LiquidatorTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        uint256 remainingCred = uint128(proxy.getRemainingCredit());
-        proxy.takeCredit(uint128(remainingCred));
+        uint256 remainingCred = uint128(proxy.getFreeMargin());
+        pool.borrow(remainingCred, address(proxy), vaultOwner);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -773,11 +780,11 @@ contract LiquidatorTest is Test {
         vm.prank(address(1110));
         factory.liquidate(address(proxy));
 
-        giveStable(address(2000), remainingCred * 2);
-        giveStable(address(1111), remainingCred * 2);
+        giveAsset(address(2000), remainingCred * 2);
+        giveAsset(address(1111), remainingCred * 2);
         (uint256 price, , ) = liquidator.getPriceOfVault(address(proxy), 0);
         vm.startPrank(address(2000));
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         liquidator.buyVault(address(proxy), 0);
         vm.stopPrank();
 
@@ -787,7 +794,7 @@ contract LiquidatorTest is Test {
         lives[0] = 0;
 
         Liquidator.auctionInformation memory auction;
-        auction.stablePaid = uint128(price);
+        auction.assetPaid = uint128(price);
         auction.openDebt = uint128(remainingCred);
         auction.originalOwner = vaultOwner;
         auction.liquidationKeeper = address(1110);
@@ -795,7 +802,7 @@ contract LiquidatorTest is Test {
 
         liquidator.claimable(auction, address(proxy), 0);
 
-        Balances memory pre = getBalances(stable, vaultOwner);
+        Balances memory pre = getBalances(asset, vaultOwner);
 
         liquidator.claimProceeds(address(1110), vaultAddresses, lives);
         liquidator.claimProceeds(address(1000), vaultAddresses, lives);
@@ -803,7 +810,7 @@ contract LiquidatorTest is Test {
 
         Rewards memory rewards = getRewards(price, remainingCred);
 
-        Balances memory post = getBalances(stable, vaultOwner);
+        Balances memory post = getBalances(asset, vaultOwner);
 
         assertEq(pre.keeper + rewards.expectedKeeperReward, post.keeper);
         assertEq(pre.protocol + rewards.expectedProtocolReward, post.protocol);
@@ -826,11 +833,11 @@ contract LiquidatorTest is Test {
         uint256 price;
         Rewards[] memory rewards = new Rewards[](amountsEth.length);
         Rewards memory rewardsSum;
-        giveStable(address(2000), type(uint256).max);
-        giveStable(address(1111), type(uint256).max);
+        giveAsset(address(2000), type(uint256).max);
+        giveAsset(address(1111), type(uint256).max);
         emit log_named_uint(
             "bal of buyer pre",
-            stable.balanceOf(address(2000))
+            asset.balanceOf(address(2000))
         );
 
         for (uint256 i; i < amountsEth.length; ++i) {
@@ -851,8 +858,8 @@ contract LiquidatorTest is Test {
             depositERC20InVault(eth, amountEth, vaultOwner);
 
             vm.startPrank(vaultOwner);
-            remainingCred = uint128(proxy.getRemainingCredit());
-            proxy.takeCredit(uint128(remainingCred));
+            remainingCred = uint128(proxy.getFreeMargin());
+            pool.borrow(remainingCred, address(proxy), vaultOwner);
             vm.stopPrank();
 
             vm.startPrank(oracleOwner);
@@ -870,10 +877,10 @@ contract LiquidatorTest is Test {
             (price, , ) = liquidator.getPriceOfVault(address(proxy), i);
 
             vm.startPrank(address(2000));
-            stable.approve(address(liquidator), type(uint256).max);
+            asset.approve(address(liquidator), type(uint256).max);
             emit log_named_uint(
                 "bal of buyer",
-                stable.balanceOf(address(2000))
+                asset.balanceOf(address(2000))
             );
             emit log_named_uint("priceToPay", price);
             liquidator.buyVault(address(proxy), i);
@@ -900,13 +907,13 @@ contract LiquidatorTest is Test {
             vm.stopPrank();
         }
 
-        Balances memory pre = getBalances(stable, vaultOwner);
+        Balances memory pre = getBalances(asset, vaultOwner);
 
         liquidator.claimProceeds(address(1110), vaultAddresses, lives);
         liquidator.claimProceeds(address(1000), vaultAddresses, lives);
         liquidator.claimProceeds(vaultOwner, vaultAddresses, lives);
 
-        Balances memory post = getBalances(stable, vaultOwner);
+        Balances memory post = getBalances(asset, vaultOwner);
 
         assertEq(pre.keeper + rewardsSum.expectedKeeperReward, post.keeper);
         assertEq(
@@ -946,12 +953,14 @@ contract LiquidatorTest is Test {
             assetAmounts,
             assetTypes
         );
+        Vault(proxy2).authorize(address(pool), true);
+        asset.approve(proxy2, type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        uint256 remainingCred = uint128(proxy.getRemainingCredit());
-        proxy.takeCredit(uint128(remainingCred));
-        Vault(proxy2).takeCredit(uint128(remainingCred));
+        uint256 remainingCred = uint128(proxy.getFreeMargin());
+        pool.borrow(remainingCred, address(proxy), vaultOwner);
+        pool.borrow(remainingCred, proxy2, vaultOwner);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -970,11 +979,11 @@ contract LiquidatorTest is Test {
         factory.liquidate(proxy2);
         vm.stopPrank();
 
-        giveStable(address(2000), remainingCred * 10);
-        giveStable(address(1111), remainingCred * 10);
+        giveAsset(address(2000), remainingCred * 10);
+        giveAsset(address(1111), remainingCred * 10);
         (uint256 price, , ) = liquidator.getPriceOfVault(address(proxy), 0);
         vm.startPrank(address(2000));
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         liquidator.buyVault(address(proxy), 0);
         liquidator.buyVault(address(proxy2), 0);
         vm.stopPrank();
@@ -986,7 +995,7 @@ contract LiquidatorTest is Test {
         lives[0] = 0;
         lives[1] = 0;
 
-        Balances memory pre = getBalances(stable, vaultOwner);
+        Balances memory pre = getBalances(asset, vaultOwner);
 
         Liquidator.auctionInformation memory auction1;
         Liquidator.auctionInformation memory auction2;
@@ -995,8 +1004,8 @@ contract LiquidatorTest is Test {
         auction2.openDebt = uint128(remainingCred);
         auction1.liquidationKeeper = address(1110);
         auction2.liquidationKeeper = address(1110);
-        auction1.stablePaid = uint128(price);
-        auction2.stablePaid = uint128(price);
+        auction1.assetPaid = uint128(price);
+        auction2.assetPaid = uint128(price);
         auction1.originalOwner = vaultOwner;
         auction2.originalOwner = vaultOwner;
 
@@ -1009,7 +1018,7 @@ contract LiquidatorTest is Test {
 
         Rewards memory rewards = getRewards(price, remainingCred);
 
-        Balances memory post = getBalances(stable, vaultOwner);
+        Balances memory post = getBalances(asset, vaultOwner);
 
         assertEq(pre.keeper + 2 * rewards.expectedKeeperReward, post.keeper);
         assertEq(
@@ -1035,8 +1044,8 @@ contract LiquidatorTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        uint256 remainingCred = uint128(proxy.getRemainingCredit());
-        proxy.takeCredit(uint128(remainingCred));
+        uint256 remainingCred = uint128(proxy.getFreeMargin());
+        pool.borrow(remainingCred, address(proxy), vaultOwner);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -1053,14 +1062,14 @@ contract LiquidatorTest is Test {
         vm.prank(address(1110));
         factory.liquidate(address(proxy));
 
-        giveStable(address(2000), remainingCred * 2);
-        giveStable(address(1111), remainingCred * 2);
+        giveAsset(address(2000), remainingCred * 2);
+        giveAsset(address(1111), remainingCred * 2);
         (uint256 price, , ) = liquidator.getPriceOfVault(
             address(proxy),
             newLife
         );
         vm.startPrank(address(2000));
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         liquidator.buyVault(address(proxy), newLife);
         vm.stopPrank();
 
@@ -1070,7 +1079,7 @@ contract LiquidatorTest is Test {
         lives[0] = newLife;
 
         Liquidator.auctionInformation memory auction;
-        auction.stablePaid = uint128(price);
+        auction.assetPaid = uint128(price);
         auction.openDebt = uint128(remainingCred);
         auction.originalOwner = vaultOwner;
         auction.liquidationKeeper = address(1110);
@@ -1078,7 +1087,7 @@ contract LiquidatorTest is Test {
 
         liquidator.claimable(auction, address(proxy), newLife);
 
-        Balances memory pre = getBalances(stable, vaultOwner);
+        Balances memory pre = getBalances(asset, vaultOwner);
 
         liquidator.claimProceeds(address(1110), vaultAddresses, lives);
         liquidator.claimProceeds(address(1000), vaultAddresses, lives);
@@ -1086,7 +1095,7 @@ contract LiquidatorTest is Test {
 
         Rewards memory rewards = getRewards(price, remainingCred);
 
-        Balances memory post = getBalances(stable, vaultOwner);
+        Balances memory post = getBalances(asset, vaultOwner);
 
         assertEq(pre.keeper + rewards.expectedKeeperReward, post.keeper);
         assertEq(pre.protocol + rewards.expectedProtocolReward, post.protocol);
@@ -1114,8 +1123,8 @@ contract LiquidatorTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        uint256 remainingCred = uint128(proxy.getRemainingCredit());
-        proxy.takeCredit(uint128(remainingCred));
+        uint256 remainingCred = uint128(proxy.getFreeMargin());
+        pool.borrow(remainingCred, address(proxy), vaultOwner);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -1132,12 +1141,12 @@ contract LiquidatorTest is Test {
         vm.prank(address(1110));
         factory.liquidate(address(proxy));
 
-        giveStable(address(2000), remainingCred * 2);
-        giveStable(address(1111), remainingCred * 2);
+        giveAsset(address(2000), remainingCred * 2);
+        giveAsset(address(1111), remainingCred * 2);
         //liquidator.getPriceOfVault(address(proxy), newLife);
         liquidator.getPriceOfVault(address(proxy), lifeToBuy);
         vm.startPrank(address(2000));
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(liquidator), type(uint256).max);
         vm.expectRevert("LQ_BV: Not for sale");
         liquidator.buyVault(address(proxy), lifeToBuy);
         vm.stopPrank();
@@ -1153,7 +1162,7 @@ contract LiquidatorTest is Test {
             blocksToRoll <
                 liquidator.hourlyBlocks() * breakevenTime
         );
-        (, uint16 collThresProxy, uint8 liqThresProxy, , , ) = proxy.debt();
+        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd *
@@ -1162,10 +1171,10 @@ contract LiquidatorTest is Test {
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
-        uint128 amountCredit = uint128(proxy.getRemainingCredit());
+        uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        proxy.takeCredit(amountCredit);
+        pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(creatorAddress);
         liquidator.setBreakevenTime(breakevenTime);
@@ -1199,15 +1208,15 @@ contract LiquidatorTest is Test {
         assertEq(vaultPriceAfter, expectedPrice);
     }
 
-    function getBalances(Stable stableAddr, address _vaultOwner)
+    function getBalances(Asset assetAddr, address _vaultOwner)
         public
         view
         returns (Balances memory)
     {
         Balances memory bal;
-        bal.keeper = stableAddr.balanceOf(address(1110));
-        bal.protocol = stableAddr.balanceOf(address(1000));
-        bal.originalOwner = stableAddr.balanceOf(_vaultOwner);
+        bal.keeper = assetAddr.balanceOf(address(1110));
+        bal.protocol = assetAddr.balanceOf(address(1000));
+        bal.originalOwner = assetAddr.balanceOf(_vaultOwner);
 
         return bal;
     }
@@ -1267,15 +1276,15 @@ contract LiquidatorTest is Test {
         vm.store(address(vaultAddr), loc, newLife_b);
     }
 
-    function giveStable(address addr, uint256 amount) public {
+    function giveAsset(address addr, uint256 amount) public {
         uint256 slot = stdstore
-            .target(address(stable))
-            .sig(stable.balanceOf.selector)
+            .target(address(asset))
+            .sig(asset.balanceOf.selector)
             .with_key(addr)
             .find();
         bytes32 loc = bytes32(slot);
         bytes32 newBalance = bytes32(abi.encode(amount));
-        vm.store(address(stable), loc, newBalance);
+        vm.store(address(asset), loc, newBalance);
     }
 
     function depositERC20InVault(

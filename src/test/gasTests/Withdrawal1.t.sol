@@ -14,18 +14,22 @@ import "../../Vault.sol";
 import "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
-import "../../Stable.sol";
 import "../../AssetRegistry/MainRegistry.sol";
 import "../../AssetRegistry/FloorERC721SubRegistry.sol";
 import "../../AssetRegistry/StandardERC20SubRegistry.sol";
 import "../../AssetRegistry/FloorERC1155SubRegistry.sol";
-import "../../InterestRateModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
 
 import "../../utils/Constants.sol";
 import "../../ArcadiaOracle.sol";
 import "../fixtures/ArcadiaOracleFixture.f.sol";
+
+import {LiquidityPool} from "../../../lib/arcadia-lending/src/LiquidityPool.sol";
+import {DebtToken} from "../../../lib/arcadia-lending/src/DebtToken.sol";
+import {Tranche} from "../../../lib/arcadia-lending/src/Tranche.sol";
+import {Asset} from "../../../lib/arcadia-lending/src/mocks/Asset.sol";
+
 
 contract gasWithdrawal1_1ERC20 is Test {
     using stdStorage for StdStorage;
@@ -57,16 +61,19 @@ contract gasWithdrawal1_1ERC20 is Test {
     StandardERC20Registry private standardERC20Registry;
     FloorERC721SubRegistry private floorERC721SubRegistry;
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
-    InterestRateModule private interestRateModule;
-    Stable private stable;
     Liquidator private liquidator;
+
+    Asset asset;
+    LiquidityPool pool;
+    Tranche tranche;
+    DebtToken debt;
 
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
     address private unprivilegedAddress = address(4);
-    address private stakeContract = address(5);
     address private vaultOwner = address(6);
+    address private liquidityProvider = address(9);
 
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
@@ -400,20 +407,6 @@ contract gasWithdrawal1_1ERC20 is Test {
         eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);
-        interestRateModule = new InterestRateModule();
-        interestRateModule.setBaseInterestRate(5 * 10**16);
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable = new Stable(
-            "Arcadia Stable Mock",
-            "masUSD",
-            uint8(Constants.stableDecimals),
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        );
-        vm.stopPrank();
 
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
@@ -434,6 +427,32 @@ contract gasWithdrawal1_1ERC20 is Test {
             oracleGenericStoreFrontToEth
         );
         oracleGenericStoreFrontToEthEthToUsd[1] = address(oracleEthToUsd);
+
+        vm.prank(creatorAddress);
+        factory = new Factory();
+
+        vm.startPrank(tokenCreatorAddress);
+        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
+        asset.mint(liquidityProvider, type(uint128).max);
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);
+        pool = new LiquidityPool(asset, creatorAddress, address(factory));
+        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
+
+        debt = new DebtToken(pool);
+        pool.setDebtToken(address(debt));
+
+        tranche = new Tranche(pool, "Senior", "SR");
+        pool.addTranche(address(tranche), 50);
+        vm.stopPrank();
+
+        vm.prank(liquidityProvider);
+        asset.approve(address(pool), type(uint256).max);
+
+
+        vm.prank(address(tranche));
+        pool.deposit(type(uint128).max, liquidityProvider);
     }
 
     //this is a before each
@@ -444,7 +463,7 @@ contract gasWithdrawal1_1ERC20 is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                stableAddress: address(stable),
+                liquidityPool: address(pool),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -457,7 +476,7 @@ contract gasWithdrawal1_1ERC20 is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                stableAddress: address(stable),
+                liquidityPool: address(pool),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -553,27 +572,19 @@ contract gasWithdrawal1_1ERC20 is Test {
 
         vm.startPrank(vaultOwner);
         vault = new Vault();
-        stable.transfer(address(0), stable.balanceOf(vaultOwner));
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        factory = new Factory();
         factory.setNewVaultInfo(
             address(mainRegistry),
             address(vault),
-            stakeContract,
-            address(interestRateModule),
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
         factory.setLiquidator(address(liquidator));
+        pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        stable.setLiquidator(address(liquidator));
-        stable.setFactory(address(factory));
         vm.stopPrank();
 
         vm.prank(vaultOwner);
@@ -607,6 +618,9 @@ contract gasWithdrawal1_1ERC20 is Test {
         eth.mint(vaultOwner, 1e18);
 
         vm.startPrank(vaultOwner);
+        proxy.authorize(address(pool), true);
+        asset.approve(address(proxy), type(uint256).max);
+
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
         dickButs.setApprovalForAll(address(proxy), true);
@@ -616,8 +630,7 @@ contract gasWithdrawal1_1ERC20 is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        stable.approve(address(proxy), type(uint256).max);
-        stable.approve(address(liquidator), type(uint256).max);
+        asset.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
@@ -647,13 +660,13 @@ contract gasWithdrawal1_1ERC20 is Test {
         proxy.getValue(uint8(Constants.UsdBaseCurrency));
     }
 
-    function testGetRemainingValue_1_ERC20() public view {
-        proxy.getRemainingCredit();
+    function testGetRemainingValue_1_ERC20() public {
+        proxy.getFreeMargin();
     }
 
-    function testTakeCredit() public {
+    function testBorrow() public {
         vm.prank(vaultOwner);
-        proxy.takeCredit(1);
+        pool.borrow(1 , address(proxy), vaultOwner);
     }
 
     function testGenerateAssetData() public view {

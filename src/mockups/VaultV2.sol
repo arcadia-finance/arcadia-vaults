@@ -10,10 +10,11 @@ import "../utils/LogExpMath.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IERC721.sol";
 import "../interfaces/IERC1155.sol";
+import "../interfaces/IERC4626.sol";
 import "../interfaces/ILiquidator.sol";
 import "../interfaces/IRegistry.sol";
-import "../interfaces/IRM.sol";
 import "../interfaces/IMainRegistry.sol";
+import "../interfaces/ILiquidityPool.sol";
 
 /** 
   * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -54,11 +55,8 @@ contract VaultV2 {
                           EXTERNAL CONTRACTS
   ///////////////////////////////////////////////////////////////*/
     address public _registryAddress; /// to be fetched somewhere else?
-    address public _stable;
-    address public _stakeContract;
-    address public _irmAddress;
-
-
+    address public _liquidityPool;
+    address public _debtToken;
 
     // ACCESS CONTROL
     address public owner;
@@ -72,16 +70,13 @@ contract VaultV2 {
     bool public initialized;
     uint16 public vaultVersion;
 
-    struct debtInfo {
-        uint128 _openDebt;
+    struct VaultInfo {
         uint16 _collThres; //2 decimals precision (factor 100)
         uint8 _liqThres; //2 decimals precision (factor 100)
-        uint64 _yearlyInterestRate; //18 decimals precision (factor 10**18)
-        uint32 _lastBlock;
         uint8 _baseCurrency;
     }
 
-    debtInfo public debt;
+    VaultInfo public vault;
 
     struct AddressSlot {
         address value;
@@ -190,28 +185,23 @@ contract VaultV2 {
          Costly function (156k gas)
     @param _owner The tx.origin: the sender of the 'createVault' on the factory
     @param registryAddress The 'beacon' contract to which should be looked at for external logic.
-    @param stakeContract The stake contract in which stablecoin can be staked. 
-                         Used when syncing debt: interest in stable is minted to stakecontract.
-    @param irmAddress The contract address of the InterestRateModule, which calculates the interest rate
-                      for a credit line, based on the underlying assets.
+    @param _vaultVersion The version of the vault logic.
   */
     function initialize(
         address _owner,
         address registryAddress,
-        address stakeContract,
-        address irmAddress,
         uint16 _vaultVersion
     ) external payable {
         require(vaultVersion == 0, "V_I: Already initialized!");
         require(_vaultVersion != 0, "V_I: Invalid vault version");
         _registryAddress = registryAddress;
         owner = _owner;
-        debt._collThres = 150;
-        debt._liqThres = 110;
-        _stakeContract = stakeContract;
-        _irmAddress = irmAddress;
-        (,,,,_stable,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
+        vault._collThres = 150;
+        vault._liqThres = 110;
+        (,,,,_liquidityPool,) = IMainRegistry(registryAddress).baseCurrencyToInformation(0);
         vaultVersion = _vaultVersion;
+        _debtToken = ILiquidityPool(_liquidityPool).debtToken();
+        IERC20(IERC4626(_liquidityPool).asset()).approve(_liquidityPool, type(uint256).max);
     }
 
     /** 
@@ -439,29 +429,9 @@ contract VaultV2 {
             }
         }
 
-        uint256 openDebt = getOpenDebt();
-        if (openDebt != 0) {
-            (
-                address[] memory _assetAddresses,
-                uint256[] memory _assetIds,
-                uint256[] memory _assetAmounts
-            ) = generateAssetData();
-            uint256[] memory valuesPerCreditRating = IRegistry(_registryAddress)
-                .getListOfValuesPerCreditRating(
-                    _assetAddresses,
-                    _assetIds,
-                    _assetAmounts,
-                    debt._baseCurrency
-                );
-            uint256 vaultValue = sumElementsOfList(valuesPerCreditRating);
-            uint256 minCollValue;
-            //gas: can't overflow: uint129 * uint16 << uint256
-            unchecked {
-                minCollValue = uint256(openDebt * debt._collThres) / 100;
-            }
-            require(vaultValue > minCollValue, "V_W: coll. value too low!");
-
-            _setYearlyInterestRate(valuesPerCreditRating, minCollValue);
+        uint256 usedMargin = getUsedMargin();
+        if (usedMargin != 0) {
+            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }
 
@@ -718,8 +688,6 @@ contract VaultV2 {
     @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
   */
     function setBaseCurrency(uint256 newBaseCurrency) public onlyAuthorized {
-        require(getOpenDebt() == 0, "VL: Can't change baseCurrency when openDebt > 0");
-        require(newBaseCurrency + 1 <= IMainRegistry(_registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
         _setBaseCurrency(newBaseCurrency);
     }
 
@@ -730,68 +698,9 @@ contract VaultV2 {
     function _setBaseCurrency(
         uint256 newBaseCurrency
     ) private {
-        debt._baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
-    }
-
-    /** 
-    @notice Sets the yearly interest rate of the proxy vault, in the form of a 1e18 decimal number.
-    @dev First syncs all debt to realise all unrealised debt. Fetches all the asset data and queries the
-         Registry to obtain an array of values, split up according to the credit rating of the underlying assets.
-  */
-    function setYearlyInterestRate() public onlyOwner {
-        syncDebt();
-        uint256 minCollValue;
-        //gas: can't overflow: uint128 * uint16 << uint256
-        unchecked {
-            minCollValue = (uint256(debt._openDebt) * debt._collThres) / 100;
-        }
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts
-        ) = generateAssetData();
-        uint256[] memory ValuesPerCreditRating = IRegistry(_registryAddress)
-            .getListOfValuesPerCreditRating(
-                assetAddresses,
-                assetIds,
-                assetAmounts,
-                debt._baseCurrency
-            );
-
-        _setYearlyInterestRate(ValuesPerCreditRating, minCollValue);
-    }
-
-    /** 
-    @notice Internal function: sets the yearly interest rate (with 18 decimals precision).
-    @param valuesPerCreditRating An array of values, split per credit rating.
-    @param minCollValue The minimum collateral value based on the amount of open debt on the proxy vault.
-  */
-    function _setYearlyInterestRate(
-        uint256[] memory valuesPerCreditRating,
-        uint256 minCollValue
-    ) private {
-        debt._yearlyInterestRate = calculateYearlyInterestRate(
-            valuesPerCreditRating,
-            minCollValue
-        );
-    }
-
-    /** 
-    @notice Calculates the yearly interest (with 18 decimals precision).
-    @dev Based on an array with values per credit rating (tranches) and the minimum collateral value needed for the debt taken,
-         returns the yearly interest rate in a 1e18 decimal number.
-    @param valuesPerCreditRating An array of values, split per credit rating.
-    @param minCollValue The minimum collateral value based on the amount of open debt on the proxy vault.
-    @return yearlyInterestRate The yearly interest rate in a 1e18 decimal number.
-  */
-    function calculateYearlyInterestRate(
-        uint256[] memory valuesPerCreditRating,
-        uint256 minCollValue
-    ) public view returns (uint64 yearlyInterestRate) {
-        yearlyInterestRate = IRM(_irmAddress).getYearlyInterestRate(
-            valuesPerCreditRating,
-            minCollValue
-        );
+        require(getUsedMargin() == 0, "VL: Can't change baseCurrency when openDebt > 0");
+        require(newBaseCurrency + 1 <= IMainRegistry(_registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
+        vault._baseCurrency = uint8(newBaseCurrency); //Change this to where ever it is going to be actually set
     }
 
     // https://twitter.com/0x_beans/status/1502420621250105346
@@ -820,212 +729,104 @@ contract VaultV2 {
         }
     }
 
-    /** 
-    @notice Syncs all unrealised debt (= interest) on the proxy vault.
-    @dev Public function, can be called by any user to keep the game fair and to allow keeps to
-         sync the debt before in case a liquidation can be triggered.
-         To Find the unrealised debt over an amount of time, you need to calculate D[(1+r)^x-1].
-         The base of the exponential: 1 + r, is a 18 decimals fixed point number
-         with r the yearly interest rate.
-         The exponent of the exponential: x, is a 18 decimals fixed point number.
-         The exponent x is calculated as: the amount of blocks since last sync divided by the average of 
-         blocks produced over a year (using a 12s average block time).
-         Any debt being realised will be accompanied by a mint of stablecoin of equal amounts.
-         Bookkeeping requires total open (realised) debt of the system = totalsupply of stablecoin.
-         _yearlyInterestRate = 1 + r expressed as 18 decimals fixed point number
-  */
-    function syncDebt() public {
-        uint128 base;
-        uint128 exponent;
-        uint128 unRealisedDebt;
+    /*///////////////////////////////////////////////////////////////
+                          MARGIN REQUIREMENTS
+    ///////////////////////////////////////////////////////////////*/
 
-        unchecked {
-            //gas: can't overflow: 1e18 + uint64 <<< uint128
-            base = uint128(1e18) + debt._yearlyInterestRate;
-
-            //gas: only overflows when blocks.number > 894262060268226281981748468
-            //in practice: assumption that delta of blocks < 341640000 (150 years)
-            //as foreseen in LogExpMath lib
-            exponent = uint128(
-                ((block.number - debt._lastBlock) * 1e18) / yearlyBlocks
-            );
-
-            //gas: taking an imaginary worst-case D- tier assets with max interest of 1000%
-            //over a period of 5 years
-            //this won't overflow as long as opendebt < 3402823669209384912995114146594816
-            //which is 3.4 million billion *10**18 decimals
-
-            unRealisedDebt = uint128(
-                (debt._openDebt * (LogExpMath.pow(base, exponent) - 1e18)) /
-                    1e18
-            );
-        }
-
-        //gas: could go unchecked as well, but might result in opendebt = 0 on overflow
-        debt._openDebt += unRealisedDebt;
-        debt._lastBlock = uint32(block.number);
-
-        if (unRealisedDebt > 0) {
-            IERC20(_stable).mint(_stakeContract, unRealisedDebt);
-        }
-    }
-
-    /** 
-    @notice Can be called by the proxy vault owner to take out (additional) credit against
-            his assets stored on the proxy vault.
-    @dev amount to be provided in stablecoin decimals. 
-    @param amount The amount of credit to take out, in the form of a pegged stablecoin with 18 decimals.
-  */
-    function takeCredit(uint128 amount) public onlyOwner {
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts
-        ) = generateAssetData();
-        _takeCredit(amount, assetAddresses, assetIds, assetAmounts);
-    }
-
-    /** 
-    @notice Internal function to take out credit.
-    @dev Syncs debt to cement unrealised debt. 
-         MinCollValue is calculated without unrealised debt since it is zero.
-         Gets the total value of assets per credit rating.
-         Calculates and sets the yearly interest rate based on the values per credit rating and the debt to be taken out.
-         Mints stablecoin to the vault owner.
-  */
-    function _takeCredit(
-        uint128 amount,
-        address[] memory _assetAddresses,
-        uint256[] memory _assetIds,
-        uint256[] memory _assetAmounts
-    ) private {
-        syncDebt();
-
-        uint256 minCollValue;
-        //gas: can't overflow: uint129 * uint16 << uint256
-        unchecked {
-            minCollValue =
-                uint256((uint256(debt._openDebt) + amount) * debt._collThres) /
-                100;
-        }
-
-        uint256[] memory valuesPerCreditRating = IRegistry(_registryAddress)
-            .getListOfValuesPerCreditRating(
-                _assetAddresses,
-                _assetIds,
-                _assetAmounts,
-                debt._baseCurrency
-            );
-        uint256 vaultValue = sumElementsOfList(valuesPerCreditRating);
-
-        require(
-            vaultValue >= minCollValue,
-            "Cannot take this amount of extra credit!"
-        );
-
-        _setYearlyInterestRate(valuesPerCreditRating, minCollValue);
-
-        //gas: can only overflow when total opendebt is
-        //above 340 billion billion *10**18 decimals
-        //could go unchecked as well, but might result in opendebt = 0 on overflow
-        debt._openDebt += amount;
-        IERC20(_stable).mint(owner, amount);
-    }
-
-    /** 
-    @notice Calculates the total open debt on the proxy vault, including unrealised debt.
-    @dev Debt is expressed in an uint128 as the stored debt is an uint128 as well.
-         _yearlyInterestRate = 1 + r expressed as 18 decimals fixed point number
-    @return openDebt Total open debt, as a uint128.
-  */
-    function getOpenDebt() public view returns (uint128 openDebt) {
-        uint128 base;
-        uint128 exponent;
-        unchecked {
-            //gas: can't overflow as long as interest remains < 1744%/yr
-            base = uint128(1e18) + debt._yearlyInterestRate;
-
-            //gas: only overflows when blocks.number > ~10**20
-            exponent = uint128(
-                ((block.number - debt._lastBlock) * 1e18) / yearlyBlocks
-            );
-        }
-
-        //with sensible blocks, can return an open debt up to 3e38 units
-        //gas: could go unchecked as well, but might result in opendebt = 0 on overflow
-        openDebt = uint128(
-            (debt._openDebt * LogExpMath.pow(base, exponent)) / 1e18
-        );
-    }
-
-    /** 
-    @notice Calculates the remaining credit the owner of the proxy vault can take out.
-    @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
-    @return remainingCredit The remaining amount of credit a user can take, 
-                            returned in the decimals of the stablecoin.
-  */
-    function getRemainingCredit()
+    function getCollateralValue()
         public
         view
-        returns (uint256 remainingCredit)
+        returns (uint256 collateralValue)
     {
-        uint256 currentValue = getValue(debt._baseCurrency);
-        uint256 openDebt = getOpenDebt();
-
-        uint256 maxAllowedCredit;
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
         unchecked {
-            maxAllowedCredit = (currentValue * 100) / debt._collThres;
+            collateralValue = getValue(vault._baseCurrency) * 100 / vault._collThres;
         }
+    }
+
+    function getCollateralValue(uint256 vaultValue)
+        public
+        view
+        returns (uint256 collateralValue)
+    {
+        //gas: cannot overflow unless currentValue is more than
+        // 1.15**57 *10**18 decimals, which is too many billions to write out
+        unchecked {
+            collateralValue = vaultValue * 100 / vault._collThres;
+        }
+    }
+
+    function getUsedMargin() public returns (uint128 usedMargin) {
+        ILiquidityPool(_liquidityPool).syncInterests();
+        usedMargin = uint128(IERC4626(_debtToken).maxWithdraw(address(this))); // ToDo: Check if cast is safe
+    }
+
+    /** 
+    @notice Calculates the remaining margin the owner of the proxy vault can use.
+    @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
+    @return freeMargin The remaining amount of margin a user can take, 
+                            returned in the decimals of the base currency.
+  */
+    function getFreeMargin()
+        public
+        returns (uint256 freeMargin)
+    {
+        uint256 collateralValue = getCollateralValue();
+        uint256 usedMargin = getUsedMargin();
 
         //gas: explicit check is done to prevent underflow
         unchecked {
-            remainingCredit = maxAllowedCredit > openDebt
-                ? maxAllowedCredit - openDebt
+            freeMargin = collateralValue > usedMargin
+                ? collateralValue - usedMargin
                 : 0;
         }
     }
 
     /** 
-    @notice Function used by owner of the proxy vault to repay any open debt.
-    @dev Amount of debt to repay in same decimals as the stablecoin decimals.
-         Amount given can be greater than open debt. Will only transfer the required
-         amount from the user's balance.
-    @param amount Amount of debt to repay.
+    @notice Calculates the remaining margin the owner of the proxy vault can use.
+    @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
+    @return freeMargin The remaining amount of margin a user can take, 
+                            returned in the decimals of the base currency.
   */
-    function repayDebt(uint256 amount) public onlyOwner {
-        syncDebt();
+    function getFreeMargin(uint256 vaultValue)
+        public
+        returns (uint256 freeMargin)
+    {
+        uint256 collateralValue = getCollateralValue(vaultValue);
+        uint256 usedMargin = getUsedMargin();
 
-        // if a user wants to pay more than their open debt
-        // we should only take the amount that's needed
-        // prevents refunds etc
-        uint256 openDebt = debt._openDebt;
-        uint256 transferAmount = openDebt > amount ? amount : openDebt;
-        require(
-            IERC20(_stable).transferFrom(
-                msg.sender,
-                address(this),
-                transferAmount
-            ),
-            "Transfer from failed"
-        );
-
-        IERC20(_stable).burn(transferAmount);
-
-        //gas: transferAmount cannot be larger than debt._openDebt,
-        //which is a uint128, thus can't underflow
-        assert(openDebt >= transferAmount);
+        //gas: explicit check is done to prevent underflow
         unchecked {
-            debt._openDebt -= uint128(transferAmount);
-        }
-
-        // if interest is calculated on a fixed rate, set interest to zero if opendebt is zero
-        // todo: can be removed safely?
-        if (debt._openDebt == 0) {
-            debt._yearlyInterestRate = 0;
+            freeMargin = collateralValue > usedMargin
+                ? collateralValue - usedMargin
+                : 0;
         }
     }
+
+    /** 
+    @notice Can be called by authorised applications to open or increase a margin position.
+    @param baseCurrency The Base-currency in which the margin position is denominated
+    @param amount The amount the position is increased.
+    @return success boolean indicating if there is sufficient free margin to increase the margin position
+    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency. 
+    */
+    function increaseMarginPosition(uint256 baseCurrency, uint256 amount) public onlyAuthorized returns (bool success) {
+        if (baseCurrency != vault._baseCurrency) _setBaseCurrency(baseCurrency);
+        success = getFreeMargin() >= amount;
+    }
+
+    /** 
+    @notice Can be called by authorised applications to close or decrease a margin position.
+    @dev All values expressed in the base currency of the vault with same number of decimals as the base currency. 
+     */
+    function decreaseMarginPosition(uint256 baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
+        success = baseCurrency == vault._baseCurrency;
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                          LIQUIDATION LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /** 
     @notice Function called to start a vault liquidation.
@@ -1041,7 +842,8 @@ contract VaultV2 {
         returns (bool success)
     {
         //gas: 35 gas cheaper to not take debt into memory
-        uint256 totalValue = getValue(debt._baseCurrency);
+        uint256 totalValue = getValue(vault._baseCurrency);
+        uint128 openDebt = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
 
@@ -1050,7 +852,7 @@ contract VaultV2 {
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
             //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = uint256(debt._liqThres) * uint256(debt._openDebt); //yes, double cast is cheaper than no cast (and equal to one cast)
+            rightHand = uint256(vault._liqThres) * uint256(openDebt);
         }
 
         require(leftHand < rightHand, "This vault is healthy");
@@ -1061,9 +863,9 @@ contract VaultV2 {
                 life,
                 liquidationKeeper,
                 owner,
-                debt._openDebt,
-                debt._liqThres,
-                debt._baseCurrency
+                openDebt,
+                vault._liqThres,
+                vault._baseCurrency
             ),
             "Failed to start auction!"
         );
@@ -1072,9 +874,6 @@ contract VaultV2 {
         unchecked {
             ++life;
         }
-
-        debt._openDebt = 0;
-        debt._lastBlock = 0;
 
         return true;
     }
@@ -1116,6 +915,7 @@ contract VaultV2 {
             _erc1155Stored.length
         );
     }
+
     function returnFive() external pure returns (uint256) {
         return 5;
     }
