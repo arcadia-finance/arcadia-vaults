@@ -686,7 +686,7 @@ contract Vault {
     @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
     @dev Currently only one trusted protocol can be set.
     */
-    function openTrustedMarginAccount(address protocol) public {
+    function openTrustedMarginAccount(address protocol) onlyOwner public {
         require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
