@@ -392,69 +392,6 @@ contract factoryTest is Test {
         return this.onERC1155Received.selector;
     }
 
-    //Test addBaseCurrency
-    function testNonRegistryAddsBaseCurrency(address unprivilegedAddress) public {
-        vm.assume(unprivilegedAddress != address(registryContr));
-        vm.assume(unprivilegedAddress != address(this));
-        vm.assume(unprivilegedAddress != address(factoryContr));
-        vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("FTRY_AN: Add BaseCurrencies via MR");
-        factoryContr.addBaseCurrency(2, address(pool));
-        vm.stopPrank();
-    }
-
-    function testOldRegistryAddsBaseCurrency() public {
-        registryContr2 = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
-            })
-        );
-        factoryContr.setNewVaultInfo(
-            address(registryContr2),
-            address(vaultContr),
-            Constants.upgradeProof1To2
-        );
-        factoryContr.confirmNewVaultInfo();
-        registryContr2.setFactory(address(factoryContr));
-
-        vm.expectRevert("FTRY_AN: Add BaseCurrencies via MR");
-        registryContr.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
-            }),
-            emptyList
-        );
-    }
-
-    function testLatestRegistryAddsBaseCurrency(address newPool) public {
-        assertEq(address(pool), factoryContr.baseCurrencyToLendingPool(0));
-        assertEq(address(0), factoryContr.baseCurrencyToLendingPool(1));
-        registryContr.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: newPool,
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
-            }),
-            emptyList
-        );
-
-        assertEq(address(pool), factoryContr.baseCurrencyToLendingPool(0));
-        assertEq(newPool, factoryContr.baseCurrencyToLendingPool(1));
-    }
-
     //Test setNewVaultInfo
     function testNonOwnerSetsNewVaultInfo(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != address(this));
@@ -646,9 +583,6 @@ contract factoryTest is Test {
         address logic
     ) public {
         vm.assume(logic != address(0));
-
-        assertEq(address(pool), factoryContr.baseCurrencyToLendingPool(0));
-        assertEq(address(0), factoryContr.baseCurrencyToLendingPool(1));
 
         registryContr2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({

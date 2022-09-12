@@ -37,9 +37,6 @@ contract Factory is ERC721, Ownable {
 
     address public liquidatorAddress;
 
-    uint256 public baseCurrencyCounter;
-    mapping(uint256 => address) public baseCurrencyToLendingPool;
-
     event VaultCreated(
         address indexed vaultAddress,
         address indexed owner,
@@ -152,23 +149,6 @@ contract Factory is ERC721, Ownable {
                     ++i;
                 }
             }
-        }
-    }
-
-    /** 
-  @notice Function adds baseCurrency and corresponding Liquidity Pool contract to the factory
-  @dev BaseCurrencies can only be added by the latest Main Registry
-  @param baseCurrency An identifier (uint256) of the BaseCurrency
-  @param lendingPool The contract address of the corresponding Liquidity Pool
-  */
-    function addBaseCurrency(uint256 baseCurrency, address lendingPool) external {
-        require(
-            vaultDetails[latestVaultVersion].registryAddress == msg.sender,
-            "FTRY_AN: Add BaseCurrencies via MR"
-        );
-        baseCurrencyToLendingPool[baseCurrency] = lendingPool;
-        unchecked {
-            ++baseCurrencyCounter;
         }
     }
 

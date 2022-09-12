@@ -22,5 +22,8 @@ interface IVault {
         returns (bool);
 
     function upgradeVault(address, uint16) external;
+
     function vaultVersion() external view returns (uint8);
+
+    function trustedProtocol() external view returns (address);
 }

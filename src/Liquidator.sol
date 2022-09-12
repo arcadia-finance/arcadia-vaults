@@ -131,7 +131,7 @@ contract Liquidator is Ownable {
             "Liquidation already ongoing"
         );
 
-        ILendingPool(IFactory(factoryAddress).baseCurrencyToLendingPool(uint256(baseCurrency))).liquidateVault(vaultAddress, openDebt);
+        ILendingPool(IVault(vaultAddress).trustedProtocol()).liquidateVault(vaultAddress, openDebt);
 
         auctionInfo[vaultAddress][life].startBlock = uint128(block.number);
         auctionInfo[vaultAddress][life].liquidationKeeper = liquidationKeeper;
@@ -230,14 +230,14 @@ contract Liquidator is Ownable {
     @param life the life of the vault for which the price has to be fetched.
   */
     function buyVault(address vaultAddress, uint256 life) public {
-        (uint256 priceOfVault, uint8 baseCurrency, bool forSale) = getPriceOfVault(
+        (uint256 priceOfVault, , bool forSale) = getPriceOfVault(
             vaultAddress,
             life
         );
 
         require(forSale, "LQ_BV: Not for sale");
 
-        address lendingPool = IFactory(factoryAddress).baseCurrencyToLendingPool(uint256(baseCurrency));
+        address lendingPool = IVault(vaultAddress).trustedProtocol();
         address asset = ILendingPool(lendingPool).asset();
 
         require(
@@ -353,7 +353,7 @@ contract Liquidator is Ownable {
     ) public {
         uint256 len = vaultAddresses.length;
         require(len == lives.length, "Arrays must be of same length");
-        uint256 baseCurrencyCounter = IFactory(factoryAddress).baseCurrencyCounter();
+        uint256 baseCurrencyCounter = IMainRegistry(registryAddress).baseCurrencyCounter();
 
         uint256[] memory totalClaimable = new uint256[](baseCurrencyCounter);
         uint256 claimableBitmapMem;
@@ -397,7 +397,7 @@ contract Liquidator is Ownable {
     ) internal {
         for (uint8 k; k < baseCurrencyCounter; ) {
             if (totalClaimable[k] > 0) {
-                address asset = ILendingPool(IFactory(factoryAddress).baseCurrencyToLendingPool(uint256(k))).asset();
+                address asset = IMainRegistry(registryAddress).baseCurrencies(uint256(k));
                 require(
                     IERC20(asset).transfer(
                         claimer,

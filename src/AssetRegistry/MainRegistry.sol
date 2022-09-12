@@ -81,31 +81,11 @@ contract MainRegistry is Ownable {
     }
 
     /**
-     * @notice Sets the new Factory address
-     * @dev The factory can only be set on the Main Registry AFTER the Main registry is set in the Factory.
-     *      This ensures that the allowed BaseCurrencies and corresponding liquidity pool contracts in both contract are equal.
+     * @notice Sets the Factory address
      * @param _factoryAddress The address of the Factory
      */
     function setFactory(address _factoryAddress) external onlyOwner {
-        require(
-            IFactory(_factoryAddress).getCurrentRegistry() == address(this),
-            "MR_AA: MR not set in factory"
-        );
         factoryAddress = _factoryAddress;
-
-        uint256 factoryBaseCurrencyCounter = IFactory(_factoryAddress)
-            .baseCurrencyCounter();
-        if (baseCurrencyCounter > factoryBaseCurrencyCounter) {
-            for (uint256 i = factoryBaseCurrencyCounter; i < baseCurrencyCounter; ) {
-                IFactory(factoryAddress).addBaseCurrency(
-                    i,
-                    baseCurrencyToInformation[i].lendingPool
-                );
-                unchecked {
-                    ++i;
-                }
-            }
-        }
     }
 
     /**
@@ -330,12 +310,6 @@ contract MainRegistry is Ownable {
             }
         }
 
-        if (factoryAddress != address(0)) {
-            IFactory(factoryAddress).addBaseCurrency(
-                baseCurrencyCounter,
-                baseCurrencyInformation.lendingPool
-            );
-        }
         unchecked {
             ++baseCurrencyCounter;
         }

@@ -2645,27 +2645,6 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testMainRegistryNotSetInFactory() public {
-        vm.startPrank(creatorAddress);
-        factory = new Factory();
-        vm.expectRevert("MR_AA: MR not set in factory");
-        mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-    }
-
-    function testMainRegistryNotConfirmedInFactory() public {
-        vm.startPrank(creatorAddress);
-        factory = new Factory();
-        factory.setNewVaultInfo(
-            address(mainRegistry),
-            0x0000000000000000000000000000001234567890,
-            Constants.upgradeProof1To2
-        );
-        vm.expectRevert("MR_AA: MR not set in factory");
-        mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-    }
-
     function testOwnerSetsFactoryWithMultipleBaseCurrencies() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
