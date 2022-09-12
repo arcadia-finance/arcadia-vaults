@@ -39,6 +39,7 @@ contract MainRegistry is Ownable {
     mapping(address => mapping(uint256 => uint256))
         public assetToBaseCurrencyToCreditRating;
     mapping(address => uint256) public assetToBaseCurrency;
+    mapping(address => bool) public isBaseCurrency;
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
@@ -305,6 +306,7 @@ contract MainRegistry is Ownable {
     ) external onlyOwner {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
+        isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
 
         uint256 assetCreditRatingsLength = assetCreditRatings.length;
         require(

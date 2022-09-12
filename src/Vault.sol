@@ -669,7 +669,7 @@ contract Vault {
         address _baseCurrency
     ) private {
         require(getUsedMargin() == 0, "VL: Can't change baseCurrency when Used Margin > 0");
-        //require(_baseCurrency + 1 <= IMainRegistry(registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
+        require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL: baseCurrency not found");
         vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
     }
 

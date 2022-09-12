@@ -38,4 +38,6 @@ interface IMainRegistry {
     ) external view returns (bool);
 
     function assetToSubRegistry(address) external view returns (address);
+
+    function isBaseCurrency(address) external view returns (bool);
 }
