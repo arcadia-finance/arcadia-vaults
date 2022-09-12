@@ -136,15 +136,16 @@ contract Factory is ERC721, Ownable {
 
         //If there is a new Main Registry Contract, Check that baseCurrencies in factory and main registry match
         if (
-            vaultDetails[latestVaultVersion].registryAddress != registryAddress
+            vaultDetails[latestVaultVersion].registryAddress != registryAddress &&
+            latestVaultVersion != 0
         ) {
-            address lendingPool;
-            for (uint256 i; i < baseCurrencyCounter; ) {
-                (, , , , lendingPool, ) = IMainRegistry(
-                    registryAddress
-                ).baseCurrencyToInformation(i);
+            address oldRegistry = vaultDetails[latestVaultVersion].registryAddress;
+            uint256 oldCounter = IMainRegistry(oldRegistry).baseCurrencyCounter();
+            uint256 newCounter = IMainRegistry(registryAddress).baseCurrencyCounter();
+            require(oldCounter <= newCounter, "FTRY_SNVI:No match baseCurrencies MR");
+            for (uint256 i; i < oldCounter; ) {
                 require(
-                    lendingPool == baseCurrencyToLendingPool[i],
+                    IMainRegistry(oldRegistry).baseCurrencies(i) == IMainRegistry(registryAddress).baseCurrencies(i),
                     "FTRY_SNVI:No match baseCurrencies MR"
                 );
                 unchecked {
