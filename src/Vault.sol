@@ -58,6 +58,8 @@ contract Vault {
     address public _liquidityPool;
     address public _debtToken;
 
+    address public liquidatorAddress;
+
     // ACCESS CONTROL
     address public owner;
     mapping(address => bool) public allowed;
@@ -154,6 +156,16 @@ contract Vault {
     function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
         vaultVersion = newVersion;
         getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
+    }
+
+    /** 
+    @notice Function to set a new contract for the liquidation logic
+    @dev Since vaults to be liquidated, together with the open debt, are transferred to the protocol,
+         New logic can be set without needing to increment the vault version.
+    @param _newLiquidator The new liquidator contract
+  */
+    function setLiquidator(address _newLiquidator) public onlyOwner {
+        liquidatorAddress = _newLiquidator;
     }
 
     /**
@@ -865,10 +877,10 @@ contract Vault {
     @param liquidator Contract Address of the liquidation logic.
     @return success Boolean returning if the liquidation process is successfully started.
   */
-    function liquidateVault(address liquidationKeeper, address liquidator)
+    function liquidateVault(address liquidationKeeper)
         public
         onlyFactory
-        returns (bool success)
+        returns (bool success, address liquidator)
     {
         //gas: 35 gas cheaper to not take debt into memory
         uint256 totalValue = getValue(vault._baseCurrency);
@@ -904,7 +916,7 @@ contract Vault {
             ++life;
         }
 
-        return true;
+        return (true, liquidatorAddress);
     }
 
     function onERC721Received(

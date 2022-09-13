@@ -17,9 +17,9 @@ interface IVault {
         uint16 latestVaultVersion
     ) external;
 
-    function liquidateVault(address liquidationKeeper, address liquidator)
+    function liquidateVault(address liquidationKeeper)
         external
-        returns (bool);
+        returns (bool, address);
 
     function upgradeVault(address, uint16) external;
     function vaultVersion() external view returns (uint8);

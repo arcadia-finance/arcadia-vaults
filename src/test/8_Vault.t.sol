@@ -1866,7 +1866,7 @@ contract vaultTests is Test {
         assertEq(vault_m.owner(), vaultOwner);
 
         vm.expectRevert("VL: You are not the factory");
-        vault_m.liquidateVault(liquidationKeeper, address(liquidator));
+        vault_m.liquidateVault(liquidationKeeper);
 
        assertEq(vault_m.owner(), vaultOwner);
        
