@@ -693,7 +693,7 @@ contract Vault {
         (bool success, address baseCurrency, address liquidator_) = ITrustedProtocol(protocol).openMarginAccount();
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
-        liquidator = liquidator_;
+        liquidatorAddress = liquidator_;
         trustedProtocol = protocol;
         if (vault.baseCurrency != baseCurrency) _setBaseCurrency(baseCurrency);
         IERC20(baseCurrency).approve(protocol, type(uint256).max);
@@ -889,7 +889,6 @@ contract Vault {
          Sets debtInfo todo: needed?
          Transfers ownership of the proxy vault to the liquidator!
     @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
-    @param _liquidator Contract Address of the liquidation logic.
     @return success Boolean returning if the liquidation process is successfully started.
   */
 

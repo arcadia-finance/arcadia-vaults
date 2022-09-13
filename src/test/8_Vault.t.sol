@@ -1733,7 +1733,7 @@ contract vaultTests is Test {
         vm.store(address(debt), loc, addDebt);
 
         vm.startPrank(vaultOwner);
-        vault.setLiquidator(address(vault));
+        vault.setLiquidator(address(liquidator));
         vm.stopPrank();
 
         vm.startPrank(liquidationKeeper);
