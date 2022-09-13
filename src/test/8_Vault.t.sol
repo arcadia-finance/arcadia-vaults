@@ -1832,6 +1832,10 @@ contract vaultTests is Test {
         loc = bytes32(slot);
         vm.store(address(debt), loc, addDebt);
 
+        vm.startPrank(vaultOwner);
+        vault.setLiquidator(address(vault));
+        vm.stopPrank();
+
         vm.startPrank(liquidationKeeper);
         factoryContr.liquidate(address(vault));
         vm.stopPrank();

@@ -899,7 +899,7 @@ contract Vault {
         require(leftHand < rightHand, "This vault is healthy");
 
         require(
-            ILiquidator(liquidator).startAuction(
+            ILiquidator(liquidatorAddress).startAuction(
                 address(this),
                 life,
                 liquidationKeeper,
