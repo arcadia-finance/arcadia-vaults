@@ -26,7 +26,6 @@ interface IMainRegistry {
             uint64,
             address,
             address,
-            address,
             string memory
         );
 
@@ -38,4 +37,8 @@ interface IMainRegistry {
     ) external view returns (bool);
 
     function assetToSubRegistry(address) external view returns (address);
+
+    function isBaseCurrency(address) external view returns (bool);
+
+    function baseCurrencies(uint256) external view returns(address);
 }

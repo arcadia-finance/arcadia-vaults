@@ -64,9 +64,8 @@ contract FloorERC721SubRegistryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         oracleHub = new OracleHub();
@@ -92,7 +91,7 @@ contract FloorERC721SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -103,7 +102,7 @@ contract FloorERC721SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
@@ -114,7 +113,7 @@ contract FloorERC721SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
@@ -138,9 +137,8 @@ contract FloorERC721SubRegistryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         mainRegistry.addBaseCurrency(
@@ -150,9 +148,8 @@ contract FloorERC721SubRegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                liquidityPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -324,7 +321,7 @@ contract FloorERC721SubRegistryTest is Test {
                 assetAddress: address(bayc),
                 assetId: 0,
                 assetAmount: 1,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -357,7 +354,7 @@ contract FloorERC721SubRegistryTest is Test {
                 assetAddress: address(bayc),
                 assetId: 0,
                 assetAmount: 1,
-                baseCurrency: 1
+                baseCurrency: uint8(Constants.EthBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -390,7 +387,7 @@ contract FloorERC721SubRegistryTest is Test {
                 assetAddress: address(mayc),
                 assetId: 0,
                 assetAmount: 1,
-                baseCurrency: 1
+                baseCurrency: uint8(Constants.EthBaseCurrency)
             });
         (
             uint256 actualValueInUsd,

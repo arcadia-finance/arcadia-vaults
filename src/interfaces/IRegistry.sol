@@ -19,10 +19,19 @@ interface IRegistry {
         uint256 baseCurrency
     ) external view returns (uint256);
 
+    function getTotalValue(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        address baseCurrency
+    ) external view returns (uint256);
+
     function getListOfValuesPerCreditRating(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
     ) external view returns (uint256[] memory);
+
+    function assetToBaseCurrency(address baseCurrency) external view returns (uint8 baseCurrencyIdentifier);
 }

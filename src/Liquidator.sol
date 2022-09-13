@@ -11,7 +11,7 @@ import "./interfaces/IMainRegistry.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IVault.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./interfaces/ILiquidityPool.sol";
+import "./interfaces/ILendingPool.sol";
 
 /**
  * @title The liquidator holds the execution logic and storage or all things related to liquidating Arcadia Vaults
@@ -131,7 +131,7 @@ contract Liquidator is Ownable {
             "Liquidation already ongoing"
         );
 
-        ILiquidityPool(IFactory(factoryAddress).baseCurrencyToLiquidityPool(uint256(baseCurrency))).liquidateVault(vaultAddress, openDebt);
+        ILendingPool(IVault(vaultAddress).trustedProtocol()).liquidateVault(vaultAddress, openDebt);
 
         auctionInfo[vaultAddress][life].startBlock = uint128(block.number);
         auctionInfo[vaultAddress][life].liquidationKeeper = liquidationKeeper;
@@ -230,15 +230,15 @@ contract Liquidator is Ownable {
     @param life the life of the vault for which the price has to be fetched.
   */
     function buyVault(address vaultAddress, uint256 life) public {
-        (uint256 priceOfVault, uint8 baseCurrency, bool forSale) = getPriceOfVault(
+        (uint256 priceOfVault, , bool forSale) = getPriceOfVault(
             vaultAddress,
             life
         );
 
         require(forSale, "LQ_BV: Not for sale");
 
-        address liquidityPool = IFactory(factoryAddress).baseCurrencyToLiquidityPool(uint256(baseCurrency));
-        address asset = ILiquidityPool(liquidityPool).asset();
+        address lendingPool = IVault(vaultAddress).trustedProtocol();
+        address asset = ILendingPool(lendingPool).asset();
 
         require(
             IERC20(asset).transferFrom(
@@ -256,10 +256,10 @@ contract Liquidator is Ownable {
         if (priceOfVault < openDebt + keeperReward) {
             uint256 default_ = openDebt + keeperReward - priceOfVault;
             uint256 deficit = priceOfVault < keeperReward ? keeperReward - openDebt : 0;
-            if (deficit == 0) IERC20(asset).transfer(liquidityPool, openDebt - default_); //ToDo do one transfer from msg.sender directly to liquiditypool?
-            ILiquidityPool(liquidityPool).settleLiquidation(default_, deficit);
+            if (deficit == 0) IERC20(asset).transfer(lendingPool, openDebt - default_); //ToDo do one transfer from msg.sender directly to liquiditypool?
+            ILendingPool(lendingPool).settleLiquidation(default_, deficit);
         } else {
-            IERC20(asset).transfer(liquidityPool, openDebt);
+            IERC20(asset).transfer(lendingPool, openDebt);
             //ToDo: transfer protocolReward to Liquidity Pool
             //uint256 protocolReward = openDebt * ratios.protocol / 100;
             //uint256 surplus = priceOfVault - auctionInfo[vaultAddress][life].openDebt;
@@ -353,7 +353,7 @@ contract Liquidator is Ownable {
     ) public {
         uint256 len = vaultAddresses.length;
         require(len == lives.length, "Arrays must be of same length");
-        uint256 baseCurrencyCounter = IFactory(factoryAddress).baseCurrencyCounter();
+        uint256 baseCurrencyCounter = IMainRegistry(registryAddress).baseCurrencyCounter();
 
         uint256[] memory totalClaimable = new uint256[](baseCurrencyCounter);
         uint256 claimableBitmapMem;
@@ -397,7 +397,7 @@ contract Liquidator is Ownable {
     ) internal {
         for (uint8 k; k < baseCurrencyCounter; ) {
             if (totalClaimable[k] > 0) {
-                address asset = ILiquidityPool(IFactory(factoryAddress).baseCurrencyToLiquidityPool(uint256(k))).asset();
+                address asset = IMainRegistry(registryAddress).baseCurrencies(uint256(k));
                 require(
                     IERC20(asset).transfer(
                         claimer,
