@@ -467,8 +467,7 @@ contract MainRegistry is Ownable {
                 assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress
             ) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
-                valuesPerAsset[i] = _assetAmounts[i] *
-                    baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //_assetAmounts must be a with 18 decimals precision
+                valuesPerAsset[i] = _assetAmounts[i];
             } else {
                 (uint256 valueInUsd, uint256 valueInBaseCurrency) = ISubRegistry(
                     assetToSubRegistry[assetAddress]
