@@ -41,9 +41,9 @@ contract Vault {
 
     uint256 public constant yearlyBlocks = 2628000;
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                 INTERNAL BOOKKEEPING OF DEPOSITED ASSETS
-  ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
     address[] public _erc20Stored;
     address[] public _erc721Stored;
     address[] public _erc1155Stored;
@@ -51,9 +51,9 @@ contract Vault {
     uint256[] public _erc721TokenIds;
     uint256[] public _erc1155TokenIds;
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                           EXTERNAL CONTRACTS
-  ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
     address public _registryAddress; /// to be fetched somewhere else?
     address public _liquidityPool;
     address public _debtToken;
@@ -90,7 +90,7 @@ contract Vault {
     // set the vault logic implementation to the msg.sender
     // NOTE: this does not represent the owner of the proxy vault!
     //       The owner of this contract (not the derived proxies)
-    //       should not have any privilages!
+    //       should not have any privileges!
     constructor() {}
 
     /**
@@ -119,13 +119,13 @@ contract Vault {
         allowed[user] = isAuthorized;
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                   REDUCED & MODIFIED OPENZEPPELIN OWNABLE
       Reduced to functions needed, while modified to allow
       a transfer of ownership of this vault by a transfer
       of ownership of the accompanying ERC721 Vault NFT
       issued by the factory. Owner of Vault NFT = owner of vault
-  ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @dev Throws if called by any account other than the owner.
@@ -729,9 +729,9 @@ contract Vault {
         }
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                           MARGIN REQUIREMENTS
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /** 
     @notice Calculates the total collateral value of the vault.
