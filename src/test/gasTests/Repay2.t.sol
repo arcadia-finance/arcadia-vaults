@@ -683,7 +683,7 @@ contract gasRepay_2ERC20 is Test {
         uint256 valueLink = (((10**18 * rateLinkToUsd) /
             10**Constants.oracleLinkToUsdDecimals) * s_3[1]) /
             10**Constants.linkDecimals;
-        maxCredit = uint128(((valueEth + valueLink) * 100) / 150);
+        maxCredit = uint128(((valueEth + valueLink) / 10**(18-Constants.daiDecimals) * 100) / 150);
         pool.borrow(maxCredit , address(proxy), vaultOwner);
     }
 

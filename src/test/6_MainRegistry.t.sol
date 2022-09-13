@@ -1289,7 +1289,7 @@ contract MainRegistryTest is Test {
             10**Constants.oracleLinkToUsdDecimals /
             10**linkDecimals;
         uint256 linkValueInEth = (linkValueInUsd *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsdNew;
+            10**Constants.oracleEthToUsdDecimals) / rateEthToUsdNew / 10**(18-Constants.ethDecimals);
 
         uint256 expectedTotalValue = linkValueInEth;
 
@@ -1961,17 +1961,16 @@ contract MainRegistryTest is Test {
             Constants.EthBaseCurrency
         );
 
-        uint256 ethValueInEth = (Constants.WAD * assetAmounts[0]) /
-            10**Constants.ethDecimals;
+        uint256 ethValueInEth = assetAmounts[0];
         uint256 linkValueInUsd = (Constants.WAD *
             rateLinkToUsd *
             assetAmounts[1]) /
             10**(Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 linkValueInEth = (linkValueInUsd *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
+            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd / 10**(18-Constants.ethDecimals);
         uint256 baycValueInEth = (Constants.WAD *
             rateWbaycToEth *
-            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals;
+            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals / 10**(18-Constants.ethDecimals);
 
         uint256 expectedTotalValue = ethValueInEth +
             linkValueInEth +
@@ -2064,17 +2063,16 @@ contract MainRegistryTest is Test {
                 Constants.EthBaseCurrency
             );
 
-        uint256 ethValueInEth = (Constants.WAD * assetAmounts[0]) /
-            10**Constants.ethDecimals;
+        uint256 ethValueInEth = assetAmounts[0];
         uint256 linkValueInUsd = (Constants.WAD *
             rateLinkToUsd *
             assetAmounts[1]) /
             10**(Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 linkValueInEth = (linkValueInUsd *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
+            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd / 10**(18-Constants.ethDecimals);
         uint256 baycValueInEth = (Constants.WAD *
             rateWbaycToEth *
-            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals;
+            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals / 10**(18-Constants.ethDecimals);
 
         uint256[] memory expectedListOfValuesPerAsset = new uint256[](3);
         expectedListOfValuesPerAsset[0] = ethValueInEth;
@@ -2186,17 +2184,16 @@ contract MainRegistryTest is Test {
                 Constants.EthBaseCurrency
             );
 
-        uint256 ethValueInEth = (Constants.WAD * assetAmounts[0]) /
-            10**Constants.ethDecimals;
+        uint256 ethValueInEth = assetAmounts[0];
         uint256 linkValueInUsd = (Constants.WAD *
             rateLinkToUsd *
             assetAmounts[1]) /
             10**(Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 linkValueInEth = (linkValueInUsd *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
+            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd / 10**(18-Constants.ethDecimals);
         uint256 baycValueInEth = (Constants.WAD *
             rateWbaycToEth *
-            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals;
+            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals / 10**(18-Constants.ethDecimals);
 
         uint256[] memory expectedListOfValuesPerCreditRating = new uint256[](
             mainRegistry.CREDIT_RATING_CATOGERIES()

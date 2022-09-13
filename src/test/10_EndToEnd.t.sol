@@ -477,360 +477,6 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testReturnUsdValueOfEth(uint128 amount) public {
-        uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
-            10**Constants.oracleEthToUsdDecimals;
-        uint256 expectedValue = (valueOfOneEth * amount) /
-            10**Constants.ethDecimals;
-
-        depositERC20InVault(eth, amount, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnUsdValueOfLink(uint128 amount) public {
-        uint256 valueOfOneLink = (Constants.WAD * rateLinkToUsd) /
-            10**Constants.oracleLinkToUsdDecimals;
-        uint256 expectedValue = (valueOfOneLink * amount) /
-            10**Constants.linkDecimals;
-
-        depositERC20InVault(link, amount, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnUsdValueOfSnx(uint128 amount) public {
-        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
-            10 **
-                (Constants.oracleSnxToEthDecimals +
-                    Constants.oracleEthToUsdDecimals);
-        uint256 expectedValue = (valueOfOneSnx * amount) /
-            10**Constants.snxDecimals;
-
-        depositERC20InVault(snx, amount, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnEthValueOfEth(uint128 amount) public {
-        uint256 valueOfOneEth = Constants.WAD;
-        uint256 expectedValue = (valueOfOneEth * amount) /
-            10**Constants.ethDecimals;
-
-        depositERC20InVault(eth, amount, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(address(eth));
-
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnEthValueOfLink(uint128 amount) public {
-        uint256 valueOfOneLinkInUsd = (Constants.WAD * rateLinkToUsd) /
-            10**Constants.oracleLinkToUsdDecimals;
-        uint256 expectedValue = (((valueOfOneLinkInUsd * amount) /
-            10**Constants.linkDecimals) *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
-
-        depositERC20InVault(link, amount, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(address(eth));
-
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnEthValueOfSnx(uint128 amount) public {
-        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth) /
-            10**Constants.oracleSnxToEthDecimals;
-        uint256 expectedValue = (valueOfOneSnx * amount) /
-            10**Constants.snxDecimals;
-
-        depositERC20InVault(snx, amount, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(address(eth));
-
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnEthValueOfBayc(uint128[] calldata tokenIds) public {
-        vm.assume(tokenIds.length <= 5 && tokenIds.length >= 1);
-        uint256 valueOfOneBayc = (Constants.WAD * rateWbaycToEth) /
-            10**Constants.oracleWbaycToEthDecimals;
-        uint256 expectedValue = valueOfOneBayc * tokenIds.length;
-
-        depositERC721InVault(bayc, tokenIds, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(address(eth));
-
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnEthvalueOfInterleave(uint256 tokenId, uint256 amount)
-        public
-    {
-        uint256 valueOfOneIL = (Constants.WAD * rateInterleaveToEth) /
-            10**Constants.oracleInterleaveToEthDecimals;
-        vm.assume(amount > 0);
-        vm.assume(valueOfOneIL < type(uint256).max / amount);
-        uint256 expectedValue = valueOfOneIL * amount;
-
-        uint256[] memory assetCreditRatingsInterleave = new uint256[](3);
-        assetCreditRatingsInterleave[0] = Constants.interleaveCreditRatingUsd;
-        assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingDai;
-        assetCreditRatingsInterleave[2] = Constants.interleaveCreditRatingEth;
-
-        vm.prank(creatorAddress);
-        floorERC1155SubRegistry.setAssetInformation(
-            FloorERC1155SubRegistry.AssetInformation({
-                oracleAddresses: oracleInterleaveToEthEthToUsd,
-                id: tokenId,
-                assetAddress: address(interleave)
-            }),
-            assetCreditRatingsInterleave
-        );
-
-        depositERC1155InVault(interleave, tokenId, amount, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(address(eth));
-
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnUsdValueEthEth(uint128 amount1, uint128 amount2) public {
-        uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
-            10**Constants.oracleEthToUsdDecimals;
-        vm.assume(
-            (uint256(amount1) + uint256(amount2)) <
-                type(uint256).max / valueOfOneEth
-        );
-
-        depositERC20InVault(eth, amount1, vaultOwner);
-        uint256 expectedValue = (valueOfOneEth * amount1) /
-            10**Constants.ethDecimals;
-        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValue, expectedValue);
-
-        depositERC20InVault(eth, amount2, vaultOwner);
-        expectedValue =
-            (valueOfOneEth * (uint256(amount1) + uint256(amount2))) /
-            10**Constants.ethDecimals;
-        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnUsdValueEthLink(uint128 amountLink, uint128 amountEth)
-        public
-    {
-        uint256 valueOfOneLink = (Constants.WAD * rateLinkToUsd) /
-            10**Constants.oracleLinkToUsdDecimals;
-        uint256 expectedValueLink = (valueOfOneLink * amountLink) /
-            10**Constants.linkDecimals;
-        depositERC20InVault(link, amountLink, vaultOwner);
-        uint256 actualValueLink = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValueLink, expectedValueLink);
-
-        uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
-            10**Constants.oracleEthToUsdDecimals;
-        uint256 expectedValue = actualValueLink +
-            (valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals;
-        depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnUsdValueEthSnx(uint128 amountSnx, uint128 amountEth)
-        public
-    {
-        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
-            10 **
-                (Constants.oracleSnxToEthDecimals +
-                    Constants.oracleEthToUsdDecimals);
-        uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
-            10**Constants.snxDecimals;
-        depositERC20InVault(snx, amountSnx, vaultOwner);
-        uint256 actualValueSnx = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValueSnx, expectedValueSnx);
-
-        uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
-            10**Constants.oracleEthToUsdDecimals;
-        uint256 expectedValue = actualValueSnx +
-            (valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals;
-        depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnUsdValueLinkSnx(uint128 amountLink, uint128 amountSnx)
-        public
-    {
-        uint256 valueOfOneLink = (Constants.WAD * rateLinkToUsd) /
-            10**Constants.oracleLinkToUsdDecimals;
-        uint256 expectedValueLink = (valueOfOneLink * amountLink) /
-            10**Constants.linkDecimals;
-        depositERC20InVault(link, amountLink, vaultOwner);
-        uint256 actualValueLink = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValueLink, expectedValueLink);
-
-        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
-            10 **
-                (Constants.oracleSnxToEthDecimals +
-                    Constants.oracleEthToUsdDecimals);
-        uint256 expectedValue = expectedValueLink +
-            (valueOfOneSnx * amountSnx) /
-            10**Constants.snxDecimals;
-        depositERC20InVault(snx, amountSnx, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValue, expectedValue);
-    }
-
-    function testReturnUsdValueEthLinkSnx(
-        uint128 amountEth,
-        uint128 amountLink,
-        uint128 amountSnx
-    ) public {
-        uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
-            10**Constants.oracleEthToUsdDecimals;
-        uint256 expectedValueEth = (valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals;
-        depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValue, expectedValueEth);
-
-        uint256 valueOfOneLink = (Constants.WAD * rateLinkToUsd) /
-            10**Constants.oracleLinkToUsdDecimals;
-        uint256 expectedValueLink = (valueOfOneLink * amountLink) /
-            10**Constants.linkDecimals;
-        depositERC20InVault(link, amountLink, vaultOwner);
-        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValue, expectedValueEth + expectedValueLink);
-
-        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
-            10 **
-                (Constants.oracleSnxToEthDecimals +
-                    Constants.oracleEthToUsdDecimals);
-        uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
-            10**Constants.snxDecimals;
-        depositERC20InVault(snx, amountSnx, vaultOwner);
-        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(
-            actualValue,
-            expectedValueEth + expectedValueLink + expectedValueSnx
-        );
-    }
-
-    function testReturnUsdValueSnxEthSnx(
-        uint128 amountSnx1,
-        uint128 amountSnx2,
-        uint128 amountEth
-    ) public {
-        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
-            10 **
-                (Constants.oracleSnxToEthDecimals +
-                    Constants.oracleEthToUsdDecimals);
-        uint256 expectedValueSnx1 = (valueOfOneSnx * amountSnx1) /
-            10**Constants.snxDecimals;
-        depositERC20InVault(snx, amountSnx1, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValue, expectedValueSnx1);
-
-        uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
-            10**Constants.oracleEthToUsdDecimals;
-        uint256 expectedValueEth = (valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals;
-        depositERC20InVault(eth, amountEth, vaultOwner);
-        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(actualValue, expectedValueSnx1 + expectedValueEth);
-
-        uint256 expectedValueSnx2 = (valueOfOneSnx * amountSnx2) /
-            10**Constants.snxDecimals;
-        depositERC20InVault(snx, amountSnx2, vaultOwner);
-        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-        assertEq(
-            actualValue,
-            expectedValueSnx1 + expectedValueEth + expectedValueSnx2
-        );
-    }
-
-    function testReturnEthValueEthEth(uint128 amountEth1, uint128 amountEth2)
-        public
-    {
-        uint256 valueOfOneEth = Constants.WAD;
-        uint256 expectedValueEth1 = (valueOfOneEth * amountEth1) /
-            10**Constants.ethDecimals;
-        depositERC20InVault(eth, amountEth1, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(address(eth));
-        assertEq(actualValue, expectedValueEth1);
-
-        uint256 expectedValueEth2 = (valueOfOneEth * amountEth2) /
-            10**Constants.ethDecimals;
-        depositERC20InVault(eth, amountEth2, vaultOwner);
-        actualValue = proxy.getVaultValue(address(eth));
-        assertEq(actualValue, expectedValueEth1 + expectedValueEth2);
-    }
-
-    function testReturnEthValueEthLink(uint128 amountEth, uint128 amountLink)
-        public
-    {
-        uint256 valueOfOneEth = Constants.WAD;
-        uint256 expectedValueEth = (valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals;
-        depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(address(eth));
-        assertEq(actualValue, expectedValueEth);
-
-        uint256 valueOfOneLinkInUsd = (Constants.WAD * rateLinkToUsd) /
-            10**Constants.oracleLinkToUsdDecimals;
-        uint256 expectedValueLink = (((valueOfOneLinkInUsd * amountLink) /
-            10**Constants.linkDecimals) *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
-        depositERC20InVault(link, amountLink, vaultOwner);
-        actualValue = proxy.getVaultValue(address(eth));
-        assertEq(actualValue, expectedValueEth + expectedValueLink);
-    }
-
-    function testReturnEthValueSnxLink(uint128 amountSnx, uint128 amountLink)
-        public
-    {
-        uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth) /
-            10**Constants.oracleSnxToEthDecimals;
-        uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
-            10**Constants.snxDecimals;
-        depositERC20InVault(snx, amountSnx, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(address(eth));
-        assertEq(actualValue, expectedValueSnx);
-
-        uint256 valueOfOneLinkInUsd = (Constants.WAD * rateLinkToUsd) /
-            10**Constants.oracleLinkToUsdDecimals;
-        uint256 expectedValueLink = (((valueOfOneLinkInUsd * amountLink) /
-            10**Constants.linkDecimals) *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
-        depositERC20InVault(link, amountLink, vaultOwner);
-        actualValue = proxy.getVaultValue(address(eth));
-        assertEq(actualValue, expectedValueSnx + expectedValueLink);
-    }
-    
-    function testReturnUsdValueEthPriceChange(
-        uint128 amountEth,
-        uint256 newRateEthToUsd
-    ) public {
-        vm.assume(newRateEthToUsd <= uint256(type(int256).max));
-        vm.assume(newRateEthToUsd <= type(uint256).max / (10**18));
-        vm.prank(oracleOwner);
-        oracleEthToUsd.transmit(int256(newRateEthToUsd));
-
-        uint256 valueOfOneEth = (Constants.WAD * newRateEthToUsd) /
-            10**Constants.oracleEthToUsdDecimals;
-        if (valueOfOneEth != 0) {
-            vm.assume(amountEth < type(uint256).max / valueOfOneEth);
-        }
-        uint256 expectedValue = (valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals;
-
-        depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
-
-        assertEq(actualValue, expectedValue);
-    }
-
     function testAmountOfAllowedCredit(uint128 amountEth) public {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
@@ -839,7 +485,7 @@ contract EndToEndTest is Test {
         (uint16 collThres, , ) = proxy.vault();
 
         uint256 expectedValue = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / collThres;
+            10**Constants.ethDecimals) * 100) / collThres / 10**(18-Constants.daiDecimals);
         uint256 actualValue = proxy.getFreeMargin();
 
         assertEq(actualValue, expectedValue);
@@ -857,7 +503,7 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / collThres;
+            10**Constants.ethDecimals) / 10**(18-Constants.daiDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -879,7 +525,7 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / collThres;
+            10**Constants.ethDecimals) / 10**(18-Constants.daiDecimals) * 100) / collThres;
         vm.assume(amountCredit > maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -910,7 +556,7 @@ contract EndToEndTest is Test {
         (uint16 collThres, , ) = proxy.vault();
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / collThres;
+            10**Constants.ethDecimals / 10**(18-Constants.daiDecimals)) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -953,7 +599,7 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint128 amountCredit = uint128(
-            (((valueOfOneEth * amountEth) / 10**Constants.ethDecimals) * 100) /
+            (((valueOfOneEth * amountEth) / 10**Constants.ethDecimals) / 10**(18-Constants.daiDecimals) * 100) /
                 collThres
         ) - 1;
 
@@ -989,7 +635,7 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / collThres;
+            10**Constants.ethDecimals) / 10**(18-Constants.daiDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -1004,7 +650,7 @@ contract EndToEndTest is Test {
         uint256 newValueOfOneEth = (Constants.WAD * newRateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
         uint256 expectedAvailableCredit = (((newValueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) /
+            10**Constants.ethDecimals) / 10**(18-Constants.daiDecimals) * 100) /
             collThres -
             amountCredit;
 
@@ -1071,7 +717,7 @@ contract EndToEndTest is Test {
         vm.assume(
             proxy.getFreeMargin() >
                 ((amountEthWithdrawal * valueOfOneEth) /
-                    10**Constants.ethDecimals) +
+                    10**Constants.ethDecimals) / 10**(18-Constants.daiDecimals) +
                     amountCredit
         );
 
@@ -1099,7 +745,7 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / collThres;
+            10**Constants.ethDecimals) / 10**(18-Constants.daiDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1141,7 +787,7 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / collThres;
+            10**Constants.ethDecimals) / 10**(18-Constants.daiDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1182,7 +828,7 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / collThres;
+            10**Constants.ethDecimals) / 10**(18-Constants.daiDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1227,7 +873,7 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / collThres;
+            10**Constants.ethDecimals) / 10**(18-Constants.daiDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);

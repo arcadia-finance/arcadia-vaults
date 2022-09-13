@@ -698,7 +698,7 @@ contract gasRepay_2ERC202ERC721 is Test {
         uint256 valueMayc = ((10**18 * rateWmaycToUsd) /
             10**Constants.oracleWmaycToUsdDecimals) * s_3[3];
         maxCredit = uint128(
-            ((valueEth + valueLink + valueBayc + valueMayc) * 100) / 150
+            ((valueEth + valueLink + valueBayc + valueMayc) / 10**(18-Constants.daiDecimals) * 100) / 150
         );
         pool.borrow(maxCredit , address(proxy), vaultOwner);
     }

@@ -698,7 +698,7 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
             10**Constants.oracleWmaycToUsdDecimals) * s_3[3];
         pool.borrow(
             uint128(
-                ((valueEth + valueLink + valueBayc + valueMayc) * 100) / 150
+                ((valueEth + valueLink + valueBayc + valueMayc) / 10**(18-Constants.daiDecimals) * 100) / 150
             )
        , address(proxy), vaultOwner);
 

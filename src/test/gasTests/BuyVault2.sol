@@ -688,7 +688,7 @@ contract gasBuyVault_2ERC20 is Test {
         uint256 valueLink = (((10**18 * rateLinkToUsd) /
             10**Constants.oracleLinkToUsdDecimals) * s_3[1]) /
             10**Constants.linkDecimals;
-        pool.borrow(uint128(((valueEth + valueLink) * 100) / 150), address(proxy), vaultOwner);
+        pool.borrow(uint128(((valueEth + valueLink) / 10**(18-Constants.daiDecimals) * 100) / 150), address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd) / 2);

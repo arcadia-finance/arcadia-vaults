@@ -14,9 +14,9 @@ library Constants {
     uint256 internal constant EthBaseCurrency = 2;
     uint256 internal constant SafemoonBaseCurrency = 3;
 
-    uint256 internal constant usdDecimals = 18;
-    uint256 internal constant daiDecimals = 18;
-    uint256 internal constant ethDecimals = 18;
+    uint256 internal constant usdDecimals = 11;
+    uint256 internal constant daiDecimals = 12;
+    uint256 internal constant ethDecimals = 13;
 
     uint256 internal constant ethCreditRatingUsd = 2;
     uint256 internal constant ethCreditRatingBtc = 0;

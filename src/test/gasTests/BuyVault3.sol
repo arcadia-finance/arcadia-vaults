@@ -689,7 +689,7 @@ contract gasBuyVault_1ERC201ERC721 is Test {
             10 **
                 (Constants.oracleWbaycToEthDecimals +
                     Constants.oracleEthToUsdDecimals)) * s_3[1];
-        pool.borrow(uint128(((valueEth + valueBayc) * 100) / 150), address(proxy), vaultOwner);
+        pool.borrow(uint128(((valueEth + valueBayc) / 10**(18-Constants.daiDecimals) * 100) / 150), address(proxy), vaultOwner);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd) / 2);
