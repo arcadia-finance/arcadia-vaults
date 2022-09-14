@@ -431,7 +431,6 @@ contract LiquidatorTest is Test {
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
-        factory.setLiquidator(address(liquidator));
         pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
@@ -452,6 +451,10 @@ contract LiquidatorTest is Test {
             0
         );
         proxy = Vault(proxyAddr);
+
+        vm.startPrank(vaultOwner);
+        proxy.setLiquidator(address(liquidator));
+        vm.stopPrank();
 
         uint256 slot = stdstore
             .target(address(factory))

@@ -98,7 +98,7 @@ contract factoryTest is Test {
             Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
-        factoryContr.setLiquidator(address(liquidatorContr));
+        vaultContr.setLiquidator(address(liquidatorContr));
 
         registryContr.setFactory(address(factoryContr));
     }

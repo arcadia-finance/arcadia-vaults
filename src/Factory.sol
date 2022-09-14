@@ -35,7 +35,7 @@ contract Factory is ERC721, Ownable {
 
     string public baseURI;
 
-    address public liquidatorAddress;
+    //address public liquidatorAddress;
 
     event VaultCreated(
         address indexed vaultAddress,
@@ -59,10 +59,10 @@ contract Factory is ERC721, Ownable {
     @dev Since vaults to be liquidated, together with the open debt, are transferred to the protocol,
          New logic can be set without needing to increment the vault version.
     @param _newLiquidator The new liquidator contract
-  */
     function setLiquidator(address _newLiquidator) public onlyOwner {
         liquidatorAddress = _newLiquidator;
     }
+  */
 
     /** 
     @notice Function confirms the new contracts to be used for new deployed vaults
@@ -348,8 +348,8 @@ contract Factory is ERC721, Ownable {
         );
         require(success, "FTRY: Vault liquidation failed");
         // Vault version read via Ivault?
-        IVault(vault).transferOwnership(liquidatorAddress);
-        _liquidateTransfer(vault);
+        IVault(vault).transferOwnership(liquidator);
+        _liquidateTransfer(vault, sender);
     }
 
     /** 
@@ -359,17 +359,20 @@ contract Factory is ERC721, Ownable {
          We circumvent the ERC721 transfer function.
     @param vault Vault that needs to get transfered.
   */
-    function _liquidateTransfer(address vault) internal {
+    function _liquidateTransfer(address vault, address sender) internal {
+        (bool success, address liquidator) = IVault(vault).liquidateVault(
+            sender
+        );
         address from = ownerOf[vaultIndex[vault]];
         unchecked {
             balanceOf[from]--;
-            balanceOf[liquidatorAddress]++;
+            balanceOf[liquidator]++;
         }
 
-        ownerOf[vaultIndex[vault]] = liquidatorAddress;
+        ownerOf[vaultIndex[vault]] = liquidator;
 
         delete getApproved[vaultIndex[vault]];
-        emit Transfer(from, liquidatorAddress, vaultIndex[vault]);
+        emit Transfer(from, liquidator, vaultIndex[vault]);
     }
 
     /** 

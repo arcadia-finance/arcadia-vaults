@@ -371,7 +371,6 @@ contract vaultTests is Test {
         );
 
         mainRegistry.setFactory(address(factoryContr));
-        factoryContr.setLiquidator(address(liquidator));
         pool.setLiquidator(address(liquidator));
 
         standardERC20Registry = new StandardERC20Registry(
@@ -407,6 +406,8 @@ contract vaultTests is Test {
             address(mainRegistry),
             1
         );
+
+        vault.setLiquidator(address(liquidator));
 
         vault.openTrustedMarginAccount(address(pool));
         dai.approve(address(vault), type(uint256).max);
