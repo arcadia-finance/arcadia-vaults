@@ -349,7 +349,7 @@ contract Factory is ERC721, Ownable {
         require(success, "FTRY: Vault liquidation failed");
         // Vault version read via Ivault?
         IVault(vault).transferOwnership(liquidator);
-        _liquidateTransfer(vault, sender);
+        _liquidateTransfer(vault, liquidator);
     }
 
     /** 
@@ -359,10 +359,10 @@ contract Factory is ERC721, Ownable {
          We circumvent the ERC721 transfer function.
     @param vault Vault that needs to get transfered.
   */
-    function _liquidateTransfer(address vault, address sender) internal {
-        (bool success, address liquidator) = IVault(vault).liquidateVault(
-            sender
-        );
+    function _liquidateTransfer(address vault, address liquidator) internal {
+//        (bool success, address liquidator) = IVault(vault).liquidateVault(
+//            liquidator
+//        );
         address from = ownerOf[vaultIndex[vault]];
         unchecked {
             balanceOf[from]--;

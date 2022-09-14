@@ -434,7 +434,6 @@ contract gasProxyDeploy is Test {
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
-        vault.setLiquidator(address(liquidator));
         pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
@@ -455,6 +454,10 @@ contract gasProxyDeploy is Test {
             0
         );
         proxy = Vault(proxyAddr);
+
+        vm.startPrank(vaultOwner);
+        proxy.setLiquidator(address(liquidator));
+        vm.stopPrank();
 
         vm.prank(vaultOwner);
         proxy.openTrustedMarginAccount(address(pool));

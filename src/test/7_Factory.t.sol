@@ -28,6 +28,8 @@ contract factoryTest is Test {
     using stdStorage for StdStorage;
 
     Factory internal factoryContr;
+    Vault private proxy;
+    address private proxyAddr;
     Vault internal vaultContr;
     Liquidator internal liquidatorContr;
     MainRegistry internal registryContr;
@@ -41,6 +43,7 @@ contract factoryTest is Test {
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
     address internal unprivilegedAddress1 = address(5);
+    address private vaultOwner = address(6);
     address private liquidityProvider = address(7);
 
     uint256[] emptyList = new uint256[](0);
@@ -54,7 +57,11 @@ contract factoryTest is Test {
     //this is a before
     constructor() {
         factoryContr = new Factory();
+        
+        vm.startPrank(vaultOwner);
         vaultContr = new Vault();
+        vm.stopPrank();
+
         liquidatorContr = new Liquidator(
             address(factoryContr),
             0x0000000000000000000000000000000000000000
@@ -98,7 +105,26 @@ contract factoryTest is Test {
             Constants.upgradeProof1To2
         );
         factoryContr.confirmNewVaultInfo();
-        vaultContr.setLiquidator(address(liquidatorContr));
+
+        vm.prank(vaultOwner);
+        proxyAddr = factoryContr.createVault(
+            uint256(
+                keccak256(
+                    abi.encodeWithSignature(
+                        "doRandom(uint256,uint256,bytes32)",
+                        block.timestamp,
+                        block.number,
+                        blockhash(block.number)
+                    )
+                )
+            ),
+            0
+        );
+        proxy = Vault(proxyAddr);
+
+        vm.startPrank(vaultOwner);
+        proxy.setLiquidator(address(liquidatorContr));
+        vm.stopPrank();
 
         registryContr.setFactory(address(factoryContr));
     }

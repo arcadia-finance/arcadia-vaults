@@ -603,7 +603,6 @@ contract gasRepay_1ERC20 is Test {
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
-        vault.setLiquidator(address(liquidator));
         pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
@@ -624,6 +623,10 @@ contract gasRepay_1ERC20 is Test {
             0
         );
         proxy = Vault(proxyAddr);
+
+        vm.startPrank(vaultOwner);
+        proxy.setLiquidator(address(liquidator));
+        vm.stopPrank();
 
         vm.prank(tokenCreatorAddress);
         dai.mint(vaultOwner, 10000000 * 10**18);
