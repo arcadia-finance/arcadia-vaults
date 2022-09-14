@@ -13,6 +13,7 @@ import "../interfaces/IFactory.sol";
 import "../interfaces/ISubRegistry.sol";
 
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import "../RiskModule.sol";
 
 /**
  * @title Main Asset registry
@@ -20,7 +21,7 @@ import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
  * @notice The Main-registry stores basic information for each token that can, or could at some point, be deposited in the vaults
  * @dev No end-user should directly interact with the Main-registry, only vaults, Sub-Registries or the contract owner
  */
-contract MainRegistry is Ownable {
+contract MainRegistry is Ownable, RiskModule {
     using FixedPointMathLib for uint256;
 
     bool public assetsUpdatable = true;
@@ -525,9 +526,9 @@ contract MainRegistry is Ownable {
 
         uint256 valuesPerAssetLength = valuesPerAsset.length;
         for (uint256 i; i < valuesPerAssetLength; ) {
-            address assetAdress = _assetAddresses[i];
+            address assetAddress = _assetAddresses[i];
             valuesPerCreditRating[
-                assetToBaseCurrencyToCreditRating[assetAdress][baseCurrency]
+                assetToBaseCurrencyToCreditRating[assetAddress][baseCurrency]
             ] += valuesPerAsset[i];
             unchecked {
                 ++i;
@@ -535,5 +536,38 @@ contract MainRegistry is Ownable {
         }
 
         return valuesPerCreditRating;
+    }
+
+    function getCollateralValue(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        uint256 baseCurrency
+    ) public view returns (uint256 collateralValue) {
+        uint assetAddressesLength = _assetAddresses.length;
+
+    require(
+            assetAddressesLength == _assetIds.length &&
+            assetAddressesLength == _assetAmounts.length,
+            "MR_GCV: LENGTH_MISMATCH"
+        );
+        uint256[] memory valuesPerAsset = getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrency);
+        collateralValue = calculateWeightedCollateralValue(_assetAddresses, valuesPerAsset);
+    }
+
+    function getCollateralFactor(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        uint256 baseCurrency
+    ) public view returns (uint256 collateralFactor) {
+        uint assetAddressesLength = _assetAddresses.length;
+        require(
+            assetAddressesLength == _assetIds.length &&
+            assetAddressesLength == _assetAmounts.length,
+            "MR_GCF: LENGTH_MISMATCH"
+        );
+        uint256[] memory valuesPerAsset = getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrency);
+        collateralFactor = calculateWeightedCollateralFactor(_assetAddresses, valuesPerAsset);
     }
 }

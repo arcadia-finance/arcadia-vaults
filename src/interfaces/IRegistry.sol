@@ -19,6 +19,20 @@ interface IRegistry {
         uint256 baseCurrency
     ) external view returns (uint256);
 
+    function getCollateralValue(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        uint256 baseCurrency
+    ) external view returns (uint256);
+
+    function getCollateralFactor(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        uint256 baseCurrency
+    ) external view returns (uint256);
+
     function getListOfValuesPerCreditRating(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,

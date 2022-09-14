@@ -22,20 +22,20 @@ contract RiskModule is Ownable {
     // TODO: This can be precalculated as bitmap
     AssetConfiguration.AssetDetail defaultConfig = AssetConfiguration.AssetDetail(
     {
-        collateralFactor : uint16(2000),
-        liquidityThreshold : uint16(3000),
-        liquidityReward : uint16(500),
-        protocolLiquidityFee : uint16(100),
-        decimals : uint8(16),
-        isActive : true,
-        isFrozen : false,
-        isPaused : false,
-        isBorrowing : false
+    collateralFactor : uint16(2000),
+    liquidityThreshold : uint16(3000),
+    liquidityReward : uint16(500),
+    protocolLiquidityFee : uint16(100),
+    decimals : uint8(16),
+    isActive : true,
+    isFrozen : false,
+    isPaused : false,
+    isBorrowing : false
     });
 
     mapping(address => AssetConfiguration.AssetDetailBitmap) public assetConfigurationDetails;
 
-    function addAsset(address assetAddress) external onlyOwner{
+    function addAsset(address assetAddress) external onlyOwner {
         require(!(assetConfigurationDetails[assetAddress].data > 0), "RM: Asset is already added");
         AssetConfiguration.AssetDetailBitmap memory config = AssetConfiguration.toBitmap(defaultConfig);
         assetConfigurationDetails[assetAddress] = config;
@@ -53,7 +53,11 @@ contract RiskModule is Ownable {
         assetConfigurationDetails[assetAddress] = config;
     }
 
-    function getCollateralFactor(address assetAddress) external returns (uint128) {
+    function getCollateralFactorHARDCODED(address assetAddress) public view returns (uint128) {
+        return 150;
+    }
+
+    function getCollateralFactor(address assetAddress) public view returns (uint128) {
         return AssetConfiguration.getCollateralFactor(assetConfigurationDetails[assetAddress]);
     }
 
@@ -65,6 +69,82 @@ contract RiskModule is Ownable {
 
     function getLiquidationThreshold(address assetAddress) external returns (uint128) {
         return AssetConfiguration.getLiquidationThreshold(assetConfigurationDetails[assetAddress]);
+    }
+
+    function calculateMinCollateralFactor(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts
+    ) public returns (uint256) {
+        uint256 assetAddressesLength = assetAddresses.length;
+        require(
+            assetAddressesLength == assetIds.length &&
+            assetAddressesLength == assetAmounts.length,
+            "RM_CMCF: LENGTH_MISMATCH"
+        );
+        uint minCollateralFactor = type(uint128).max;
+        for (uint256 i; i < assetAddressesLength;) {
+            address assetAddress = assetAddresses[i];
+            uint128 collFact = getCollateralFactorHARDCODED(assetAddress);
+            if (collFact < minCollateralFactor) {
+                minCollateralFactor = collFact;
+            }
+        }
+        return minCollateralFactor;
+    }
+
+    function calculateWeightedCollateralValue(
+        address[] calldata assetAddresses,
+        uint256[] memory valuesPerAsset
+    ) public view returns (uint256) {
+        uint256 assetAddressesLength = assetAddresses.length;
+        require(
+            assetAddressesLength == valuesPerAsset.length,
+            "RM_CCV: LENGTH_MISMATCH"
+        );
+        uint256 collateralValue;
+        address assetAddress;
+        uint256 collFact;
+        for (uint256 i; i < assetAddressesLength;) {
+            assetAddress = assetAddresses[i];
+            collFact = getCollateralFactorHARDCODED(assetAddress);
+            collateralValue += valuesPerAsset[i] * 100 / collFact;
+            unchecked {
+                ++i;
+            }
+        }
+        return collateralValue;
+    }
+
+    function calculateWeightedCollateralFactor(
+        address[] calldata assetAddresses,
+        uint256[] memory valuesPerAsset
+    ) public view returns (uint256) {
+        uint256 assetAddressesLength = assetAddresses.length;
+        require(
+            assetAddressesLength == valuesPerAsset.length,
+            "RM_CWCF: LENGTH_MISMATCH"
+        );
+        uint256 collateralFactor;
+        uint256 totalValue;
+
+        for (uint256 i; i < valuesPerAsset.length;){
+            totalValue += valuesPerAsset[i];
+            unchecked {
+            i++;
+        }
+
+        }
+        uint128 collFact;
+        for (uint256 j; j < assetAddressesLength;) {
+            address assetAddress = assetAddresses[j];
+            collFact = getCollateralFactorHARDCODED(assetAddress);
+            collateralFactor += collFact * (valuesPerAsset[j] / totalValue);
+            unchecked {
+                j++;
+            }
+        }
+        return collateralFactor;
     }
 
 }
