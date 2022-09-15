@@ -65,7 +65,7 @@ contract FloorERC721SubRegistryTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         oracleHub = new OracleHub();
@@ -138,7 +138,7 @@ contract FloorERC721SubRegistryTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         mainRegistry.addBaseCurrency(
@@ -149,7 +149,7 @@ contract FloorERC721SubRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );

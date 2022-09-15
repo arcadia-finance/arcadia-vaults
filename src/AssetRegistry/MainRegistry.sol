@@ -44,7 +44,7 @@ contract MainRegistry is Ownable {
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
-        uint64 baseCurrencyUnit;
+        uint64 baseCurrencyUnitCorrection;
         address assetAddress;
         address baseCurrencyToUsdOracle;
         string baseCurrencyLabel;
@@ -367,8 +367,11 @@ contract MainRegistry is Ownable {
         ISubRegistry.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
 
+        address assetAddress;
+        uint256 tempValueInUsd;
+        uint256 tempValueInBaseCurrency;
         for (uint256 i; i < assetAddressesLength; ) {
-            address assetAddress = _assetAddresses[i];
+            assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GTV: Unknown asset");
 
             getValueInput.assetAddress = assetAddress;
@@ -381,15 +384,13 @@ contract MainRegistry is Ownable {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
                 valueInBaseCurrency =
                     valueInBaseCurrency +
-                    _assetAmounts[i].mulDivDown(
-                        FixedPointMathLib.WAD,
-                        baseCurrencyToInformation[baseCurrency].baseCurrencyUnit
-                    ); //_assetAmounts can have a variable decimal precision -> bring to 18 decimals
+                    _assetAmounts[i] *
+                    baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //_assetAmounts can have a variable decimal precision -> bring to 18 decimals
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
                 (
-                    uint256 tempValueInUsd,
-                    uint256 tempValueInBaseCurrency
+                    tempValueInUsd,
+                    tempValueInBaseCurrency
                 ) = ISubRegistry(assetToSubRegistry[assetAddress]).getValue(
                         getValueInput
                     );
@@ -400,10 +401,10 @@ contract MainRegistry is Ownable {
                 ++i;
             }
         }
-
+        //Check if baseCurrency is USD
         if (baseCurrency == 0) {
-            //Check if baseCurrency is USD
-            return valueInUsd;
+            //Bring from internal 18 decimals to the number of decimals of baseCurrency
+            return valueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
         } else if (valueInUsd > 0) {
             //Get the BaseCurrency-USD rate
             (, int256 rate, , , ) = IChainLinkData(
@@ -417,7 +418,8 @@ contract MainRegistry is Ownable {
                     uint256(rate)
                 );
         }
-        return valueInBaseCurrency;
+        //Bring from internal 18 decimals to the number of decimals of baseCurrency
+        return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
     }
 
     /**
@@ -475,9 +477,11 @@ contract MainRegistry is Ownable {
         getValueInput.baseCurrency = baseCurrency;
 
         int256 rateBaseCurrencyToUsd;
-
+        address assetAddress;
+        uint256 valueInUsd;
+        uint256 valueInBaseCurrency;
         for (uint256 i; i < assetAddressesLength; ) {
-            address assetAddress = _assetAddresses[i];
+            assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
 
             getValueInput.assetAddress = assetAddress;
@@ -488,20 +492,18 @@ contract MainRegistry is Ownable {
                 assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress
             ) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
-                valuesPerAsset[i] = _assetAmounts[i].mulDivDown(
-                    FixedPointMathLib.WAD,
-                    baseCurrencyToInformation[baseCurrency].baseCurrencyUnit
-                ); //_assetAmounts must be a with 18 decimals precision
+                valuesPerAsset[i] = _assetAmounts[i];
             } else {
-                //Calculate value of the next asset and add it to the total value of the vault
-                (uint256 valueInUsd, uint256 valueInBaseCurrency) = ISubRegistry(
+                (valueInUsd, valueInBaseCurrency) = ISubRegistry(
                     assetToSubRegistry[assetAddress]
                 ).getValue(getValueInput);
+                //Check if baseCurrency is USD
                 if (baseCurrency == 0) {
-                    //Check if baseCurrency is USD
-                    valuesPerAsset[i] = valueInUsd;
+                    //Bring from internal 18 decimals to the number of decimals of baseCurrency
+                    valuesPerAsset[i] = valueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else if (valueInBaseCurrency > 0) {
-                    valuesPerAsset[i] = valueInBaseCurrency;
+                    //Bring from internal 18 decimals to the number of decimals of baseCurrency
+                    valuesPerAsset[i] = valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else {
                     //Check if the BaseCurrency-USD rate is already fetched
                     if (rateBaseCurrencyToUsd == 0) {
@@ -515,7 +517,7 @@ contract MainRegistry is Ownable {
                         baseCurrencyToInformation[baseCurrency]
                             .baseCurrencyToUsdOracleUnit,
                         uint256(rateBaseCurrencyToUsd)
-                    );
+                    ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //Bring from internal 18 decimals to the number of decimals of baseCurrency
                 }
             }
             unchecked {
@@ -581,8 +583,9 @@ contract MainRegistry is Ownable {
         );
 
         uint256 valuesPerAssetLength = valuesPerAsset.length;
+        address assetAdress;
         for (uint256 i; i < valuesPerAssetLength; ) {
-            address assetAdress = _assetAddresses[i];
+            assetAdress = _assetAddresses[i];
             valuesPerCreditRating[
                 assetToBaseCurrencyToCreditRating[assetAdress][baseCurrency]
             ] += valuesPerAsset[i];

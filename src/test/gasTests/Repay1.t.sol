@@ -475,7 +475,7 @@ contract gasRepay_1ERC20 is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         uint256[] memory emptyList = new uint256[](0);
@@ -487,7 +487,7 @@ contract gasRepay_1ERC20 is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -499,7 +499,7 @@ contract gasRepay_1ERC20 is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -684,7 +684,7 @@ contract gasRepay_1ERC20 is Test {
         uint256 valueEth = (((10**18 * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals) * s_assetAmounts[0]) /
             10**Constants.ethDecimals;
-        maxCredit = uint128((valueEth * 100) / 150);
+        maxCredit = uint128((valueEth / 10**(18-Constants.daiDecimals) * 100) / 150);
         pool.borrow(maxCredit , address(proxy), vaultOwner);
     }
 

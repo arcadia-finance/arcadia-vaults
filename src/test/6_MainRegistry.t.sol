@@ -242,7 +242,7 @@ contract MainRegistryTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
 
@@ -283,7 +283,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -321,7 +321,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             assetCreditRatings
         );
@@ -362,7 +362,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             assetCreditRatings
         );
@@ -397,7 +397,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -409,7 +409,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -450,7 +450,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             assetCreditRatings
         );
@@ -522,7 +522,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -534,7 +534,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -562,7 +562,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -574,7 +574,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -602,7 +602,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -614,7 +614,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -638,7 +638,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -650,7 +650,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -679,7 +679,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -691,7 +691,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -728,7 +728,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -740,7 +740,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -779,7 +779,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -791,7 +791,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -837,7 +837,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -849,7 +849,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -895,7 +895,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -907,7 +907,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -953,7 +953,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -965,7 +965,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1011,7 +1011,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1023,7 +1023,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1077,7 +1077,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1089,7 +1089,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1143,7 +1143,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1155,7 +1155,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1235,7 +1235,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1247,7 +1247,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1289,7 +1289,7 @@ contract MainRegistryTest is Test {
             10**Constants.oracleLinkToUsdDecimals /
             10**linkDecimals;
         uint256 linkValueInEth = (linkValueInUsd *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsdNew;
+            10**Constants.oracleEthToUsdDecimals) / rateEthToUsdNew / 10**(18-Constants.ethDecimals);
 
         uint256 expectedTotalValue = linkValueInEth;
 
@@ -1320,7 +1320,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1332,7 +1332,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1385,7 +1385,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1397,7 +1397,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1447,7 +1447,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1459,7 +1459,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1529,7 +1529,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1541,7 +1541,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1612,7 +1612,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1624,7 +1624,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1681,7 +1681,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1693,7 +1693,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1750,7 +1750,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1762,7 +1762,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1819,7 +1819,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1831,7 +1831,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1888,7 +1888,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -1900,7 +1900,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -1961,17 +1961,16 @@ contract MainRegistryTest is Test {
             Constants.EthBaseCurrency
         );
 
-        uint256 ethValueInEth = (Constants.WAD * assetAmounts[0]) /
-            10**Constants.ethDecimals;
+        uint256 ethValueInEth = assetAmounts[0];
         uint256 linkValueInUsd = (Constants.WAD *
             rateLinkToUsd *
             assetAmounts[1]) /
             10**(Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 linkValueInEth = (linkValueInUsd *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
+            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd / 10**(18-Constants.ethDecimals);
         uint256 baycValueInEth = (Constants.WAD *
             rateWbaycToEth *
-            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals;
+            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals / 10**(18-Constants.ethDecimals);
 
         uint256 expectedTotalValue = ethValueInEth +
             linkValueInEth +
@@ -1990,7 +1989,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -2002,7 +2001,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -2064,17 +2063,16 @@ contract MainRegistryTest is Test {
                 Constants.EthBaseCurrency
             );
 
-        uint256 ethValueInEth = (Constants.WAD * assetAmounts[0]) /
-            10**Constants.ethDecimals;
+        uint256 ethValueInEth = assetAmounts[0];
         uint256 linkValueInUsd = (Constants.WAD *
             rateLinkToUsd *
             assetAmounts[1]) /
             10**(Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 linkValueInEth = (linkValueInUsd *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
+            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd / 10**(18-Constants.ethDecimals);
         uint256 baycValueInEth = (Constants.WAD *
             rateWbaycToEth *
-            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals;
+            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals / 10**(18-Constants.ethDecimals);
 
         uint256[] memory expectedListOfValuesPerAsset = new uint256[](3);
         expectedListOfValuesPerAsset[0] = ethValueInEth;
@@ -2099,7 +2097,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -2111,7 +2109,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -2186,17 +2184,16 @@ contract MainRegistryTest is Test {
                 Constants.EthBaseCurrency
             );
 
-        uint256 ethValueInEth = (Constants.WAD * assetAmounts[0]) /
-            10**Constants.ethDecimals;
+        uint256 ethValueInEth = assetAmounts[0];
         uint256 linkValueInUsd = (Constants.WAD *
             rateLinkToUsd *
             assetAmounts[1]) /
             10**(Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 linkValueInEth = (linkValueInUsd *
-            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
+            10**Constants.oracleEthToUsdDecimals) / rateEthToUsd / 10**(18-Constants.ethDecimals);
         uint256 baycValueInEth = (Constants.WAD *
             rateWbaycToEth *
-            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals;
+            assetAmounts[2]) / 10**Constants.oracleWbaycToEthDecimals / 10**(18-Constants.ethDecimals);
 
         uint256[] memory expectedListOfValuesPerCreditRating = new uint256[](
             mainRegistry.CREDIT_RATING_CATOGERIES()
@@ -2230,7 +2227,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -2242,7 +2239,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -2308,7 +2305,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -2320,7 +2317,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -2401,7 +2398,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -2413,7 +2410,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -2494,7 +2491,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -2506,7 +2503,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -2590,7 +2587,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
             }),
             emptyList
         );
@@ -2602,7 +2599,7 @@ contract MainRegistryTest is Test {
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );

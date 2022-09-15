@@ -88,7 +88,7 @@ contract factoryTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
 
@@ -472,7 +472,7 @@ contract factoryTest is Test {
                 assetAddress: randomAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
@@ -500,7 +500,7 @@ contract factoryTest is Test {
                 assetAddress: newAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -511,7 +511,7 @@ contract factoryTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
@@ -536,7 +536,7 @@ contract factoryTest is Test {
                 assetAddress: newAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -547,7 +547,7 @@ contract factoryTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         registryContr2.addBaseCurrency(
@@ -556,7 +556,7 @@ contract factoryTest is Test {
                 assetAddress: newAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -583,7 +583,7 @@ contract factoryTest is Test {
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         registryContr2.addBaseCurrency(
@@ -592,7 +592,7 @@ contract factoryTest is Test {
                 assetAddress: newAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
             }),
             emptyList
         );
