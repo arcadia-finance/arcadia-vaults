@@ -35,8 +35,6 @@ contract Factory is ERC721, Ownable {
 
     string public baseURI;
 
-    address public liquidatorAddress;
-
     event VaultCreated(
         address indexed vaultAddress,
         address indexed owner,
@@ -52,16 +50,6 @@ contract Factory is ERC721, Ownable {
   */
     function allVaultsLength() external view returns (uint256 numberOfVaults) {
         numberOfVaults = allVaults.length;
-    }
-
-    /** 
-    @notice Function to set a new contract for the liquidation logic
-    @dev Since vaults to be liquidated, together with the open debt, are transferred to the protocol,
-         New logic can be set without needing to increment the vault version.
-    @param _newLiquidator The new liquidator contract
-  */
-    function setLiquidator(address _newLiquidator) public onlyOwner {
-        liquidatorAddress = _newLiquidator;
     }
 
     /** 
@@ -343,13 +331,13 @@ contract Factory is ERC721, Ownable {
     @param sender The msg.sender of the liquidator. Also the 'keeper'
   */
     function _liquidate(address vault, address sender) internal {
-        require(
-            IVault(vault).liquidateVault(sender, liquidatorAddress),
-            "FTRY: Vault liquidation failed"
+        (bool success, address liquidator) = IVault(vault).liquidateVault(
+            sender
         );
+        require(success, "FTRY: Vault liquidation failed");
         // Vault version read via Ivault?
-        IVault(vault).transferOwnership(liquidatorAddress);
-        _liquidateTransfer(vault);
+        IVault(vault).transferOwnership(liquidator);
+        _liquidateTransfer(vault, liquidator);
     }
 
     /** 
@@ -359,17 +347,17 @@ contract Factory is ERC721, Ownable {
          We circumvent the ERC721 transfer function.
     @param vault Vault that needs to get transfered.
   */
-    function _liquidateTransfer(address vault) internal {
+    function _liquidateTransfer(address vault, address liquidator) internal {
         address from = ownerOf[vaultIndex[vault]];
         unchecked {
             balanceOf[from]--;
-            balanceOf[liquidatorAddress]++;
+            balanceOf[liquidator]++;
         }
 
-        ownerOf[vaultIndex[vault]] = liquidatorAddress;
+        ownerOf[vaultIndex[vault]] = liquidator;
 
         delete getApproved[vaultIndex[vault]];
-        emit Transfer(from, liquidatorAddress, vaultIndex[vault]);
+        emit Transfer(from, liquidator, vaultIndex[vault]);
     }
 
     /** 

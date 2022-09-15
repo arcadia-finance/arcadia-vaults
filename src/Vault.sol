@@ -878,13 +878,12 @@ contract Vault {
          Sets debtInfo todo: needed?
          Transfers ownership of the proxy vault to the liquidator!
     @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
-    @param _liquidator Contract Address of the liquidation logic.
     @return success Boolean returning if the liquidation process is successfully started.
   */
-    function liquidateVault(address liquidationKeeper, address _liquidator)
+    function liquidateVault(address liquidationKeeper)
         public
         onlyFactory
-        returns (bool success)
+        returns (bool success, address liquidator_)
     {
         //gas: 35 gas cheaper to not take debt into memory
         uint256 totalValue = getVaultValue(vault.baseCurrency);
@@ -905,7 +904,7 @@ contract Vault {
         uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
 
         require(
-            ILiquidator(_liquidator).startAuction(
+            ILiquidator(liquidator).startAuction(
                 address(this),
                 life,
                 liquidationKeeper,
@@ -922,7 +921,7 @@ contract Vault {
             ++life;
         }
 
-        return true;
+        return (true, liquidator);
     }
 
     /*///////////////////////////////////////////////////////////////

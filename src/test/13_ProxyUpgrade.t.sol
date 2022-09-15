@@ -434,7 +434,6 @@ contract VaultV2Test is Test {
             Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
-        factory.setLiquidator(address(liquidator));
         pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));

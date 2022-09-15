@@ -371,7 +371,6 @@ contract vaultTests is Test {
         );
 
         mainRegistry.setFactory(address(factoryContr));
-        factoryContr.setLiquidator(address(liquidator));
         pool.setLiquidator(address(liquidator));
 
         standardERC20Registry = new StandardERC20Registry(
@@ -1745,7 +1744,7 @@ contract vaultTests is Test {
         assertEq(vault.owner(), vaultOwner);
 
         vm.expectRevert("VL: You are not the factory");
-        vault.liquidateVault(liquidationKeeper, address(liquidator));
+        vault.liquidateVault(liquidationKeeper);
 
        assertEq(vault.owner(), vaultOwner);
        
