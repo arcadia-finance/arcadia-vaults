@@ -18,11 +18,7 @@ abstract contract ERC4626 is ERC20 {
     event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
 
     event Withdraw(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
+        address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
     );
 
     /*///////////////////////////////////////////////////////////////
@@ -31,12 +27,9 @@ abstract contract ERC4626 is ERC20 {
 
     ERC20 public immutable asset;
 
-    constructor(
-        ERC20 _asset,
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals
-    ) ERC20(_name, _symbol, _decimals) {
+    constructor(ERC20 _asset, string memory _name, string memory _symbol, uint8 _decimals)
+        ERC20(_name, _symbol, _decimals)
+    {
         asset = _asset;
     }
 
@@ -71,17 +64,15 @@ abstract contract ERC4626 is ERC20 {
         afterDeposit(assets, shares);
     }
 
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public virtual returns (uint256 shares) {
+    function withdraw(uint256 assets, address receiver, address owner) public virtual returns (uint256 shares) {
         shares = previewWithdraw(assets); // No need to check for rounding error, previewWithdraw rounds up.
 
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
-            if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
+            if (allowed != type(uint256).max) {
+                allowance[owner][msg.sender] = allowed - shares;
+            }
         }
 
         beforeWithdraw(assets, shares);
@@ -93,15 +84,13 @@ abstract contract ERC4626 is ERC20 {
         asset.transfer(receiver, assets);
     }
 
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public virtual returns (uint256 assets) {
+    function redeem(uint256 shares, address receiver, address owner) public virtual returns (uint256 assets) {
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
-            if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
+            if (allowed != type(uint256).max) {
+                allowance[owner][msg.sender] = allowed - shares;
+            }
         }
 
         // Check for rounding error since we round down in previewRedeem.
@@ -184,12 +173,9 @@ abstract contract ERC4626 is ERC20 {
 }
 
 contract ERC4626Mock is ERC4626 {
-    constructor(
-        ERC20 _underlying,
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals
-    ) ERC4626(_underlying, _name, _symbol, _decimals) {}
+    constructor(ERC20 _underlying, string memory _name, string memory _symbol, uint8 _decimals)
+        ERC4626(_underlying, _name, _symbol, _decimals)
+    {}
 
     function totalAssets() public view override returns (uint256) {
         return ERC20(asset).balanceOf(address(this));

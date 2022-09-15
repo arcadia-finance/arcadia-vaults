@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >0.8.10;
 
@@ -74,14 +74,13 @@ contract LiquidatorTest is Test {
     address private auctionBuyer = address(8);
     address private liquidityProvider = address(9);
 
-    uint256 rateDaiToUsd = 1 * 10**Constants.oracleDaiToUsdDecimals;
-    uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
-    uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
+    uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
+    uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
+    uint256 rateLinkToUsd = 20 * 10 ** Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
-    uint256 rateWbaycToEth = 85 * 10**Constants.oracleWbaycToEthDecimals;
-    uint256 rateWmaycToUsd = 50000 * 10**Constants.oracleWmaycToUsdDecimals;
-    uint256 rateInterleaveToEth =
-        1 * 10**(Constants.oracleInterleaveToEthDecimals - 2);
+    uint256 rateWbaycToEth = 85 * 10 ** Constants.oracleWbaycToEthDecimals;
+    uint256 rateWmaycToUsd = 50000 * 10 ** Constants.oracleWmaycToUsdDecimals;
+    uint256 rateInterleaveToEth = 1 * 10 ** (Constants.oracleInterleaveToEthDecimals - 2);
 
     address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
@@ -93,14 +92,10 @@ contract LiquidatorTest is Test {
 
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     // FIXTURES
-    ArcadiaOracleFixture arcadiaOracleFixture =
-        new ArcadiaOracleFixture(oracleOwner);
+    ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
     //this is a before
     constructor() {
@@ -108,27 +103,24 @@ contract LiquidatorTest is Test {
 
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
+        eth.mint(tokenCreatorAddress, 200000 * 10 ** Constants.ethDecimals);
 
         snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
-        snx.mint(tokenCreatorAddress, 200000 * 10**Constants.snxDecimals);
+        snx.mint(tokenCreatorAddress, 200000 * 10 ** Constants.snxDecimals);
 
         link = new ERC20Mock(
             "LINK Mock",
             "mLINK",
             uint8(Constants.linkDecimals)
         );
-        link.mint(tokenCreatorAddress, 200000 * 10**Constants.linkDecimals);
+        link.mint(tokenCreatorAddress, 200000 * 10 ** Constants.linkDecimals);
 
         safemoon = new ERC20Mock(
             "Safemoon Mock",
             "mSFMN",
             uint8(Constants.safemoonDecimals)
         );
-        safemoon.mint(
-            tokenCreatorAddress,
-            200000 * 10**Constants.safemoonDecimals
-        );
+        safemoon.mint(tokenCreatorAddress, 200000 * 10 ** Constants.safemoonDecimals);
 
         bayc = new ERC721Mock("BAYC Mock", "mBAYC");
         bayc.mint(tokenCreatorAddress, 0);
@@ -147,7 +139,7 @@ contract LiquidatorTest is Test {
             "mwBAYC",
             uint8(Constants.wbaycDecimals)
         );
-        wbayc.mint(tokenCreatorAddress, 100000 * 10**Constants.wbaycDecimals);
+        wbayc.mint(tokenCreatorAddress, 100000 * 10 ** Constants.wbaycDecimals);
 
         interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
         interleave.mint(tokenCreatorAddress, 1, 100000);
@@ -157,34 +149,16 @@ contract LiquidatorTest is Test {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
-        oracleDaiToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleDaiToUsdDecimals),
-            "DAI / USD"
-        );
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleEthToUsdDecimals),
-            "ETH / USD"
-        );
-        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleLinkToUsdDecimals),
-            "LINK / USD"
-        );
-        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleSnxToEthDecimals),
-            "SNX / ETH"
-        );
-        oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWbaycToEthDecimals),
-            "WBAYC / ETH"
-        );
-        oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWmaycToUsdDecimals),
-            "WMAYC / USD"
-        );
-        oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleInterleaveToEthDecimals),
-            "INTERLEAVE / ETH"
-        );
+        oracleDaiToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleDaiToUsdDecimals), "DAI / USD");
+        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
+        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
+        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
+        oracleWbaycToEth =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
+        oracleWmaycToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WMAYC / USD");
+        oracleInterleaveToEth =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
 
         vm.startPrank(creatorAddress);
         oracleHub.addOracle(
@@ -256,10 +230,10 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
-        eth.transfer(vaultOwner, 100000 * 10**Constants.ethDecimals);
-        link.transfer(vaultOwner, 100000 * 10**Constants.linkDecimals);
-        snx.transfer(vaultOwner, 100000 * 10**Constants.snxDecimals);
-        safemoon.transfer(vaultOwner, 100000 * 10**Constants.safemoonDecimals);
+        eth.transfer(vaultOwner, 100000 * 10 ** Constants.ethDecimals);
+        link.transfer(vaultOwner, 100000 * 10 ** Constants.linkDecimals);
+        snx.transfer(vaultOwner, 100000 * 10 ** Constants.snxDecimals);
+        safemoon.transfer(vaultOwner, 100000 * 10 ** Constants.safemoonDecimals);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 1);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 2);
@@ -273,9 +247,8 @@ contract LiquidatorTest is Test {
             100000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
-        eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
+        eth.transfer(unprivilegedAddress, 1000 * 10 ** Constants.ethDecimals);
         vm.stopPrank();
-
 
         oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
 
@@ -303,7 +276,7 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(creatorAddress);
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
+        pool.updateInterestRate(5 * 10 ** 16); //5% with 18 decimals precision
 
         debt = new DebtToken(address(pool));
         pool.setDebtToken(address(debt));
@@ -334,25 +307,21 @@ contract LiquidatorTest is Test {
         uint256[] memory emptyList = new uint256[](0);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(
-                    10**Constants.oracleDaiToUsdDecimals
-                ),
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
             }),
             emptyList
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(
-                    10**Constants.oracleEthToUsdDecimals
-                ),
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -382,7 +351,7 @@ contract LiquidatorTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             assetCreditRatings
@@ -390,7 +359,7 @@ contract LiquidatorTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10**Constants.linkDecimals),
+                assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
             assetCreditRatings
@@ -398,7 +367,7 @@ contract LiquidatorTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
-                assetUnit: uint64(10**Constants.snxDecimals),
+                assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
             }),
             assetCreditRatings
@@ -425,11 +394,7 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(
-            address(mainRegistry),
-            address(vault),
-            Constants.upgradeProof1To2
-        );
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
         pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
@@ -441,10 +406,7 @@ contract LiquidatorTest is Test {
             uint256(
                 keccak256(
                     abi.encodeWithSignature(
-                        "doRandom(uint256,uint256,bytes32)",
-                        block.timestamp,
-                        block.number,
-                        blockhash(block.number)
+                        "doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)
                     )
                 )
             ),
@@ -452,17 +414,13 @@ contract LiquidatorTest is Test {
         );
         proxy = Vault(proxyAddr);
 
-        uint256 slot = stdstore
-            .target(address(factory))
-            .sig(factory.isVault.selector)
-            .with_key(address(vault))
-            .find();
+        uint256 slot = stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault)).find();
         bytes32 loc = bytes32(slot);
         bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
         vm.store(address(factory), loc, mockedCurrentTokenId);
 
         vm.prank(tokenCreatorAddress);
-        dai.mint(tokenCreatorAddress, 100000 * 10**18);
+        dai.mint(tokenCreatorAddress, 100000 * 10 ** 18);
 
         vm.startPrank(oracleOwner);
         oracleDaiToUsd.transmit(int256(rateDaiToUsd));
@@ -523,18 +481,10 @@ contract LiquidatorTest is Test {
         assertEq(address(this), liquidator_m.owner());
     }
 
-    function testNotAllowAuctionHealthyVault(
-        uint128 amountEth,
-        uint128 amountCredit
-    ) public {
-        uint256 valueOfOneEth = rateEthToUsd *
-            10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+    function testNotAllowAuctionHealthyVault(uint128 amountEth, uint128 amountCredit) public {
+        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
-        vm.assume(
-            ((valueOfOneEth * amountEth) / 10**Constants.ethDecimals / 150) *
-                100 >=
-                amountCredit
-        );
+        vm.assume(((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals / 150) * 100 >= amountCredit);
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
@@ -549,11 +499,10 @@ contract LiquidatorTest is Test {
     }
 
     function testStartAuction(uint128 amountEth, uint256 newPrice) public {
-        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
+        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd *
-            10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         depositERC20InVault(eth, amountEth, vaultOwner);
         assertEq(proxy.life(), 0);
@@ -575,14 +524,11 @@ contract LiquidatorTest is Test {
         assertEq(proxy.life(), 1);
     }
 
-    function testShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice)
-        public
-    {
-        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
+    function testShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public {
+        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd *
-            10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -598,35 +544,21 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (, , uint8 liqThres, , , , , ) = liquidator.auctionInfo(
-            address(proxy),
-            0
-        );
+        (,, uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
 
-        (uint256 vaultPrice, , bool forSale) = liquidator.getPriceOfVault(
-            address(proxy),
-            0
-        );
+        (uint256 vaultPrice,, bool forSale) = liquidator.getPriceOfVault(address(proxy), 0);
 
         uint256 expectedPrice = (amountCredit * liqThres) / 100;
         assertTrue(forSale);
         assertEq(vaultPrice, expectedPrice);
     }
 
-    function testAuctionPriceDecrease(
-        uint128 amountEth,
-        uint256 newPrice,
-        uint64 blocksToRoll
-    ) public {
-        vm.assume(
-            blocksToRoll <
-                liquidator.hourlyBlocks() * liquidator.breakevenTime()
-        );
-        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
+    function testAuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+        vm.assume(blocksToRoll < liquidator.hourlyBlocks() * liquidator.breakevenTime());
+        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd *
-            10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -642,20 +574,17 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt, , uint8 liqThres, , , , , ) = liquidator.auctionInfo(
-            address(proxy),
-            0
-        );
-        (uint256 vaultPriceBefore, , bool forSaleBefore) = liquidator
-            .getPriceOfVault(address(proxy), 0);
+        (uint128 openDebt,, uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
         vm.roll(block.number + blocksToRoll);
-        (uint256 vaultPriceAfter, , bool forSaleAfter) = liquidator
-            .getPriceOfVault(address(proxy), 0);
+        (uint256 vaultPriceAfter,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
 
-        uint256 expectedPrice = ((openDebt * liqThres) / 100) -
-            ((blocksToRoll * ((openDebt * (liqThres - 100)) / 100)) /
-                (liquidator.hourlyBlocks() * liquidator.breakevenTime()));
+        uint256 expectedPrice = ((openDebt * liqThres) / 100)
+            - (
+                (blocksToRoll * ((openDebt * (liqThres - 100)) / 100))
+                    / (liquidator.hourlyBlocks() * liquidator.breakevenTime())
+            );
 
         emit log_named_uint("expectedPrice", expectedPrice);
 
@@ -665,20 +594,12 @@ contract LiquidatorTest is Test {
         assertEq(vaultPriceAfter, expectedPrice);
     }
 
-    function testBuyVault(
-        uint128 amountEth,
-        uint256 newPrice,
-        uint64 blocksToRoll
-    ) public {
-        vm.assume(
-            blocksToRoll >
-                liquidator.hourlyBlocks() * liquidator.breakevenTime()
-        );
-        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
+    function testBuyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+        vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
+        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd *
-            10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -694,10 +615,7 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint256 priceOfVault, , ) = liquidator.getPriceOfVault(
-            address(proxy),
-            0
-        );
+        (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy), 0);
         giveAsset(auctionBuyer, priceOfVault);
 
         vm.prank(auctionBuyer);
@@ -706,20 +624,12 @@ contract LiquidatorTest is Test {
         assertEq(proxy.owner(), auctionBuyer); //todo: check erc721 owner
     }
 
-    function testWithrawAssetsFromPurchasedVault(
-        uint128 amountEth,
-        uint256 newPrice,
-        uint64 blocksToRoll
-    ) public {
-        vm.assume(
-            blocksToRoll >
-                liquidator.hourlyBlocks() * liquidator.breakevenTime()
-        );
-        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
+    function testWithrawAssetsFromPurchasedVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+        vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
+        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd *
-            10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         (
@@ -740,10 +650,7 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint256 priceOfVault, , ) = liquidator.getPriceOfVault(
-            address(proxy),
-            0
-        );
+        (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy), 0);
         giveAsset(auctionBuyer, priceOfVault);
 
         vm.prank(auctionBuyer);
@@ -773,8 +680,7 @@ contract LiquidatorTest is Test {
     function testClaimSingle(uint128 amountEth) public {
         vm.assume(amountEth > 0);
         {
-            uint256 valueOfOneEth = rateEthToUsd *
-                10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+            uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
             vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         }
 
@@ -801,7 +707,7 @@ contract LiquidatorTest is Test {
 
         giveAsset(address(2000), remainingCred * 2);
         giveAsset(address(1111), remainingCred * 2);
-        (uint256 price, , ) = liquidator.getPriceOfVault(address(proxy), 0);
+        (uint256 price,,) = liquidator.getPriceOfVault(address(proxy), 0);
         vm.startPrank(address(2000));
         dai.approve(address(liquidator), type(uint256).max);
         liquidator.buyVault(address(proxy), 0);
@@ -833,10 +739,7 @@ contract LiquidatorTest is Test {
 
         assertEq(pre.keeper + rewards.expectedKeeperReward, post.keeper);
         assertEq(pre.protocol + rewards.expectedProtocolReward, post.protocol);
-        assertEq(
-            pre.originalOwner + rewards.originalOwnerRecovery,
-            post.originalOwner
-        );
+        assertEq(pre.originalOwner + rewards.originalOwnerRecovery, post.originalOwner);
     }
 
     function testClaimMultiple(uint128[] calldata amountsEth) public {
@@ -854,20 +757,13 @@ contract LiquidatorTest is Test {
         Rewards memory rewardsSum;
         giveAsset(address(2000), type(uint256).max);
         giveAsset(address(1111), type(uint256).max);
-        emit log_named_uint(
-            "bal of buyer pre",
-            dai.balanceOf(address(2000))
-        );
+        emit log_named_uint("bal of buyer pre", dai.balanceOf(address(2000)));
 
         for (uint256 i; i < amountsEth.length; ++i) {
             amountEth = amountsEth[i];
             vm.assume(amountEth > 0);
             {
-                valueOfOneEth =
-                    rateEthToUsd *
-                    10 **
-                        (Constants.usdDecimals -
-                            Constants.oracleEthToUsdDecimals);
+                valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
                 vm.assume(amountEth < type(uint128).max / valueOfOneEth);
             }
 
@@ -893,24 +789,19 @@ contract LiquidatorTest is Test {
             vm.prank(address(1110));
             factory.liquidate(address(proxy));
 
-            (price, , ) = liquidator.getPriceOfVault(address(proxy), i);
+            (price,,) = liquidator.getPriceOfVault(address(proxy), i);
 
             vm.startPrank(address(2000));
             dai.approve(address(liquidator), type(uint256).max);
-            emit log_named_uint(
-                "bal of buyer",
-                dai.balanceOf(address(2000))
-            );
+            emit log_named_uint("bal of buyer", dai.balanceOf(address(2000)));
             emit log_named_uint("priceToPay", price);
             liquidator.buyVault(address(proxy), i);
             vm.stopPrank();
 
             rewards[i] = getRewards(price, remainingCred);
             rewardsSum.expectedKeeperReward += rewards[i].expectedKeeperReward;
-            rewardsSum.expectedProtocolReward += rewards[i]
-                .expectedProtocolReward;
-            rewardsSum.originalOwnerRecovery += rewards[i]
-                .originalOwnerRecovery;
+            rewardsSum.expectedProtocolReward += rewards[i].expectedProtocolReward;
+            rewardsSum.originalOwnerRecovery += rewards[i].originalOwnerRecovery;
 
             vm.prank(oracleOwner);
             oracleEthToUsd.transmit(int256(rateEthToUsd));
@@ -918,11 +809,7 @@ contract LiquidatorTest is Test {
             vaultAddresses[i] = address(proxy);
             lives[i] = i;
             vm.startPrank(address(2000));
-            factory.transferFrom(
-                address(2000),
-                vaultOwner,
-                factory.vaultIndex(address(proxy))
-            );
+            factory.transferFrom(address(2000), vaultOwner, factory.vaultIndex(address(proxy)));
             vm.stopPrank();
         }
 
@@ -935,21 +822,14 @@ contract LiquidatorTest is Test {
         Balances memory post = getBalances(dai, vaultOwner);
 
         assertEq(pre.keeper + rewardsSum.expectedKeeperReward, post.keeper);
-        assertEq(
-            pre.protocol + rewardsSum.expectedProtocolReward,
-            post.protocol
-        );
-        assertEq(
-            pre.originalOwner + rewardsSum.originalOwnerRecovery,
-            post.originalOwner
-        );
+        assertEq(pre.protocol + rewardsSum.expectedProtocolReward, post.protocol);
+        assertEq(pre.originalOwner + rewardsSum.originalOwnerRecovery, post.originalOwner);
     }
 
     function testClaimSingleMultipleVaults(uint128 amountEth) public {
         vm.assume(amountEth > 0);
         {
-            uint256 valueOfOneEth = rateEthToUsd *
-                10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+            uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
             vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         }
 
@@ -966,12 +846,7 @@ contract LiquidatorTest is Test {
         vm.startPrank(vaultOwner);
         address proxy2 = factory.createVault(45855465656845214, 0);
         eth.approve(proxy2, type(uint256).max);
-        Vault(proxy2).deposit(
-            assetAddresses,
-            assetIds,
-            assetAmounts,
-            assetTypes
-        );
+        Vault(proxy2).deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         Vault(proxy2).openTrustedMarginAccount(address(pool));
         dai.approve(proxy2, type(uint256).max);
         vm.stopPrank();
@@ -1000,7 +875,7 @@ contract LiquidatorTest is Test {
 
         giveAsset(address(2000), remainingCred * 10);
         giveAsset(address(1111), remainingCred * 10);
-        (uint256 price, , ) = liquidator.getPriceOfVault(address(proxy), 0);
+        (uint256 price,,) = liquidator.getPriceOfVault(address(proxy), 0);
         vm.startPrank(address(2000));
         dai.approve(address(liquidator), type(uint256).max);
         liquidator.buyVault(address(proxy), 0);
@@ -1040,21 +915,14 @@ contract LiquidatorTest is Test {
         Balances memory post = getBalances(dai, vaultOwner);
 
         assertEq(pre.keeper + 2 * rewards.expectedKeeperReward, post.keeper);
-        assertEq(
-            pre.protocol + 2 * rewards.expectedProtocolReward,
-            post.protocol
-        );
-        assertEq(
-            pre.originalOwner + 2 * rewards.originalOwnerRecovery,
-            post.originalOwner
-        );
+        assertEq(pre.protocol + 2 * rewards.expectedProtocolReward, post.protocol);
+        assertEq(pre.originalOwner + 2 * rewards.originalOwnerRecovery, post.originalOwner);
     }
 
     function testClaimSingleHighLife(uint128 amountEth, uint16 newLife) public {
         vm.assume(amountEth > 0);
         {
-            uint256 valueOfOneEth = rateEthToUsd *
-                10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+            uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
             vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         }
 
@@ -1083,10 +951,7 @@ contract LiquidatorTest is Test {
 
         giveAsset(address(2000), remainingCred * 2);
         giveAsset(address(1111), remainingCred * 2);
-        (uint256 price, , ) = liquidator.getPriceOfVault(
-            address(proxy),
-            newLife
-        );
+        (uint256 price,,) = liquidator.getPriceOfVault(address(proxy), newLife);
         vm.startPrank(address(2000));
         dai.approve(address(liquidator), type(uint256).max);
         liquidator.buyVault(address(proxy), newLife);
@@ -1118,22 +983,14 @@ contract LiquidatorTest is Test {
 
         assertEq(pre.keeper + rewards.expectedKeeperReward, post.keeper);
         assertEq(pre.protocol + rewards.expectedProtocolReward, post.protocol);
-        assertEq(
-            pre.originalOwner + rewards.originalOwnerRecovery,
-            post.originalOwner
-        );
+        assertEq(pre.originalOwner + rewards.originalOwnerRecovery, post.originalOwner);
     }
 
-    function testClaimSingleWrongLife(
-        uint128 amountEth,
-        uint16 newLife,
-        uint16 lifeToBuy
-    ) public {
+    function testClaimSingleWrongLife(uint128 amountEth, uint16 newLife, uint16 lifeToBuy) public {
         vm.assume(newLife != lifeToBuy);
         vm.assume(amountEth > 0);
         {
-            uint256 valueOfOneEth = rateEthToUsd *
-                10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+            uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
             vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         }
 
@@ -1171,21 +1028,12 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
     }
 
-
-    function testBreakeven(
-        uint128 amountEth,
-        uint256 newPrice,
-        uint64 blocksToRoll,
-        uint8 breakevenTime) public {
-        vm.assume(
-            blocksToRoll <
-                liquidator.hourlyBlocks() * breakevenTime
-        );
-        (uint16 collThresProxy, uint8 liqThresProxy, ) = proxy.vault();
+    function testBreakeven(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll, uint8 breakevenTime) public {
+        vm.assume(blocksToRoll < liquidator.hourlyBlocks() * breakevenTime);
+        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd *
-            10**(Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
+        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1204,20 +1052,14 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt, , uint8 liqThres, , , , , ) = liquidator.auctionInfo(
-            address(proxy),
-            0
-        );
-        (uint256 vaultPriceBefore, , bool forSaleBefore) = liquidator
-            .getPriceOfVault(address(proxy), 0);
+        (uint128 openDebt,, uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
         vm.roll(block.number + blocksToRoll);
-        (uint256 vaultPriceAfter, , bool forSaleAfter) = liquidator
-            .getPriceOfVault(address(proxy), 0);
+        (uint256 vaultPriceAfter,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
 
-        uint256 expectedPrice = ((openDebt * liqThres) / 100) -
-            ((blocksToRoll * ((openDebt * (liqThres - 100)) / 100)) /
-                (liquidator.hourlyBlocks() * breakevenTime));
+        uint256 expectedPrice = ((openDebt * liqThres) / 100)
+            - ((blocksToRoll * ((openDebt * (liqThres - 100)) / 100)) / (liquidator.hourlyBlocks() * breakevenTime));
 
         emit log_named_uint("expectedPrice", expectedPrice);
 
@@ -1227,11 +1069,7 @@ contract LiquidatorTest is Test {
         assertEq(vaultPriceAfter, expectedPrice);
     }
 
-    function getBalances(ERC20Mock assetAddr, address _vaultOwner)
-        public
-        view
-        returns (Balances memory)
-    {
+    function getBalances(ERC20Mock assetAddr, address _vaultOwner) public view returns (Balances memory) {
         Balances memory bal;
         bal.keeper = assetAddr.balanceOf(address(1110));
         bal.protocol = assetAddr.balanceOf(address(1000));
@@ -1240,34 +1078,19 @@ contract LiquidatorTest is Test {
         return bal;
     }
 
-    function getRewards(uint256 buyPrice, uint256 openDebt)
-        public
-        view
-        returns (Rewards memory)
-    {
+    function getRewards(uint256 buyPrice, uint256 openDebt) public view returns (Rewards memory) {
         (uint64 protocolRatio, uint64 keeperRatio) = liquidator.claimRatio();
 
         Rewards memory rewards;
         rewards.expectedKeeperReward = (openDebt * keeperRatio) / 100;
 
         if (buyPrice > openDebt + rewards.expectedKeeperReward) {
-            if (
-                buyPrice - openDebt - rewards.expectedKeeperReward >
-                (openDebt * protocolRatio) / 100
-            ) {
-                rewards.expectedProtocolReward =
-                    (openDebt * protocolRatio) /
-                    100;
+            if (buyPrice - openDebt - rewards.expectedKeeperReward > (openDebt * protocolRatio) / 100) {
+                rewards.expectedProtocolReward = (openDebt * protocolRatio) / 100;
                 rewards.originalOwnerRecovery =
-                    buyPrice -
-                    openDebt -
-                    rewards.expectedKeeperReward -
-                    rewards.expectedProtocolReward;
+                    buyPrice - openDebt - rewards.expectedKeeperReward - rewards.expectedProtocolReward;
             } else {
-                rewards.expectedProtocolReward =
-                    buyPrice -
-                    openDebt -
-                    rewards.expectedKeeperReward;
+                rewards.expectedProtocolReward = buyPrice - openDebt - rewards.expectedKeeperReward;
                 rewards.originalOwnerRecovery = 0;
             }
         } else {
@@ -1286,31 +1109,20 @@ contract LiquidatorTest is Test {
     }
 
     function setLife(Vault vaultAddr, uint256 newLife) public {
-        uint256 slot = stdstore
-            .target(address(vaultAddr))
-            .sig(vaultAddr.life.selector)
-            .find();
+        uint256 slot = stdstore.target(address(vaultAddr)).sig(vaultAddr.life.selector).find();
         bytes32 loc = bytes32(slot);
         bytes32 newLife_b = bytes32(abi.encode(newLife));
         vm.store(address(vaultAddr), loc, newLife_b);
     }
 
     function giveAsset(address addr, uint256 amount) public {
-        uint256 slot = stdstore
-            .target(address(dai))
-            .sig(dai.balanceOf.selector)
-            .with_key(addr)
-            .find();
+        uint256 slot = stdstore.target(address(dai)).sig(dai.balanceOf.selector).with_key(addr).find();
         bytes32 loc = bytes32(slot);
         bytes32 newBalance = bytes32(abi.encode(amount));
         vm.store(address(dai), loc, newBalance);
     }
 
-    function depositERC20InVault(
-        ERC20Mock token,
-        uint128 amount,
-        address sender
-    )
+    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
         returns (
             address[] memory assetAddresses,
@@ -1339,11 +1151,7 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
     }
 
-    function depositERC721InVault(
-        ERC721Mock token,
-        uint128[] memory tokenIds,
-        address sender
-    )
+    function depositERC721InVault(ERC721Mock token, uint128[] memory tokenIds, address sender)
         public
         returns (
             address[] memory assetAddresses,
@@ -1376,12 +1184,7 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
     }
 
-    function depositERC1155InVault(
-        ERC1155Mock token,
-        uint256 tokenId,
-        uint256 amount,
-        address sender
-    )
+    function depositERC1155InVault(ERC1155Mock token, uint256 tokenId, uint256 amount, address sender)
         public
         returns (
             address[] memory assetAddresses,

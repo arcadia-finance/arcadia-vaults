@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >=0.4.22 <0.9.0;
 
@@ -50,12 +50,7 @@ abstract contract SubRegistry is Ownable {
      * @return A boolean, indicating if the asset passed as input is whitelisted
      * @dev For tokens without Id (for instance ERC20 tokens), the Id should be set to 0
      */
-    function isWhiteListed(address, uint256)
-        external
-        view
-        virtual
-        returns (bool)
-    {
+    function isWhiteListed(address, uint256) external view virtual returns (bool) {
         return false;
     }
 
@@ -80,17 +75,12 @@ abstract contract SubRegistry is Ownable {
     /**
      * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency
      * @dev The value of the asset can be denominated in:
-     *      - USD.
-     *      - A given BaseCurrency, different from USD.
-     *      - A combination of USD and a given BaseCurrency, different from USD (will be very exceptional,
-     *        but theoratically possible for eg. a UNI V2 LP position of two underlying assets,
-     *        one denominated in USD and the other one in the different BaseCurrency).
+     * - USD.
+     * - A given BaseCurrency, different from USD.
+     * - A combination of USD and a given BaseCurrency, different from USD (will be very exceptional,
+     * but theoratically possible for eg. a UNI V2 LP position of two underlying assets,
+     * one denominated in USD and the other one in the different BaseCurrency).
      * @dev All price feeds should be fetched in the Oracle-Hub
      */
-    function getValue(GetValueInput memory)
-        public
-        view
-        virtual
-        returns (uint256, uint256)
-    {}
+    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256) {}
 }
