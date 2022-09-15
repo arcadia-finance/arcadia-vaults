@@ -668,8 +668,8 @@ contract VaultV2 {
     function _setBaseCurrency(
         address _baseCurrency
     ) private {
-        require(getUsedMargin() == 0, "VL: Can't change baseCurrency when Used Margin > 0");
-        //require(_baseCurrency + 1 <= IMainRegistry(registryAddress).baseCurrencyCounter(), "VL: baseCurrency not found");
+        require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
+        require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL_SBC: baseCurrency not found");
         vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
     }
 
@@ -680,7 +680,13 @@ contract VaultV2 {
     bool isTrustedProtocolSet;
     address public trustedProtocol;
 
-    function openTrustedMarginAccount(address protocol) public {
+    /** 
+    @notice Initiates a margin account on the vault for one trusted application..
+    @param protocol The contract address of the trusted application.
+    @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
+    @dev Currently only one trusted protocol can be set.
+    */
+    function openTrustedMarginAccount(address protocol) onlyOwner public {
         require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
@@ -695,10 +701,14 @@ contract VaultV2 {
         allowed[protocol] = true;
     }
 
+    /** 
+    @notice Closes the margin account on the vault of the trusted application..
+    @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
+    @dev Currently only one trusted protocol can be set.
+    */
     function closeTrustedMarginAccount() public onlyOwner {
         require(isTrustedProtocolSet, "V_CMA: NOT SET");
-
-        require(ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) == 0, "NON-ZERO OPEN POSITION");
+        require(ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
 
         isTrustedProtocolSet = false;
         allowed[trustedProtocol] = false;
@@ -714,7 +724,7 @@ contract VaultV2 {
          Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
     @param baseCurrency The asset to return the value in.
     @return vaultValue Total value stored on the vault, expressed in baseCurrency.
-  */
+    */
     function getVaultValue(address baseCurrency)
         public
         view
@@ -735,15 +745,15 @@ contract VaultV2 {
 
     /** 
     @notice Calculates the total collateral value of the vault.
-    @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
     @return collateralValue The collateral value, returned in the decimals of the base currency.
+    @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
     @dev The collateral value of the vault is equal to the spot value of the underlying assets,
          discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
          collateralised assets can fluctuate, the haircut guarantees that the vault 
          remains over-collateralised with a high confidence level (99,9%+). The size of the
          haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
          or the smaller the on-chain liquidity, the biggert the haircut will be.
-  */
+    */
     function getCollateralValue()
         public
         view
@@ -759,15 +769,15 @@ contract VaultV2 {
     /** 
     @notice Calculates the total collateral value of the vault.
     @param vaultValue The total spot value of all the assets in the vault.
-    @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
     @return collateralValue The collateral value, returned in the decimals of the base currency.
+    @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
     @dev The collateral value of the vault is equal to the spot value of the underlying assets,
          discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
          collateralised assets can fluctuate, the haircut guarantees that the vault 
          remains over-collateralised with a high confidence level (99,9%+). The size of the
          haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
          or the smaller the on-chain liquidity, the biggert the haircut will be.
-  */
+    */
     function getCollateralValue(uint256 vaultValue)
         public
         view
@@ -780,16 +790,23 @@ contract VaultV2 {
         }
     }
 
+    /** 
+    @notice Returns the used margin of the proxy vault.
+    @return usedMargin The used amount of margin a user has taken
+    @dev The used margin is denominated in the baseCurrency of the proxy vault.
+    @dev Currently only one trusted application (Arcadia Lending) can open a margin account.
+         The open position is fetched at a contract of the application -> only allow trusted audited protocols!!! 
+    */
     function getUsedMargin() public returns (uint128 usedMargin) {
         usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)); // ToDo: Check if cast is safe
     }
 
     /** 
     @notice Calculates the remaining margin the owner of the proxy vault can use.
-    @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
-    @return freeMargin The remaining amount of margin a user can take, 
-                            returned in the decimals of the base currency.
-  */
+    @return freeMargin The remaining amount of margin a user can take.
+    @dev The free margin is denominated in the baseCurrency of the proxy vault,
+         with an equal number of decimals as the base currency.
+    */
     function getFreeMargin()
         public
         returns (uint256 freeMargin)
@@ -810,7 +827,7 @@ contract VaultV2 {
     @param vaultValue The total spot value of all the assets in the vault.
     @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
     @return freeMargin The remaining amount of margin a user can take, 
-                            returned in the decimals of the base currency.
+            returned in the decimals of the base currency.
   */
     function getFreeMargin(uint256 vaultValue)
         public
@@ -844,6 +861,7 @@ contract VaultV2 {
     @param baseCurrency The Base-currency in which the margin position is denominated.
     @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
     @return success Boolean indicating if there the margin position is successfully decreased.
+    @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
      */
     function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
         success = baseCurrency == vault.baseCurrency;
@@ -883,7 +901,7 @@ contract VaultV2 {
             rightHand = uint256(vault.liqThres) * uint256(openDebt);
         }
 
-        require(leftHand < rightHand, "This vault is healthy");
+        require(leftHand < rightHand, "V_LV: This vault is healthy");
 
         uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
 
@@ -897,7 +915,7 @@ contract VaultV2 {
                 vault.liqThres,
                 baseCurrencyIdentifier
             ),
-            "Failed to start auction!"
+            "V_LV: Failed to start auction!"
         );
 
         //gas: good luck overflowing this

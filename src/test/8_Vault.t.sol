@@ -1702,7 +1702,7 @@ contract vaultTests is Test {
         vm.stopPrank();
 
         vm.startPrank(toAuth);
-        vm.expectRevert("VL: Can't change baseCurrency when Used Margin > 0");
+        vm.expectRevert("VL_SBC: Can't change baseCurrency when Used Margin > 0");
         vault.setBaseCurrency(address(eth));
         vm.stopPrank();
 
