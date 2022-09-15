@@ -338,6 +338,16 @@ contract MainRegistry is Ownable {
         }
     }
 
+    /**
+     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     *      for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency The contract address of the BaseCurrency
+     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
+     */
     function getTotalValue(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
@@ -436,6 +446,16 @@ contract MainRegistry is Ownable {
         return valueInBaseCurrency;
     }
 
+    /**
+     * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     *      for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency The contract address of the BaseCurrency
+     * @return valuesPerAsset The list of values per assets denominated in BaseCurrency
+     */
     function getListOfValuesPerAsset(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
@@ -531,6 +551,19 @@ contract MainRegistry is Ownable {
         return valuesPerAsset;
     }
 
+    /**
+     * @notice Calculate the value per Credit Rating Category of a list of assets denominated in a given BaseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     *      for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency The contract address of the BaseCurrency
+     * @return valuesPerCreditRating The list of values per Credit Rating Category denominated in BaseCurrency
+     * @dev Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
+     *      Category from 1 to 10 will be used to label groups of assets with similar risk profiles
+     *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
+     */
     function getListOfValuesPerCreditRating(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
