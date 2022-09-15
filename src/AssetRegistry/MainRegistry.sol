@@ -31,6 +31,7 @@ contract MainRegistry is Ownable {
     address public factoryAddress;
     address[] private subRegistries;
     address[] public assetsInMainRegistry;
+    address[] public baseCurrencies;
 
     mapping(address => bool) public inMainRegistry;
     mapping(address => bool) public isSubRegistry;
@@ -73,37 +74,18 @@ contract MainRegistry is Ownable {
         //Main registry must be initialised with usd
         baseCurrencyToInformation[baseCurrencyCounter] = _baseCurrencyInformation;
         assetToBaseCurrency[_baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
+        baseCurrencies.push(_baseCurrencyInformation.assetAddress);
         unchecked {
             ++baseCurrencyCounter;
         }
     }
 
     /**
-     * @notice Sets the new Factory address
-     * @dev The factory can only be set on the Main Registry AFTER the Main registry is set in the Factory.
-     *      This ensures that the allowed BaseCurrencies and corresponding liquidity pool contracts in both contract are equal.
+     * @notice Sets the Factory address
      * @param _factoryAddress The address of the Factory
      */
     function setFactory(address _factoryAddress) external onlyOwner {
-        require(
-            IFactory(_factoryAddress).getCurrentRegistry() == address(this),
-            "MR_AA: MR not set in factory"
-        );
         factoryAddress = _factoryAddress;
-
-        uint256 factoryBaseCurrencyCounter = IFactory(_factoryAddress)
-            .baseCurrencyCounter();
-        if (baseCurrencyCounter > factoryBaseCurrencyCounter) {
-            for (uint256 i = factoryBaseCurrencyCounter; i < baseCurrencyCounter; ) {
-                IFactory(factoryAddress).addBaseCurrency(
-                    i,
-                    baseCurrencyToInformation[i].lendingPool
-                );
-                unchecked {
-                    ++i;
-                }
-            }
-        }
     }
 
     /**
@@ -238,7 +220,7 @@ contract MainRegistry is Ownable {
     /**
      * @notice Change the Credit Rating Category for one or more assets for one or more baseCurrencies
      * @param assets The List of addresses of the assets
-     * @param baseCurrencies The corresponding List of BaseCurrencies
+     * @param _baseCurrencies The corresponding List of BaseCurrencies
      * @param newCreditRating The corresponding List of new Credit Ratings
      * @dev The function loops over all indexes, and changes for each index the Credit Rating Category of the combination of asset and baseCurrency.
      *      In case multiple Credit Rating Categories for the same assets need to be changed, the address must be repeated in the assets.
@@ -248,12 +230,12 @@ contract MainRegistry is Ownable {
      */
     function batchSetCreditRating(
         address[] calldata assets,
-        uint256[] calldata baseCurrencies,
+        uint256[] calldata _baseCurrencies,
         uint256[] calldata newCreditRating
     ) external onlyOwner {
         uint256 assetsLength = assets.length;
         require(
-            assetsLength == baseCurrencies.length &&
+            assetsLength == _baseCurrencies.length &&
                 assetsLength == newCreditRating.length,
             "MR_BSCR: LENGTH_MISMATCH"
         );
@@ -264,7 +246,7 @@ contract MainRegistry is Ownable {
                 "MR_BSCR: non-existing creditRat"
             );
             assetToBaseCurrencyToCreditRating[assets[i]][
-                baseCurrencies[i]
+                _baseCurrencies[i]
             ] = newCreditRating[i];
             unchecked {
                 ++i;
@@ -307,6 +289,7 @@ contract MainRegistry is Ownable {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
+        baseCurrencies.push(baseCurrencyInformation.assetAddress);
 
         uint256 assetCreditRatingsLength = assetCreditRatings.length;
         require(
@@ -327,12 +310,6 @@ contract MainRegistry is Ownable {
             }
         }
 
-        if (factoryAddress != address(0)) {
-            IFactory(factoryAddress).addBaseCurrency(
-                baseCurrencyCounter,
-                baseCurrencyInformation.lendingPool
-            );
-        }
         unchecked {
             ++baseCurrencyCounter;
         }
