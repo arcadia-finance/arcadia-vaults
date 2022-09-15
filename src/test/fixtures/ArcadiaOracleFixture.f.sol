@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >=0.4.22 <0.9.0;
 
@@ -23,11 +23,10 @@ contract ArcadiaOracleFixture is Test {
         defaultTransmitter = transmitter;
     }
 
-    function initOracle(
-        uint8 decimals,
-        string memory description,
-        address asset_address
-    ) public returns (ArcadiaOracle) {
+    function initOracle(uint8 decimals, string memory description, address asset_address)
+        public
+        returns (ArcadiaOracle)
+    {
         vm.startPrank(defaultCreatorAddress);
         ArcadiaOracle oracle = new ArcadiaOracle(
             uint8(decimals),
@@ -45,7 +44,10 @@ contract ArcadiaOracleFixture is Test {
         string memory description,
         address asset_address,
         address transmitterAddress
-    ) public returns (ArcadiaOracle) {
+    )
+        public
+        returns (ArcadiaOracle)
+    {
         vm.startPrank(creatorAddress);
         ArcadiaOracle oracle = new ArcadiaOracle(
             uint8(decimals),
@@ -57,11 +59,10 @@ contract ArcadiaOracleFixture is Test {
         return oracle;
     }
 
-    function initMockedOracle(
-        uint8 decimals,
-        string memory description,
-        uint256 answer
-    ) public returns (ArcadiaOracle) {
+    function initMockedOracle(uint8 decimals, string memory description, uint256 answer)
+        public
+        returns (ArcadiaOracle)
+    {
         vm.startPrank(defaultCreatorAddress);
         ArcadiaOracle oracle = new ArcadiaOracle(
             uint8(decimals),
@@ -77,10 +78,7 @@ contract ArcadiaOracleFixture is Test {
         return oracle;
     }
 
-    function initMockedOracle(uint8 decimals, string memory description)
-        public
-        returns (ArcadiaOracle)
-    {
+    function initMockedOracle(uint8 decimals, string memory description) public returns (ArcadiaOracle) {
         vm.startPrank(defaultCreatorAddress);
         ArcadiaOracle oracle = new ArcadiaOracle(
             uint8(decimals),
@@ -92,11 +90,7 @@ contract ArcadiaOracleFixture is Test {
         return oracle;
     }
 
-    function transmitOracle(
-        ArcadiaOracle oracle,
-        int256 answer,
-        address transmitter
-    ) public {
+    function transmitOracle(ArcadiaOracle oracle, int256 answer, address transmitter) public {
         vm.startPrank(transmitter);
         oracle.transmit(answer);
         vm.stopPrank();

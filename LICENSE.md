@@ -9,7 +9,7 @@ Parameters
 
 Licensor: Arcadia Finance
 
-Licensed Work: Arcadia Finance Lending Core. The Licensed Work is (c) 2022 Arcadia Finance
+Licensed Work: Arcadia Finance - Arcadia Vaults. The Licensed Work is (c) 2022 Arcadia Finance
 
 Additional Use Grant: Any uses listed and defined at this [LICENSE](./LICENSE.md) or at [core-license-grants.arcadia.finance](https://core-license-grants.arcadia.finance)
 

@@ -2,21 +2,15 @@
 pragma solidity >0.8.0;
 
 library Printing {
-    function append(
-        string memory a,
-        string memory b,
-        string memory c,
-        string memory d,
-        string memory e
-    ) internal pure returns (string memory) {
+    function append(string memory a, string memory b, string memory c, string memory d, string memory e)
+        internal
+        pure
+        returns (string memory)
+    {
         return string(abi.encodePacked(a, b, c, d, e));
     }
 
-    function uint2str(uint256 _i)
-        internal
-        pure
-        returns (string memory _uintAsString)
-    {
+    function uint2str(uint256 _i) internal pure returns (string memory _uintAsString) {
         if (_i == 0) {
             return "0";
         }
@@ -38,11 +32,7 @@ library Printing {
         return string(bstr);
     }
 
-    function makeString(bytes memory byteCode)
-        internal
-        pure
-        returns (string memory stringData)
-    {
+    function makeString(bytes memory byteCode) internal pure returns (string memory stringData) {
         uint256 blank = 0; //blank 32 byte value
         uint256 length = byteCode.length;
 
@@ -50,9 +40,8 @@ library Printing {
         uint256 requiredAlloc = length;
 
         if (
-            length % 0x20 > 0
-        ) //optimise copying the final part of the bytes - to avoid looping with single byte writes
-        {
+            length % 0x20 > 0 //optimise copying the final part of the bytes - to avoid looping with single byte writes
+        ) {
             cycles++;
             requiredAlloc += 0x20; //expand memory to allow end blank, so we don't smack the next stack entry
         }
@@ -70,9 +59,7 @@ library Printing {
                 mc := add(mc, 0x20)
                 cc := add(cc, 0x20)
                 cycle := add(cycle, 0x01)
-            } {
-                mstore(mc, mload(cc))
-            }
+            } { mstore(mc, mload(cc)) }
         }
 
         //finally blank final bytes and shrink size (part of the optimisation to avoid looping adding blank bytes1)

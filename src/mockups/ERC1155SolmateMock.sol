@@ -26,11 +26,7 @@ contract ERC1155Mock is ERC1155 {
         symbol = _symbol;
     }
 
-    function mint(
-        address to,
-        uint256 id,
-        uint256 amount
-    ) public {
+    function mint(address to, uint256 id, uint256 amount) public {
         _mint(to, id, amount, "");
     }
 
@@ -55,9 +51,6 @@ contract ERC1155Mock is ERC1155 {
      * @return uri of the token or an empty string if it does not exist
      */
     function uri(uint256 id) public view override returns (string memory) {
-        return
-            bytes(_uri[id]).length > 0
-                ? _uri[id]
-                : string(abi.encodePacked(baseURI, id.toString()));
+        return bytes(_uri[id]).length > 0 ? _uri[id] : string(abi.encodePacked(baseURI, id.toString()));
     }
 }

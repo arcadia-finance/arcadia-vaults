@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: AGPL-3.0-or-later
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 pragma solidity >=0.4.22 <0.9.0;
 
@@ -15,5 +15,7 @@ interface ILiquidator {
         uint128 openDebt,
         uint8 liqThres,
         uint8 baseCurrency
-    ) external returns (bool);
+    )
+        external
+        returns (bool);
 }
