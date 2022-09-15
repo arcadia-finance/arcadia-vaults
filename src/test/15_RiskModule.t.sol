@@ -1,15 +1,14 @@
 /**
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >=0.4.22 <0.9.0;
 
 import "../../lib/forge-std/src/Test.sol";
 import "../RiskModule.sol";
 import "./gasTests/BuyVault1.sol";
-
 
 contract RiskModuleTest is Test {
     using stdStorage for StdStorage;
@@ -19,6 +18,7 @@ contract RiskModuleTest is Test {
 
     RiskModule public riskModule;
     // These code will run before all the tests
+
     constructor() {
         vm.startPrank(creator);
         riskModule = new RiskModule();
@@ -37,7 +37,6 @@ contract RiskModuleTest is Test {
         // Then: Collateral factor for the asset should be 2000
         uint128 collateralFactor = riskModule.getCollateralFactor(assetAddress);
         assertEq(collateralFactor, 2000);
-
     }
 
     function testAddAssetWDefaultsFail() public {
@@ -49,7 +48,6 @@ contract RiskModuleTest is Test {
         vm.expectRevert("Ownable: caller is not the owner");
         riskModule.addAsset(assetAddress);
         vm.stopPrank();
-
     }
 
     function testAddingSameAddressAssetShouldRevertFail() public {
@@ -66,7 +64,6 @@ contract RiskModuleTest is Test {
         vm.expectRevert("RM: Asset is already added");
         riskModule.addAsset(assetAddress);
         vm.stopPrank();
-
     }
 
     function testSetNewCollateralFactorSuccess() public {
@@ -87,9 +84,8 @@ contract RiskModuleTest is Test {
         vm.stopPrank();
 
         // Then: The collateral factor should be new value
-        uint collateralFactorReturned = riskModule.getCollateralFactor(assetAddress);
+        uint256 collateralFactorReturned = riskModule.getCollateralFactor(assetAddress);
         assertEq(collateralFactorNew, collateralFactorReturned);
-
     }
 
     function testSetNewLiquidationThresholdSuccess() public {
@@ -110,10 +106,7 @@ contract RiskModuleTest is Test {
         vm.stopPrank();
 
         // Then: The liquidation threshold should be new value
-        uint liquidationThresholdReturned = riskModule.getLiquidationThreshold(assetAddress);
+        uint256 liquidationThresholdReturned = riskModule.getLiquidationThreshold(assetAddress);
         assertEq(liquidationThresholdNew, liquidationThresholdReturned);
-
     }
-
-
 }

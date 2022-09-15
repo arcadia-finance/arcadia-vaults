@@ -38,7 +38,7 @@ contract MainRegistry is Ownable, RiskModule {
     mapping(address => bool) public isSubRegistry;
     mapping(address => address) public assetToSubRegistry;
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
-    mapping(address => mapping(uint256 => uint256))public assetToBaseCurrencyToCreditRating;
+    mapping(address => mapping(uint256 => uint256)) public assetToBaseCurrencyToCreditRating;
     mapping(address => uint256) public assetToBaseCurrency;
     mapping(address => bool) public isBaseCurrency;
 
@@ -354,10 +354,10 @@ contract MainRegistry is Ownable, RiskModule {
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
                 valueInBaseCurrency = valueInBaseCurrency
-                    + _assetAmounts[i]* baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //_assetAmounts can have a variable decimal precision -> bring to 18 decimals
+                    + _assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //_assetAmounts can have a variable decimal precision -> bring to 18 decimals
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
-                ( tempValueInUsd,  tempValueInBaseCurrency) =
+                (tempValueInUsd, tempValueInBaseCurrency) =
                     ISubRegistry(assetToSubRegistry[assetAddress]).getValue(getValueInput);
                 valueInUsd = valueInUsd + tempValueInUsd;
                 valueInBaseCurrency = valueInBaseCurrency + tempValueInBaseCurrency;

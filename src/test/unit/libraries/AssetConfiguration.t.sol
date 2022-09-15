@@ -1,21 +1,21 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >=0.4.22 <0.9.0;
 
 import "../../../../lib/forge-std/src/Test.sol";
 import "../../../libraries/AssetConfiguration.sol";
 
-
 contract AssetConfigurationTest is Test {
     using stdStorage for StdStorage;
 
     function testValidCollateralFactor() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When: The collateral factor is fetch from the config
         uint256 collateralFactor1 = AssetConfiguration.getCollateralFactor(initialConfig);
@@ -36,17 +36,18 @@ contract AssetConfigurationTest is Test {
 
     function testInvalidCollateralFactor() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When Then: The collateral factor is set with invalid value, it should revert
         vm.expectRevert("Invalid Collateral Factor parameter for asset");
         AssetConfiguration.setCollateralFactor(initialConfig, 65537);
-
     }
 
     function testValidLiquidationThreshold() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When: The liquidity threshold is fetch from the config
         uint256 liquidationThreshold1 = AssetConfiguration.getLiquidationThreshold(initialConfig);
@@ -67,17 +68,18 @@ contract AssetConfigurationTest is Test {
 
     function testInvalidLiquidationThreshold() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When Then: The liquidity threshold is set with invalid value, it should revert
         vm.expectRevert("Invalid Liquidity Threshold parameter for asset");
         AssetConfiguration.setLiquidationThreshold(initialConfig, 65537);
-
     }
 
     function testValidLiquidationReward() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When: The liquidity reward is fetch from the config
         uint256 liquidationReward1 = AssetConfiguration.getLiquidationReward(initialConfig);
@@ -98,17 +100,18 @@ contract AssetConfigurationTest is Test {
 
     function testInvalidLiquidationReward() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When Then: The collateral factor is set with invalid value, it should revert
         vm.expectRevert("Invalid Liquidity Reward parameter for asset");
         AssetConfiguration.setLiquidationReward(initialConfig, 65537);
-
     }
 
     function testValidProtocolLiquidationFee() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When: The protocol liquidity fee is fetch from the config
         uint256 liquidationFee1 = AssetConfiguration.getProtocolLiquidationFee(initialConfig);
@@ -129,17 +132,18 @@ contract AssetConfigurationTest is Test {
 
     function testInvalidProtocolLiquidationFee() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When Then: The protocol liquidity fee is set with invalid value, it should revert
         vm.expectRevert("Invalid Protocol Liquidity Fee parameter for asset");
         AssetConfiguration.setProtocolLiquidationFee(initialConfig, 65537);
-
     }
 
     function testValidDecimals() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When: The decimals is fetch from the config
         uint256 decimals1 = AssetConfiguration.getDecimals(initialConfig);
@@ -160,17 +164,18 @@ contract AssetConfigurationTest is Test {
 
     function testInvalidDecimals() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When Then: The decimals is set with invalid value, it should revert
         vm.expectRevert("Invalid Decimal for asset");
         AssetConfiguration.setDecimals(initialConfig, 256);
-
     }
 
     function testValidIsActive() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When: The active is fetch from the config
         bool isActive1 = AssetConfiguration.getActive(initialConfig);
@@ -191,7 +196,8 @@ contract AssetConfigurationTest is Test {
 
     function testValidIsFrozen() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When: The frozen is fetch from the config
         bool isFrozen1 = AssetConfiguration.getFrozen(initialConfig);
@@ -212,7 +218,8 @@ contract AssetConfigurationTest is Test {
 
     function testValidIsPaused() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When: The paused is fetch from the config
         bool isPaused1 = AssetConfiguration.getPaused(initialConfig);
@@ -233,7 +240,8 @@ contract AssetConfigurationTest is Test {
 
     function testValidIsBorrowing() public {
         // Given: the initialConfig with all configuration parameters zero for the asset
-        AssetConfiguration.AssetDetailBitmap memory initialConfig = AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
+        AssetConfiguration.AssetDetailBitmap memory initialConfig =
+            AssetConfiguration.AssetDetailBitmap({data: uint128(0)});
 
         // When: The borrowing is fetch from the config
         bool isBorrowing1 = AssetConfiguration.getBorrowing(initialConfig);

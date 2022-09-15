@@ -41,7 +41,7 @@ contract Vault {
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
-*/
+     */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
     // Used by the liquidator contract for proceed claims
@@ -698,9 +698,9 @@ contract Vault {
      */
     function getCollateralValue(uint256 vaultValue) public view returns (uint256 collateralValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-        generateAssetData();
+            generateAssetData();
         uint256 collateralFactor =
-        IRegistry(_registryAddress).getCollateralFactor(assetAddresses, assetIds, assetAmounts, vault._baseCurrency);
+            IRegistry(_registryAddress).getCollateralFactor(assetAddresses, assetIds, assetAmounts, vault._baseCurrency);
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
         unchecked {
@@ -804,8 +804,9 @@ contract Vault {
         uint128 openDebt = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
-        uint256 liquidityThreshold =
-            IRegistry(_registryAddress).getLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault._baseCurrency);
+        uint256 liquidityThreshold = IRegistry(_registryAddress).getLiquidationThreshold(
+            assetAddresses, assetIds, assetAmounts, vault._baseCurrency
+        );
 
         unchecked {
             //gas: cannot overflow unless totalValue is

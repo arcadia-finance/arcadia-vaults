@@ -62,10 +62,6 @@ interface IRegistry {
         external
         view
         returns (uint256);
-    )
-        external
-        view
-        returns (uint256);
 
     function getTotalValue(
         address[] calldata _assetAddresses,

@@ -152,8 +152,8 @@ contract Factory is ERC721, Ownable {
 
         vault = address(
             new Proxy{salt: bytes32(salt)}(
-                vaultDetails[vaultVersion].logic
-            )
+                                                    vaultDetails[vaultVersion].logic
+                                                )
         );
 
         IVault(vault).initialize(msg.sender, vaultDetails[vaultVersion].registryAddress, uint16(vaultVersion));
