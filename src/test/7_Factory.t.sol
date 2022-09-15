@@ -87,7 +87,6 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -472,7 +471,6 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: randomAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -501,7 +499,6 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: newAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -513,7 +510,6 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -539,7 +535,6 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: newAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -551,7 +546,6 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -561,7 +555,6 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: newAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -589,7 +582,6 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -599,7 +591,6 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: newAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                lendingPool: address(pool),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
