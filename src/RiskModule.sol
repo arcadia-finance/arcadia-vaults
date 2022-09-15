@@ -1,8 +1,8 @@
 /**
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >=0.4.22 <0.9.0;
 
@@ -18,19 +18,17 @@ import "./libraries/AssetConfiguration.sol";
  * @dev No end-user should directly interact with the Risk Module
  */
 contract RiskModule is Ownable {
-
     // TODO: This can be precalculated as bitmap
-    AssetConfiguration.AssetDetail defaultConfig = AssetConfiguration.AssetDetail(
-    {
-    collateralFactor : uint16(2000),
-    liquidityThreshold : uint16(3000),
-    liquidityReward : uint16(500),
-    protocolLiquidityFee : uint16(100),
-    decimals : uint8(16),
-    isActive : true,
-    isFrozen : false,
-    isPaused : false,
-    isBorrowing : false
+    AssetConfiguration.AssetDetail defaultConfig = AssetConfiguration.AssetDetail({
+        collateralFactor: uint16(2000),
+        liquidityThreshold: uint16(3000),
+        liquidityReward: uint16(500),
+        protocolLiquidityFee: uint16(100),
+        decimals: uint8(16),
+        isActive: true,
+        isFrozen: false,
+        isPaused: false,
+        isBorrowing: false
     });
 
     mapping(address => AssetConfiguration.AssetDetailBitmap) public assetConfigurationDetails;
@@ -67,22 +65,28 @@ contract RiskModule is Ownable {
         assetConfigurationDetails[assetAddress] = config;
     }
 
-    function getLiquidationThreshold(address assetAddress) external returns (uint128) {
+    function getLiquidationThreshold(address assetAddress) public view returns (uint128) {
         return AssetConfiguration.getLiquidationThreshold(assetConfigurationDetails[assetAddress]);
+    }
+
+    function getLiquidationThresholdHARDCODED(address assetAddress) public view returns (uint128) {
+        return 110;
     }
 
     function calculateMinCollateralFactor(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts
-    ) public returns (uint256) {
+    )
+        public
+        returns (uint256)
+    {
         uint256 assetAddressesLength = assetAddresses.length;
         require(
-            assetAddressesLength == assetIds.length &&
-            assetAddressesLength == assetAmounts.length,
+            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
             "RM_CMCF: LENGTH_MISMATCH"
         );
-        uint minCollateralFactor = type(uint128).max;
+        uint256 minCollateralFactor = type(uint128).max;
         for (uint256 i; i < assetAddressesLength;) {
             address assetAddress = assetAddresses[i];
             uint128 collFact = getCollateralFactorHARDCODED(assetAddress);
@@ -93,15 +97,13 @@ contract RiskModule is Ownable {
         return minCollateralFactor;
     }
 
-    function calculateWeightedCollateralValue(
-        address[] calldata assetAddresses,
-        uint256[] memory valuesPerAsset
-    ) public view returns (uint256) {
+    function calculateWeightedCollateralValue(address[] calldata assetAddresses, uint256[] memory valuesPerAsset)
+        public
+        view
+        returns (uint256)
+    {
         uint256 assetAddressesLength = assetAddresses.length;
-        require(
-            assetAddressesLength == valuesPerAsset.length,
-            "RM_CCV: LENGTH_MISMATCH"
-        );
+        require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
         uint256 collateralValue;
         address assetAddress;
         uint256 collFact;
@@ -116,24 +118,21 @@ contract RiskModule is Ownable {
         return collateralValue;
     }
 
-    function calculateWeightedCollateralFactor(
-        address[] calldata assetAddresses,
-        uint256[] memory valuesPerAsset
-    ) public view returns (uint256) {
+    function calculateWeightedCollateralFactor(address[] calldata assetAddresses, uint256[] memory valuesPerAsset)
+        public
+        view
+        returns (uint256)
+    {
         uint256 assetAddressesLength = assetAddresses.length;
-        require(
-            assetAddressesLength == valuesPerAsset.length,
-            "RM_CWCF: LENGTH_MISMATCH"
-        );
+        require(assetAddressesLength == valuesPerAsset.length, "RM_CWCF: LENGTH_MISMATCH");
         uint256 collateralFactor;
         uint256 totalValue;
 
-        for (uint256 i; i < valuesPerAsset.length;){
+        for (uint256 i; i < valuesPerAsset.length;) {
             totalValue += valuesPerAsset[i];
             unchecked {
-            i++;
-        }
-
+                i++;
+            }
         }
         uint128 collFact;
         for (uint256 j; j < assetAddressesLength;) {
@@ -147,4 +146,46 @@ contract RiskModule is Ownable {
         return collateralFactor;
     }
 
+    function calculateWeightedLiquidationThreshold(address[] calldata assetAddresses, uint256[] memory valuesPerAsset)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 assetAddressesLength = assetAddresses.length;
+        require(assetAddressesLength == valuesPerAsset.length, "RM_CWLT: LENGTH_MISMATCH");
+        uint256 liquidationThreshold;
+        uint256 totalValue;
+
+        for (uint256 i; i < valuesPerAsset.length;) {
+            totalValue += valuesPerAsset[i];
+            unchecked {
+                i++;
+            }
+        }
+        uint128 liqThreshold;
+        for (uint256 j; j < assetAddressesLength;) {
+            address assetAddress = assetAddresses[j];
+            liqThreshold = getLiquidationThresholdHARDCODED(assetAddress);
+            liquidationThreshold += liqThreshold * (valuesPerAsset[j] / totalValue);
+            unchecked {
+                j++;
+            }
+        }
+        return liquidationThreshold;
+    }
+
+    function calculateWeightedLiquidationValue(
+        address[] calldata assetAddresses,
+        uint256[] memory valuesPerAsset,
+        uint256 debt
+    )
+        public
+        view
+        returns (uint256)
+    {
+        uint256 assetAddressesLength = assetAddresses.length;
+        require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
+        uint256 liquidationThreshold = calculateWeightedLiquidationThreshold(assetAddresses, valuesPerAsset);
+        return liquidationThreshold * debt;
+    }
 }
