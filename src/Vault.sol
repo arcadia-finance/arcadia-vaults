@@ -890,7 +890,6 @@ contract Vault {
     @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
     @return success Boolean returning if the liquidation process is successfully started.
   */
-
     function liquidateVault(address liquidationKeeper)
         public
         onlyFactory

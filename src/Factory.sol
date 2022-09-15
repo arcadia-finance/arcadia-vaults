@@ -35,8 +35,6 @@ contract Factory is ERC721, Ownable {
 
     string public baseURI;
 
-    //address public liquidatorAddress;
-
     event VaultCreated(
         address indexed vaultAddress,
         address indexed owner,
@@ -53,16 +51,6 @@ contract Factory is ERC721, Ownable {
     function allVaultsLength() external view returns (uint256 numberOfVaults) {
         numberOfVaults = allVaults.length;
     }
-
-    /** 
-    @notice Function to set a new contract for the liquidation logic
-    @dev Since vaults to be liquidated, together with the open debt, are transferred to the protocol,
-         New logic can be set without needing to increment the vault version.
-    @param _newLiquidator The new liquidator contract
-    function setLiquidator(address _newLiquidator) public onlyOwner {
-        liquidatorAddress = _newLiquidator;
-    }
-  */
 
     /** 
     @notice Function confirms the new contracts to be used for new deployed vaults
@@ -360,9 +348,6 @@ contract Factory is ERC721, Ownable {
     @param vault Vault that needs to get transfered.
   */
     function _liquidateTransfer(address vault, address liquidator) internal {
-//        (bool success, address liquidator) = IVault(vault).liquidateVault(
-//            liquidator
-//        );
         address from = ownerOf[vaultIndex[vault]];
         unchecked {
             balanceOf[from]--;
