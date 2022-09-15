@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >0.8.10;
 
@@ -74,14 +74,13 @@ contract VaultV2Test is Test {
     address private vaultOwner = address(6);
     address private liquidityProvider = address(7);
 
-    uint256 rateDaiToUsd = 1 * 10**Constants.oracleDaiToUsdDecimals;
-    uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
-    uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
+    uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
+    uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
+    uint256 rateLinkToUsd = 20 * 10 ** Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
-    uint256 rateWbaycToEth = 85 * 10**Constants.oracleWbaycToEthDecimals;
-    uint256 rateWmaycToUsd = 50000 * 10**Constants.oracleWmaycToUsdDecimals;
-    uint256 rateInterleaveToEth =
-        1 * 10**(Constants.oracleInterleaveToEthDecimals - 2);
+    uint256 rateWbaycToEth = 85 * 10 ** Constants.oracleWbaycToEthDecimals;
+    uint256 rateWmaycToUsd = 50000 * 10 ** Constants.oracleWmaycToUsdDecimals;
+    uint256 rateInterleaveToEth = 1 * 10 ** (Constants.oracleInterleaveToEthDecimals - 2);
 
     address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
@@ -95,8 +94,7 @@ contract VaultV2Test is Test {
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
     // FIXTURES
-    ArcadiaOracleFixture arcadiaOracleFixture =
-        new ArcadiaOracleFixture(oracleOwner);
+    ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
     //this is a before
     constructor() {
@@ -104,27 +102,24 @@ contract VaultV2Test is Test {
 
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
+        eth.mint(tokenCreatorAddress, 200000 * 10 ** Constants.ethDecimals);
 
         snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
-        snx.mint(tokenCreatorAddress, 200000 * 10**Constants.snxDecimals);
+        snx.mint(tokenCreatorAddress, 200000 * 10 ** Constants.snxDecimals);
 
         link = new ERC20Mock(
             "LINK Mock",
             "mLINK",
             uint8(Constants.linkDecimals)
         );
-        link.mint(tokenCreatorAddress, 200000 * 10**Constants.linkDecimals);
+        link.mint(tokenCreatorAddress, 200000 * 10 ** Constants.linkDecimals);
 
         safemoon = new ERC20Mock(
             "Safemoon Mock",
             "mSFMN",
             uint8(Constants.safemoonDecimals)
         );
-        safemoon.mint(
-            tokenCreatorAddress,
-            200000 * 10**Constants.safemoonDecimals
-        );
+        safemoon.mint(tokenCreatorAddress, 200000 * 10 ** Constants.safemoonDecimals);
 
         bayc = new ERC721Mock("BAYC Mock", "mBAYC");
         bayc.mint(tokenCreatorAddress, 0);
@@ -143,7 +138,7 @@ contract VaultV2Test is Test {
             "mwBAYC",
             uint8(Constants.wbaycDecimals)
         );
-        wbayc.mint(tokenCreatorAddress, 100000 * 10**Constants.wbaycDecimals);
+        wbayc.mint(tokenCreatorAddress, 100000 * 10 ** Constants.wbaycDecimals);
 
         interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
         interleave.mint(tokenCreatorAddress, 1, 100000);
@@ -153,30 +148,15 @@ contract VaultV2Test is Test {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleEthToUsdDecimals),
-            "ETH / USD"
-        );
-        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleLinkToUsdDecimals),
-            "LINK / USD"
-        );
-        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleSnxToEthDecimals),
-            "SNX / ETH"
-        );
-        oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWbaycToEthDecimals),
-            "WBAYC / ETH"
-        );
-        oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWmaycToUsdDecimals),
-            "WBAYC / USD"
-        );
-        oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleInterleaveToEthDecimals),
-            "INTERLEAVE / ETH"
-        );
+        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
+        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
+        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
+        oracleWbaycToEth =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
+        oracleWmaycToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WBAYC / USD");
+        oracleInterleaveToEth =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
 
         vm.startPrank(creatorAddress);
         oracleHub.addOracle(
@@ -248,10 +228,10 @@ contract VaultV2Test is Test {
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
-        eth.transfer(vaultOwner, 100000 * 10**Constants.ethDecimals);
-        link.transfer(vaultOwner, 100000 * 10**Constants.linkDecimals);
-        snx.transfer(vaultOwner, 100000 * 10**Constants.snxDecimals);
-        safemoon.transfer(vaultOwner, 100000 * 10**Constants.safemoonDecimals);
+        eth.transfer(vaultOwner, 100000 * 10 ** Constants.ethDecimals);
+        link.transfer(vaultOwner, 100000 * 10 ** Constants.linkDecimals);
+        snx.transfer(vaultOwner, 100000 * 10 ** Constants.snxDecimals);
+        safemoon.transfer(vaultOwner, 100000 * 10 ** Constants.safemoonDecimals);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 1);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 2);
@@ -265,9 +245,8 @@ contract VaultV2Test is Test {
             100000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
-        eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
+        eth.transfer(unprivilegedAddress, 1000 * 10 ** Constants.ethDecimals);
         vm.stopPrank();
-
 
         oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
 
@@ -295,7 +274,7 @@ contract VaultV2Test is Test {
 
         vm.startPrank(creatorAddress);
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
+        pool.updateInterestRate(5 * 10 ** 16); //5% with 18 decimals precision
 
         debt = new DebtToken(address(pool));
         pool.setDebtToken(address(debt));
@@ -307,14 +286,12 @@ contract VaultV2Test is Test {
         vm.prank(liquidityProvider);
         dai.approve(address(pool), type(uint256).max);
 
-
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
     }
 
     //this is a before each
     function setUp() public {
-
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
@@ -328,25 +305,21 @@ contract VaultV2Test is Test {
         uint256[] memory emptyList = new uint256[](0);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(
-                    10**Constants.oracleDaiToUsdDecimals
-                ),
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
             }),
             emptyList
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(
-                    10**Constants.oracleEthToUsdDecimals
-                ),
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -376,7 +349,7 @@ contract VaultV2Test is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             assetCreditRatings
@@ -384,7 +357,7 @@ contract VaultV2Test is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10**Constants.linkDecimals),
+                assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
             assetCreditRatings
@@ -392,7 +365,7 @@ contract VaultV2Test is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
-                assetUnit: uint64(10**Constants.snxDecimals),
+                assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
             }),
             assetCreditRatings
@@ -428,11 +401,7 @@ contract VaultV2Test is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(
-            address(mainRegistry),
-            address(vault),
-            Constants.upgradeProof1To2
-        );
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
         pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
@@ -445,10 +414,7 @@ contract VaultV2Test is Test {
             uint256(
                 keccak256(
                     abi.encodeWithSignature(
-                        "doRandom(uint256,uint256,bytes32)",
-                        block.timestamp,
-                        block.number,
-                        blockhash(block.number)
+                        "doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)
                     )
                 )
             ),
@@ -488,16 +454,11 @@ contract VaultV2Test is Test {
         vaultV2 = new VaultV2();
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);        
-        factory.setNewVaultInfo(
-            address(mainRegistry),
-            address(vaultV2),
-            Constants.upgradeRoot1To2
-        );
+        vm.startPrank(creatorAddress);
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
         factory.confirmNewVaultInfo();
         vm.stopPrank();
 
-        
         assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
 
         vm.startPrank(address(123456789));
@@ -512,6 +473,7 @@ contract VaultV2Test is Test {
         uint8 liqThres;
         address baseCurrency;
     }
+
     struct Checks {
         address erc20Stored;
         address erc721Stored;
@@ -538,9 +500,7 @@ contract VaultV2Test is Test {
         checks.trustedProtocol = proxy.trustedProtocol();
         checks.life = proxy.life();
         checks.owner = proxy.owner();
-        (vaultVar.collThres,
-        vaultVar.liqThres,
-        vaultVar.baseCurrency) = proxy.vault();
+        (vaultVar.collThres, vaultVar.liqThres, vaultVar.baseCurrency) = proxy.vault();
         checks.vaultVar = vaultVar;
 
         return checks;
@@ -562,14 +522,9 @@ contract VaultV2Test is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(
-            address(mainRegistry),
-            address(vaultV2),
-            Constants.upgradeRoot1To2
-        );
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
         factory.confirmNewVaultInfo();
         vm.stopPrank();
-
 
         bytes32[] memory proofs = new bytes32[](1);
         proofs[0] = Constants.upgradeProof1To2;
@@ -601,15 +556,10 @@ contract VaultV2Test is Test {
         vaultV2 = new VaultV2();
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);        
-        factory.setNewVaultInfo(
-            address(mainRegistry),
-            address(vaultV2),
-            Constants.upgradeRoot1To2
-        );
+        vm.startPrank(creatorAddress);
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
         factory.confirmNewVaultInfo();
         vm.stopPrank();
-
 
         bytes32[] memory proofs = new bytes32[](1);
         proofs[0] = Constants.upgradeProof1To2;
@@ -637,12 +587,8 @@ contract VaultV2Test is Test {
         vaultV2 = new VaultV2();
         vm.stopPrank();
 
-        vm.startPrank(creatorAddress);        
-        factory.setNewVaultInfo(
-            address(mainRegistry),
-            address(vaultV2),
-            Constants.upgradeRoot1To2
-        );
+        vm.startPrank(creatorAddress);
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
         factory.confirmNewVaultInfo();
         vm.stopPrank();
 
@@ -655,11 +601,7 @@ contract VaultV2Test is Test {
         vm.stopPrank();
     }
 
-    function depositERC20InVault(
-        ERC20Mock token,
-        uint128 amount,
-        address sender
-    )
+    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
         returns (
             address[] memory assetAddresses,
@@ -688,11 +630,7 @@ contract VaultV2Test is Test {
         vm.stopPrank();
     }
 
-    function depositERC20InVaultV2(
-        ERC20Mock token,
-        uint128 amount,
-        address sender
-    )
+    function depositERC20InVaultV2(ERC20Mock token, uint128 amount, address sender)
         public
         returns (
             address[] memory assetAddresses,
@@ -721,11 +659,7 @@ contract VaultV2Test is Test {
         vm.stopPrank();
     }
 
-        function depositERC721InVault(
-        ERC721Mock token,
-        uint128[] memory tokenIds,
-        address sender
-    )
+    function depositERC721InVault(ERC721Mock token, uint128[] memory tokenIds, address sender)
         public
         returns (
             address[] memory assetAddresses,
@@ -758,12 +692,7 @@ contract VaultV2Test is Test {
         vm.stopPrank();
     }
 
-    function depositERC1155InVault(
-        ERC1155Mock token,
-        uint256 tokenId,
-        uint256 amount,
-        address sender
-    )
+    function depositERC1155InVault(ERC1155Mock token, uint256 tokenId, uint256 amount, address sender)
         public
         returns (
             address[] memory assetAddresses,
@@ -787,5 +716,4 @@ contract VaultV2Test is Test {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
-
 }

@@ -6,11 +6,7 @@ pragma solidity ^0.8.4;
 /// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/MerkleProofLib.sol)
 /// @author Modified from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/MerkleProof.sol)
 library MerkleProofLib {
-    function verify(
-        bytes32[] calldata proof,
-        bytes32 root,
-        bytes32 leaf
-    ) internal pure returns (bool isValid) {
+    function verify(bytes32[] calldata proof, bytes32 root, bytes32 leaf) internal pure returns (bool isValid) {
         assembly {
             if proof.length {
                 // Left shift by 5 is equivalent to multiplying by 0x20.
@@ -37,5 +33,4 @@ library MerkleProofLib {
             isValid := eq(leaf, root)
         }
     }
-
 }

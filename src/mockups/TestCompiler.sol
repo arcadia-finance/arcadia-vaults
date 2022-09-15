@@ -2,10 +2,7 @@
 pragma solidity >0.8.10;
 
 interface IMainReg {
-    function assetToBaseCurrencyToCreditRating(address asset, uint256 baseCurrency)
-        external
-        view
-        returns (uint256);
+    function assetToBaseCurrencyToCreditRating(address asset, uint256 baseCurrency) external view returns (uint256);
 }
 
 contract TestCompiler {
@@ -13,14 +10,15 @@ contract TestCompiler {
         address mainRegAddr,
         address[] calldata assets,
         uint256[] calldata baseCurrencies
-    ) public view returns (uint256[] memory) {
+    )
+        public
+        view
+        returns (uint256[] memory)
+    {
         uint256[] memory ratings = new uint256[](assets.length);
 
         for (uint256 i; i < assets.length; i++) {
-            ratings[i] = IMainReg(mainRegAddr).assetToBaseCurrencyToCreditRating(
-                assets[i],
-                baseCurrencies[i]
-            );
+            ratings[i] = IMainReg(mainRegAddr).assetToBaseCurrencyToCreditRating(assets[i], baseCurrencies[i]);
         }
 
         return ratings;

@@ -31,48 +31,26 @@ library FixedPointMathLib {
                     LOW LEVEL FIXED POINT OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
-    function mulDivDown(
-        uint256 x,
-        uint256 y,
-        uint256 denominator
-    ) internal pure returns (uint256 z) {
+    function mulDivDown(uint256 x, uint256 y, uint256 denominator) internal pure returns (uint256 z) {
         assembly {
             // Store x * y in z for now.
             z := mul(x, y)
 
             // Equivalent to require(denominator != 0 && (x == 0 || (x * y) / x == y))
-            if iszero(
-                and(
-                    iszero(iszero(denominator)),
-                    or(iszero(x), eq(div(z, x), y))
-                )
-            ) {
-                revert(0, 0)
-            }
+            if iszero(and(iszero(iszero(denominator)), or(iszero(x), eq(div(z, x), y)))) { revert(0, 0) }
 
             // Divide z by the denominator.
             z := div(z, denominator)
         }
     }
 
-    function mulDivUp(
-        uint256 x,
-        uint256 y,
-        uint256 denominator
-    ) internal pure returns (uint256 z) {
+    function mulDivUp(uint256 x, uint256 y, uint256 denominator) internal pure returns (uint256 z) {
         assembly {
             // Store x * y in z for now.
             z := mul(x, y)
 
             // Equivalent to require(denominator != 0 && (x == 0 || (x * y) / x == y))
-            if iszero(
-                and(
-                    iszero(iszero(denominator)),
-                    or(iszero(x), eq(div(z, x), y))
-                )
-            ) {
-                revert(0, 0)
-            }
+            if iszero(and(iszero(iszero(denominator)), or(iszero(x), eq(div(z, x), y)))) { revert(0, 0) }
 
             // First, divide z - 1 by the denominator and add 1.
             // We allow z - 1 to underflow if z is 0, because we multiply the
@@ -81,11 +59,7 @@ library FixedPointMathLib {
         }
     }
 
-    function rpow(
-        uint256 x,
-        uint256 n,
-        uint256 scalar
-    ) internal pure returns (uint256 z) {
+    function rpow(uint256 x, uint256 n, uint256 scalar) internal pure returns (uint256 z) {
         assembly {
             switch x
             case 0 {
@@ -122,9 +96,7 @@ library FixedPointMathLib {
                 } {
                     // Revert immediately if x ** 2 would overflow.
                     // Equivalent to iszero(eq(div(xx, x), x)) here.
-                    if shr(128, x) {
-                        revert(0, 0)
-                    }
+                    if shr(128, x) { revert(0, 0) }
 
                     // Store x squared.
                     let xx := mul(x, x)
@@ -133,9 +105,7 @@ library FixedPointMathLib {
                     let xxRound := add(xx, half)
 
                     // Revert if xx + half overflowed.
-                    if lt(xxRound, xx) {
-                        revert(0, 0)
-                    }
+                    if lt(xxRound, xx) { revert(0, 0) }
 
                     // Set x to scaled xxRound.
                     x := div(xxRound, scalar)
@@ -148,18 +118,14 @@ library FixedPointMathLib {
                         // If z * x overflowed:
                         if iszero(eq(div(zx, x), z)) {
                             // Revert if x is non-zero.
-                            if iszero(iszero(x)) {
-                                revert(0, 0)
-                            }
+                            if iszero(iszero(x)) { revert(0, 0) }
                         }
 
                         // Round to the nearest number.
                         let zxRound := add(zx, half)
 
                         // Revert if zx + half overflowed.
-                        if lt(zxRound, zx) {
-                            revert(0, 0)
-                        }
+                        if lt(zxRound, zx) { revert(0, 0) }
 
                         // Return properly scaled zxRound.
                         z := div(zxRound, scalar)
@@ -224,9 +190,7 @@ library FixedPointMathLib {
             let zRoundDown := div(x, z)
 
             // If zRoundDown is smaller, use it.
-            if lt(zRoundDown, z) {
-                z := zRoundDown
-            }
+            if lt(zRoundDown, z) { z := zRoundDown }
         }
     }
 }

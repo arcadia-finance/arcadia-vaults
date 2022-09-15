@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >=0.4.22 <0.9.0;
 
@@ -21,32 +21,23 @@ contract ArcadiaOracleTest is Test {
     address public nonTransmitter = address(31);
 
     // FIXTURES
-    ArcadiaOracleFixture internal arcadiaOracleFixture =
-        new ArcadiaOracleFixture(transmitter);
+    ArcadiaOracleFixture internal arcadiaOracleFixture = new ArcadiaOracleFixture(transmitter);
 
     function testTransmit() public {
-        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(
-            uint8(decimals),
-            "masUSD / USD",
-            address(812)
-        );
-        int192 answerToTransmit = int192(int256(10**decimals));
+        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(uint8(decimals), "masUSD / USD", address(812));
+        int192 answerToTransmit = int192(int256(10 ** decimals));
         arcadiaOracleFixture.transmitOracle(oracle, answerToTransmit);
         int256 answerFromOracle;
-        (, answerFromOracle, , , ) = oracle.latestRoundData();
+        (, answerFromOracle,,,) = oracle.latestRoundData();
         assertEq(answerFromOracle, answerToTransmit);
     }
 
     function testOnlyTransmitter() public {
         // given: oracle initialized by defaultCreatorAddress
-        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(
-            uint8(decimals),
-            "masUSD / USD",
-            address(812)
-        );
+        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(uint8(decimals), "masUSD / USD", address(812));
 
         // when: nonTransmitter tries to transmit
-        int192 answerToTransmit = int192(int256(11**decimals));
+        int192 answerToTransmit = int192(int256(11 ** decimals));
         vm.prank(nonTransmitter);
 
         // then: nonTransmitter shouldn not be able to add new transmission
@@ -57,11 +48,7 @@ contract ArcadiaOracleTest is Test {
 
     function testSetNewTransmitter() public {
         // given: oracle initialized by defaultCreatorAddress
-        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(
-            uint8(decimals),
-            "masUSD / USD",
-            address(812)
-        );
+        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(uint8(decimals), "masUSD / USD", address(812));
 
         // when: defaultCreatorAddress should be able to add new transmitter, and adds
         vm.prank(arcadiaOracleFixture.defaultCreatorAddress());
@@ -69,24 +56,20 @@ contract ArcadiaOracleTest is Test {
         vm.stopPrank();
 
         // then: new transmitter should be able to transmit
-        int192 answerToTransmit = int192(int256(11**decimals));
+        int192 answerToTransmit = int192(int256(11 ** decimals));
         vm.prank(nonTransmitter);
         oracle.transmit(answerToTransmit);
         vm.stopPrank();
 
         // and: responses should match
         int256 answerFromOracle;
-        (, answerFromOracle, , , ) = oracle.latestRoundData();
+        (, answerFromOracle,,,) = oracle.latestRoundData();
         assertEq(answerFromOracle, answerToTransmit);
     }
 
     function testFailSetNewTransmitter() public {
         // given: oracle initialized by defaultCreatorAddress
-        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(
-            uint8(decimals),
-            "masUSD / USD",
-            address(812)
-        );
+        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(uint8(decimals), "masUSD / USD", address(812));
 
         // when: nonCreator is pranked
         vm.startPrank(nonCreator);
@@ -99,11 +82,7 @@ contract ArcadiaOracleTest is Test {
 
     function testDeactivateTransmitter() public {
         // given: oracle initialized by defaultCreatorAddress
-        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(
-            uint8(decimals),
-            "masUSD / USD",
-            address(812)
-        );
+        ArcadiaOracle oracle = arcadiaOracleFixture.initOracle(uint8(decimals), "masUSD / USD", address(812));
 
         // when: defaultCreatorAddress is pranked, and deactivates transmitter
         vm.startPrank(arcadiaOracleFixture.defaultCreatorAddress());
@@ -111,7 +90,7 @@ contract ArcadiaOracleTest is Test {
         vm.stopPrank();
 
         // then: transmitter shouldn not be able to add new transmission
-        int192 answerToTransmit = int192(int256(11**decimals));
+        int192 answerToTransmit = int192(int256(11 ** decimals));
         vm.prank(transmitter);
         vm.expectRevert("Oracle: transmitter is not active");
         oracle.transmit(answerToTransmit);

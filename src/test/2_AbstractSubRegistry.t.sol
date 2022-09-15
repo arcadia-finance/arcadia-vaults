@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >0.8.10;
 
@@ -15,9 +15,7 @@ import "../AssetRegistry/AbstractSubRegistry.sol";
 import "../AssetRegistry/MainRegistry.sol";
 
 contract AbstractSubRegistryForTest is SubRegistry {
-    constructor(address mainRegistry, address oracleHub)
-        SubRegistry(mainRegistry, oracleHub)
-    {}
+    constructor(address mainRegistry, address oracleHub) SubRegistry(mainRegistry, oracleHub) {}
 
     function setAssetInformation(address assetAddress) public onlyOwner {
         if (!inSubRegistry[assetAddress]) {
@@ -78,18 +76,14 @@ contract AbstractSubRegistryTest is Test {
         );
     }
 
-    function testAssetWhitelistedWhenAddedToSubregistry(address assetAddress)
-        public
-    {
+    function testAssetWhitelistedWhenAddedToSubregistry(address assetAddress) public {
         vm.prank(creatorAddress);
         abstractSubRegistry.setAssetInformation(assetAddress);
 
         assertTrue(abstractSubRegistry.isAssetAddressWhiteListed(assetAddress));
     }
 
-    function testNonOwnerAddsExistingAssetToWhitelist(
-        address unprivilegedAddress
-    ) public {
+    function testNonOwnerAddsExistingAssetToWhitelist(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.prank(creatorAddress);
         abstractSubRegistry.setAssetInformation(address(eth));
@@ -108,9 +102,7 @@ contract AbstractSubRegistryTest is Test {
         abstractSubRegistry.addToWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(
-            !abstractSubRegistry.isAssetAddressWhiteListed(address(eth))
-        );
+        assertTrue(!abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testOwnerAddsExistingAssetToWhitelist() public {
@@ -122,9 +114,7 @@ contract AbstractSubRegistryTest is Test {
         assertTrue(abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testNonOwnerRemovesExistingAssetFromWhitelist(
-        address unprivilegedAddress
-    ) public {
+    function testNonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
 
         vm.prank(creatorAddress);
@@ -147,9 +137,7 @@ contract AbstractSubRegistryTest is Test {
         abstractSubRegistry.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(
-            !abstractSubRegistry.isAssetAddressWhiteListed(address(eth))
-        );
+        assertTrue(!abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testOwnerRemovesExistingAssetFromWhitelist() public {
@@ -158,14 +146,10 @@ contract AbstractSubRegistryTest is Test {
         abstractSubRegistry.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(
-            !abstractSubRegistry.isAssetAddressWhiteListed(address(eth))
-        );
+        assertTrue(!abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testNonOwnerAddsRemovedAssetToWhitelist(
-        address unprivilegedAddress
-    ) public {
+    function testNonOwnerAddsRemovedAssetToWhitelist(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
 
         vm.startPrank(creatorAddress);
@@ -178,9 +162,7 @@ contract AbstractSubRegistryTest is Test {
         abstractSubRegistry.addToWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(
-            !abstractSubRegistry.isAssetAddressWhiteListed(address(eth))
-        );
+        assertTrue(!abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testOwnerAddsRemovedAssetToWhitelist() public {

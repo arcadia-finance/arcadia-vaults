@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >0.8.10;
 
@@ -35,8 +35,8 @@ contract StandardERC20RegistryTest is Test {
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
 
-    uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
-    uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
+    uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
+    uint256 rateLinkToUsd = 20 * 10 ** Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
 
     address[] public oracleEthToUsdArr = new address[](1);
@@ -46,8 +46,7 @@ contract StandardERC20RegistryTest is Test {
     uint256[] emptyList = new uint256[](0);
 
     // FIXTURES
-    ArcadiaOracleFixture arcadiaOracleFixture =
-        new ArcadiaOracleFixture(oracleOwner);
+    ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
     //this is a before
     constructor() {
@@ -74,21 +73,13 @@ contract StandardERC20RegistryTest is Test {
         oracleHub = new OracleHub();
         vm.stopPrank();
 
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleEthToUsdDecimals),
-            "ETH / USD",
-            rateEthToUsd
-        );
+        oracleEthToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
         oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWbaycToEthDecimals),
-            "LINK / USD",
-            rateLinkToUsd
+            uint8(Constants.oracleWbaycToEthDecimals), "LINK / USD", rateLinkToUsd
         );
-        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWmaycToUsdDecimals),
-            "SNX / ETH",
-            rateSnxToEth
-        );
+        oracleSnxToEth =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals), "SNX / ETH", rateSnxToEth);
 
         vm.startPrank(creatorAddress);
         oracleHub.addOracle(
@@ -148,13 +139,11 @@ contract StandardERC20RegistryTest is Test {
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(
-                    10**Constants.oracleEthToUsdDecimals
-                ),
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -174,7 +163,7 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             emptyList
@@ -190,7 +179,7 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**19),
+                assetUnit: uint64(10 ** 19),
                 assetAddress: address(eth)
             }),
             assetCreditRatings
@@ -206,7 +195,7 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             assetCreditRatings
@@ -219,7 +208,7 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             emptyList
@@ -237,7 +226,7 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             assetCreditRatings
@@ -252,7 +241,7 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             emptyList
@@ -260,7 +249,7 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             emptyList
@@ -275,7 +264,7 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             emptyList
@@ -295,44 +284,36 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             emptyList
         );
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (amountEth *
-            rateEthToUsd *
-            Constants.WAD) /
-            10**(Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
+        uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
+            / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(eth),
-                assetId: 0,
-                assetAmount: amountEth,
-                baseCurrency: uint8(Constants.UsdBaseCurrency)
-            });
-        (
-            uint256 actualValueInUsd,
-            uint256 actualValueInBaseCurrency
-        ) = standardERC20Registry.getValue(getValueInput);
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+            assetAddress: address(eth),
+            assetId: 0,
+            assetAmount: amountEth,
+            baseCurrency: uint8(Constants.UsdBaseCurrency)
+        });
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = standardERC20Registry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testreturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountSnx)
-        public
-    {
+    function testreturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountSnx) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
-                assetUnit: uint64(10**Constants.snxDecimals),
+                assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
             }),
             emptyList
@@ -340,67 +321,51 @@ contract StandardERC20RegistryTest is Test {
         vm.stopPrank();
 
         uint256 expectedValueInUsd = 0;
-        uint256 expectedValueInBaseCurrency = (amountSnx *
-            rateSnxToEth *
-            Constants.WAD) /
-            10**(Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
+        uint256 expectedValueInBaseCurrency = (amountSnx * rateSnxToEth * Constants.WAD)
+            / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(snx),
-                assetId: 0,
-                assetAmount: amountSnx,
-                baseCurrency: uint8(Constants.EthBaseCurrency)
-            });
-        (
-            uint256 actualValueInUsd,
-            uint256 actualValueInBaseCurrency
-        ) = standardERC20Registry.getValue(getValueInput);
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+            assetAddress: address(snx),
+            assetId: 0,
+            assetAmount: amountSnx,
+            baseCurrency: uint8(Constants.EthBaseCurrency)
+        });
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = standardERC20Registry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountLink)
-        public
-    {
+    function testReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountLink) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10**Constants.linkDecimals),
+                assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
             emptyList
         );
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (amountLink *
-            rateLinkToUsd *
-            Constants.WAD) /
-            10**(Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
+        uint256 expectedValueInUsd = (amountLink * rateLinkToUsd * Constants.WAD)
+            / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(link),
-                assetId: 0,
-                assetAmount: amountLink,
-                baseCurrency: uint8(Constants.EthBaseCurrency)
-            });
-        (
-            uint256 actualValueInUsd,
-            uint256 actualValueInBaseCurrency
-        ) = standardERC20Registry.getValue(getValueInput);
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+            assetAddress: address(link),
+            assetId: 0,
+            assetAmount: amountLink,
+            baseCurrency: uint8(Constants.EthBaseCurrency)
+        });
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = standardERC20Registry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnValueSucces(uint256 rateEthToUsdNew, uint256 amountEth)
-        public
-    {
+    function testReturnValueSucces(uint256 rateEthToUsdNew, uint256 amountEth) public {
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew <= type(uint256).max / Constants.WAD);
 
@@ -408,11 +373,9 @@ contract StandardERC20RegistryTest is Test {
             vm.assume(uint256(amountEth) <= type(uint256).max / Constants.WAD);
         } else {
             vm.assume(
-                uint256(amountEth) <=
-                    (type(uint256).max /
-                        uint256(rateEthToUsdNew) /
-                        Constants.WAD) *
-                        10**Constants.oracleEthToUsdDecimals
+                uint256(amountEth)
+                    <= (type(uint256).max / uint256(rateEthToUsdNew) / Constants.WAD)
+                        * 10 ** Constants.oracleEthToUsdDecimals
             );
         }
 
@@ -424,45 +387,38 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             emptyList
         );
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (((Constants.WAD * rateEthToUsdNew) /
-            10**Constants.oracleEthToUsdDecimals) * amountEth) /
-            10**Constants.ethDecimals;
+        uint256 expectedValueInUsd = (
+            ((Constants.WAD * rateEthToUsdNew) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth
+        ) / 10 ** Constants.ethDecimals;
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(eth),
-                assetId: 0,
-                assetAmount: amountEth,
-                baseCurrency: uint8(Constants.UsdBaseCurrency)
-            });
-        (
-            uint256 actualValueInUsd,
-            uint256 actualValueInBaseCurrency
-        ) = standardERC20Registry.getValue(getValueInput);
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+            assetAddress: address(eth),
+            assetId: 0,
+            assetAmount: amountEth,
+            baseCurrency: uint8(Constants.UsdBaseCurrency)
+        });
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = standardERC20Registry.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnValueOverflow(uint256 rateEthToUsdNew, uint256 amountEth)
-        public
-    {
+    function testReturnValueOverflow(uint256 rateEthToUsdNew, uint256 amountEth) public {
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew <= type(uint256).max / Constants.WAD);
         vm.assume(rateEthToUsdNew > 0);
 
         vm.assume(
-            uint256(amountEth) >
-                (type(uint256).max / uint256(rateEthToUsdNew) / Constants.WAD) *
-                    10**Constants.oracleEthToUsdDecimals
+            uint256(amountEth)
+                > (type(uint256).max / uint256(rateEthToUsdNew) / Constants.WAD) * 10 ** Constants.oracleEthToUsdDecimals
         );
 
         vm.startPrank(oracleOwner);
@@ -473,20 +429,19 @@ contract StandardERC20RegistryTest is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             emptyList
         );
         vm.stopPrank();
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(eth),
-                assetId: 0,
-                assetAmount: amountEth,
-                baseCurrency: uint8(Constants.UsdBaseCurrency)
-            });
+        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+            assetAddress: address(eth),
+            assetId: 0,
+            assetAmount: amountEth,
+            baseCurrency: uint8(Constants.UsdBaseCurrency)
+        });
         //Arithmetic overflow.
         vm.expectRevert(bytes(""));
         standardERC20Registry.getValue(getValueInput);

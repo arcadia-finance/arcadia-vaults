@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: AGPL-3.0-or-later
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 pragma solidity ^0.8.0;
@@ -57,16 +57,13 @@ library Constants {
     uint256 internal constant oracleWmaycToUsdDecimals = 8;
     uint256 internal constant oracleInterleaveToEthDecimals = 10;
 
-    uint256 internal constant oracleDaiToUsdUnit = 10**oracleDaiToUsdDecimals;
-    uint256 internal constant oracleEthToUsdUnit = 10**oracleEthToUsdDecimals;
-    uint256 internal constant oracleLinkToUsdUnit = 10**oracleLinkToUsdDecimals;
-    uint256 internal constant oracleSnxToEthUnit = 10**oracleSnxToEthDecimals;
-    uint256 internal constant oracleWbaycToEthUnit =
-        10**oracleWbaycToEthDecimals;
-    uint256 internal constant oracleWmaycToUsdUnit =
-        10**oracleWmaycToUsdDecimals;
-    uint256 internal constant oracleInterleaveToEthUnit =
-        10**oracleInterleaveToEthDecimals;
+    uint256 internal constant oracleDaiToUsdUnit = 10 ** oracleDaiToUsdDecimals;
+    uint256 internal constant oracleEthToUsdUnit = 10 ** oracleEthToUsdDecimals;
+    uint256 internal constant oracleLinkToUsdUnit = 10 ** oracleLinkToUsdDecimals;
+    uint256 internal constant oracleSnxToEthUnit = 10 ** oracleSnxToEthDecimals;
+    uint256 internal constant oracleWbaycToEthUnit = 10 ** oracleWbaycToEthDecimals;
+    uint256 internal constant oracleWmaycToUsdUnit = 10 ** oracleWmaycToUsdDecimals;
+    uint256 internal constant oracleInterleaveToEthUnit = 10 ** oracleInterleaveToEthDecimals;
 
     uint256 internal constant assetDecimals = 18;
 

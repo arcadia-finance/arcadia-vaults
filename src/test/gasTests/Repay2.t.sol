@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >0.8.10;
 
@@ -28,7 +28,6 @@ import "../fixtures/ArcadiaOracleFixture.f.sol";
 import {LendingPool, ERC20} from "../../../lib/arcadia-lending/src/LendingPool.sol";
 import {DebtToken} from "../../../lib/arcadia-lending/src/DebtToken.sol";
 import {Tranche} from "../../../lib/arcadia-lending/src/Tranche.sol";
-
 
 contract gasRepay_2ERC20 is Test {
     using stdStorage for StdStorage;
@@ -75,15 +74,14 @@ contract gasRepay_2ERC20 is Test {
     address private vaultOwner = address(6);
     address private liquidityProvider = address(9);
 
-    uint256 rateDaiToUsd = 1 * 10**Constants.oracleDaiToUsdDecimals;
-    uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
-    uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
+    uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
+    uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
+    uint256 rateLinkToUsd = 20 * 10 ** Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
-    uint256 rateWbaycToEth = 85 * 10**Constants.oracleWbaycToEthDecimals;
-    uint256 rateWmaycToUsd = 50000 * 10**Constants.oracleWmaycToUsdDecimals;
-    uint256 rateInterleaveToEth =
-        1 * 10**(Constants.oracleInterleaveToEthDecimals - 2);
-    uint256 rateGenericStoreFrontToEth = 1 * 10**(8);
+    uint256 rateWbaycToEth = 85 * 10 ** Constants.oracleWbaycToEthDecimals;
+    uint256 rateWmaycToUsd = 50000 * 10 ** Constants.oracleWmaycToUsdDecimals;
+    uint256 rateInterleaveToEth = 1 * 10 ** (Constants.oracleInterleaveToEthDecimals - 2);
+    uint256 rateGenericStoreFrontToEth = 1 * 10 ** (8);
 
     address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
@@ -105,8 +103,7 @@ contract gasRepay_2ERC20 is Test {
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
     // FIXTURES
-    ArcadiaOracleFixture arcadiaOracleFixture =
-        new ArcadiaOracleFixture(oracleOwner);
+    ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
     //this is a before
     constructor() {
@@ -114,27 +111,24 @@ contract gasRepay_2ERC20 is Test {
 
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
+        eth.mint(tokenCreatorAddress, 200000 * 10 ** Constants.ethDecimals);
 
         snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
-        snx.mint(tokenCreatorAddress, 200000 * 10**Constants.snxDecimals);
+        snx.mint(tokenCreatorAddress, 200000 * 10 ** Constants.snxDecimals);
 
         link = new ERC20Mock(
             "LINK Mock",
             "mLINK",
             uint8(Constants.linkDecimals)
         );
-        link.mint(tokenCreatorAddress, 200000 * 10**Constants.linkDecimals);
+        link.mint(tokenCreatorAddress, 200000 * 10 ** Constants.linkDecimals);
 
         safemoon = new ERC20Mock(
             "Safemoon Mock",
             "mSFMN",
             uint8(Constants.safemoonDecimals)
         );
-        safemoon.mint(
-            tokenCreatorAddress,
-            200000 * 10**Constants.safemoonDecimals
-        );
+        safemoon.mint(tokenCreatorAddress, 200000 * 10 ** Constants.safemoonDecimals);
 
         bayc = new ERC721Mock("BAYC Mock", "mBAYC");
         bayc.mint(tokenCreatorAddress, 0);
@@ -173,7 +167,7 @@ contract gasRepay_2ERC20 is Test {
             "mwBAYC",
             uint8(Constants.wbaycDecimals)
         );
-        wbayc.mint(tokenCreatorAddress, 100000 * 10**Constants.wbaycDecimals);
+        wbayc.mint(tokenCreatorAddress, 100000 * 10 ** Constants.wbaycDecimals);
 
         interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
         interleave.mint(tokenCreatorAddress, 1, 100000);
@@ -194,46 +188,25 @@ contract gasRepay_2ERC20 is Test {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
-        oracleDaiToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleDaiToUsdDecimals),
-            "DAI / USD",
-            rateDaiToUsd
-        );
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleEthToUsdDecimals),
-            "ETH / USD",
-            rateEthToUsd
-        );
-        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleLinkToUsdDecimals),
-            "LINK / USD",
-            rateLinkToUsd
-        );
-        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleSnxToEthDecimals),
-            "SNX / ETH",
-            rateSnxToEth
-        );
+        oracleDaiToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleDaiToUsdDecimals), "DAI / USD", rateDaiToUsd);
+        oracleEthToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
+        oracleLinkToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD", rateLinkToUsd);
+        oracleSnxToEth =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH", rateSnxToEth);
         oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWbaycToEthDecimals),
-            "WBAYC / ETH",
-            rateWbaycToEth
+            uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH", rateWbaycToEth
         );
         oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWmaycToUsdDecimals),
-            "WBAYC / USD",
-            rateWmaycToUsd
+            uint8(Constants.oracleWmaycToUsdDecimals), "WBAYC / USD", rateWmaycToUsd
         );
         oracleInterleaveToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleInterleaveToEthDecimals),
-            "INTERLEAVE / ETH",
-            rateInterleaveToEth
+            uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH", rateInterleaveToEth
         );
-        oracleGenericStoreFrontToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(10),
-            "GenericStoreFront / ETH",
-            rateGenericStoreFrontToEth
-        );
+        oracleGenericStoreFrontToEth =
+            arcadiaOracleFixture.initMockedOracle(uint8(10), "GenericStoreFront / ETH", rateGenericStoreFrontToEth);
 
         vm.startPrank(creatorAddress);
         oracleHub.addOracle(
@@ -304,7 +277,7 @@ contract gasRepay_2ERC20 is Test {
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
-                oracleUnit: uint64(10**10),
+                oracleUnit: uint64(10 ** 10),
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "GenericStoreFront",
                 baseAsset: "ETH",
@@ -316,10 +289,10 @@ contract gasRepay_2ERC20 is Test {
         vm.stopPrank();
 
         vm.startPrank(tokenCreatorAddress);
-        eth.transfer(vaultOwner, 100000 * 10**Constants.ethDecimals);
-        link.transfer(vaultOwner, 100000 * 10**Constants.linkDecimals);
-        snx.transfer(vaultOwner, 100000 * 10**Constants.snxDecimals);
-        safemoon.transfer(vaultOwner, 100000 * 10**Constants.safemoonDecimals);
+        eth.transfer(vaultOwner, 100000 * 10 ** Constants.ethDecimals);
+        link.transfer(vaultOwner, 100000 * 10 ** Constants.linkDecimals);
+        snx.transfer(vaultOwner, 100000 * 10 ** Constants.snxDecimals);
+        safemoon.transfer(vaultOwner, 100000 * 10 ** Constants.safemoonDecimals);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 1);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 2);
@@ -414,9 +387,8 @@ contract gasRepay_2ERC20 is Test {
             100000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
-        eth.transfer(unprivilegedAddress, 1000 * 10**Constants.ethDecimals);
+        eth.transfer(unprivilegedAddress, 1000 * 10 ** Constants.ethDecimals);
         vm.stopPrank();
-
 
         oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
 
@@ -435,9 +407,7 @@ contract gasRepay_2ERC20 is Test {
         oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
 
-        oracleGenericStoreFrontToEthEthToUsd[0] = address(
-            oracleGenericStoreFrontToEth
-        );
+        oracleGenericStoreFrontToEthEthToUsd[0] = address(oracleGenericStoreFrontToEth);
         oracleGenericStoreFrontToEthEthToUsd[1] = address(oracleEthToUsd);
 
         vm.prank(creatorAddress);
@@ -449,7 +419,7 @@ contract gasRepay_2ERC20 is Test {
 
         vm.startPrank(creatorAddress);
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
+        pool.updateInterestRate(5 * 10 ** 16); //5% with 18 decimals precision
 
         debt = new DebtToken(address(pool));
         pool.setDebtToken(address(debt));
@@ -460,7 +430,6 @@ contract gasRepay_2ERC20 is Test {
 
         vm.prank(liquidityProvider);
         dai.approve(address(pool), type(uint256).max);
-
 
         vm.prank(address(tranche));
         pool.deposit(type(uint128).max, liquidityProvider);
@@ -481,25 +450,21 @@ contract gasRepay_2ERC20 is Test {
         uint256[] memory emptyList = new uint256[](0);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(
-                    10**Constants.oracleDaiToUsdDecimals
-                ),
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
                 assetAddress: address(dai),
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.daiDecimals))
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
             }),
             emptyList
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(
-                    10**Constants.oracleEthToUsdDecimals
-                ),
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.ethDecimals))
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
             emptyList
         );
@@ -529,7 +494,7 @@ contract gasRepay_2ERC20 is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10**Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
             assetCreditRatings
@@ -537,7 +502,7 @@ contract gasRepay_2ERC20 is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10**Constants.linkDecimals),
+                assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
             assetCreditRatings
@@ -545,7 +510,7 @@ contract gasRepay_2ERC20 is Test {
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
-                assetUnit: uint64(10**Constants.snxDecimals),
+                assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
             }),
             assetCreditRatings
@@ -597,11 +562,7 @@ contract gasRepay_2ERC20 is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(
-            address(mainRegistry),
-            address(vault),
-            Constants.upgradeProof1To2
-        );
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
         pool.setLiquidator(address(liquidator));
         liquidator.setFactory(address(factory));
@@ -609,14 +570,11 @@ contract gasRepay_2ERC20 is Test {
         vm.stopPrank();
 
         vm.prank(vaultOwner);
-         proxyAddr = factory.createVault(
+        proxyAddr = factory.createVault(
             uint256(
                 keccak256(
                     abi.encodeWithSignature(
-                        "doRandom(uint256,uint256,bytes32)",
-                        block.timestamp,
-                        block.number,
-                        blockhash(block.number)
+                        "doRandom(uint256,uint256,bytes32)", block.timestamp, block.number, blockhash(block.number)
                     )
                 )
             ),
@@ -665,8 +623,8 @@ contract gasRepay_2ERC20 is Test {
         s_2[1] = 0;
 
         s_3 = new uint256[](2);
-        s_3[0] = 10**Constants.ethDecimals;
-        s_3[1] = 10**Constants.linkDecimals;
+        s_3[0] = 10 ** Constants.ethDecimals;
+        s_3[1] = 10 ** Constants.linkDecimals;
 
         s_4 = new uint256[](2);
         s_4[0] = 0;
@@ -676,14 +634,12 @@ contract gasRepay_2ERC20 is Test {
         vm.stopPrank();
 
         vm.prank(vaultOwner);
-        uint256 valueEth = (((10**18 * rateEthToUsd) /
-            10**Constants.oracleEthToUsdDecimals) * s_3[0]) /
-            10**Constants.ethDecimals;
-        uint256 valueLink = (((10**18 * rateLinkToUsd) /
-            10**Constants.oracleLinkToUsdDecimals) * s_3[1]) /
-            10**Constants.linkDecimals;
-        maxCredit = uint128(((valueEth + valueLink) / 10**(18-Constants.daiDecimals) * 100) / 150);
-        pool.borrow(maxCredit , address(proxy), vaultOwner);
+        uint256 valueEth = (((10 ** 18 * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * s_3[0])
+            / 10 ** Constants.ethDecimals;
+        uint256 valueLink = (((10 ** 18 * rateLinkToUsd) / 10 ** Constants.oracleLinkToUsdDecimals) * s_3[1])
+            / 10 ** Constants.linkDecimals;
+        maxCredit = uint128(((valueEth + valueLink) / 10 ** (18 - Constants.daiDecimals) * 100) / 150);
+        pool.borrow(maxCredit, address(proxy), vaultOwner);
     }
 
     function testRepay_partly() public {
