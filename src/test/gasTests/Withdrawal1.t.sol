@@ -11,7 +11,7 @@ import "../../../lib/forge-std/src/Test.sol";
 import "../../Factory.sol";
 import "../../Proxy.sol";
 import "../../Vault.sol";
-import "../../mockups/ERC20SolmateMock.sol";
+import {ERC20Mock} from "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
 import "../../AssetRegistry/MainRegistry.sol";
@@ -25,10 +25,9 @@ import "../../utils/Constants.sol";
 import "../../ArcadiaOracle.sol";
 import "../fixtures/ArcadiaOracleFixture.f.sol";
 
-import {LiquidityPool} from "../../../lib/arcadia-lending/src/LiquidityPool.sol";
+import {LendingPool, ERC20} from "../../../lib/arcadia-lending/src/LendingPool.sol";
 import {DebtToken} from "../../../lib/arcadia-lending/src/DebtToken.sol";
 import {Tranche} from "../../../lib/arcadia-lending/src/Tranche.sol";
-import {Asset} from "../../../lib/arcadia-lending/src/mocks/Asset.sol";
 
 
 contract gasWithdrawal1_1ERC20 is Test {
@@ -38,6 +37,7 @@ contract gasWithdrawal1_1ERC20 is Test {
     Vault private vault;
     Vault private proxy;
     address private proxyAddr;
+    ERC20Mock private dai;
     ERC20Mock private eth;
     ERC20Mock private snx;
     ERC20Mock private link;
@@ -50,6 +50,7 @@ contract gasWithdrawal1_1ERC20 is Test {
     ERC1155Mock private interleave;
     ERC1155Mock private genericStoreFront;
     OracleHub private oracleHub;
+    ArcadiaOracle private oracleDaiToUsd;
     ArcadiaOracle private oracleEthToUsd;
     ArcadiaOracle private oracleLinkToUsd;
     ArcadiaOracle private oracleSnxToEth;
@@ -63,8 +64,7 @@ contract gasWithdrawal1_1ERC20 is Test {
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
     Liquidator private liquidator;
 
-    Asset asset;
-    LiquidityPool pool;
+    LendingPool pool;
     Tranche tranche;
     DebtToken debt;
 
@@ -75,6 +75,7 @@ contract gasWithdrawal1_1ERC20 is Test {
     address private vaultOwner = address(6);
     address private liquidityProvider = address(9);
 
+    uint256 rateDaiToUsd = 1 * 10**Constants.oracleDaiToUsdDecimals;
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
@@ -84,6 +85,7 @@ contract gasWithdrawal1_1ERC20 is Test {
         1 * 10**(Constants.oracleInterleaveToEthDecimals - 2);
     uint256 rateGenericStoreFrontToEth = 1 * 10**(8);
 
+    address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
     address[] public oracleLinkToUsdArr = new address[](1);
     address[] public oracleSnxToEthEthToUsd = new address[](2);
@@ -108,6 +110,7 @@ contract gasWithdrawal1_1ERC20 is Test {
     constructor() {
         vm.startPrank(tokenCreatorAddress);
 
+        dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
         eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
@@ -189,6 +192,11 @@ contract gasWithdrawal1_1ERC20 is Test {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
+        oracleDaiToUsd = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleDaiToUsdDecimals),
+            "DAI / USD",
+            rateDaiToUsd
+        );
         oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleEthToUsdDecimals),
             "ETH / USD",
@@ -229,7 +237,7 @@ contract gasWithdrawal1_1ERC20 is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -240,7 +248,7 @@ contract gasWithdrawal1_1ERC20 is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
@@ -251,7 +259,7 @@ contract gasWithdrawal1_1ERC20 is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
@@ -262,7 +270,7 @@ contract gasWithdrawal1_1ERC20 is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
@@ -273,7 +281,7 @@ contract gasWithdrawal1_1ERC20 is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
@@ -284,7 +292,7 @@ contract gasWithdrawal1_1ERC20 is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
@@ -295,7 +303,7 @@ contract gasWithdrawal1_1ERC20 is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10**10),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "GenericStoreFront",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleGenericStoreFrontToEth),
@@ -408,6 +416,8 @@ contract gasWithdrawal1_1ERC20 is Test {
         vm.stopPrank();
 
 
+        oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
+
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
         oracleLinkToUsdArr[0] = address(oracleLinkToUsd);
@@ -432,23 +442,22 @@ contract gasWithdrawal1_1ERC20 is Test {
         factory = new Factory();
 
         vm.startPrank(tokenCreatorAddress);
-        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
-        asset.mint(liquidityProvider, type(uint128).max);
+        dai.mint(liquidityProvider, type(uint128).max);
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LiquidityPool(asset, creatorAddress, address(factory));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
-        debt = new DebtToken(pool);
+        debt = new DebtToken(address(pool));
         pool.setDebtToken(address(debt));
 
-        tranche = new Tranche(pool, "Senior", "SR");
+        tranche = new Tranche(address(pool), "Senior", "SR");
         pool.addTranche(address(tranche), 50);
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
-        asset.approve(address(pool), type(uint256).max);
+        dai.approve(address(pool), type(uint256).max);
 
 
         vm.prank(address(tranche));
@@ -463,7 +472,7 @@ contract gasWithdrawal1_1ERC20 is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: address(pool),
+                lendingPool: address(pool),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -472,11 +481,24 @@ contract gasWithdrawal1_1ERC20 is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: address(pool),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                liquidityPool: address(pool),
+                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -500,9 +522,10 @@ contract gasWithdrawal1_1ERC20 is Test {
         mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
         mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
 
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
+        assetCreditRatings[2] = 0;
 
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
@@ -618,8 +641,8 @@ contract gasWithdrawal1_1ERC20 is Test {
         eth.mint(vaultOwner, 1e18);
 
         vm.startPrank(vaultOwner);
-        proxy.authorize(address(pool), true);
-        asset.approve(address(proxy), type(uint256).max);
+        proxy.openTrustedMarginAccount(address(pool));
+        dai.approve(address(proxy), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
@@ -630,7 +653,7 @@ contract gasWithdrawal1_1ERC20 is Test {
         link.approve(address(proxy), type(uint256).max);
         snx.approve(address(proxy), type(uint256).max);
         safemoon.approve(address(proxy), type(uint256).max);
-        asset.approve(address(pool), type(uint256).max);
+        dai.approve(address(pool), type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
@@ -657,7 +680,7 @@ contract gasWithdrawal1_1ERC20 is Test {
     }
 
     function testGetValue_1_ERC20() public view {
-        proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        proxy.getVaultValue(0x0000000000000000000000000000000000000000);
     }
 
     function testGetRemainingValue_1_ERC20() public {

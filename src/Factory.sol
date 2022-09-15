@@ -38,7 +38,7 @@ contract Factory is ERC721, Ownable {
     address public liquidatorAddress;
 
     uint256 public baseCurrencyCounter;
-    mapping(uint256 => address) public baseCurrencyToLiquidityPool;
+    mapping(uint256 => address) public baseCurrencyToLendingPool;
 
     event VaultCreated(
         address indexed vaultAddress,
@@ -138,13 +138,13 @@ contract Factory is ERC721, Ownable {
         if (
             vaultDetails[latestVaultVersion].registryAddress != registryAddress
         ) {
-            address liquidityPool;
+            address lendingPool;
             for (uint256 i; i < baseCurrencyCounter; ) {
-                (, , , , liquidityPool, ) = IMainRegistry(
+                (, , , , lendingPool, ) = IMainRegistry(
                     registryAddress
                 ).baseCurrencyToInformation(i);
                 require(
-                    liquidityPool == baseCurrencyToLiquidityPool[i],
+                    lendingPool == baseCurrencyToLendingPool[i],
                     "FTRY_SNVI:No match baseCurrencies MR"
                 );
                 unchecked {
@@ -158,14 +158,14 @@ contract Factory is ERC721, Ownable {
   @notice Function adds baseCurrency and corresponding Liquidity Pool contract to the factory
   @dev BaseCurrencies can only be added by the latest Main Registry
   @param baseCurrency An identifier (uint256) of the BaseCurrency
-  @param liquidityPool The contract address of the corresponding Liquidity Pool
+  @param lendingPool The contract address of the corresponding Liquidity Pool
   */
-    function addBaseCurrency(uint256 baseCurrency, address liquidityPool) external {
+    function addBaseCurrency(uint256 baseCurrency, address lendingPool) external {
         require(
             vaultDetails[latestVaultVersion].registryAddress == msg.sender,
             "FTRY_AN: Add BaseCurrencies via MR"
         );
-        baseCurrencyToLiquidityPool[baseCurrency] = liquidityPool;
+        baseCurrencyToLendingPool[baseCurrency] = lendingPool;
         unchecked {
             ++baseCurrencyCounter;
         }

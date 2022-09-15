@@ -67,7 +67,7 @@ contract StandardERC20RegistryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
+                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -95,7 +95,7 @@ contract StandardERC20RegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -106,7 +106,7 @@ contract StandardERC20RegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
@@ -117,7 +117,7 @@ contract StandardERC20RegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
@@ -143,7 +143,7 @@ contract StandardERC20RegistryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: 0x0000000000000000000000000000000000000000,
+                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -155,7 +155,7 @@ contract StandardERC20RegistryTest is Test {
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                liquidityPool: 0x0000000000000000000000000000000000000000,
+                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -316,7 +316,7 @@ contract StandardERC20RegistryTest is Test {
                 assetAddress: address(eth),
                 assetId: 0,
                 assetAmount: amountEth,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -353,7 +353,7 @@ contract StandardERC20RegistryTest is Test {
                 assetAddress: address(snx),
                 assetId: 0,
                 assetAmount: amountSnx,
-                baseCurrency: 1
+                baseCurrency: uint8(Constants.EthBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -390,7 +390,7 @@ contract StandardERC20RegistryTest is Test {
                 assetAddress: address(link),
                 assetId: 0,
                 assetAmount: amountLink,
-                baseCurrency: 1
+                baseCurrency: uint8(Constants.EthBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -444,7 +444,7 @@ contract StandardERC20RegistryTest is Test {
                 assetAddress: address(eth),
                 assetId: 0,
                 assetAmount: amountEth,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
         (
             uint256 actualValueInUsd,
@@ -488,7 +488,7 @@ contract StandardERC20RegistryTest is Test {
                 assetAddress: address(eth),
                 assetId: 0,
                 assetAmount: amountEth,
-                baseCurrency: 0
+                baseCurrency: uint8(Constants.UsdBaseCurrency)
             });
         //Arithmetic overflow.
         vm.expectRevert(bytes(""));

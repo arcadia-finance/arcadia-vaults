@@ -11,7 +11,7 @@ import "../../lib/forge-std/src/Test.sol";
 import "../Factory.sol";
 import "../Proxy.sol";
 import "../Vault.sol";
-import "../mockups/ERC20SolmateMock.sol";
+import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
 import "../AssetRegistry/MainRegistry.sol";
@@ -24,10 +24,9 @@ import "../utils/Constants.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-import {LiquidityPool} from "../../lib/arcadia-lending/src/LiquidityPool.sol";
+import {LendingPool, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
-import {Asset} from "../../lib/arcadia-lending/src/mocks/Asset.sol";
 
 contract EndToEndTest is Test {
     using stdStorage for StdStorage;
@@ -36,6 +35,7 @@ contract EndToEndTest is Test {
     Vault private vault;
     Vault private proxy;
     address private proxyAddr;
+    ERC20Mock private dai;
     ERC20Mock private eth;
     ERC20Mock private snx;
     ERC20Mock private link;
@@ -47,6 +47,7 @@ contract EndToEndTest is Test {
     ERC20Mock private wmayc;
     ERC1155Mock private interleave;
     OracleHub private oracleHub;
+    ArcadiaOracle private oracleDaiToUsd;
     ArcadiaOracle private oracleEthToUsd;
     ArcadiaOracle private oracleLinkToUsd;
     ArcadiaOracle private oracleSnxToEth;
@@ -59,8 +60,7 @@ contract EndToEndTest is Test {
     FloorERC1155SubRegistry private floorERC1155SubRegistry;
     Liquidator private liquidator;
 
-    Asset asset;
-    LiquidityPool pool;
+    LendingPool pool;
     Tranche tranche;
     DebtToken debt;
 
@@ -71,6 +71,7 @@ contract EndToEndTest is Test {
     address private vaultOwner = address(6);
     address private liquidityProvider = address(7);
 
+    uint256 rateDaiToUsd = 1 * 10**Constants.oracleDaiToUsdDecimals;
     uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10**Constants.oracleLinkToUsdDecimals;
     uint256 rateSnxToEth = 1600000000000000;
@@ -79,6 +80,7 @@ contract EndToEndTest is Test {
     uint256 rateInterleaveToEth =
         1 * 10**(Constants.oracleInterleaveToEthDecimals - 2);
 
+    address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
     address[] public oracleLinkToUsdArr = new address[](1);
     address[] public oracleSnxToEthEthToUsd = new address[](2);
@@ -97,6 +99,7 @@ contract EndToEndTest is Test {
     constructor() {
         vm.startPrank(tokenCreatorAddress);
 
+        dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
         eth.mint(tokenCreatorAddress, 200000 * 10**Constants.ethDecimals);
 
@@ -147,6 +150,10 @@ contract EndToEndTest is Test {
         vm.prank(creatorAddress);
         oracleHub = new OracleHub();
 
+        oracleDaiToUsd = arcadiaOracleFixture.initMockedOracle(
+            uint8(Constants.oracleDaiToUsdDecimals),
+            "DAI / USD"
+        );
         oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
             uint8(Constants.oracleEthToUsdDecimals),
             "ETH / USD"
@@ -176,7 +183,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -187,7 +194,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "LINK",
                 baseAsset: "USD",
                 oracleAddress: address(oracleLinkToUsd),
@@ -198,7 +205,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleSnxToEth),
@@ -209,7 +216,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
@@ -220,7 +227,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
@@ -231,7 +238,7 @@ contract EndToEndTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleInterleaveToEth),
@@ -263,6 +270,8 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
 
+        oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
+
         oracleEthToUsdArr[0] = address(oracleEthToUsd);
 
         oracleLinkToUsdArr[0] = address(oracleLinkToUsd);
@@ -282,23 +291,22 @@ contract EndToEndTest is Test {
         factory = new Factory();
 
         vm.startPrank(tokenCreatorAddress);
-        asset = new Asset("Asset", "ASSET", uint8(Constants.assetDecimals));
-        asset.mint(liquidityProvider, type(uint256).max);
+        dai.mint(liquidityProvider, type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        pool = new LiquidityPool(asset, creatorAddress, address(factory));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.updateInterestRate(5 * 10**16); //5% with 18 decimals precision
 
-        debt = new DebtToken(pool);
+        debt = new DebtToken(address(pool));
         pool.setDebtToken(address(debt));
 
-        tranche = new Tranche(pool, "Senior", "SR");
+        tranche = new Tranche(address(pool), "Senior", "SR");
         pool.addTranche(address(tranche), 50);
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
-        asset.approve(address(pool), type(uint256).max);
+        dai.approve(address(pool), type(uint256).max);
 
 
         vm.prank(address(tranche));
@@ -315,7 +323,7 @@ contract EndToEndTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                liquidityPool: address(pool),
+                lendingPool: address(pool),
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnit: 1
             })
@@ -324,11 +332,24 @@ contract EndToEndTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(
+                    10**Constants.oracleDaiToUsdDecimals
+                ),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                lendingPool: address(pool),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnit: uint64(10**Constants.daiDecimals)
+            }),
+            emptyList
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(
                     10**Constants.oracleEthToUsdDecimals
                 ),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                liquidityPool: address(pool),
+                lendingPool: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnit: uint64(10**Constants.ethDecimals)
             }),
@@ -352,9 +373,10 @@ contract EndToEndTest is Test {
         mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
         mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
 
-        uint256[] memory assetCreditRatings = new uint256[](2);
+        uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
+        assetCreditRatings[2] = 0;
 
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
@@ -434,6 +456,7 @@ contract EndToEndTest is Test {
         proxy = Vault(proxyAddr);
 
         vm.startPrank(oracleOwner);
+        oracleDaiToUsd.transmit(int256(rateDaiToUsd));
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
         oracleSnxToEth.transmit(int256(rateSnxToEth));
@@ -443,8 +466,8 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        proxy.authorize(address(pool), true);
-        asset.approve(address(pool), type(uint256).max);
+        proxy.openTrustedMarginAccount(address(pool));
+        dai.approve(address(pool), type(uint256).max);
 
         bayc.setApprovalForAll(address(proxy), true);
         mayc.setApprovalForAll(address(proxy), true);
@@ -464,7 +487,7 @@ contract EndToEndTest is Test {
             10**Constants.ethDecimals;
 
         depositERC20InVault(eth, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
 
         assertEq(actualValue, expectedValue);
     }
@@ -476,7 +499,7 @@ contract EndToEndTest is Test {
             10**Constants.linkDecimals;
 
         depositERC20InVault(link, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
 
         assertEq(actualValue, expectedValue);
     }
@@ -490,7 +513,7 @@ contract EndToEndTest is Test {
             10**Constants.snxDecimals;
 
         depositERC20InVault(snx, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
 
         assertEq(actualValue, expectedValue);
     }
@@ -501,7 +524,7 @@ contract EndToEndTest is Test {
             10**Constants.ethDecimals;
 
         depositERC20InVault(eth, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
 
         assertEq(actualValue, expectedValue);
     }
@@ -514,7 +537,7 @@ contract EndToEndTest is Test {
             10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
 
         depositERC20InVault(link, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
 
         assertEq(actualValue, expectedValue);
     }
@@ -526,7 +549,7 @@ contract EndToEndTest is Test {
             10**Constants.snxDecimals;
 
         depositERC20InVault(snx, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
 
         assertEq(actualValue, expectedValue);
     }
@@ -538,7 +561,7 @@ contract EndToEndTest is Test {
         uint256 expectedValue = valueOfOneBayc * tokenIds.length;
 
         depositERC721InVault(bayc, tokenIds, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
 
         assertEq(actualValue, expectedValue);
     }
@@ -552,9 +575,10 @@ contract EndToEndTest is Test {
         vm.assume(valueOfOneIL < type(uint256).max / amount);
         uint256 expectedValue = valueOfOneIL * amount;
 
-        uint256[] memory assetCreditRatingsInterleave = new uint256[](2);
+        uint256[] memory assetCreditRatingsInterleave = new uint256[](3);
         assetCreditRatingsInterleave[0] = Constants.interleaveCreditRatingUsd;
-        assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingEth;
+        assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingDai;
+        assetCreditRatingsInterleave[2] = Constants.interleaveCreditRatingEth;
 
         vm.prank(creatorAddress);
         floorERC1155SubRegistry.setAssetInformation(
@@ -567,7 +591,7 @@ contract EndToEndTest is Test {
         );
 
         depositERC1155InVault(interleave, tokenId, amount, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
 
         assertEq(actualValue, expectedValue);
     }
@@ -583,14 +607,14 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amount1, vaultOwner);
         uint256 expectedValue = (valueOfOneEth * amount1) /
             10**Constants.ethDecimals;
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValue);
 
         depositERC20InVault(eth, amount2, vaultOwner);
         expectedValue =
             (valueOfOneEth * (uint256(amount1) + uint256(amount2))) /
             10**Constants.ethDecimals;
-        actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValue);
     }
 
@@ -602,7 +626,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueLink = (valueOfOneLink * amountLink) /
             10**Constants.linkDecimals;
         depositERC20InVault(link, amountLink, vaultOwner);
-        uint256 actualValueLink = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValueLink = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValueLink, expectedValueLink);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -611,7 +635,7 @@ contract EndToEndTest is Test {
             (valueOfOneEth * amountEth) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValue);
     }
 
@@ -625,7 +649,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx, vaultOwner);
-        uint256 actualValueSnx = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValueSnx = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValueSnx, expectedValueSnx);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -634,7 +658,7 @@ contract EndToEndTest is Test {
             (valueOfOneEth * amountEth) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValue);
     }
 
@@ -646,7 +670,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueLink = (valueOfOneLink * amountLink) /
             10**Constants.linkDecimals;
         depositERC20InVault(link, amountLink, vaultOwner);
-        uint256 actualValueLink = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValueLink = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValueLink, expectedValueLink);
 
         uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
@@ -657,7 +681,7 @@ contract EndToEndTest is Test {
             (valueOfOneSnx * amountSnx) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValue);
     }
 
@@ -671,7 +695,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueEth = (valueOfOneEth * amountEth) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValueEth);
 
         uint256 valueOfOneLink = (Constants.WAD * rateLinkToUsd) /
@@ -679,7 +703,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueLink = (valueOfOneLink * amountLink) /
             10**Constants.linkDecimals;
         depositERC20InVault(link, amountLink, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValueEth + expectedValueLink);
 
         uint256 valueOfOneSnx = (Constants.WAD * rateSnxToEth * rateEthToUsd) /
@@ -689,7 +713,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(
             actualValue,
             expectedValueEth + expectedValueLink + expectedValueSnx
@@ -708,7 +732,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueSnx1 = (valueOfOneSnx * amountSnx1) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx1, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValueSnx1);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -716,13 +740,13 @@ contract EndToEndTest is Test {
         uint256 expectedValueEth = (valueOfOneEth * amountEth) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(actualValue, expectedValueSnx1 + expectedValueEth);
 
         uint256 expectedValueSnx2 = (valueOfOneSnx * amountSnx2) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx2, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
         assertEq(
             actualValue,
             expectedValueSnx1 + expectedValueEth + expectedValueSnx2
@@ -736,13 +760,13 @@ contract EndToEndTest is Test {
         uint256 expectedValueEth1 = (valueOfOneEth * amountEth1) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth1, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueEth1);
 
         uint256 expectedValueEth2 = (valueOfOneEth * amountEth2) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth2, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueEth1 + expectedValueEth2);
     }
 
@@ -753,7 +777,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueEth = (valueOfOneEth * amountEth) /
             10**Constants.ethDecimals;
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueEth);
 
         uint256 valueOfOneLinkInUsd = (Constants.WAD * rateLinkToUsd) /
@@ -762,7 +786,7 @@ contract EndToEndTest is Test {
             10**Constants.linkDecimals) *
             10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
         depositERC20InVault(link, amountLink, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueEth + expectedValueLink);
     }
 
@@ -774,7 +798,7 @@ contract EndToEndTest is Test {
         uint256 expectedValueSnx = (valueOfOneSnx * amountSnx) /
             10**Constants.snxDecimals;
         depositERC20InVault(snx, amountSnx, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueSnx);
 
         uint256 valueOfOneLinkInUsd = (Constants.WAD * rateLinkToUsd) /
@@ -783,7 +807,7 @@ contract EndToEndTest is Test {
             10**Constants.linkDecimals) *
             10**Constants.oracleEthToUsdDecimals) / rateEthToUsd;
         depositERC20InVault(link, amountLink, vaultOwner);
-        actualValue = proxy.getValue(uint8(Constants.EthBaseCurrency));
+        actualValue = proxy.getVaultValue(address(eth));
         assertEq(actualValue, expectedValueSnx + expectedValueLink);
     }
     
@@ -805,7 +829,7 @@ contract EndToEndTest is Test {
             10**Constants.ethDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint256 actualValue = proxy.getValue(uint8(Constants.UsdBaseCurrency));
+        uint256 actualValue = proxy.getVaultValue(0x0000000000000000000000000000000000000000);
 
         assertEq(actualValue, expectedValue);
     }
@@ -815,10 +839,10 @@ contract EndToEndTest is Test {
             10**Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        (uint16 _collThres, , ) = proxy.vault();
+        (uint16 collThres, , ) = proxy.vault();
 
         uint256 expectedValue = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         uint256 actualValue = proxy.getFreeMargin();
 
         assertEq(actualValue, expectedValue);
@@ -828,37 +852,37 @@ contract EndToEndTest is Test {
         uint128 amountEth,
         uint128 amountCredit
     ) public {
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(uint256(amountCredit) * _collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(uint256(amountCredit) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
         pool.borrow(amountCredit, address(proxy), vaultOwner);
         vm.stopPrank();
 
-        assertEq(asset.balanceOf(vaultOwner), amountCredit);
+        assertEq(dai.balanceOf(vaultOwner), amountCredit);
     }
 
     function testNotAllowTooMuchCreditAfterDeposit(
         uint128 amountEth,
         uint128 amountCredit
     ) public {
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(uint256(amountCredit) * _collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(uint256(amountCredit) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit > maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -866,7 +890,7 @@ contract EndToEndTest is Test {
         pool.borrow(amountCredit, address(proxy), vaultOwner);
         vm.stopPrank();
 
-        assertEq(asset.balanceOf(vaultOwner), 0);
+        assertEq(dai.balanceOf(vaultOwner), 0);
     }
 
     function testIncreaseOfDebtPerBlock(
@@ -877,7 +901,7 @@ contract EndToEndTest is Test {
         uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
         uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) /
-            uint128(proxy.yearlyBlocks());
+            uint128(pool.YEARLY_BLOCKS());
         vm.assume(
             amountCredit < type(uint128).max / LogExpMath.pow(base, exponent)
         );
@@ -886,10 +910,10 @@ contract EndToEndTest is Test {
             10**Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        (uint16 _collThres, , ) = proxy.vault();
+        (uint16 collThres, , ) = proxy.vault();
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -911,7 +935,7 @@ contract EndToEndTest is Test {
                     LogExpMath.pow(
                         _yearlyInterestRate + 10**18,
                         (uint256(amountOfBlocksToRoll) * 10**18) /
-                            proxy.yearlyBlocks()
+                            pool.YEARLY_BLOCKS()
                     )
                 )) / 10**18
         );
@@ -922,8 +946,8 @@ contract EndToEndTest is Test {
     function testNotAllowCreditAfterLargeUnrealizedDebt(uint128 amountEth)
         public
     {
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(uint256(amountEth) * _collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(uint256(amountEth) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         vm.assume(amountEth > 1e15);
         uint128 valueOfOneEth = uint128(
             (Constants.WAD * rateEthToUsd) /
@@ -933,7 +957,7 @@ contract EndToEndTest is Test {
 
         uint128 amountCredit = uint128(
             (((valueOfOneEth * amountEth) / 10**Constants.ethDecimals) * 100) /
-                _collThres
+                collThres
         ) - 1;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -958,8 +982,8 @@ contract EndToEndTest is Test {
         vm.assume(
             newPrice * 10**Constants.oracleEthToUsdDecimals > rateEthToUsd
         );
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres); //prevent overflow in takecredit with absurd values
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = uint128(
             (Constants.WAD * rateEthToUsd) /
                 10**Constants.oracleEthToUsdDecimals
@@ -968,7 +992,7 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
@@ -984,7 +1008,7 @@ contract EndToEndTest is Test {
             10**Constants.oracleEthToUsdDecimals;
         uint256 expectedAvailableCredit = (((newValueOfOneEth * amountEth) /
             10**Constants.ethDecimals) * 100) /
-            _collThres -
+            collThres -
             amountCredit;
 
         uint256 actualAvailableCredit = proxy.getFreeMargin();
@@ -997,8 +1021,8 @@ contract EndToEndTest is Test {
         uint128 amountEthWithdrawal
     ) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
         vm.assume(amountEth >= amountEthWithdrawal);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -1031,8 +1055,8 @@ contract EndToEndTest is Test {
         uint128 amountCredit
     ) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
         vm.assume(amountEth >= amountEthWithdrawal);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
@@ -1070,15 +1094,15 @@ contract EndToEndTest is Test {
         uint16 blocksToRoll
     ) public {
         vm.assume(amountEth > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1096,7 +1120,7 @@ contract EndToEndTest is Test {
 
         uint128 base = _yearlyInterestRate + 10**18;
         uint128 exponent = uint128(
-            (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()
+            (uint128(blocksToRoll) * 10**18) / pool.YEARLY_BLOCKS()
         );
         uint128 expectedDebt = uint128(
             (amountCredit * (LogExpMath.pow(base, exponent))) / 10**18
@@ -1112,15 +1136,15 @@ contract EndToEndTest is Test {
         uint16 blocksToRoll
     ) public {
         vm.assume(amountEth > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1133,7 +1157,7 @@ contract EndToEndTest is Test {
         uint128 openDebt = proxy.getUsedMargin();
 
         vm.prank(liquidityProvider);
-        asset.transfer(vaultOwner, openDebt - amountCredit);
+        dai.transfer(vaultOwner, openDebt - amountCredit);
 
 
         vm.prank(vaultOwner);
@@ -1153,15 +1177,15 @@ contract EndToEndTest is Test {
     ) public {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1170,18 +1194,18 @@ contract EndToEndTest is Test {
         pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.prank(liquidityProvider);
-        asset.transfer(vaultOwner, factor * amountCredit);
+        dai.transfer(vaultOwner, factor * amountCredit);
 
         vm.roll(block.number + blocksToRoll);
 
         uint128 openDebt = proxy.getUsedMargin();
-        uint256 balanceBefore = asset.balanceOf(vaultOwner);
+        uint256 balanceBefore = dai.balanceOf(vaultOwner);
 
         vm.startPrank(vaultOwner);
         pool.repay(openDebt * factor, address(proxy));
         vm.stopPrank();
 
-        uint256 balanceAfter = asset.balanceOf(vaultOwner);
+        uint256 balanceAfter = dai.balanceOf(vaultOwner);
 
         assertEq(balanceBefore - openDebt, balanceAfter);
         assertEq(proxy.getUsedMargin(), 0);
@@ -1198,15 +1222,15 @@ contract EndToEndTest is Test {
     ) public {
         // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
         vm.assume(amountEth > 0);
-        (uint16 _collThres, , ) = proxy.vault();
-        vm.assume(amountEth < type(uint128).max / _collThres);
+        (uint16 collThres, , ) = proxy.vault();
+        vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) /
             10**Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (((valueOfOneEth * amountEth) /
-            10**Constants.ethDecimals) * 100) / _collThres;
+            10**Constants.ethDecimals) * 100) / collThres;
         vm.assume(amountCredit <= maxCredit);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1224,7 +1248,7 @@ contract EndToEndTest is Test {
         uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = _yearlyInterestRate + 10**18;
         uint128 exponent = uint128(
-            (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()
+            (uint128(blocksToRoll) * 10**18) / pool.YEARLY_BLOCKS()
         );
         uint128 expectedDebt = uint128(
             (amountCredit * (LogExpMath.pow(base, exponent))) / 10**18
@@ -1236,7 +1260,7 @@ contract EndToEndTest is Test {
         _yearlyInterestRate = pool.interestRate();
         base = _yearlyInterestRate + 10**18;
         exponent = uint128(
-            (uint128(blocksToRoll) * 10**18) / proxy.yearlyBlocks()
+            (uint128(blocksToRoll) * 10**18) / pool.YEARLY_BLOCKS()
         );
         expectedDebt = uint128(
             (expectedDebt * (LogExpMath.pow(base, exponent))) / 10**18

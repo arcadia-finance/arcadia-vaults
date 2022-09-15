@@ -38,13 +38,15 @@ contract MainRegistry is Ownable {
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
     mapping(address => mapping(uint256 => uint256))
         public assetToBaseCurrencyToCreditRating;
+    mapping(address => uint256) public assetToBaseCurrency;
+    mapping(address => bool) public isBaseCurrency;
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
         uint64 baseCurrencyUnit;
         address assetAddress;
         address baseCurrencyToUsdOracle;
-        address liquidityPool;
+        address lendingPool;
         string baseCurrencyLabel;
     }
 
@@ -64,12 +66,13 @@ contract MainRegistry is Ownable {
      *                              - baseCurrencyUnit: Since there is no native token for USD, this is 0 by default for USD
      *                              - assetAddress: Since there is no native token for usd, this is 0 address by default for USD
      *                              - baseCurrencyToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
-     *                              - liquidityPool: The contract of the Liquidity Pool, correspo,nding to the baseCurrency
+     *                              - lendingPool: The contract of the Liquidity Pool, correspo,nding to the baseCurrency
      *                              - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      */
     constructor(BaseCurrencyInformation memory _baseCurrencyInformation) {
         //Main registry must be initialised with usd
         baseCurrencyToInformation[baseCurrencyCounter] = _baseCurrencyInformation;
+        assetToBaseCurrency[_baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         unchecked {
             ++baseCurrencyCounter;
         }
@@ -94,7 +97,7 @@ contract MainRegistry is Ownable {
             for (uint256 i = factoryBaseCurrencyCounter; i < baseCurrencyCounter; ) {
                 IFactory(factoryAddress).addBaseCurrency(
                     i,
-                    baseCurrencyToInformation[i].liquidityPool
+                    baseCurrencyToInformation[i].lendingPool
                 );
                 unchecked {
                     ++i;
@@ -283,7 +286,7 @@ contract MainRegistry is Ownable {
      *                              - baseCurrencyUnit: The unit of the baseCurrency, equal to 10 to the power of the number of decimals of the baseCurrency
      *                              - assetAddress: The contract address of the baseCurrency,
      *                              - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
-     *                              - liquidityPool: The contract address of the Arcadia issued token, pegged to the baseCurrency
+     *                              - lendingPool: The contract address of the Arcadia issued token, pegged to the baseCurrency
      *                              - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      * @param assetCreditRatings The List of the Credit Rating Categories of the baseCurrency, for all the different assets in the Main registry
      * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
@@ -302,6 +305,8 @@ contract MainRegistry is Ownable {
         uint256[] calldata assetCreditRatings
     ) external onlyOwner {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
+        assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
+        isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
 
         uint256 assetCreditRatingsLength = assetCreditRatings.length;
         require(
@@ -325,12 +330,37 @@ contract MainRegistry is Ownable {
         if (factoryAddress != address(0)) {
             IFactory(factoryAddress).addBaseCurrency(
                 baseCurrencyCounter,
-                baseCurrencyInformation.liquidityPool
+                baseCurrencyInformation.lendingPool
             );
         }
         unchecked {
             ++baseCurrencyCounter;
         }
+    }
+
+    /**
+     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     *      for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency The contract address of the BaseCurrency
+     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
+     */
+    function getTotalValue(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        address baseCurrency
+    ) public view returns (uint256 valueInBaseCurrency) {
+        valueInBaseCurrency = 
+            getTotalValue(
+                _assetAddresses,
+                _assetIds,
+                _assetAmounts,
+                assetToBaseCurrency[baseCurrency]
+            );
     }
 
     /**
@@ -423,6 +453,31 @@ contract MainRegistry is Ownable {
      * @dev For each token address, a corresponding id at the same index should be present,
      *      for tokens without Id (ERC20 for instance), the Id should be set to 0
      * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency The contract address of the BaseCurrency
+     * @return valuesPerAsset The list of values per assets denominated in BaseCurrency
+     */
+    function getListOfValuesPerAsset(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        address baseCurrency
+    ) public view returns (uint256[] memory valuesPerAsset) {
+        valuesPerAsset = 
+            getListOfValuesPerAsset(
+                _assetAddresses,
+                _assetIds,
+                _assetAmounts,
+                assetToBaseCurrency[baseCurrency]
+            );
+    }
+
+    /**
+     * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     *      for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency An identifier (uint256) of the BaseCurrency
      * @return valuesPerAsset The list of values per assets denominated in BaseCurrency
      */
@@ -494,6 +549,34 @@ contract MainRegistry is Ownable {
             }
         }
         return valuesPerAsset;
+    }
+
+    /**
+     * @notice Calculate the value per Credit Rating Category of a list of assets denominated in a given BaseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     *      for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency The contract address of the BaseCurrency
+     * @return valuesPerCreditRating The list of values per Credit Rating Category denominated in BaseCurrency
+     * @dev Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
+     *      Category from 1 to 10 will be used to label groups of assets with similar risk profiles
+     *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
+     */
+    function getListOfValuesPerCreditRating(
+        address[] calldata _assetAddresses,
+        uint256[] calldata _assetIds,
+        uint256[] calldata _assetAmounts,
+        address baseCurrency
+    ) public view returns (uint256[] memory valuesPerCreditRating) {
+        valuesPerCreditRating = 
+            getListOfValuesPerCreditRating(
+                _assetAddresses,
+                _assetIds,
+                _assetAmounts,
+                assetToBaseCurrency[baseCurrency]
+            );
     }
 
     /**
