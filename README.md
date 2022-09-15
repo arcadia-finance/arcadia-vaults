@@ -1,7 +1,7 @@
-# Arcadia Finance Vaults
+# Arcadia Finance - Arcadia Vaults
 
 ## Name
-Arcadia Finance Vaults
+Arcadia Vaults
 
 ## Docs
 [Arcadia Finance Docs](https://arcadiafinance.notion.site)
