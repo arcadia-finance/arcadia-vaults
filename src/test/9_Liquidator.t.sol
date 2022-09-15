@@ -452,10 +452,6 @@ contract LiquidatorTest is Test {
         );
         proxy = Vault(proxyAddr);
 
-        vm.startPrank(vaultOwner);
-        proxy.setLiquidator(address(liquidator));
-        vm.stopPrank();
-
         uint256 slot = stdstore
             .target(address(factory))
             .sig(factory.isVault.selector)

@@ -407,8 +407,6 @@ contract vaultTests is Test {
             1
         );
 
-        vault.setLiquidator(address(liquidator));
-
         vault.openTrustedMarginAccount(address(pool));
         dai.approve(address(vault), type(uint256).max);
 
@@ -1732,10 +1730,6 @@ contract vaultTests is Test {
             .find();
         loc = bytes32(slot);
         vm.store(address(debt), loc, addDebt);
-
-        vm.startPrank(vaultOwner);
-        vault.setLiquidator(address(liquidator));
-        vm.stopPrank();
 
         vm.startPrank(liquidationKeeper);
         factoryContr.liquidate(address(vault));

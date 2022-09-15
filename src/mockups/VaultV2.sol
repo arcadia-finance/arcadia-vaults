@@ -52,7 +52,7 @@ contract VaultV2 {
     uint256 public life;
     uint16 public vaultVersion;
     address public registryAddress;
-    address public liquidatorAddress;
+    address public liquidator;
 
     struct VaultInfo {
         uint16 collThres; //2 decimals precision (factor 100)
@@ -668,7 +668,6 @@ contract VaultV2 {
     function _setBaseCurrency(
         address _baseCurrency
     ) private {
-
         require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
         require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL_SBC: baseCurrency not found");
         vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
@@ -694,7 +693,7 @@ contract VaultV2 {
         (bool success, address baseCurrency, address liquidator_) = ITrustedProtocol(protocol).openMarginAccount();
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
-        liquidatorAddress = liquidator_;
+        liquidator = liquidator_;
         trustedProtocol = protocol;
         if (vault.baseCurrency != baseCurrency) _setBaseCurrency(baseCurrency);
         IERC20(baseCurrency).approve(protocol, type(uint256).max);
@@ -873,16 +872,6 @@ contract VaultV2 {
     ///////////////////////////////////////////////////////////////*/
 
     /** 
-    @notice Function to set a new contract for the liquidation logic
-    @dev Since vaults to be liquidated, together with the open debt, are transferred to the protocol,
-         New logic can be set without needing to increment the vault version.
-    @param _newLiquidator The new liquidator contract
-  */
-    function setLiquidator(address _newLiquidator) public onlyOwner {
-        liquidatorAddress = _newLiquidator;
-    }
-
-    /** 
     @notice Function called to start a vault liquidation.
     @dev Requires an unhealthy vault (value / debt < liqThres).
          Starts the vault auction on the liquidator contract.
@@ -892,11 +881,10 @@ contract VaultV2 {
     @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
     @return success Boolean returning if the liquidation process is successfully started.
   */
-
     function liquidateVault(address liquidationKeeper)
         public
         onlyFactory
-        returns (bool success, address liquidator)
+        returns (bool success, address liquidator_)
     {
         //gas: 35 gas cheaper to not take debt into memory
         uint256 totalValue = getVaultValue(vault.baseCurrency);
@@ -917,7 +905,7 @@ contract VaultV2 {
         uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
 
         require(
-            ILiquidator(liquidatorAddress).startAuction(
+            ILiquidator(liquidator).startAuction(
                 address(this),
                 life,
                 liquidationKeeper,
@@ -934,7 +922,7 @@ contract VaultV2 {
             ++life;
         }
 
-        return (true, liquidatorAddress);
+        return (true, liquidator);
     }
 
     /*///////////////////////////////////////////////////////////////

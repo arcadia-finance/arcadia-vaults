@@ -455,10 +455,6 @@ contract gasProxyDeploy is Test {
         );
         proxy = Vault(proxyAddr);
 
-        vm.startPrank(vaultOwner);
-        proxy.setLiquidator(address(liquidator));
-        vm.stopPrank();
-
         vm.prank(vaultOwner);
         proxy.openTrustedMarginAccount(address(pool));
         dai.approve(address(proxy), type(uint256).max);

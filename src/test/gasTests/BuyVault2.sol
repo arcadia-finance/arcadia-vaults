@@ -624,10 +624,6 @@ contract gasBuyVault_2ERC20 is Test {
         );
         proxy = Vault(proxyAddr);
 
-        vm.startPrank(vaultOwner);
-        proxy.setLiquidator(address(liquidator));
-        vm.stopPrank();
-
         vm.prank(liquidityProvider);
         dai.mint(tokenCreatorAddress, 100000 * 10**18);
 

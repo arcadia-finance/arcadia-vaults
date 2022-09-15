@@ -455,10 +455,6 @@ contract gasDeploys is Test {
         );
         proxy = Vault(proxyAddr);
 
-        vm.startPrank(vaultOwner);
-        proxy.setLiquidator(address(liquidator));
-        vm.stopPrank();
-
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));

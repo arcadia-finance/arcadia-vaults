@@ -451,10 +451,6 @@ contract EndToEndTest is Test {
         );
         proxy = Vault(proxyAddr);
 
-        vm.startPrank(vaultOwner);
-        proxy.setLiquidator(address(liquidator));
-        vm.stopPrank();
-
         vm.startPrank(oracleOwner);
         oracleDaiToUsd.transmit(int256(rateDaiToUsd));
         oracleEthToUsd.transmit(int256(rateEthToUsd));

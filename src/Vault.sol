@@ -871,16 +871,6 @@ contract Vault {
     ///////////////////////////////////////////////////////////////*/
 
     /** 
-    @notice Function to set a new contract for the liquidation logic
-    @dev Since vaults to be liquidated, together with the open debt, are transferred to the protocol,
-         New logic can be set without needing to increment the vault version.
-    @param _liquidator The new liquidator contract
-  */
-    function setLiquidator(address _liquidator) public onlyOwner {
-        liquidator = _liquidator;
-    }
-
-    /** 
     @notice Function called to start a vault liquidation.
     @dev Requires an unhealthy vault (value / debt < liqThres).
          Starts the vault auction on the liquidator contract.
