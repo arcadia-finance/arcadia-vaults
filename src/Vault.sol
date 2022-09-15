@@ -49,7 +49,6 @@ contract Vault {
     // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
     // Used by the liquidator contract for proceed claims
     uint256 public life;
-    bool public initialized;
     uint16 public vaultVersion;
     address public registryAddress;
     address public liquidator;
