@@ -357,8 +357,11 @@ contract MainRegistry is Ownable {
         ISubRegistry.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
 
+        address assetAddress;
+        uint256 tempValueInUsd;
+        uint256 tempValueInBaseCurrency;
         for (uint256 i; i < assetAddressesLength; ) {
-            address assetAddress = _assetAddresses[i];
+            assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GTV: Unknown asset");
 
             getValueInput.assetAddress = assetAddress;
@@ -376,8 +379,8 @@ contract MainRegistry is Ownable {
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
                 (
-                    uint256 tempValueInUsd,
-                    uint256 tempValueInBaseCurrency
+                    tempValueInUsd,
+                    tempValueInBaseCurrency
                 ) = ISubRegistry(assetToSubRegistry[assetAddress]).getValue(
                         getValueInput
                     );
@@ -454,9 +457,11 @@ contract MainRegistry is Ownable {
         getValueInput.baseCurrency = baseCurrency;
 
         int256 rateBaseCurrencyToUsd;
-
+        address assetAddress;
+        uint256 valueInUsd;
+        uint256 valueInBaseCurrency;
         for (uint256 i; i < assetAddressesLength; ) {
-            address assetAddress = _assetAddresses[i];
+            assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
 
             getValueInput.assetAddress = assetAddress;
@@ -469,7 +474,7 @@ contract MainRegistry is Ownable {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
                 valuesPerAsset[i] = _assetAmounts[i];
             } else {
-                (uint256 valueInUsd, uint256 valueInBaseCurrency) = ISubRegistry(
+                (valueInUsd, valueInBaseCurrency) = ISubRegistry(
                     assetToSubRegistry[assetAddress]
                 ).getValue(getValueInput);
                 //Check if baseCurrency is USD
@@ -545,8 +550,9 @@ contract MainRegistry is Ownable {
         );
 
         uint256 valuesPerAssetLength = valuesPerAsset.length;
+        address assetAdress;
         for (uint256 i; i < valuesPerAssetLength; ) {
-            address assetAdress = _assetAddresses[i];
+            assetAdress = _assetAddresses[i];
             valuesPerCreditRating[
                 assetToBaseCurrencyToCreditRating[assetAdress][baseCurrency]
             ] += valuesPerAsset[i];
