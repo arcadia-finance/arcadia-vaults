@@ -49,7 +49,6 @@ contract Vault {
     // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
     // Used by the liquidator contract for proceed claims
     uint256 public life;
-    bool public initialized;
     uint16 public vaultVersion;
     address public registryAddress;
     address public liquidator;
@@ -668,8 +667,8 @@ contract Vault {
     function _setBaseCurrency(
         address _baseCurrency
     ) private {
-        require(getUsedMargin() == 0, "VL: Can't change baseCurrency when Used Margin > 0");
-        require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL: baseCurrency not found");
+        require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
+        require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL_SBC: baseCurrency not found");
         vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
     }
 
@@ -708,8 +707,7 @@ contract Vault {
     */
     function closeTrustedMarginAccount() public onlyOwner {
         require(isTrustedProtocolSet, "V_CMA: NOT SET");
-
-        require(ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) == 0, "NON-ZERO OPEN POSITION");
+        require(ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
 
         isTrustedProtocolSet = false;
         allowed[trustedProtocol] = false;
@@ -862,6 +860,7 @@ contract Vault {
     @param baseCurrency The Base-currency in which the margin position is denominated.
     @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
     @return success Boolean indicating if there the margin position is successfully decreased.
+    @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
      */
     function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
         success = baseCurrency == vault.baseCurrency;
@@ -911,7 +910,7 @@ contract Vault {
             rightHand = uint256(vault.liqThres) * uint256(openDebt);
         }
 
-        require(leftHand < rightHand, "This vault is healthy");
+        require(leftHand < rightHand, "V_LV: This vault is healthy");
 
         uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
 
@@ -925,7 +924,7 @@ contract Vault {
                 vault.liqThres,
                 baseCurrencyIdentifier
             ),
-            "Failed to start auction!"
+            "V_LV: Failed to start auction!"
         );
 
         //gas: good luck overflowing this

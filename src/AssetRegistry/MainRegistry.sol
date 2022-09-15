@@ -312,6 +312,16 @@ contract MainRegistry is Ownable {
         }
     }
 
+    /**
+     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     *      for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency The contract address of the BaseCurrency
+     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
+     */
     function getTotalValue(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
@@ -357,8 +367,11 @@ contract MainRegistry is Ownable {
         ISubRegistry.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
 
+        address assetAddress;
+        uint256 tempValueInUsd;
+        uint256 tempValueInBaseCurrency;
         for (uint256 i; i < assetAddressesLength; ) {
-            address assetAddress = _assetAddresses[i];
+            assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GTV: Unknown asset");
 
             getValueInput.assetAddress = assetAddress;
@@ -376,8 +389,8 @@ contract MainRegistry is Ownable {
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
                 (
-                    uint256 tempValueInUsd,
-                    uint256 tempValueInBaseCurrency
+                    tempValueInUsd,
+                    tempValueInBaseCurrency
                 ) = ISubRegistry(assetToSubRegistry[assetAddress]).getValue(
                         getValueInput
                     );
@@ -409,6 +422,16 @@ contract MainRegistry is Ownable {
         return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
     }
 
+    /**
+     * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     *      for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency The contract address of the BaseCurrency
+     * @return valuesPerAsset The list of values per assets denominated in BaseCurrency
+     */
     function getListOfValuesPerAsset(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
@@ -454,9 +477,11 @@ contract MainRegistry is Ownable {
         getValueInput.baseCurrency = baseCurrency;
 
         int256 rateBaseCurrencyToUsd;
-
+        address assetAddress;
+        uint256 valueInUsd;
+        uint256 valueInBaseCurrency;
         for (uint256 i; i < assetAddressesLength; ) {
-            address assetAddress = _assetAddresses[i];
+            assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
 
             getValueInput.assetAddress = assetAddress;
@@ -469,7 +494,7 @@ contract MainRegistry is Ownable {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
                 valuesPerAsset[i] = _assetAmounts[i];
             } else {
-                (uint256 valueInUsd, uint256 valueInBaseCurrency) = ISubRegistry(
+                (valueInUsd, valueInBaseCurrency) = ISubRegistry(
                     assetToSubRegistry[assetAddress]
                 ).getValue(getValueInput);
                 //Check if baseCurrency is USD
@@ -502,6 +527,19 @@ contract MainRegistry is Ownable {
         return valuesPerAsset;
     }
 
+    /**
+     * @notice Calculate the value per Credit Rating Category of a list of assets denominated in a given BaseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     *      for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency The contract address of the BaseCurrency
+     * @return valuesPerCreditRating The list of values per Credit Rating Category denominated in BaseCurrency
+     * @dev Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
+     *      Category from 1 to 10 will be used to label groups of assets with similar risk profiles
+     *      (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
+     */
     function getListOfValuesPerCreditRating(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
@@ -545,8 +583,9 @@ contract MainRegistry is Ownable {
         );
 
         uint256 valuesPerAssetLength = valuesPerAsset.length;
+        address assetAdress;
         for (uint256 i; i < valuesPerAssetLength; ) {
-            address assetAdress = _assetAddresses[i];
+            assetAdress = _assetAddresses[i];
             valuesPerCreditRating[
                 assetToBaseCurrencyToCreditRating[assetAdress][baseCurrency]
             ] += valuesPerAsset[i];

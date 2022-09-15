@@ -545,7 +545,7 @@ contract LiquidatorTest is Test {
         pool.borrow(amountCredit, address(proxy), vaultOwner);
 
         vm.startPrank(liquidatorBot);
-        vm.expectRevert("This vault is healthy");
+        vm.expectRevert("V_LV: This vault is healthy");
         factory.liquidate(address(proxy));
         vm.stopPrank();
 
