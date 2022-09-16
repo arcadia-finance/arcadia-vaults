@@ -12,19 +12,21 @@ import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
 /**
- * @title Abstract Sub-registry
+ * @title Abstract Pricing Logic
  * @author Arcadia Finance
  * @notice Sub-Registries have the pricing logic and basic information for tokens that can, or could at some point, be deposited in the vaults
  * @dev No end-user should directly interact with Sub-Registries, only the Main-registry, Oracle-Hub or the contract owner
- * @dev This abstract contract contains the minimal functions that each Sub-Registry should have to properly work with the Main-Registry
+ * @dev This abstract contract contains the minimal functions that each Pricing Logic should have to properly work with the Main-Registry
  */
-abstract contract SubRegistry is Ownable {
+abstract contract PricingModule is Ownable {
     using FixedPointMathLib for uint256;
 
     address public mainRegistry;
     address public oracleHub;
-    address[] public assetsInSubRegistry;
-    mapping(address => bool) public inSubRegistry;
+
+    address[] public assetsInPricingModule;
+
+    mapping(address => bool) public inPricingModule;
     mapping(address => bool) public isAssetAddressWhiteListed;
 
     //struct with input variables necessary to avoid stack to deep error
@@ -36,7 +38,7 @@ abstract contract SubRegistry is Ownable {
     }
 
     /**
-     * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and the Oracle-Hub
+     * @notice A Pricing Logic must always be initialised with the address of the Main-Registry and the Oracle-Hub
      * @param _mainRegistry The address of the Main-registry
      * @param _oracleHub The address of the Oracle-Hub
      */
@@ -44,6 +46,10 @@ abstract contract SubRegistry is Ownable {
         mainRegistry = _mainRegistry;
         oracleHub = _oracleHub;
     }
+
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Checks for a token address and the corresponding Id, if it is white-listed
@@ -59,7 +65,7 @@ abstract contract SubRegistry is Ownable {
      * @param assetAddress The token address of the asset that needs to be removed from the white-list
      */
     function removeFromWhiteList(address assetAddress) external onlyOwner {
-        require(inSubRegistry[assetAddress], "Asset not known in Sub-Registry");
+        require(inPricingModule[assetAddress], "Asset not known in Pricing Module");
         isAssetAddressWhiteListed[assetAddress] = false;
     }
 
@@ -68,9 +74,13 @@ abstract contract SubRegistry is Ownable {
      * @param assetAddress The token address of the asset that needs to be added back to the white-list
      */
     function addToWhiteList(address assetAddress) external onlyOwner {
-        require(inSubRegistry[assetAddress], "Asset not known in Sub-Registry");
+        require(inPricingModule[assetAddress], "Asset not known in Pricing Module");
         isAssetAddressWhiteListed[assetAddress] = true;
     }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency

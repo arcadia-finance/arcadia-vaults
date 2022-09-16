@@ -15,14 +15,14 @@ import {ERC20Mock} from "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
 import "../../AssetRegistry/MainRegistry.sol";
-import "../../AssetRegistry/FloorERC721SubRegistry.sol";
-import "../../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../../AssetRegistry/FloorERC1155SubRegistry.sol";
+import "../../AssetRegistry/FloorERC721PricingModule.sol";
+import "../../AssetRegistry/StandardERC20PricingModule.sol";
+import "../../AssetRegistry/FloorERC1155PricingModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
 
 import "../../utils/Constants.sol";
-import "../../ArcadiaOracle.sol";
+import "../../mockups/ArcadiaOracle.sol";
 import "../fixtures/ArcadiaOracleFixture.f.sol";
 
 import {LendingPool, ERC20} from "../../../lib/arcadia-lending/src/LendingPool.sol";
@@ -59,8 +59,8 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
     ArcadiaOracle private oracleGenericStoreFrontToEth;
     MainRegistry private mainRegistry;
     StandardERC20Registry private standardERC20Registry;
-    FloorERC721SubRegistry private floorERC721SubRegistry;
-    FloorERC1155SubRegistry private floorERC1155SubRegistry;
+    FloorERC721PricingModule private floorERC721PricingModule;
+    FloorERC1155PricingModule private floorERC1155PricingModule;
     Liquidator private liquidator;
 
     LendingPool pool;
@@ -471,18 +471,18 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
             address(mainRegistry),
             address(oracleHub)
         );
-        floorERC721SubRegistry = new FloorERC721SubRegistry(
+        floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
-        floorERC1155SubRegistry = new FloorERC1155SubRegistry(
+        floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
 
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
-        mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
+        mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
         uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = 0;
@@ -514,8 +514,8 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
             assetCreditRatings
         );
 
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -523,8 +523,8 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
             }),
             assetCreditRatings
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWmaycToUsdArr,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -532,16 +532,16 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
             }),
             assetCreditRatings
         );
-        floorERC1155SubRegistry.setAssetInformation(
-            FloorERC1155SubRegistry.AssetInformation({
+        floorERC1155PricingModule.setAssetInformation(
+            FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
                 assetAddress: address(interleave)
             }),
             assetCreditRatings
         );
-        floorERC1155SubRegistry.setAssetInformation(
-            FloorERC1155SubRegistry.AssetInformation({
+        floorERC1155PricingModule.setAssetInformation(
+            FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleGenericStoreFrontToEthEthToUsd,
                 id: 1,
                 assetAddress: address(genericStoreFront)

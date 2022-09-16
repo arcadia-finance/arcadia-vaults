@@ -11,7 +11,7 @@ import "../../../lib/forge-std/src/Test.sol";
 import "../../../lib/ds-test/src/test.sol";
 import "../../../lib/forge-std/src/Vm.sol";
 import "../../utils/Constants.sol";
-import "../../ArcadiaOracle.sol";
+import "../../mockups/ArcadiaOracle.sol";
 
 contract ArcadiaOracleFixture is Test {
     uint8 public defaultDecimals = uint8(18);

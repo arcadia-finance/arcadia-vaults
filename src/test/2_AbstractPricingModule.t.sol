@@ -11,25 +11,25 @@ import "../../lib/forge-std/src/Test.sol";
 import "../mockups/ERC20SolmateMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../AssetRegistry/AbstractSubRegistry.sol";
+import "../AssetRegistry/AbstractPricingModule.sol";
 import "../AssetRegistry/MainRegistry.sol";
 
-contract AbstractSubRegistryForTest is SubRegistry {
-    constructor(address mainRegistry, address oracleHub) SubRegistry(mainRegistry, oracleHub) {}
+contract AbstractPricingModuleForTest is PricingModule {
+    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
 
     function setAssetInformation(address assetAddress) public onlyOwner {
-        if (!inSubRegistry[assetAddress]) {
-            inSubRegistry[assetAddress] = true;
-            assetsInSubRegistry.push(assetAddress);
+        if (!inPricingModule[assetAddress]) {
+            inPricingModule[assetAddress] = true;
+            assetsInPricingModule.push(assetAddress);
         }
         isAssetAddressWhiteListed[assetAddress] = true;
     }
 }
 
-contract AbstractSubRegistryTest is Test {
+contract AbstractPricingModuleTest is Test {
     using stdStorage for StdStorage;
 
-    AbstractSubRegistryForTest internal abstractSubRegistry;
+    AbstractPricingModuleForTest internal abstractPricingModule;
     OracleHub private oracleHub;
     MainRegistry private mainRegistry;
 
@@ -70,109 +70,109 @@ contract AbstractSubRegistryTest is Test {
     //this is a before each
     function setUp() public {
         vm.prank(creatorAddress);
-        abstractSubRegistry = new AbstractSubRegistryForTest(
+        abstractPricingModule = new AbstractPricingModuleForTest(
             address(mainRegistry),
             address(oracleHub)
         );
     }
 
-    function testAssetWhitelistedWhenAddedToSubregistry(address assetAddress) public {
+    function testAssetWhitelistedWhenAddedToPricingModule(address assetAddress) public {
         vm.prank(creatorAddress);
-        abstractSubRegistry.setAssetInformation(assetAddress);
+        abstractPricingModule.setAssetInformation(assetAddress);
 
-        assertTrue(abstractSubRegistry.isAssetAddressWhiteListed(assetAddress));
+        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(assetAddress));
     }
 
     function testNonOwnerAddsExistingAssetToWhitelist(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.prank(creatorAddress);
-        abstractSubRegistry.setAssetInformation(address(eth));
+        abstractPricingModule.setAssetInformation(address(eth));
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        abstractSubRegistry.addToWhiteList(address(eth));
+        abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
+        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testOwnerAddsNonExistingAssetToWhitelist() public {
         vm.startPrank(creatorAddress);
-        vm.expectRevert("Asset not known in Sub-Registry");
-        abstractSubRegistry.addToWhiteList(address(eth));
+        vm.expectRevert("Asset not known in Pricing Module");
+        abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(!abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
+        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testOwnerAddsExistingAssetToWhitelist() public {
         vm.startPrank(creatorAddress);
-        abstractSubRegistry.setAssetInformation(address(eth));
-        abstractSubRegistry.addToWhiteList(address(eth));
+        abstractPricingModule.setAssetInformation(address(eth));
+        abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
+        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testNonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
 
         vm.prank(creatorAddress);
-        abstractSubRegistry.setAssetInformation(address(eth));
+        abstractPricingModule.setAssetInformation(address(eth));
 
         vm.assume(unprivilegedAddress != address(this));
         vm.assume(unprivilegedAddress != creatorAddress);
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        abstractSubRegistry.removeFromWhiteList(address(eth));
+        abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
+        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testOwnerRemovesNonExistingAssetFromWhitelist() public {
         vm.startPrank(creatorAddress);
-        vm.expectRevert("Asset not known in Sub-Registry");
-        abstractSubRegistry.removeFromWhiteList(address(eth));
+        vm.expectRevert("Asset not known in Pricing Module");
+        abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(!abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
+        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testOwnerRemovesExistingAssetFromWhitelist() public {
         vm.startPrank(creatorAddress);
-        abstractSubRegistry.setAssetInformation(address(eth));
-        abstractSubRegistry.removeFromWhiteList(address(eth));
+        abstractPricingModule.setAssetInformation(address(eth));
+        abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(!abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
+        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testNonOwnerAddsRemovedAssetToWhitelist(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
 
         vm.startPrank(creatorAddress);
-        abstractSubRegistry.setAssetInformation(address(eth));
-        abstractSubRegistry.removeFromWhiteList(address(eth));
+        abstractPricingModule.setAssetInformation(address(eth));
+        abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        abstractSubRegistry.addToWhiteList(address(eth));
+        abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(!abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
+        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testOwnerAddsRemovedAssetToWhitelist() public {
         vm.startPrank(creatorAddress);
-        abstractSubRegistry.setAssetInformation(address(eth));
-        abstractSubRegistry.removeFromWhiteList(address(eth));
+        abstractPricingModule.setAssetInformation(address(eth));
+        abstractPricingModule.removeFromWhiteList(address(eth));
 
-        abstractSubRegistry.addToWhiteList(address(eth));
+        abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
-        assertTrue(abstractSubRegistry.isAssetAddressWhiteListed(address(eth)));
+        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 }
