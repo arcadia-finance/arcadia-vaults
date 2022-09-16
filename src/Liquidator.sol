@@ -20,7 +20,6 @@ import "./interfaces/ILendingPool.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Ownable {
-
     uint256 public constant hourlyBlocks = 300;
     uint256 public breakevenTime = 6; //hours
 

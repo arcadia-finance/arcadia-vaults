@@ -6,7 +6,6 @@ pragma solidity >=0.4.22 <0.9.0;
  * @author Arcadia Finance
  */
 contract Proxy {
-
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1, and is
@@ -97,5 +96,4 @@ contract Proxy {
             default { return(0, returndatasize()) }
         }
     }
-
 }

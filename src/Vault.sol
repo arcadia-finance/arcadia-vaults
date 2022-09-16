@@ -32,7 +32,6 @@ import "./interfaces/ITrustedProtocol.sol";
  * For whitelists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
 contract Vault {
-
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
@@ -237,7 +236,6 @@ contract Vault {
     /*///////////////////////////////////////////////////////////////
                           MARGIN REQUIREMENTS
     ///////////////////////////////////////////////////////////////*/
-
 
     /**
      * @notice Can be called by authorised applications to open or increase a margin position.
