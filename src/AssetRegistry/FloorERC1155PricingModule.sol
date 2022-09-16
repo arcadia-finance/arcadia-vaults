@@ -6,16 +6,16 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./AbstractSubRegistry.sol";
+import "./AbstractPricingModule.sol";
 
 /**
- * @title Test Sub-registry for ERC1155 tokens
+ * @title Test Pricing Logic for ERC1155 tokens
  * @author Arcadia Finance
- * @notice The FloorERC1155SubRegistry stores pricing logic and basic information for ERC721 tokens for which a direct price feeds exists
+ * @notice The FloorERC1155PricingModule stores pricing logic and basic information for ERC721 tokens for which a direct price feeds exists
  * for the floor price of the collection
- * @dev No end-user should directly interact with the FloorERC1155SubRegistry, only the Main-registry, Oracle-Hub or the contract owner
+ * @dev No end-user should directly interact with the FloorERC1155PricingModule, only the Main-registry, Oracle-Hub or the contract owner
  */
-contract FloorERC1155SubRegistry is SubRegistry {
+contract FloorERC1155PricingModule is PricingModule {
     struct AssetInformation {
         uint256 id;
         address assetAddress;
@@ -25,14 +25,14 @@ contract FloorERC1155SubRegistry is SubRegistry {
     mapping(address => AssetInformation) public assetToInformation;
 
     /**
-     * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and of the Oracle-Hub
+     * @notice A Pricing Logic must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry The address of the Main-registry
      * @param oracleHub The address of the Oracle-Hub
      */
-    constructor(address mainRegistry, address oracleHub) SubRegistry(mainRegistry, oracleHub) {}
+    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
 
     /**
-     * @notice Adds a new asset to the FloorERC1155SubRegistry, or overwrites an existing one.
+     * @notice Adds a new asset to the FloorERC1155PricingModule, or overwrites an existing one.
      * @param assetInformation A Struct with information about the asset
      * - id: The Id of the asset
      * - assetAddress: The contract address of the asset
@@ -54,9 +54,9 @@ contract FloorERC1155SubRegistry is SubRegistry {
         IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
 
         address assetAddress = assetInformation.assetAddress;
-        if (!inSubRegistry[assetAddress]) {
-            inSubRegistry[assetAddress] = true;
-            assetsInSubRegistry.push(assetAddress);
+        if (!inPricingModule[assetAddress]) {
+            inPricingModule[assetAddress] = true;
+            assetsInPricingModule.push(assetAddress);
         }
         assetToInformation[assetAddress] = assetInformation;
         isAssetAddressWhiteListed[assetAddress] = true;
@@ -93,8 +93,8 @@ contract FloorERC1155SubRegistry is SubRegistry {
      * will return the value of the asset in USD.
      * Only one of the two values can be different from 0.
      * @dev Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
-     * @dev If the asset is not first added to subregistry this function will return value 0 without throwing an error.
-     * However no check in FloorERC1155SubRegistry is necessary, since the check if the asset is whitelisted (and hence added to subregistry)
+     * @dev If the asset is not first added to PricingModule this function will return value 0 without throwing an error.
+     * However no check in FloorERC1155PricingModule is necessary, since the check if the asset is whitelisted (and hence added to PricingModule)
      * is already done in the Main-Registry.
      */
     function getValue(GetValueInput memory getValueInput)

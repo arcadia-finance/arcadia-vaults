@@ -12,13 +12,13 @@ import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ATokenMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../AssetRegistry/ATokenSubRegistry.sol";
-import "../AssetRegistry/StandardERC20SubRegistry.sol";
+import "../AssetRegistry/ATokenPricingModule.sol";
+import "../AssetRegistry/StandardERC20PricingModule.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract aTokenSubRegistryTest is Test {
+contract aTokenPricingModuleTest is Test {
     using stdStorage for StdStorage;
 
     OracleHub private oracleHub;
@@ -29,8 +29,8 @@ contract aTokenSubRegistryTest is Test {
 
     ArcadiaOracle private oracleEthToUsd;
 
-    StandardERC20Registry private standardERC20SubRegistry;
-    ATokenSubRegistry private aTokenSubRegistry;
+    StandardERC20Registry private standardERC20PricingModule;
+    ATokenPricingModule private aTokenPricingModule;
 
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
@@ -108,20 +108,20 @@ contract aTokenSubRegistryTest is Test {
             emptyList
         );
 
-        standardERC20SubRegistry = new StandardERC20Registry(
+        standardERC20PricingModule = new StandardERC20Registry(
             address(mainRegistry),
             address(oracleHub)
         );
 
-        aTokenSubRegistry = new ATokenSubRegistry(
+        aTokenPricingModule = new ATokenPricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
 
-        mainRegistry.addSubRegistry(address(standardERC20SubRegistry));
-        mainRegistry.addSubRegistry(address(aTokenSubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20PricingModule));
+        mainRegistry.addPricingModule(address(aTokenPricingModule));
 
-        standardERC20SubRegistry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -136,7 +136,7 @@ contract aTokenSubRegistryTest is Test {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        aTokenSubRegistry.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
         vm.stopPrank();
     }
 
@@ -145,16 +145,16 @@ contract aTokenSubRegistryTest is Test {
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-        aTokenSubRegistry.setAssetInformation(address(aEth), assetCreditRatings);
+        aTokenPricingModule.setAssetInformation(address(aEth), assetCreditRatings);
         vm.stopPrank();
     }
 
     function testSuccess_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
-        aTokenSubRegistry.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
         vm.stopPrank();
 
-        assertTrue(aTokenSubRegistry.inSubRegistry(address(aEth)));
+        assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
     function testSuccess_OwnerAddsAssetWithFullListCreditRatings() public {
@@ -162,52 +162,52 @@ contract aTokenSubRegistryTest is Test {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
-        aTokenSubRegistry.setAssetInformation(address(aEth), assetCreditRatings);
+        aTokenPricingModule.setAssetInformation(address(aEth), assetCreditRatings);
         vm.stopPrank();
 
-        assertTrue(aTokenSubRegistry.inSubRegistry(address(aEth)));
+        assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
     function testSuccess_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
-        aTokenSubRegistry.setAssetInformation(address(aEth), emptyList);
-        aTokenSubRegistry.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
         vm.stopPrank();
 
-        assertTrue(aTokenSubRegistry.inSubRegistry(address(aEth)));
+        assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
     function testSuccess_IsWhitelistedPositive() public {
         vm.startPrank(creatorAddress);
 
-        aTokenSubRegistry.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
         vm.stopPrank();
 
-        assertTrue(aTokenSubRegistry.isWhiteListed(address(aEth), 0));
+        assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
     }
 
     function testSuccess_IsWhitelistedNegative(address randomAsset) public {
-        assertTrue(!aTokenSubRegistry.isWhiteListed(randomAsset, 0));
+        assertTrue(!aTokenPricingModule.isWhiteListed(randomAsset, 0));
     }
 
     function testReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
-        aTokenSubRegistry.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
             / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(aEth),
             assetId: 0,
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
 
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = aTokenSubRegistry.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = aTokenPricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -231,7 +231,7 @@ contract aTokenSubRegistryTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        aTokenSubRegistry.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (
@@ -239,13 +239,13 @@ contract aTokenSubRegistryTest is Test {
         ) / 10 ** Constants.ethDecimals;
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(aEth),
             assetId: 0,
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = aTokenSubRegistry.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = aTokenPricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -266,10 +266,10 @@ contract aTokenSubRegistryTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        aTokenSubRegistry.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
         vm.stopPrank();
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(aEth),
             assetId: 0,
             assetAmount: amountEth,
@@ -277,6 +277,6 @@ contract aTokenSubRegistryTest is Test {
         });
         //Arithmetic overflow.
         vm.expectRevert(bytes(""));
-        aTokenSubRegistry.getValue(getValueInput);
+        aTokenPricingModule.getValue(getValueInput);
     }
 }

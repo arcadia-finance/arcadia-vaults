@@ -16,9 +16,9 @@ import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
 import "../AssetRegistry/MainRegistry.sol";
-import "../AssetRegistry/FloorERC721SubRegistry.sol";
-import "../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../AssetRegistry/FloorERC1155SubRegistry.sol";
+import "../AssetRegistry/FloorERC721PricingModule.sol";
+import "../AssetRegistry/StandardERC20PricingModule.sol";
+import "../AssetRegistry/FloorERC1155PricingModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
@@ -55,8 +55,8 @@ contract vaultTests is Test {
     ArcadiaOracle private oracleInterleaveToEth;
     MainRegistry private mainRegistry;
     StandardERC20Registry private standardERC20Registry;
-    FloorERC721SubRegistry private floorERC721SubRegistry;
-    FloorERC1155SubRegistry private floorERC1155SubRegistry;
+    FloorERC721PricingModule private floorERC721PricingModule;
+    FloorERC1155PricingModule private floorERC1155PricingModule;
     Liquidator private liquidator;
 
     LendingPool pool;
@@ -347,18 +347,18 @@ contract vaultTests is Test {
             address(mainRegistry),
             address(oracleHub)
         );
-        floorERC721SubRegistry = new FloorERC721SubRegistry(
+        floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
-        floorERC1155SubRegistry = new FloorERC1155SubRegistry(
+        floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
 
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
-        mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
+        mainRegistry.addPricingModule(address(floorERC1155PricingModule));
         vm.stopPrank();
 
         uint256 slot =
@@ -538,8 +538,8 @@ contract vaultTests is Test {
         assetCreditRatings[2] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -573,8 +573,8 @@ contract vaultTests is Test {
         assetCreditRatings[2] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -621,8 +621,8 @@ contract vaultTests is Test {
         assetCreditRatings[2] = Constants.interleaveCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC1155SubRegistry.setAssetInformation(
-            FloorERC1155SubRegistry.AssetInformation({
+        floorERC1155PricingModule.setAssetInformation(
+            FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
                 assetAddress: address(interleave)
@@ -686,8 +686,8 @@ contract vaultTests is Test {
         assetCreditRatingsEth[1] = Constants.ethCreditRatingDai;
         assetCreditRatingsEth[2] = Constants.ethCreditRatingEth;
 
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -763,8 +763,8 @@ contract vaultTests is Test {
         assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingDai;
         assetCreditRatingsInterleave[2] = Constants.interleaveCreditRatingEth;
 
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -788,8 +788,8 @@ contract vaultTests is Test {
             }),
             assetCreditRatingsEth
         );
-        floorERC1155SubRegistry.setAssetInformation(
-            FloorERC1155SubRegistry.AssetInformation({
+        floorERC1155PricingModule.setAssetInformation(
+            FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
                 assetAddress: address(interleave)
@@ -1596,8 +1596,8 @@ contract vaultTests is Test {
         assetCreditRatings[2] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,

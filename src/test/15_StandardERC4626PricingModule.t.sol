@@ -12,13 +12,13 @@ import {ERC4626Mock} from "../mockups/ERC4626Mock.sol";
 import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../AssetRegistry/StandardERC4626SubRegistry.sol";
-import "../AssetRegistry/StandardERC20SubRegistry.sol";
+import "../AssetRegistry/StandardERC4626PricingModule.sol";
+import "../AssetRegistry/StandardERC20PricingModule.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract standardERC4626SubRegistryTest is Test {
+contract standardERC4626PricingModuleTest is Test {
     using stdStorage for StdStorage;
 
     OracleHub private oracleHub;
@@ -29,8 +29,8 @@ contract standardERC4626SubRegistryTest is Test {
 
     ArcadiaOracle private oracleEthToUsd;
 
-    StandardERC20Registry private standardERC20SubRegistry;
-    StandardERC4626SubRegistry private standardERC4626SubRegistry;
+    StandardERC20Registry private standardERC20PricingModule;
+    StandardERC4626PricingModule private standardERC4626PricingModule;
 
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
@@ -108,20 +108,20 @@ contract standardERC4626SubRegistryTest is Test {
             emptyList
         );
 
-        standardERC20SubRegistry = new StandardERC20Registry(
+        standardERC20PricingModule = new StandardERC20Registry(
             address(mainRegistry),
             address(oracleHub)
         );
 
-        standardERC4626SubRegistry = new StandardERC4626SubRegistry(
+        standardERC4626PricingModule = new StandardERC4626PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
 
-        mainRegistry.addSubRegistry(address(standardERC20SubRegistry));
-        mainRegistry.addSubRegistry(address(standardERC4626SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20PricingModule));
+        mainRegistry.addPricingModule(address(standardERC4626PricingModule));
 
-        standardERC20SubRegistry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -136,7 +136,7 @@ contract standardERC4626SubRegistryTest is Test {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), emptyList);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
         vm.stopPrank();
     }
 
@@ -145,7 +145,7 @@ contract standardERC4626SubRegistryTest is Test {
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), assetCreditRatings);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), assetCreditRatings);
         vm.stopPrank();
     }
 
@@ -154,16 +154,16 @@ contract standardERC4626SubRegistryTest is Test {
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("SR: Decimals of asset and underlying don't match");
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), emptyList);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
         vm.stopPrank();
     }
 
     function testSuccess_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), emptyList);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
         vm.stopPrank();
 
-        assertTrue(standardERC4626SubRegistry.inSubRegistry(address(ybEth)));
+        assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
     function testSuccess_OwnerAddsAssetWithFullListCreditRatings() public {
@@ -171,32 +171,32 @@ contract standardERC4626SubRegistryTest is Test {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), assetCreditRatings);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), assetCreditRatings);
         vm.stopPrank();
 
-        assertTrue(standardERC4626SubRegistry.inSubRegistry(address(ybEth)));
+        assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
     function testSuccess_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), emptyList);
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), emptyList);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
         vm.stopPrank();
 
-        assertTrue(standardERC4626SubRegistry.inSubRegistry(address(ybEth)));
+        assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
     function testSuccess_IsWhitelistedPositive() public {
         vm.startPrank(creatorAddress);
 
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), emptyList);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
         vm.stopPrank();
 
-        assertTrue(standardERC4626SubRegistry.isWhiteListed(address(ybEth), 0));
+        assertTrue(standardERC4626PricingModule.isWhiteListed(address(ybEth), 0));
     }
 
     function testSuccess_IsWhitelistedNegative(address randomAsset) public {
-        assertTrue(!standardERC4626SubRegistry.isWhiteListed(randomAsset, 0));
+        assertTrue(!standardERC4626PricingModule.isWhiteListed(randomAsset, 0));
     }
 
     function testReturnValueZeroTotalSupply(uint256 rateEthToUsd_, uint256 totalAssets) public {
@@ -210,7 +210,7 @@ contract standardERC4626SubRegistryTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), emptyList);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
         vm.stopPrank();
 
         //Cheat balance of
@@ -219,14 +219,14 @@ contract standardERC4626SubRegistryTest is Test {
         bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
         vm.store(address(eth), loc2, mockedBalanceOf);
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(ybEth),
             assetId: 0,
             assetAmount: 0,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
-            standardERC4626SubRegistry.getValue(getValueInput);
+            standardERC4626PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -260,7 +260,7 @@ contract standardERC4626SubRegistryTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), emptyList);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
         vm.stopPrank();
 
         //Cheat totalSupply
@@ -275,14 +275,14 @@ contract standardERC4626SubRegistryTest is Test {
         bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
         vm.store(address(eth), loc2, mockedBalanceOf);
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(ybEth),
             assetId: 0,
             assetAmount: shares,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
-            standardERC4626SubRegistry.getValue(getValueInput);
+            standardERC4626PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -309,7 +309,7 @@ contract standardERC4626SubRegistryTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        standardERC4626SubRegistry.setAssetInformation(address(ybEth), emptyList);
+        standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
         vm.stopPrank();
 
         //Cheat totalSupply
@@ -324,7 +324,7 @@ contract standardERC4626SubRegistryTest is Test {
         bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
         vm.store(address(eth), loc2, mockedBalanceOf);
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(ybEth),
             assetId: 0,
             assetAmount: shares,
@@ -333,6 +333,6 @@ contract standardERC4626SubRegistryTest is Test {
 
         //Arithmetic overflow.
         vm.expectRevert(bytes(""));
-        standardERC4626SubRegistry.getValue(getValueInput);
+        standardERC4626PricingModule.getValue(getValueInput);
     }
 }

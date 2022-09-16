@@ -12,12 +12,12 @@ import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../AssetRegistry/FloorERC721SubRegistry.sol";
+import "../AssetRegistry/FloorERC721PricingModule.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract FloorERC721SubRegistryTest is Test {
+contract FloorERC721PricingModuleTest is Test {
     using stdStorage for StdStorage;
 
     OracleHub private oracleHub;
@@ -32,7 +32,7 @@ contract FloorERC721SubRegistryTest is Test {
     ArcadiaOracle private oracleWbaycToEth;
     ArcadiaOracle private oracleWmaycToUsd;
 
-    FloorERC721SubRegistry private floorERC721SubRegistry;
+    FloorERC721PricingModule private floorERC721PricingModule;
 
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
@@ -144,11 +144,11 @@ contract FloorERC721SubRegistryTest is Test {
             emptyList
         );
 
-        floorERC721SubRegistry = new FloorERC721SubRegistry(
+        floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         vm.stopPrank();
     }
 
@@ -156,8 +156,8 @@ contract FloorERC721SubRegistryTest is Test {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -173,8 +173,8 @@ contract FloorERC721SubRegistryTest is Test {
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -188,8 +188,8 @@ contract FloorERC721SubRegistryTest is Test {
 
     function testOwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -199,7 +199,7 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(floorERC721SubRegistry.inSubRegistry(address(bayc)));
+        assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
     function testOwnerAddsAssetWithFullListCreditRatings() public {
@@ -207,8 +207,8 @@ contract FloorERC721SubRegistryTest is Test {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -218,13 +218,13 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(floorERC721SubRegistry.inSubRegistry(address(bayc)));
+        assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
     function testOwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -232,8 +232,8 @@ contract FloorERC721SubRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -243,13 +243,13 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(floorERC721SubRegistry.inSubRegistry(address(bayc)));
+        assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
     function testIsWhitelistedPositive() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -259,20 +259,20 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(floorERC721SubRegistry.isWhiteListed(address(bayc), 0));
-        assertTrue(floorERC721SubRegistry.isWhiteListed(address(bayc), 9999));
-        assertTrue(floorERC721SubRegistry.isWhiteListed(address(bayc), 5000));
+        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 0));
+        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 9999));
+        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 5000));
     }
 
     function testIsWhitelistedNegativeWrongAddress(address randomAsset) public {
-        assertTrue(!floorERC721SubRegistry.isWhiteListed(randomAsset, 0));
+        assertTrue(!floorERC721PricingModule.isWhiteListed(randomAsset, 0));
     }
 
     function testIsWhitelistedNegativeIdOutsideRange(uint256 id) public {
         vm.assume(id < 10 || id > 1000);
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 10,
                 idRangeEnd: 999,
@@ -282,13 +282,13 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(!floorERC721SubRegistry.isWhiteListed(address(bayc), id));
+        assertTrue(!floorERC721PricingModule.isWhiteListed(address(bayc), id));
     }
 
     function testReturnUsdValueWhenBaseCurrencyIsUsd() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 999,
@@ -302,13 +302,13 @@ contract FloorERC721SubRegistryTest is Test {
             / 10 ** (Constants.oracleWbaycToEthDecimals + Constants.oracleEthToUsdDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(bayc),
             assetId: 0,
             assetAmount: 1,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721SubRegistry.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -316,8 +316,8 @@ contract FloorERC721SubRegistryTest is Test {
 
     function testreturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 999,
@@ -331,13 +331,13 @@ contract FloorERC721SubRegistryTest is Test {
         uint256 expectedValueInBaseCurrency =
             (rateWbaycToEth * Constants.WAD) / 10 ** Constants.oracleWbaycToEthDecimals;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(bayc),
             assetId: 0,
             assetAmount: 1,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721SubRegistry.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -345,8 +345,8 @@ contract FloorERC721SubRegistryTest is Test {
 
     function testReturnUsdValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWmaycToUsdArr,
                 idRangeStart: 0,
                 idRangeEnd: 999,
@@ -359,13 +359,13 @@ contract FloorERC721SubRegistryTest is Test {
         uint256 expectedValueInUsd = (rateWmaycToUsd * Constants.WAD) / 10 ** Constants.oracleWmaycToUsdDecimals;
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(mayc),
             assetId: 0,
             assetAmount: 1,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721SubRegistry.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
