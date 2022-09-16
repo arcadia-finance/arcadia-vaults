@@ -11,12 +11,12 @@ import "../../lib/forge-std/src/Test.sol";
 import "../mockups/ERC20SolmateMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../AssetRegistry/StandardERC20SubRegistry.sol";
+import "../AssetRegistry/StandardERC20PricingModule.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract StandardERC20RegistryTest is Test {
+contract StandardERC20PricingModuleTest is Test {
     using stdStorage for StdStorage;
 
     OracleHub private oracleHub;
@@ -152,7 +152,7 @@ contract StandardERC20RegistryTest is Test {
             address(mainRegistry),
             address(oracleHub)
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
     }
 
@@ -215,7 +215,7 @@ contract StandardERC20RegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(standardERC20Registry.inSubRegistry(address(eth)));
+        assertTrue(standardERC20Registry.inPricingModule(address(eth)));
     }
 
     function testOwnerAddsAssetWithFullListCreditRatings() public {
@@ -233,7 +233,7 @@ contract StandardERC20RegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(standardERC20Registry.inSubRegistry(address(eth)));
+        assertTrue(standardERC20Registry.inPricingModule(address(eth)));
     }
 
     function testOwnerOverwritesExistingAsset() public {
@@ -256,7 +256,7 @@ contract StandardERC20RegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(standardERC20Registry.inSubRegistry(address(eth)));
+        assertTrue(standardERC20Registry.inPricingModule(address(eth)));
     }
 
     function testIsWhitelistedPositive() public {
@@ -295,7 +295,7 @@ contract StandardERC20RegistryTest is Test {
             / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(eth),
             assetId: 0,
             assetAmount: amountEth,
@@ -324,7 +324,7 @@ contract StandardERC20RegistryTest is Test {
         uint256 expectedValueInBaseCurrency = (amountSnx * rateSnxToEth * Constants.WAD)
             / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(snx),
             assetId: 0,
             assetAmount: amountSnx,
@@ -353,7 +353,7 @@ contract StandardERC20RegistryTest is Test {
             / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(link),
             assetId: 0,
             assetAmount: amountLink,
@@ -399,7 +399,7 @@ contract StandardERC20RegistryTest is Test {
         ) / 10 ** Constants.ethDecimals;
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(eth),
             assetId: 0,
             assetAmount: amountEth,
@@ -436,7 +436,7 @@ contract StandardERC20RegistryTest is Test {
         );
         vm.stopPrank();
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry.GetValueInput({
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(eth),
             assetId: 0,
             assetAmount: amountEth,

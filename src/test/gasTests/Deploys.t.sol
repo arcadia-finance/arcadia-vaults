@@ -15,9 +15,9 @@ import {ERC20Mock} from "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
 import "../../AssetRegistry/MainRegistry.sol";
-import "../../AssetRegistry/FloorERC721SubRegistry.sol";
-import "../../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../../AssetRegistry/FloorERC1155SubRegistry.sol";
+import "../../AssetRegistry/FloorERC721PricingModule.sol";
+import "../../AssetRegistry/StandardERC20PricingModule.sol";
+import "../../AssetRegistry/FloorERC1155PricingModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
 
@@ -57,8 +57,8 @@ contract gasDeploys is Test {
     ArcadiaOracle private oracleInterleaveToEth;
     MainRegistry private mainRegistry;
     StandardERC20Registry private standardERC20Registry;
-    FloorERC721SubRegistry private floorERC721SubRegistry;
-    FloorERC1155SubRegistry private floorERC1155SubRegistry;
+    FloorERC721PricingModule private floorERC721PricingModule;
+    FloorERC1155PricingModule private floorERC1155PricingModule;
     Liquidator private liquidator;
 
     LendingPool pool;
@@ -334,18 +334,18 @@ contract gasDeploys is Test {
             address(mainRegistry),
             address(oracleHub)
         );
-        floorERC721SubRegistry = new FloorERC721SubRegistry(
+        floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
-        floorERC1155SubRegistry = new FloorERC1155SubRegistry(
+        floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
 
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
-        mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
+        mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
         uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = 0;
@@ -377,8 +377,8 @@ contract gasDeploys is Test {
             assetCreditRatings
         );
 
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -465,16 +465,16 @@ contract gasDeploys is Test {
         );
     }
 
-    function testDeploySubRegistryERC20() public {
+    function testDeployPricingModuleERC20() public {
         new StandardERC20Registry(address(mainRegistry), address(oracleHub));
     }
 
-    function testDeploySubRegistryERC721() public {
-        new FloorERC721SubRegistry(address(mainRegistry), address(oracleHub));
+    function testDeployPricingModuleERC721() public {
+        new FloorERC721PricingModule(address(mainRegistry), address(oracleHub));
     }
 
-    function testDeploySubRegistryERC1155() public {
-        new FloorERC1155SubRegistry(address(mainRegistry), address(oracleHub));
+    function testDeployPricingModuleERC1155() public {
+        new FloorERC1155PricingModule(address(mainRegistry), address(oracleHub));
     }
 
     function testDeployOracleHub() public {

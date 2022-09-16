@@ -10,7 +10,7 @@ import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../interfaces/IChainLinkData.sol";
 import "../interfaces/IOraclesHub.sol";
 import "../interfaces/IFactory.sol";
-import "../interfaces/ISubRegistry.sol";
+import "../interfaces/IPricingModule.sol";
 
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
@@ -29,13 +29,13 @@ contract MainRegistry is Ownable {
     uint256 public baseCurrencyCounter;
 
     address public factoryAddress;
-    address[] private subRegistries;
+    address[] private pricingModules;
     address[] public assetsInMainRegistry;
     address[] public baseCurrencies;
 
     mapping(address => bool) public inMainRegistry;
-    mapping(address => bool) public isSubRegistry;
-    mapping(address => address) public assetToSubRegistry;
+    mapping(address => bool) public isPricingModule;
+    mapping(address => address) public assetToPricingModule;
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
     mapping(address => mapping(uint256 => uint256)) public assetToBaseCurrencyToCreditRating;
     mapping(address => uint256) public assetToBaseCurrency;
@@ -53,8 +53,8 @@ contract MainRegistry is Ownable {
      * @dev Only Sub-registries can call functions marked by this modifier.
      *
      */
-    modifier onlySubRegistry() {
-        require(isSubRegistry[msg.sender], "Caller is not a sub-registry.");
+    modifier onlyPricingModule() {
+        require(isPricingModule[msg.sender], "Caller is not a sub-registry.");
         _;
     }
 
@@ -107,7 +107,7 @@ contract MainRegistry is Ownable {
             assetAddress = _assetAddresses[i];
             if (!inMainRegistry[assetAddress]) {
                 return false;
-            } else if (!ISubRegistry(assetToSubRegistry[assetAddress]).isWhiteListed(assetAddress, _assetIds[i])) {
+            } else if (!IPricingModule(assetToPricingModule[assetAddress]).isWhiteListed(assetAddress, _assetIds[i])) {
                 return false;
             }
             unchecked {
@@ -130,7 +130,7 @@ contract MainRegistry is Ownable {
         uint256 counter = 0;
         for (uint256 i; i < maxLength;) {
             address assetAddress = assetsInMainRegistry[i];
-            if (ISubRegistry(assetToSubRegistry[assetAddress]).isAssetAddressWhiteListed(assetAddress)) {
+            if (IPricingModule(assetToPricingModule[assetAddress]).isAssetAddressWhiteListed(assetAddress)) {
                 whiteList[counter] = assetAddress;
                 unchecked {
                     ++counter;
@@ -148,10 +148,10 @@ contract MainRegistry is Ownable {
      * @notice Add a Sub-registry Address to the list of Sub-Registries
      * @param subAssetRegistryAddress Address of the Sub-Registry
      */
-    function addSubRegistry(address subAssetRegistryAddress) external onlyOwner {
-        require(!isSubRegistry[subAssetRegistryAddress], "Sub-Registry already exists");
-        isSubRegistry[subAssetRegistryAddress] = true;
-        subRegistries.push(subAssetRegistryAddress);
+    function addPricingModule(address subAssetRegistryAddress) external onlyOwner {
+        require(!isPricingModule[subAssetRegistryAddress], "Sub-Registry already exists");
+        isPricingModule[subAssetRegistryAddress] = true;
+        pricingModules.push(subAssetRegistryAddress);
     }
 
     /**
@@ -169,14 +169,14 @@ contract MainRegistry is Ownable {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function addAsset(address assetAddress, uint256[] memory assetCreditRatings) external onlySubRegistry {
+    function addAsset(address assetAddress, uint256[] memory assetCreditRatings) external onlyPricingModule {
         if (inMainRegistry[assetAddress]) {
             require(assetsUpdatable, "MR_AA: already known");
         } else {
             inMainRegistry[assetAddress] = true;
             assetsInMainRegistry.push(assetAddress);
         }
-        assetToSubRegistry[assetAddress] = msg.sender;
+        assetToPricingModule[assetAddress] = msg.sender;
 
         uint256 assetCreditRatingsLength = assetCreditRatings.length;
 
@@ -336,7 +336,7 @@ contract MainRegistry is Ownable {
             assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
             "MR_GTV: LENGTH_MISMATCH"
         );
-        ISubRegistry.GetValueInput memory getValueInput;
+        IPricingModule.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
 
         address assetAddress;
@@ -357,7 +357,7 @@ contract MainRegistry is Ownable {
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
                 (tempValueInUsd, tempValueInBaseCurrency) =
-                    ISubRegistry(assetToSubRegistry[assetAddress]).getValue(getValueInput);
+                    IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 valueInUsd = valueInUsd + tempValueInUsd;
                 valueInBaseCurrency = valueInBaseCurrency + tempValueInBaseCurrency;
             }
@@ -434,7 +434,7 @@ contract MainRegistry is Ownable {
             assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
             "MR_GLV: LENGTH_MISMATCH"
         );
-        ISubRegistry.GetValueInput memory getValueInput;
+        IPricingModule.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
 
         int256 rateBaseCurrencyToUsd;
@@ -454,7 +454,7 @@ contract MainRegistry is Ownable {
                 valuesPerAsset[i] = _assetAmounts[i];
             } else {
                 (valueInUsd, valueInBaseCurrency) =
-                    ISubRegistry(assetToSubRegistry[assetAddress]).getValue(getValueInput);
+                    IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 //Check if baseCurrency is USD
                 if (baseCurrency == 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
