@@ -276,7 +276,8 @@ contract FloorERC1155PricingModuleTest is Test {
             assetAmount: amountInterleave,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC1155PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
+            floorERC1155PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -305,7 +306,8 @@ contract FloorERC1155PricingModuleTest is Test {
             assetAmount: amountInterleave,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC1155PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
+            floorERC1155PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -334,7 +336,8 @@ contract FloorERC1155PricingModuleTest is Test {
             assetAmount: amountInterleave,
             baseCurrency: uint8(Constants.SafemoonBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC1155PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
+            floorERC1155PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -380,7 +383,8 @@ contract FloorERC1155PricingModuleTest is Test {
             assetAmount: amountInterleave,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC1155PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
+            floorERC1155PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);

@@ -16,6 +16,8 @@ import "./AbstractPricingModule.sol";
  * @dev No end-user should directly interact with the FloorERC721PricingModule, only the Main-registry, Oracle-Hub or the contract owner
  */
 contract FloorERC721PricingModule is PricingModule {
+    mapping(address => AssetInformation) public assetToInformation;
+
     struct AssetInformation {
         uint256 idRangeStart;
         uint256 idRangeEnd;
@@ -23,14 +25,16 @@ contract FloorERC721PricingModule is PricingModule {
         address[] oracleAddresses;
     }
 
-    mapping(address => AssetInformation) public assetToInformation;
-
     /**
      * @notice A Pricing Logic must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry The address of the Main-registry
      * @param oracleHub The address of the Oracle-Hub
      */
     constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+
+    /*///////////////////////////////////////////////////////////////
+                        ASSET MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Adds a new asset to the FloorERC721PricingModule, or overwrites an existing asset.
@@ -83,6 +87,10 @@ contract FloorERC721PricingModule is PricingModule {
         );
     }
 
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
      * @param assetAddress The address of the asset
@@ -115,6 +123,10 @@ contract FloorERC721PricingModule is PricingModule {
             return false;
         }
     }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency

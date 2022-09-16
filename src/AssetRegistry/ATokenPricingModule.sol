@@ -21,6 +21,8 @@ import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 contract ATokenPricingModule is PricingModule {
     using FixedPointMathLib for uint256;
 
+    mapping(address => AssetInformation) public assetToInformation;
+
     struct AssetInformation {
         uint64 assetUnit;
         address assetAddress;
@@ -28,14 +30,16 @@ contract ATokenPricingModule is PricingModule {
         address[] underlyingAssetOracleAddresses;
     }
 
-    mapping(address => AssetInformation) public assetToInformation;
-
     /**
      * @notice A Pricing-Logic must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry The address of the Main-registry
      * @param oracleHub The address of the Oracle-Hub
      */
     constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+
+    /*///////////////////////////////////////////////////////////////
+                        ASSET MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Adds a new asset to the ATokenPricingModule, or overwrites an existing asset.
@@ -91,6 +95,10 @@ contract ATokenPricingModule is PricingModule {
         );
     }
 
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
      * @param assetAddress The address of the asset
@@ -104,6 +112,10 @@ contract ATokenPricingModule is PricingModule {
 
         return false;
     }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency
