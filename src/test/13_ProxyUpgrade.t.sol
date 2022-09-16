@@ -22,7 +22,7 @@ import "../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../ArcadiaOracle.sol";
+import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 import {LendingPool, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";

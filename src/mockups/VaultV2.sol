@@ -33,11 +33,6 @@ import "../interfaces/ITrustedProtocol.sol";
  * For whitelists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
 contract VaultV2 {
-    constructor() {}
-
-    /*///////////////////////////////////////////////////////////////
-                          VAULT MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @dev Storage slot with the address of the current implementation.
@@ -45,34 +40,69 @@ contract VaultV2 {
      */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
-    // Each vault has a certain 'life', equal to the amount of times the vault is liquidated.
-    // Used by the liquidator contract for proceed claims
-    uint256 public life;
+    bool isTrustedProtocolSet;
+
     uint16 public vaultVersion;
-    address public registryAddress;
+    uint256 public life;
+
+    address public owner;
     address public liquidator;
+    address public registryAddress;
+    address public trustedProtocol;
+
+    address[] public erc20Stored;
+    address[] public erc721Stored;
+    address[] public erc1155Stored;
+
+    uint256[] public erc721TokenIds;
+    uint256[] public erc1155TokenIds;
+
+    mapping(address => bool) public allowed;
+
+    struct AddressSlot {
+        address value;
+    }
 
     struct VaultInfo {
         uint16 collThres; //2 decimals precision (factor 100)
         uint8 liqThres; //2 decimals precision (factor 100)
         address baseCurrency;
     }
-    //address baseCurrencyAddress;
 
     VaultInfo public vault;
 
-    struct AddressSlot {
-        address value;
+    event Upgraded(address indexed implementation);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Throws if called by any account other than the factory adress.
+     */
+    modifier onlyFactory() {
+        require(msg.sender == IMainRegistry(registryAddress).factoryAddress(), "VL: You are not the factory");
+        _;
     }
 
     /**
-     * @dev Returns an `AddressSlot` with member `value` located at `slot`.
+     * @dev Throws if called by any account other than an authorised adress.
      */
-    function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
-        assembly {
-            r.slot := slot
-        }
+    modifier onlyAuthorized() {
+        require(allowed[msg.sender], "VL: You are not authorized");
+        _;
     }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(msg.sender == owner, "VL: You are not the owner");
+        _;
+    }
+
+    constructor() {}
+
+    /*///////////////////////////////////////////////////////////////
+                          VAULT MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Initiates the variables of the vault
@@ -101,44 +131,22 @@ contract VaultV2 {
     function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
         vaultVersion = newVersion;
         getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
+
+        emit Upgraded(newImplementation);
+    }
+
+    /**
+     * @dev Returns an `AddressSlot` with member `value` located at `slot`.
+     */
+    function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
+        assembly {
+            r.slot := slot
+        }
     }
 
     /*///////////////////////////////////////////////////////////////
-                          ACCESS MANAGEMENT
+                        OWNERSHIP MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
-
-    address public owner;
-    mapping(address => bool) public allowed;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev Throws if called by any account other than the factory adress.
-     */
-    modifier onlyFactory() {
-        require(msg.sender == IMainRegistry(registryAddress).factoryAddress(), "VL: You are not the factory");
-        _;
-    }
-
-    /**
-     * @dev Throws if called by any account other than an authorised adress.
-     */
-    modifier onlyAuthorized() {
-        require(allowed[msg.sender], "VL: You are not authorized");
-        _;
-    }
-
-    function authorize(address user, bool isAuthorized) external onlyOwner {
-        allowed[user] = isAuthorized;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner, "VL: You are not the owner");
-        _;
-    }
 
     /**
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
@@ -165,15 +173,249 @@ contract VaultV2 {
     }
 
     /*///////////////////////////////////////////////////////////////
-                    ASSET DEPOSIT/WITHDRAWN LOGIC
+                        BASE CURRENCY LOGIC
     ///////////////////////////////////////////////////////////////*/
 
-    address[] public erc20Stored;
-    address[] public erc721Stored;
-    address[] public erc1155Stored;
+    /**
+     * @notice Sets the baseCurrency of a vault.
+     * @param baseCurrency the new baseCurrency for the vault.
+     */
+    function setBaseCurrency(address baseCurrency) public onlyAuthorized {
+        _setBaseCurrency(baseCurrency);
+    }
 
-    uint256[] public erc721TokenIds;
-    uint256[] public erc1155TokenIds;
+    /**
+     * @notice Internal function: sets baseCurrency.
+     * @param _baseCurrency the new baseCurrency for the vault.
+     * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
+     */
+    function _setBaseCurrency(address _baseCurrency) private {
+        require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
+        require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL_SBC: baseCurrency not found");
+        vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                    MARGIN ACCOUNT SETTINGS
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Initiates a margin account on the vault for one trusted application..
+     * @param protocol The contract address of the trusted application.
+     * @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
+     * @dev Currently only one trusted protocol can be set.
+     */
+    function openTrustedMarginAccount(address protocol) public onlyOwner {
+        require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
+        //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
+
+        (bool success, address baseCurrency, address liquidator_) = ITrustedProtocol(protocol).openMarginAccount();
+        require(success, "V_OMA: OPENING ACCOUNT REVERTED");
+
+        liquidator = liquidator_;
+        trustedProtocol = protocol;
+        if (vault.baseCurrency != baseCurrency) {
+            _setBaseCurrency(baseCurrency);
+        }
+        IERC20(baseCurrency).approve(protocol, type(uint256).max);
+        isTrustedProtocolSet = true;
+        allowed[protocol] = true;
+    }
+
+    /**
+     * @notice Closes the margin account on the vault of the trusted application..
+     * @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
+     * @dev Currently only one trusted protocol can be set.
+     */
+    function closeTrustedMarginAccount() public onlyOwner {
+        require(isTrustedProtocolSet, "V_CMA: NOT SET");
+        require(ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
+
+        isTrustedProtocolSet = false;
+        allowed[trustedProtocol] = false;
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                          MARGIN REQUIREMENTS
+    ///////////////////////////////////////////////////////////////*/
+
+
+    /**
+     * @notice Can be called by authorised applications to open or increase a margin position.
+     * @param baseCurrency The Base-currency in which the margin position is denominated
+     * @param amount The amount the position is increased.
+     * @return success Boolean indicating if there is sufficient free margin to increase the margin position
+     * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
+     */
+    function increaseMarginPosition(address baseCurrency, uint256 amount)
+        public
+        onlyAuthorized
+        returns (bool success)
+    {
+        if (baseCurrency != vault.baseCurrency) {
+            _setBaseCurrency(baseCurrency);
+        }
+        success = getFreeMargin() >= amount;
+    }
+
+    /**
+     * @notice Can be called by authorised applications to close or decrease a margin position.
+     * @param baseCurrency The Base-currency in which the margin position is denominated.
+     * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
+     * @return success Boolean indicating if there the margin position is successfully decreased.
+     * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
+     */
+    function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
+        success = baseCurrency == vault.baseCurrency;
+    }
+
+    /**
+     * @notice Returns the total value of the vault in a specific baseCurrency
+     * @dev Fetches all stored assets with their amounts on the proxy vault.
+     * Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
+     * @param baseCurrency The asset to return the value in.
+     * @return vaultValue Total value stored on the vault, expressed in baseCurrency.
+     */
+    function getVaultValue(address baseCurrency) public view returns (uint256 vaultValue) {
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            generateAssetData();
+        vaultValue = IRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+    }
+
+    /**
+     * @notice Calculates the total collateral value of the vault.
+     * @return collateralValue The collateral value, returned in the decimals of the base currency.
+     * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+     * @dev The collateral value of the vault is equal to the spot value of the underlying assets,
+     * discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
+     * collateralised assets can fluctuate, the haircut guarantees that the vault
+     * remains over-collateralised with a high confidence level (99,9%+). The size of the
+     * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
+     * or the smaller the on-chain liquidity, the biggert the haircut will be.
+     */
+    function getCollateralValue() public view returns (uint256 collateralValue) {
+        //gas: cannot overflow unless currentValue is more than
+        // 1.15**57 *10**18 decimals, which is too many billions to write out
+        unchecked {
+            collateralValue = getVaultValue(vault.baseCurrency) * 100 / vault.collThres;
+        }
+    }
+
+    /**
+     * @notice Calculates the total collateral value of the vault.
+     * @param vaultValue The total spot value of all the assets in the vault.
+     * @return collateralValue The collateral value, returned in the decimals of the base currency.
+     * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+     * @dev The collateral value of the vault is equal to the spot value of the underlying assets,
+     * discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
+     * collateralised assets can fluctuate, the haircut guarantees that the vault
+     * remains over-collateralised with a high confidence level (99,9%+). The size of the
+     * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
+     * or the smaller the on-chain liquidity, the biggert the haircut will be.
+     */
+    function getCollateralValue(uint256 vaultValue) public view returns (uint256 collateralValue) {
+        //gas: cannot overflow unless currentValue is more than
+        // 1.15**57 *10**18 decimals, which is too many billions to write out
+        unchecked {
+            collateralValue = vaultValue * 100 / vault.collThres;
+        }
+    }
+
+    /**
+     * @notice Returns the used margin of the proxy vault.
+     * @return usedMargin The used amount of margin a user has taken
+     * @dev The used margin is denominated in the baseCurrency of the proxy vault.
+     * @dev Currently only one trusted application (Arcadia Lending) can open a margin account.
+     * The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
+     */
+    function getUsedMargin() public returns (uint128 usedMargin) {
+        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)); // ToDo: Check if cast is safe
+    }
+
+    /**
+     * @notice Calculates the remaining margin the owner of the proxy vault can use.
+     * @return freeMargin The remaining amount of margin a user can take.
+     * @dev The free margin is denominated in the baseCurrency of the proxy vault,
+     * with an equal number of decimals as the base currency.
+     */
+    function getFreeMargin() public returns (uint256 freeMargin) {
+        uint256 collateralValue = getCollateralValue();
+        uint256 usedMargin = getUsedMargin();
+
+        //gas: explicit check is done to prevent underflow
+        unchecked {
+            freeMargin = collateralValue > usedMargin ? collateralValue - usedMargin : 0;
+        }
+    }
+
+    /**
+     * @notice Calculates the remaining margin the owner of the proxy vault can use.
+     * @param vaultValue The total spot value of all the assets in the vault.
+     * @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
+     * @return freeMargin The remaining amount of margin a user can take,
+     * returned in the decimals of the base currency.
+     */
+    function getFreeMargin(uint256 vaultValue) public returns (uint256 freeMargin) {
+        uint256 collateralValue = getCollateralValue(vaultValue);
+        uint256 usedMargin = getUsedMargin();
+
+        //gas: explicit check is done to prevent underflow
+        unchecked {
+            freeMargin = collateralValue > usedMargin ? collateralValue - usedMargin : 0;
+        }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                          LIQUIDATION LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Function called to start a vault liquidation.
+     * @dev Requires an unhealthy vault (value / debt < liqThres).
+     * Starts the vault auction on the liquidator contract.
+     * Increases the life of the vault to indicate a liquidation has happened.
+     * Sets debtInfo todo: needed?
+     * Transfers ownership of the proxy vault to the liquidator!
+     * @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
+     * @return success Boolean returning if the liquidation process is successfully started.
+     */
+    function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
+        //gas: 35 gas cheaper to not take debt into memory
+        uint256 totalValue = getVaultValue(vault.baseCurrency);
+        uint128 openDebt = getUsedMargin();
+        uint256 leftHand;
+        uint256 rightHand;
+
+        unchecked {
+            //gas: cannot overflow unless totalValue is
+            //higher than 1.15 * 10**57 * 10**18 decimals
+            leftHand = totalValue * 100;
+            //gas: cannot overflow: uint8 * uint128 << uint256
+            rightHand = uint256(vault.liqThres) * uint256(openDebt);
+        }
+
+        require(leftHand < rightHand, "V_LV: This vault is healthy");
+
+        uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
+
+        require(
+            ILiquidator(liquidator).startAuction(
+                address(this), life, liquidationKeeper, owner, openDebt, vault.liqThres, baseCurrencyIdentifier
+            ),
+            "V_LV: Failed to start auction!"
+        );
+
+        //gas: good luck overflowing this
+        unchecked {
+            ++life;
+        }
+
+        return (true, liquidator);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                    ASSET DEPOSIT/WITHDRAWN LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Deposits assets into the proxy vault by the proxy vault owner.
@@ -232,6 +474,70 @@ contract VaultV2 {
             unchecked {
                 ++i;
             }
+        }
+    }
+
+    /**
+     * @notice Processes withdrawals of assets by and to the owner of the proxy vault.
+     * @dev All arrays should be of same length, each index in each array corresponding
+     * to the same asset that will get withdrawn. If multiple asset IDs of the same contract address
+     * are to be withdrawn, the assetAddress must be repeated in assetAddresses.
+     * The ERC20 get withdrawn by transfers. ERC721 & ERC1155 using safeTransferFrom.
+     * Can only be called by the proxy vault owner.
+     * Will fail if balance on proxy vault is not sufficient for one of the withdrawals.
+     * Will fail if "the value after withdrawal / open debt (including unrealised debt) > collateral threshold".
+     * If no debt is taken yet on this proxy vault, users are free to withraw any asset at any time.
+     * Example inputs:
+     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * @dev After withdrawing assets, the interest rate is renewed
+     * @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
+     * even if multiple assets of the same contract address are withdrawn.
+     * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
+     * When withdrawing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
+     * @param assetAmounts The amounts of the assets to be withdrawn.
+     * @param assetTypes The types of the assets to be withdrawn.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
+     * Any other number = failed tx
+     */
+    function withdraw(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
+        uint256[] calldata assetTypes
+    )
+        external
+        payable
+        onlyOwner
+    {
+        uint256 assetAddressesLength = assetAddresses.length;
+
+        require(
+            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
+                && assetAddressesLength == assetTypes.length,
+            "Length mismatch"
+        );
+
+        for (uint256 i; i < assetAddressesLength;) {
+            if (assetTypes[i] == 0) {
+                _withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
+            } else if (assetTypes[i] == 1) {
+                _withdrawERC721(msg.sender, assetAddresses[i], assetIds[i]);
+            } else if (assetTypes[i] == 2) {
+                _withdrawERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+            } else {
+                require(false, "Unknown asset type");
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        uint256 usedMargin = getUsedMargin();
+        if (usedMargin != 0) {
+            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }
 
@@ -309,70 +615,6 @@ contract VaultV2 {
         if (!addrSeen) {
             erc1155Stored.push(ERC1155Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
             erc1155TokenIds.push(id);
-        }
-    }
-
-    /**
-     * @notice Processes withdrawals of assets by and to the owner of the proxy vault.
-     * @dev All arrays should be of same length, each index in each array corresponding
-     * to the same asset that will get withdrawn. If multiple asset IDs of the same contract address
-     * are to be withdrawn, the assetAddress must be repeated in assetAddresses.
-     * The ERC20 get withdrawn by transfers. ERC721 & ERC1155 using safeTransferFrom.
-     * Can only be called by the proxy vault owner.
-     * Will fail if balance on proxy vault is not sufficient for one of the withdrawals.
-     * Will fail if "the value after withdrawal / open debt (including unrealised debt) > collateral threshold".
-     * If no debt is taken yet on this proxy vault, users are free to withraw any asset at any time.
-     * Example inputs:
-     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
-     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
-     * @dev After withdrawing assets, the interest rate is renewed
-     * @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
-     * even if multiple assets of the same contract address are withdrawn.
-     * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
-     * When withdrawing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
-     * @param assetAmounts The amounts of the assets to be withdrawn.
-     * @param assetTypes The types of the assets to be withdrawn.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
-     */
-    function withdraw(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        uint256[] calldata assetTypes
-    )
-        external
-        payable
-        onlyOwner
-    {
-        uint256 assetAddressesLength = assetAddresses.length;
-
-        require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
-                && assetAddressesLength == assetTypes.length,
-            "Length mismatch"
-        );
-
-        for (uint256 i; i < assetAddressesLength;) {
-            if (assetTypes[i] == 0) {
-                _withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
-            } else if (assetTypes[i] == 1) {
-                _withdrawERC721(msg.sender, assetAddresses[i], assetIds[i]);
-            } else if (assetTypes[i] == 2) {
-                _withdrawERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
-            } else {
-                require(false, "Unknown asset type");
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        uint256 usedMargin = getUsedMargin();
-        if (usedMargin != 0) {
-            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }
 
@@ -490,6 +732,10 @@ contract VaultV2 {
         IERC1155(ERC1155Address).safeTransferFrom(address(this), to, id, amount, "");
     }
 
+    /*///////////////////////////////////////////////////////////////
+                        HELPER FUNCTIONS
+    ///////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Generates three arrays about the stored assets in the proxy vault
      * in the format needed for vault valuation functions.
@@ -557,253 +803,6 @@ contract VaultV2 {
             }
         }
     }
-
-    /*///////////////////////////////////////////////////////////////
-                        BASE CURRENCY LOGIC
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Sets the baseCurrency of a vault.
-     * @param baseCurrency the new baseCurrency for the vault.
-     */
-    function setBaseCurrency(address baseCurrency) public onlyAuthorized {
-        _setBaseCurrency(baseCurrency);
-    }
-
-    /**
-     * @notice Internal function: sets baseCurrency.
-     * @param _baseCurrency the new baseCurrency for the vault.
-     * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
-     */
-    function _setBaseCurrency(address _baseCurrency) private {
-        require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
-        require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL_SBC: baseCurrency not found");
-        vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                    MARGIN ACCOUNT SETTINGS
-    ///////////////////////////////////////////////////////////////*/
-
-    bool isTrustedProtocolSet;
-    address public trustedProtocol;
-
-    /**
-     * @notice Initiates a margin account on the vault for one trusted application..
-     * @param protocol The contract address of the trusted application.
-     * @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
-     * @dev Currently only one trusted protocol can be set.
-     */
-    function openTrustedMarginAccount(address protocol) public onlyOwner {
-        require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
-        //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
-
-        (bool success, address baseCurrency, address liquidator_) = ITrustedProtocol(protocol).openMarginAccount();
-        require(success, "V_OMA: OPENING ACCOUNT REVERTED");
-
-        liquidator = liquidator_;
-        trustedProtocol = protocol;
-        if (vault.baseCurrency != baseCurrency) {
-            _setBaseCurrency(baseCurrency);
-        }
-        IERC20(baseCurrency).approve(protocol, type(uint256).max);
-        isTrustedProtocolSet = true;
-        allowed[protocol] = true;
-    }
-
-    /**
-     * @notice Closes the margin account on the vault of the trusted application..
-     * @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
-     * @dev Currently only one trusted protocol can be set.
-     */
-    function closeTrustedMarginAccount() public onlyOwner {
-        require(isTrustedProtocolSet, "V_CMA: NOT SET");
-        require(ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
-
-        isTrustedProtocolSet = false;
-        allowed[trustedProtocol] = false;
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                          MARGIN REQUIREMENTS
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Returns the total value of the vault in a specific baseCurrency
-     * @dev Fetches all stored assets with their amounts on the proxy vault.
-     * Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
-     * @param baseCurrency The asset to return the value in.
-     * @return vaultValue Total value stored on the vault, expressed in baseCurrency.
-     */
-    function getVaultValue(address baseCurrency) public view returns (uint256 vaultValue) {
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
-        vaultValue = IRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
-    }
-
-    /**
-     * @notice Calculates the total collateral value of the vault.
-     * @return collateralValue The collateral value, returned in the decimals of the base currency.
-     * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
-     * @dev The collateral value of the vault is equal to the spot value of the underlying assets,
-     * discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
-     * collateralised assets can fluctuate, the haircut guarantees that the vault
-     * remains over-collateralised with a high confidence level (99,9%+). The size of the
-     * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
-     * or the smaller the on-chain liquidity, the biggert the haircut will be.
-     */
-    function getCollateralValue() public view returns (uint256 collateralValue) {
-        //gas: cannot overflow unless currentValue is more than
-        // 1.15**57 *10**18 decimals, which is too many billions to write out
-        unchecked {
-            collateralValue = getVaultValue(vault.baseCurrency) * 100 / vault.collThres;
-        }
-    }
-
-    /**
-     * @notice Calculates the total collateral value of the vault.
-     * @param vaultValue The total spot value of all the assets in the vault.
-     * @return collateralValue The collateral value, returned in the decimals of the base currency.
-     * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
-     * @dev The collateral value of the vault is equal to the spot value of the underlying assets,
-     * discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
-     * collateralised assets can fluctuate, the haircut guarantees that the vault
-     * remains over-collateralised with a high confidence level (99,9%+). The size of the
-     * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
-     * or the smaller the on-chain liquidity, the biggert the haircut will be.
-     */
-    function getCollateralValue(uint256 vaultValue) public view returns (uint256 collateralValue) {
-        //gas: cannot overflow unless currentValue is more than
-        // 1.15**57 *10**18 decimals, which is too many billions to write out
-        unchecked {
-            collateralValue = vaultValue * 100 / vault.collThres;
-        }
-    }
-
-    /**
-     * @notice Returns the used margin of the proxy vault.
-     * @return usedMargin The used amount of margin a user has taken
-     * @dev The used margin is denominated in the baseCurrency of the proxy vault.
-     * @dev Currently only one trusted application (Arcadia Lending) can open a margin account.
-     * The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
-     */
-    function getUsedMargin() public returns (uint128 usedMargin) {
-        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)); // ToDo: Check if cast is safe
-    }
-
-    /**
-     * @notice Calculates the remaining margin the owner of the proxy vault can use.
-     * @return freeMargin The remaining amount of margin a user can take.
-     * @dev The free margin is denominated in the baseCurrency of the proxy vault,
-     * with an equal number of decimals as the base currency.
-     */
-    function getFreeMargin() public returns (uint256 freeMargin) {
-        uint256 collateralValue = getCollateralValue();
-        uint256 usedMargin = getUsedMargin();
-
-        //gas: explicit check is done to prevent underflow
-        unchecked {
-            freeMargin = collateralValue > usedMargin ? collateralValue - usedMargin : 0;
-        }
-    }
-
-    /**
-     * @notice Calculates the remaining margin the owner of the proxy vault can use.
-     * @param vaultValue The total spot value of all the assets in the vault.
-     * @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
-     * @return freeMargin The remaining amount of margin a user can take,
-     * returned in the decimals of the base currency.
-     */
-    function getFreeMargin(uint256 vaultValue) public returns (uint256 freeMargin) {
-        uint256 collateralValue = getCollateralValue(vaultValue);
-        uint256 usedMargin = getUsedMargin();
-
-        //gas: explicit check is done to prevent underflow
-        unchecked {
-            freeMargin = collateralValue > usedMargin ? collateralValue - usedMargin : 0;
-        }
-    }
-
-    /**
-     * @notice Can be called by authorised applications to open or increase a margin position.
-     * @param baseCurrency The Base-currency in which the margin position is denominated
-     * @param amount The amount the position is increased.
-     * @return success Boolean indicating if there is sufficient free margin to increase the margin position
-     * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
-     */
-    function increaseMarginPosition(address baseCurrency, uint256 amount)
-        public
-        onlyAuthorized
-        returns (bool success)
-    {
-        if (baseCurrency != vault.baseCurrency) {
-            _setBaseCurrency(baseCurrency);
-        }
-        success = getFreeMargin() >= amount;
-    }
-
-    /**
-     * @notice Can be called by authorised applications to close or decrease a margin position.
-     * @param baseCurrency The Base-currency in which the margin position is denominated.
-     * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
-     * @return success Boolean indicating if there the margin position is successfully decreased.
-     * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
-     */
-    function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
-        success = baseCurrency == vault.baseCurrency;
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                          LIQUIDATION LOGIC
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Function called to start a vault liquidation.
-     * @dev Requires an unhealthy vault (value / debt < liqThres).
-     * Starts the vault auction on the liquidator contract.
-     * Increases the life of the vault to indicate a liquidation has happened.
-     * Sets debtInfo todo: needed?
-     * Transfers ownership of the proxy vault to the liquidator!
-     * @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
-     * @return success Boolean returning if the liquidation process is successfully started.
-     */
-    function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
-        //gas: 35 gas cheaper to not take debt into memory
-        uint256 totalValue = getVaultValue(vault.baseCurrency);
-        uint128 openDebt = getUsedMargin();
-        uint256 leftHand;
-        uint256 rightHand;
-
-        unchecked {
-            //gas: cannot overflow unless totalValue is
-            //higher than 1.15 * 10**57 * 10**18 decimals
-            leftHand = totalValue * 100;
-            //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = uint256(vault.liqThres) * uint256(openDebt);
-        }
-
-        require(leftHand < rightHand, "V_LV: This vault is healthy");
-
-        uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
-
-        require(
-            ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, openDebt, vault.liqThres, baseCurrencyIdentifier
-            ),
-            "V_LV: Failed to start auction!"
-        );
-
-        //gas: good luck overflowing this
-        unchecked {
-            ++life;
-        }
-
-        return (true, liquidator);
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        HELPER FUNCTIONS
-    ///////////////////////////////////////////////////////////////*/
 
     // https://twitter.com/0x_beans/status/1502420621250105346
     /**

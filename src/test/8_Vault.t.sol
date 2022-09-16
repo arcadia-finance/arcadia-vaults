@@ -22,7 +22,7 @@ import "../AssetRegistry/FloorERC1155SubRegistry.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../ArcadiaOracle.sol";
+import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 import {LendingPool, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
@@ -1350,87 +1350,14 @@ contract vaultTests is Test {
         assertEq(vaultOwner, vault.owner());
     }
 
-    function testAuthorizeAddress(address toAuth) public {
-        vm.assume(toAuth != address(this) && toAuth != address(0) && toAuth != address(factoryContr));
-        Vault vault_m = new Vault();
+    function testSetBaseCurrency(address authorised) public {
+        uint256 slot = stdstore.target(address(vault)).sig(vault.allowed.selector).with_key(authorised).find();
+        bytes32 loc = bytes32(slot);
+        bool allowed = true;
+        bytes32 value = bytes32(abi.encode(allowed));
+        vm.store(address(vault), loc, value);
 
-        uint256 slot3 = stdstore.target(address(vault_m)).sig(vault_m.owner.selector).find();
-        bytes32 loc3 = bytes32(slot3);
-        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc3, newOwner);
-
-        vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth, true);
-        vm.stopPrank();
-
-        assertTrue(vault_m.allowed(toAuth));
-    }
-
-    function testRevokeAuthAddress(address toAuth) public {
-        vm.assume(toAuth != address(this) && toAuth != address(0) && toAuth != address(factoryContr));
-        Vault vault_m = new Vault();
-
-        uint256 slot3 = stdstore.target(address(vault_m)).sig(vault_m.owner.selector).find();
-        bytes32 loc3 = bytes32(slot3);
-        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc3, newOwner);
-
-        vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth, true);
-        vm.stopPrank();
-
-        assertTrue(vault_m.allowed(toAuth));
-
-        vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth, false);
-        vm.stopPrank();
-
-        assertFalse(vault_m.allowed(toAuth));
-    }
-
-    function testAuthorizeAddressByNonOwner(address toAuth) public {
-        vm.assume(toAuth != address(this) && toAuth != address(0) && toAuth != address(factoryContr));
-        Vault vault_m = new Vault();
-        address notOwner = address(789);
-
-        vm.startPrank(notOwner);
-        vm.expectRevert("VL: You are not the owner");
-        vault_m.authorize(toAuth, true);
-        vm.stopPrank();
-
-        assertFalse(vault_m.allowed(toAuth));
-    }
-
-    function testRevokeAuthAddressByNonOwner(address toAuth) public {
-        vm.assume(toAuth != address(this) && toAuth != address(0) && toAuth != address(factoryContr));
-        Vault vault_m = new Vault();
-        address notOwner = address(789);
-
-        uint256 slot3 = stdstore.target(address(vault_m)).sig(vault_m.owner.selector).find();
-        bytes32 loc3 = bytes32(slot3);
-        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc3, newOwner);
-
-        vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth, true);
-        vm.stopPrank();
-
-        assertTrue(vault_m.allowed(toAuth));
-
-        vm.startPrank(notOwner);
-        vm.expectRevert("VL: You are not the owner");
-        vault_m.authorize(toAuth, false);
-        vm.stopPrank();
-
-        assertTrue(vault_m.allowed(toAuth));
-    }
-
-    function testSetBaseCurrency(address toAuth) public {
-        vm.startPrank(vaultOwner);
-        vault.authorize(toAuth, true);
-        vm.stopPrank();
-
-        vm.startPrank(toAuth);
+        vm.startPrank(authorised);
         vault.setBaseCurrency(address(eth));
         vm.stopPrank();
 
@@ -1451,9 +1378,15 @@ contract vaultTests is Test {
         assertEq(baseCurrency, address(dai));
     }
 
-    function testSetBaseCurrencyWithDebt(address toAuth) public {
-        uint256 slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
+    function testSetBaseCurrencyWithDebt(address authorised) public {
+        uint256 slot = stdstore.target(address(vault)).sig(vault.allowed.selector).with_key(authorised).find();
         bytes32 loc = bytes32(slot);
+        bool allowed = true;
+        bytes32 value = bytes32(abi.encode(allowed));
+        vm.store(address(vault), loc, value);
+
+        slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
+        loc = bytes32(slot);
         bytes32 addDebt = bytes32(abi.encode(1));
         vm.store(address(debt), loc, addDebt);
 
@@ -1465,11 +1398,7 @@ contract vaultTests is Test {
         loc = bytes32(slot);
         vm.store(address(debt), loc, addDebt);
 
-        vm.startPrank(vaultOwner);
-        vault.authorize(toAuth, true);
-        vm.stopPrank();
-
-        vm.startPrank(toAuth);
+        vm.startPrank(authorised);
         vm.expectRevert("VL_SBC: Can't change baseCurrency when Used Margin > 0");
         vault.setBaseCurrency(address(eth));
         vm.stopPrank();
