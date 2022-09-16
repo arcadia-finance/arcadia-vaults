@@ -63,7 +63,7 @@ contract VaultV2 {
     }
 
     struct VaultInfo {
-        uint16 collThres; //2 decimals precision (factor 100)
+        uint16 collFactor; //2 decimals precision (factor 100)
         uint8 liqThres; //2 decimals precision (factor 100)
         address baseCurrency;
     }
@@ -120,7 +120,7 @@ contract VaultV2 {
         registryAddress = _registryAddress;
         vaultVersion = _vaultVersion;
         //ToDo: riskmodule
-        vault.collThres = 150;
+        vault.collFactor = 150;
         vault.liqThres = 110;
     }
 
@@ -294,9 +294,10 @@ contract VaultV2 {
     function getCollateralValue() public view returns (uint256 collateralValue) {
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
-        unchecked {
-            collateralValue = getVaultValue(vault.baseCurrency) * 100 / vault.collThres;
-        }
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            generateAssetData();
+        collateralValue =
+            IRegistry(registryAddress).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -312,10 +313,14 @@ contract VaultV2 {
      * or the smaller the on-chain liquidity, the biggert the haircut will be.
      */
     function getCollateralValue(uint256 vaultValue) public view returns (uint256 collateralValue) {
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            generateAssetData();
+        uint256 collateralFactor =
+            IRegistry(registryAddress).getCollateralFactor(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
         unchecked {
-            collateralValue = vaultValue * 100 / vault.collThres;
+            collateralValue = vaultValue * 100 / collateralFactor;
         }
     }
 
@@ -379,17 +384,22 @@ contract VaultV2 {
      */
     function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
         //gas: 35 gas cheaper to not take debt into memory
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            generateAssetData();
         uint256 totalValue = getVaultValue(vault.baseCurrency);
         uint128 openDebt = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
+        uint256 liquidityThreshold = IRegistry(registryAddress).getLiquidationThreshold(
+            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
+        );
 
         unchecked {
             //gas: cannot overflow unless totalValue is
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
             //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = uint256(vault.liqThres) * uint256(openDebt);
+            rightHand = liquidityThreshold * uint256(openDebt);
         }
 
         require(leftHand < rightHand, "V_LV: This vault is healthy");
@@ -398,7 +408,7 @@ contract VaultV2 {
 
         require(
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, openDebt, vault.liqThres, baseCurrencyIdentifier
+                address(this), life, liquidationKeeper, owner, openDebt, uint8(liquidityThreshold), baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );
@@ -562,7 +572,8 @@ contract VaultV2 {
             }
         }
 
-        erc20Stored.push(ERC20Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
+        erc20Stored.push(ERC20Address);
+        //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
     }
 
     /**
@@ -577,7 +588,8 @@ contract VaultV2 {
     function _depositERC721(address _from, address ERC721Address, uint256 id) private {
         IERC721(ERC721Address).transferFrom(_from, address(this), id);
 
-        erc721Stored.push(ERC721Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
+        erc721Stored.push(ERC721Address);
+        //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
         erc721TokenIds.push(id);
     }
 
