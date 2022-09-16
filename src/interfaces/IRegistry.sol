@@ -26,7 +26,7 @@ interface IRegistry {
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
-        uint256 baseCurrency
+        address baseCurrency
     )
         external
         view
@@ -36,7 +36,7 @@ interface IRegistry {
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
-        uint256 baseCurrency
+        address baseCurrency
     )
         external
         view
@@ -57,7 +57,7 @@ interface IRegistry {
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
-        uint256 baseCurrency
+        address baseCurrency
     )
         external
         view

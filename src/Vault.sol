@@ -51,9 +51,9 @@ contract Vault {
     address public liquidator;
 
     struct VaultInfo {
-        uint16 _collateralFactor; //2 decimals precision (factor 100)
-        uint8 _liquidityThreshold; //2 decimals precision (factor 100)
-        uint8 _baseCurrency;
+        uint16 collFactor; //2 decimals precision (factor 100)
+        uint8 liqThres; //2 decimals precision (factor 100)
+        address baseCurrency;
     }
     //address baseCurrencyAddress;
 
@@ -89,7 +89,7 @@ contract Vault {
         registryAddress = _registryAddress;
         vaultVersion = _vaultVersion;
         //ToDo: riskmodule
-        vault.collThres = 150;
+        vault.collFactor = 150;
         vault.liqThres = 110;
     }
 
@@ -659,29 +659,7 @@ contract Vault {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         collateralValue =
-            IRegistry(_registryAddress).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault._baseCurrency);
-    }
-
-    /**
-     * @notice Calculates the total collateral value of the vault.
-     * @param vaultValue The total spot value of all the assets in the vault.
-     * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
-     * @return collateralValue The collateral value, returned in the decimals of the base currency.
-     * @dev The collateral value of the vault is equal to the spot value of the underlying assets,
-     * discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
-     * collateralised assets can fluctuate, the haircut guarantees that the vault
-     * remains over-collateralised with a high confidence level (99,9%+). The size of the
-     * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
-     * or the smaller the on-chain liquidity, the biggert the haircut will be.
-     */
-    function getCollateralValue(uint256 vaultValue) public view returns (uint256 collateralValue) {
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
-        uint256 collateralFactor =
-            IRegistry(_registryAddress).getCollateralFactor(assetAddresses, assetIds, assetAmounts, vault._baseCurrency);
-        unchecked {
-            collateralValue = getVaultValue(vault.baseCurrency) * 100 / vault.collThres;
-        }
+            IRegistry(registryAddress).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -700,11 +678,11 @@ contract Vault {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         uint256 collateralFactor =
-            IRegistry(_registryAddress).getCollateralFactor(assetAddresses, assetIds, assetAmounts, vault._baseCurrency);
+            IRegistry(registryAddress).getCollateralFactor(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
         unchecked {
-            collateralValue = vaultValue * collateralFactor;
+            collateralValue = vaultValue * 100 / collateralFactor;
         }
     }
 
@@ -804,8 +782,8 @@ contract Vault {
         uint128 openDebt = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
-        uint256 liquidityThreshold = IRegistry(_registryAddress).getLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault._baseCurrency
+        uint256 liquidityThreshold = IRegistry(registryAddress).getLiquidationThreshold(
+            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
         );
 
         unchecked {
@@ -822,7 +800,7 @@ contract Vault {
 
         require(
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, openDebt, uint8(liquidityThreshold), vault._baseCurrency
+                address(this), life, liquidationKeeper, owner, openDebt, uint8(liquidityThreshold), baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );
