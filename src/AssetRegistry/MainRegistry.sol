@@ -556,7 +556,7 @@ contract MainRegistry is Ownable, RiskModule {
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
-        uint256 baseCurrency
+        address baseCurrency
     )
         public
         view
@@ -577,7 +577,7 @@ contract MainRegistry is Ownable, RiskModule {
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
-        uint256 baseCurrency
+        address baseCurrency
     )
         public
         view
@@ -597,7 +597,7 @@ contract MainRegistry is Ownable, RiskModule {
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
-        uint256 baseCurrency,
+        address baseCurrency,
         uint256 openDebt
     )
         public
@@ -606,7 +606,7 @@ contract MainRegistry is Ownable, RiskModule {
     {
         uint256 assetAddressesLength = _assetAddresses.length;
 
-        require(
+    require(
             assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
             "MR_GCV: LENGTH_MISMATCH"
         );
@@ -630,7 +630,6 @@ contract MainRegistry is Ownable, RiskModule {
             assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
             "MR_GCF: LENGTH_MISMATCH"
         );
-        uint256 baseCurrencyIdentifier = assetToBaseCurrency[baseCurrency];
         uint256[] memory valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrency);
         liquidationThreshold = calculateWeightedLiquidationThreshold(_assetAddresses, valuesPerAsset);
