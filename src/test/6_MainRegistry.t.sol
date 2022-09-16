@@ -20,7 +20,7 @@ import "../Factory.sol";
 import "../utils/Constants.sol";
 import "../utils/StringHelpers.sol";
 import "../utils/CompareArrays.sol";
-import "../ArcadiaOracle.sol";
+import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract MainRegistryTest is Test {

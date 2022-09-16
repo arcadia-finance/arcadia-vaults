@@ -29,17 +29,18 @@ contract MainRegistry is Ownable {
     uint256 public baseCurrencyCounter;
 
     address public factoryAddress;
+
     address[] private pricingModules;
     address[] public assetsInMainRegistry;
     address[] public baseCurrencies;
 
     mapping(address => bool) public inMainRegistry;
     mapping(address => bool) public isPricingModule;
+    mapping(address => bool) public isBaseCurrency;
+    mapping(address => uint256) public assetToBaseCurrency;
     mapping(address => address) public assetToPricingModule;
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
     mapping(address => mapping(uint256 => uint256)) public assetToBaseCurrencyToCreditRating;
-    mapping(address => uint256) public assetToBaseCurrency;
-    mapping(address => bool) public isBaseCurrency;
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
@@ -78,6 +79,10 @@ contract MainRegistry is Ownable {
         }
     }
 
+    /*///////////////////////////////////////////////////////////////
+                        EXTERNAL CONTRACTS
+    ///////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Sets the Factory address
      * @param _factoryAddress The address of the Factory
@@ -85,6 +90,127 @@ contract MainRegistry is Ownable {
     function setFactory(address _factoryAddress) external onlyOwner {
         factoryAddress = _factoryAddress;
     }
+
+    /*///////////////////////////////////////////////////////////////
+                        BASE CURRENCY MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Add a new baseCurrency (a unit in which price is measured, like USD or ETH) to the Main Registry, or overwrite an existing one
+     * @param baseCurrencyInformation A Struct with information about the BaseCurrency
+     * - baseCurrencyToUsdOracleUnit: The unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
+     * - baseCurrencyUnit: The unit of the baseCurrency, equal to 10 to the power of the number of decimals of the baseCurrency
+     * - assetAddress: The contract address of the baseCurrency,
+     * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
+     * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
+     * @param assetCreditRatings The List of the Credit Rating Categories of the baseCurrency, for all the different assets in the Main registry
+     * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
+     * Tokens pegged to the native token do not count as native tokens
+     * - USDC is not a native token for USD as BaseCurrency
+     * - WETH is a native token for ETH as BaseCurrency
+     * @dev The list of Credit Rating Categories should or be as long as the number of assets added to the Main Registry,
+     * or the list must have length 0. If the list has length zero, the credit ratings of the baseCurrency for all assets
+     * is initiated as credit rating with index 0 by default (worst credit rating).
+     * Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
+     * Category from 1 to 9 will be used to label groups of assets with similar risk profiles
+     * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
+     */
+    function addBaseCurrency(
+        BaseCurrencyInformation calldata baseCurrencyInformation,
+        uint256[] calldata assetCreditRatings
+    )
+        external
+        onlyOwner
+    {
+        baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
+        assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
+        isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
+        baseCurrencies.push(baseCurrencyInformation.assetAddress);
+
+        uint256 assetCreditRatingsLength = assetCreditRatings.length;
+        require(
+            assetCreditRatingsLength == assetsInMainRegistry.length || assetCreditRatingsLength == 0, "MR_AN: length"
+        );
+        for (uint256 i; i < assetCreditRatingsLength;) {
+            require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AN: non existing credRat");
+            assetToBaseCurrencyToCreditRating[assetsInMainRegistry[i]][baseCurrencyCounter] = assetCreditRatings[i];
+            unchecked {
+                ++i;
+            }
+        }
+
+        unchecked {
+            ++baseCurrencyCounter;
+        }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        PRICE MODULE MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Add a Sub-registry Address to the list of Sub-Registries
+     * @param subAssetRegistryAddress Address of the Sub-Registry
+     */
+    function addPricingModule(address subAssetRegistryAddress) external onlyOwner {
+        require(!isPricingModule[subAssetRegistryAddress], "Sub-Registry already exists");
+        isPricingModule[subAssetRegistryAddress] = true;
+        pricingModules.push(subAssetRegistryAddress);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        ASSET MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Disables the updatability of assets. In the disabled states, asset properties become immutable
+     *
+     */
+    function setAssetsToNonUpdatable() external onlyOwner {
+        assetsUpdatable = false;
+    }
+
+    /**
+     * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
+     * @param assetAddress The address of the asset
+     * @param assetCreditRatings The List of Credit Rating Categories for the asset for the different BaseCurrencies
+     * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
+     * or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies
+     * is initiated as credit rating with index 0 by default (worst credit rating).
+     * Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
+     * Category from 1 to 9 will be used to label groups of assets with similar risk profiles
+     * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
+     * @dev By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
+     * (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
+     * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
+     * assets are no longer updatable.
+     */
+    function addAsset(address assetAddress, uint256[] memory assetCreditRatings) external onlyPricingModule {
+        if (inMainRegistry[assetAddress]) {
+            require(assetsUpdatable, "MR_AA: already known");
+        } else {
+            inMainRegistry[assetAddress] = true;
+            assetsInMainRegistry.push(assetAddress);
+        }
+        assetToPricingModule[assetAddress] = msg.sender;
+
+        uint256 assetCreditRatingsLength = assetCreditRatings.length;
+
+        require(
+            assetCreditRatingsLength == baseCurrencyCounter || assetCreditRatingsLength == 0, "MR_AA: LENGTH_MISMATCH"
+        );
+        for (uint256 i; i < assetCreditRatingsLength;) {
+            require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AA: non-existing");
+            assetToBaseCurrencyToCreditRating[assetAddress][i] = assetCreditRatings[i];
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Checks for a list of tokens and a list of corresponding IDs if all tokens are white-listed
@@ -144,53 +270,9 @@ contract MainRegistry is Ownable {
         return whiteList;
     }
 
-    /**
-     * @notice Add a Sub-registry Address to the list of Sub-Registries
-     * @param subAssetRegistryAddress Address of the Sub-Registry
-     */
-    function addPricingModule(address subAssetRegistryAddress) external onlyOwner {
-        require(!isPricingModule[subAssetRegistryAddress], "Sub-Registry already exists");
-        isPricingModule[subAssetRegistryAddress] = true;
-        pricingModules.push(subAssetRegistryAddress);
-    }
-
-    /**
-     * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
-     * @param assetAddress The address of the asset
-     * @param assetCreditRatings The List of Credit Rating Categories for the asset for the different BaseCurrencies
-     * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
-     * or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies
-     * is initiated as credit rating with index 0 by default (worst credit rating).
-     * Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-     * Category from 1 to 9 will be used to label groups of assets with similar risk profiles
-     * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
-     * @dev By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     * (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
-     * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
-     * assets are no longer updatable.
-     */
-    function addAsset(address assetAddress, uint256[] memory assetCreditRatings) external onlyPricingModule {
-        if (inMainRegistry[assetAddress]) {
-            require(assetsUpdatable, "MR_AA: already known");
-        } else {
-            inMainRegistry[assetAddress] = true;
-            assetsInMainRegistry.push(assetAddress);
-        }
-        assetToPricingModule[assetAddress] = msg.sender;
-
-        uint256 assetCreditRatingsLength = assetCreditRatings.length;
-
-        require(
-            assetCreditRatingsLength == baseCurrencyCounter || assetCreditRatingsLength == 0, "MR_AA: LENGTH_MISMATCH"
-        );
-        for (uint256 i; i < assetCreditRatingsLength;) {
-            require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AA: non-existing");
-            assetToBaseCurrencyToCreditRating[assetAddress][i] = assetCreditRatings[i];
-            unchecked {
-                ++i;
-            }
-        }
-    }
+    /*///////////////////////////////////////////////////////////////
+                        CREDIT RATING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Change the Credit Rating Category for one or more assets for one or more baseCurrencies
@@ -225,62 +307,9 @@ contract MainRegistry is Ownable {
         }
     }
 
-    /**
-     * @notice Disables the updatability of assets. In the disabled states, asset properties become immutable
-     *
-     */
-    function setAssetsToNonUpdatable() external onlyOwner {
-        assetsUpdatable = false;
-    }
-
-    /**
-     * @notice Add a new baseCurrency (a unit in which price is measured, like USD or ETH) to the Main Registry, or overwrite an existing one
-     * @param baseCurrencyInformation A Struct with information about the BaseCurrency
-     * - baseCurrencyToUsdOracleUnit: The unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
-     * - baseCurrencyUnit: The unit of the baseCurrency, equal to 10 to the power of the number of decimals of the baseCurrency
-     * - assetAddress: The contract address of the baseCurrency,
-     * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
-     * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
-     * @param assetCreditRatings The List of the Credit Rating Categories of the baseCurrency, for all the different assets in the Main registry
-     * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
-     * Tokens pegged to the native token do not count as native tokens
-     * - USDC is not a native token for USD as BaseCurrency
-     * - WETH is a native token for ETH as BaseCurrency
-     * @dev The list of Credit Rating Categories should or be as long as the number of assets added to the Main Registry,
-     * or the list must have length 0. If the list has length zero, the credit ratings of the baseCurrency for all assets
-     * is initiated as credit rating with index 0 by default (worst credit rating).
-     * Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-     * Category from 1 to 9 will be used to label groups of assets with similar risk profiles
-     * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
-     */
-    function addBaseCurrency(
-        BaseCurrencyInformation calldata baseCurrencyInformation,
-        uint256[] calldata assetCreditRatings
-    )
-        external
-        onlyOwner
-    {
-        baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
-        assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
-        isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
-        baseCurrencies.push(baseCurrencyInformation.assetAddress);
-
-        uint256 assetCreditRatingsLength = assetCreditRatings.length;
-        require(
-            assetCreditRatingsLength == assetsInMainRegistry.length || assetCreditRatingsLength == 0, "MR_AN: length"
-        );
-        for (uint256 i; i < assetCreditRatingsLength;) {
-            require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AN: non existing credRat");
-            assetToBaseCurrencyToCreditRating[assetsInMainRegistry[i]][baseCurrencyCounter] = assetCreditRatings[i];
-            unchecked {
-                ++i;
-            }
-        }
-
-        unchecked {
-            ++baseCurrencyCounter;
-        }
-    }
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency

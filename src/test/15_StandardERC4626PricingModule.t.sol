@@ -15,7 +15,7 @@ import "../utils/Constants.sol";
 import "../AssetRegistry/StandardERC4626PricingModule.sol";
 import "../AssetRegistry/StandardERC20PricingModule.sol";
 import "../AssetRegistry/MainRegistry.sol";
-import "../ArcadiaOracle.sol";
+import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract standardERC4626PricingModuleTest is Test {

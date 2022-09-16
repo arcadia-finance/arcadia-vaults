@@ -23,7 +23,9 @@ abstract contract PricingModule is Ownable {
 
     address public mainRegistry;
     address public oracleHub;
+
     address[] public assetsInPricingModule;
+
     mapping(address => bool) public inPricingModule;
     mapping(address => bool) public isAssetAddressWhiteListed;
 
@@ -44,6 +46,10 @@ abstract contract PricingModule is Ownable {
         mainRegistry = _mainRegistry;
         oracleHub = _oracleHub;
     }
+
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Checks for a token address and the corresponding Id, if it is white-listed
@@ -71,6 +77,10 @@ abstract contract PricingModule is Ownable {
         require(inPricingModule[assetAddress], "Asset not known in Pricing Module");
         isAssetAddressWhiteListed[assetAddress] = true;
     }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency

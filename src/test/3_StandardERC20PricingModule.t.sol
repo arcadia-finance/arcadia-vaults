@@ -13,7 +13,7 @@ import "../OracleHub.sol";
 import "../utils/Constants.sol";
 import "../AssetRegistry/StandardERC20PricingModule.sol";
 import "../AssetRegistry/MainRegistry.sol";
-import "../ArcadiaOracle.sol";
+import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract StandardERC20PricingModuleTest is Test {
