@@ -9,7 +9,7 @@ pragma solidity >=0.4.22 <0.9.0;
 import "./AbstractPricingModule.sol";
 
 /**
- * @title Test Pricing Logic for ERC1155 tokens
+ * @title Test Pricing Module for ERC1155 tokens
  * @author Arcadia Finance
  * @notice The FloorERC1155PricingModule stores pricing logic and basic information for ERC721 tokens for which a direct price feeds exists
  * for the floor price of the collection
@@ -25,7 +25,7 @@ contract FloorERC1155PricingModule is PricingModule {
     }
 
     /**
-     * @notice A Pricing Logic must always be initialised with the address of the Main-Registry and of the Oracle-Hub
+     * @notice A Pricing Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry The address of the Main-registry
      * @param oracleHub The address of the Oracle-Hub
      */

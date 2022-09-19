@@ -13,7 +13,7 @@ import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
 /**
- * @title Pricing-Logic for Aave Yield Bearing ERC20 tokens
+ * @title Pricing Module for Aave Yield Bearing ERC20 tokens
  * @author Arcadia Finance
  * @notice The ATokenPricingModule stores pricing logic and basic information for yield bearing Aave ERC20 tokens for which a direct price feed exists
  * @dev No end-user should directly interact with the ATokenPricingModule, only the Main-registry, Oracle-Hub or the contract owner
@@ -31,7 +31,7 @@ contract ATokenPricingModule is PricingModule {
     }
 
     /**
-     * @notice A Pricing-Logic must always be initialised with the address of the Main-Registry and of the Oracle-Hub
+     * @notice A Pricing Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry The address of the Main-registry
      * @param oracleHub The address of the Oracle-Hub
      */
@@ -78,7 +78,7 @@ contract ATokenPricingModule is PricingModule {
     }
 
     /**
-     * @notice Returns the information that is stored in the Pricing-Logic for a given asset
+     * @notice Returns the information that is stored in the Pricing Module for a given asset
      * @dev struct is not taken into memory; saves 6613 gas
      * @param asset The Token address of the asset
      * @return assetUnit The number of decimals of the asset
