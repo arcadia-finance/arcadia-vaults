@@ -16,6 +16,7 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILendingPool.sol";
 import "./interfaces/ITrustedProtocol.sol";
+import "./interfaces/IIntegrationManager.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -49,6 +50,7 @@ contract Vault {
     uint256 public life;
     uint16 public vaultVersion;
     address public registryAddress;
+    address public integrationManager;
     address public liquidator;
 
     struct VaultInfo {
@@ -799,6 +801,19 @@ contract Vault {
 
         return (true, liquidator);
     }
+
+    /*///////////////////////////////////////////////////////////////
+                        INTEGRATION FUNCTIONS
+    ///////////////////////////////////////////////////////////////*/
+    function callOnIntegration(
+        address _caller,
+        address _vaultProxy,
+        bytes memory _callArgs) public payable onlyOwner returns (bool success) {
+
+        IIntegrationManager(integrationManager).__callOnIntegration(_caller, _vaultProxy, _callArgs);
+        return true;
+    }
+
 
     /*///////////////////////////////////////////////////////////////
                         HELPER FUNCTIONS
