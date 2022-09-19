@@ -46,15 +46,15 @@ Thanks to our modular pricing architecture, new token primitives and new token s
 
 ![Modular pricing](https://i.ibb.co/kyWXZ6C/Arca-Fi-pricing.png)
 
-## Pricing module
+## Pricing logic
 
-As mentioned before, pricing module is modular: a separate logic contract is deployed per type of token. We can distinguish two main categories, primary price feeds and derived price feeds.
+As mentioned before, pricing logic is modular: a separate logic contract is deployed per type of token. We can distinguish two main categories, primary price feeds and derived price feeds.
 
 For primary price feeds, we either have a direct decentralized price-oracle or we can rely on on-chain data via for instance Uniswap V3 TWAP prices. Examples of tokens for which we have primary price feeds are vanilla ERC20 tokens, or floor prices of NFT collectibles.
 
 For derived price feeds (as the name implies), we don’t have a direct price feed. We first break down the asset in its underlying tokens for which we do have primary price feeds. Examples here are Uniswap LP positions or aTokens. 
 
-All pricing module is internally calculated with 18 decimals precision, relying on gas efficient and battle tested mathematical libraries. Pricing calculations have been tested to be flash-loan resistant. Where TWAP price feeds are used, risk assessment is performed in function of the capital needed to move the TWAP price, before the asset can be accepted as collateral.
+All pricing logic is internally calculated with 18 decimals precision, relying on gas efficient and battle tested mathematical libraries. Pricing calculations have been tested to be flash-loan resistant. Where TWAP price feeds are used, risk assessment is performed in function of the capital needed to move the TWAP price, before the asset can be accepted as collateral.
 
 ## Non-custodial
 
