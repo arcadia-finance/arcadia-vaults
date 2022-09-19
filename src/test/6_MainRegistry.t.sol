@@ -12,15 +12,15 @@ import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
 import "../AssetRegistry/MainRegistry.sol";
-import "../AssetRegistry/FloorERC721SubRegistry.sol";
-import "../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../AssetRegistry/FloorERC1155SubRegistry.sol";
+import "../AssetRegistry/FloorERC721PricingModule.sol";
+import "../AssetRegistry/StandardERC20PricingModule.sol";
+import "../AssetRegistry/FloorERC1155PricingModule.sol";
 import "../OracleHub.sol";
 import "../Factory.sol";
 import "../utils/Constants.sol";
 import "../utils/StringHelpers.sol";
 import "../utils/CompareArrays.sol";
-import "../ArcadiaOracle.sol";
+import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract MainRegistryTest is Test {
@@ -47,8 +47,8 @@ contract MainRegistryTest is Test {
     ArcadiaOracle private oracleInterleaveToEth;
     MainRegistry private mainRegistry;
     StandardERC20Registry private standardERC20Registry;
-    FloorERC721SubRegistry private floorERC721SubRegistry;
-    FloorERC1155SubRegistry private floorERC1155SubRegistry;
+    FloorERC721PricingModule private floorERC721PricingModule;
+    FloorERC1155PricingModule private floorERC1155PricingModule;
     Factory private factory;
 
     address private creatorAddress = address(1);
@@ -230,11 +230,11 @@ contract MainRegistryTest is Test {
             address(mainRegistry),
             address(oracleHub)
         );
-        floorERC721SubRegistry = new FloorERC721SubRegistry(
+        floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
-        floorERC1155SubRegistry = new FloorERC1155SubRegistry(
+        floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -269,7 +269,7 @@ contract MainRegistryTest is Test {
 
     function testOwnerAddsBaseCurrencyWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -305,7 +305,7 @@ contract MainRegistryTest is Test {
 
     function testOwnerAddsBaseCurrencyWithNonExistingCreditRatingCategory() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -342,7 +342,7 @@ contract MainRegistryTest is Test {
 
     function testOwnerAddsBaseCurrencyWithEmptyListOfCreditRatings() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -391,7 +391,7 @@ contract MainRegistryTest is Test {
         assetCreditRatings[1] = 0;
 
         vm.startPrank(creatorAddress);
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -424,27 +424,27 @@ contract MainRegistryTest is Test {
         assertEq(2, mainRegistry.baseCurrencyCounter());
     }
 
-    function testNonOwnerAddsSubRegistry(address unprivilegedAddress) public {
+    function testNonOwnerAddsPricingModule(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
     }
 
-    function testOwnerAddsSubRegistry() public {
+    function testOwnerAddsPricingModule() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
 
-        assertTrue(mainRegistry.isSubRegistry(address(standardERC20Registry)));
+        assertTrue(mainRegistry.isPricingModule(address(standardERC20Registry)));
     }
 
-    function testOwnerOverwritesSubRegistry() public {
+    function testOwnerOverwritesPricingModule() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.expectRevert("Sub-Registry already exists");
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
     }
 
@@ -468,14 +468,14 @@ contract MainRegistryTest is Test {
         assertTrue(!mainRegistry.assetsUpdatable());
     }
 
-    function testNonSubregistryAddsAsset(address unprivilegedAddress) public {
+    function testNonPricingModuleAddsAsset(address unprivilegedAddress) public {
         vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("Caller is not a sub-registry.");
+        vm.expectRevert("Caller is not a Price Module.");
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
     }
 
-    function testSubregistryAddsAssetWithWrongNumberOfCreditRatings() public {
+    function testPricingModuleAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -497,7 +497,7 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
 
         uint256[] memory assetCreditRatings = new uint256[](1);
@@ -509,7 +509,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testSubregistryAddsAssetWithNonExistingCreditRatingCategory() public {
+    function testPricingModuleAddsAssetWithNonExistingCreditRatingCategory() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -531,7 +531,7 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
 
         uint256[] memory assetCreditRatings = new uint256[](3);
@@ -545,7 +545,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testSubregistryAddsAssetWithEmptyListCreditRatings() public {
+    function testPricingModuleAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -567,7 +567,7 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
 
         vm.startPrank(address(standardERC20Registry));
@@ -577,7 +577,7 @@ contract MainRegistryTest is Test {
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
     }
 
-    function testSubregistryAddsAssetWithFullListCreditRatings() public {
+    function testPricingModuleAddsAssetWithFullListCreditRatings() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -599,7 +599,7 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
 
         uint256[] memory assetCreditRatings = new uint256[](3);
@@ -614,7 +614,7 @@ contract MainRegistryTest is Test {
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
     }
 
-    function testSubregistryOverwritesAssetPositive() public {
+    function testPricingModuleOverwritesAssetPositive() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -636,24 +636,24 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         vm.stopPrank();
 
         vm.startPrank(address(standardERC20Registry));
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
 
-        assertEq(address(standardERC20Registry), mainRegistry.assetToSubRegistry(address(eth)));
+        assertEq(address(standardERC20Registry), mainRegistry.assetToPricingModule(address(eth)));
 
-        vm.startPrank(address(floorERC721SubRegistry));
+        vm.startPrank(address(floorERC721PricingModule));
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
 
-        assertEq(address(floorERC721SubRegistry), mainRegistry.assetToSubRegistry(address(eth)));
+        assertEq(address(floorERC721PricingModule), mainRegistry.assetToPricingModule(address(eth)));
     }
 
-    function testSubregistryOverwritesAssetNegative() public {
+    function testPricingModuleOverwritesAssetNegative() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -675,8 +675,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.setAssetsToNonUpdatable();
         vm.stopPrank();
 
@@ -684,14 +684,14 @@ contract MainRegistryTest is Test {
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
 
-        assertEq(address(standardERC20Registry), mainRegistry.assetToSubRegistry(address(eth)));
+        assertEq(address(standardERC20Registry), mainRegistry.assetToPricingModule(address(eth)));
 
-        vm.startPrank(address(floorERC721SubRegistry));
+        vm.startPrank(address(floorERC721PricingModule));
         vm.expectRevert("MR_AA: already known");
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
 
-        assertEq(address(standardERC20Registry), mainRegistry.assetToSubRegistry(address(eth)));
+        assertEq(address(standardERC20Registry), mainRegistry.assetToPricingModule(address(eth)));
     }
 
     function testIsBatchWhitelistedPositive() public {
@@ -716,8 +716,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -726,8 +726,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -770,8 +770,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -780,8 +780,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -824,8 +824,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -834,8 +834,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -878,8 +878,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -888,8 +888,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -932,8 +932,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -950,8 +950,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -992,8 +992,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1010,8 +1010,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -1052,8 +1052,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1070,8 +1070,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -1096,9 +1096,7 @@ contract MainRegistryTest is Test {
         uint256 rateEthToUsdNew,
         uint256 amountLink,
         uint8 linkDecimals
-    )
-        public
-    {
+    ) public {
         vm.assume(linkDecimals <= 18);
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew > 0);
@@ -1136,7 +1134,7 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
@@ -1178,9 +1176,7 @@ contract MainRegistryTest is Test {
         uint256 rateEthToUsdNew,
         uint256 amountLink,
         uint8 linkDecimals
-    )
-        public
-    {
+    ) public {
         vm.assume(linkDecimals < Constants.oracleEthToUsdDecimals);
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew > 0);
@@ -1211,7 +1207,7 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
@@ -1265,7 +1261,7 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
@@ -1318,8 +1314,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1328,8 +1324,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -1386,8 +1382,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1396,8 +1392,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -1455,8 +1451,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1465,8 +1461,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -1515,8 +1511,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1525,8 +1521,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -1575,8 +1571,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1585,8 +1581,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -1635,8 +1631,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1645,8 +1641,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -1695,8 +1691,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1713,8 +1709,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -1783,8 +1779,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1801,8 +1797,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -1874,8 +1870,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
 
         uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;
@@ -1905,8 +1901,8 @@ contract MainRegistryTest is Test {
         assetCreditRatings[0] = Constants.baycCreditRatingUsd;
         assetCreditRatings[1] = Constants.baycCreditRatingDai;
         assetCreditRatings[2] = Constants.baycCreditRatingEth;
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -1982,8 +1978,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -2000,8 +1996,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -2052,8 +2048,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -2070,8 +2066,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -2133,8 +2129,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -2151,8 +2147,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -2210,8 +2206,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -2228,8 +2224,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,

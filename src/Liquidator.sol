@@ -20,19 +20,22 @@ import "./interfaces/ILendingPool.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Ownable {
+    uint256 public constant hourlyBlocks = 300;
+    uint256 public breakevenTime = 6; //hours
+
     address public factoryAddress;
     address public registryAddress;
     address public reserveFund;
     address public protocolTreasury;
 
-    uint256 public constant hourlyBlocks = 300;
-    uint256 public breakevenTime = 6; //hours
+    mapping(address => mapping(uint256 => auctionInformation)) public auctionInfo;
+    mapping(address => mapping(uint256 => uint256)) public claimableBitmap;
 
     claimRatios public claimRatio;
 
     /**
      * @notice The ratios in which the liquidation fee is divided
-     * @dev ratio's are entered in factor 100 (= in percentage)
+     * @dev ratio's have 2 decimals precision (50 equals 0,5 or 50%)
      */
     struct claimRatios {
         uint64 protocol;
@@ -50,8 +53,10 @@ contract Liquidator is Ownable {
         address originalOwner;
     }
 
-    mapping(address => mapping(uint256 => auctionInformation)) public auctionInfo;
-    mapping(address => mapping(uint256 => uint256)) public claimableBitmap;
+    modifier elevated() {
+        require(IFactory(factoryAddress).isVault(msg.sender), "LQ: Not a vault!");
+        _;
+    }
 
     constructor(address newFactory, address newRegAddr) {
         factoryAddress = newFactory;
@@ -59,10 +64,9 @@ contract Liquidator is Ownable {
         claimRatio = claimRatios({protocol: 15, liquidationKeeper: 2});
     }
 
-    modifier elevated() {
-        require(IFactory(factoryAddress).isVault(msg.sender), "LQ: Not a vault!");
-        _;
-    }
+    /*///////////////////////////////////////////////////////////////
+                          EXTERNAL CONTRACTS
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Sets the factory address on the liquidator.
@@ -91,6 +95,10 @@ contract Liquidator is Ownable {
         reserveFund = _reserveFund;
     }
 
+    /*///////////////////////////////////////////////////////////////
+                        MANAGE AUCTION SETTINGS
+    ///////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Sets the breakeven time on the liquidator.
      * @dev The breakeven time is the time from starting an auction duration to
@@ -101,6 +109,10 @@ contract Liquidator is Ownable {
     function setBreakevenTime(uint256 _breakevenTime) external onlyOwner {
         breakevenTime = _breakevenTime;
     }
+
+    /*///////////////////////////////////////////////////////////////
+                            AUCTION LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Starts an auction of a vault. Called by the vault itself.
@@ -121,11 +133,7 @@ contract Liquidator is Ownable {
         uint128 openDebt,
         uint8 liqThres,
         uint8 baseCurrency
-    )
-        public
-        elevated
-        returns (bool success)
-    {
+    ) public elevated returns (bool success) {
         require(auctionInfo[vaultAddress][life].startBlock == 0, "Liquidation already ongoing");
 
         ILendingPool(IVault(vaultAddress).trustedProtocol()).liquidateVault(vaultAddress, openDebt);
@@ -139,39 +147,6 @@ contract Liquidator is Ownable {
 
         return true;
     }
-
-    /**
-     * @notice Function to check what the value of the items in the vault is.
-     * @dev Only used for partial liquidations.
-     * @param assetAddresses array of asset addresses
-     * @param assetIds array of assets ids. For assets without Id's (erc20's), Id can be set to 0.
-     * @param assetAmounts amounts of each asset. For assets without amounts (erc721's), amount can be set to 0.
-     * @return totalValue the total value of all assets.
-     */
-    function getPriceOfAssets(
-        address[] memory assetAddresses,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        uint8 baseCurrencyOfDebt
-    )
-        public
-        view
-        returns (uint256 totalValue)
-    {
-        totalValue =
-            IMainRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrencyOfDebt);
-    }
-
-    /**
-     * @notice Function to buy only a certain asset of a vault in the liquidation process
-     * @param assetAddresses the vaultAddress
-     * @param assetIds the vaultAddress
-     * @param assetAmounts the vaultAddress
-     * //todo
-     */
-    function buyPart(address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
-        public
-    {}
 
     /**
      * @notice Function to check what the current price of the vault being auctioned of is.
@@ -252,6 +227,43 @@ contract Liquidator is Ownable {
             address(this), msg.sender, IFactory(factoryAddress).vaultIndex(vaultAddress)
         );
     }
+
+    /**
+     * @notice Function to buy only a certain asset of a vault in the liquidation process
+     * @param assetAddresses the vaultAddress
+     * @param assetIds the vaultAddress
+     * @param assetAmounts the vaultAddress
+     * //todo
+     */
+    function buyPart(address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
+        public
+    {}
+
+    /*///////////////////////////////////////////////////////////////
+                        VAULT VALUE LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Function to check what the value of the items in the vault is.
+     * @dev Only used for partial liquidations.
+     * @param assetAddresses array of asset addresses
+     * @param assetIds array of assets ids. For assets without Id's (erc20's), Id can be set to 0.
+     * @param assetAmounts amounts of each asset. For assets without amounts (erc721's), amount can be set to 0.
+     * @return totalValue the total value of all assets.
+     */
+    function getValueOfAssets(
+        address[] memory assetAddresses,
+        uint256[] memory assetIds,
+        uint256[] memory assetAmounts,
+        uint8 baseCurrencyOfDebt
+    ) public view returns (uint256 totalValue) {
+        totalValue =
+            IMainRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrencyOfDebt);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                MANAGE AND PAY OUT AUCTION PROCEEDS
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Function a a user can call to check who is eligbile to claim what from an auction vault.

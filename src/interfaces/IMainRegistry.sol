@@ -14,10 +14,7 @@ interface IMainRegistry {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    )
-        external
-        view
-        returns (uint256);
+    ) external view returns (uint256);
 
     function factoryAddress() external view returns (address);
 
@@ -33,7 +30,7 @@ interface IMainRegistry {
         view
         returns (bool);
 
-    function assetToSubRegistry(address) external view returns (address);
+    function assetToPricingModule(address) external view returns (address);
 
     function isBaseCurrency(address) external view returns (bool);
 

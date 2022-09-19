@@ -91,7 +91,7 @@ Design of an architecture that reduces gas costs as well as advanced gas optimiz
 
 ## Governance
 
-Governance of the protocol will be used to shape and decide on the future developments within the Arcadia ecosystem. Examples of such developments could encompass pricing logic of new token primitives (Curve, Yearn…), new connectors to external protocols, new or partnering vertical protocols…
+Governance of the protocol will be used to shape and decide on the future developments within the Arcadia ecosystem. Examples of such developments could encompass pricing module of new token primitives (Curve, Yearn…), new connectors to external protocols, new or partnering vertical protocols…
 
 Arcadia aims to transition into a meaningful DAO upon reaching a certain level of maturity.
 

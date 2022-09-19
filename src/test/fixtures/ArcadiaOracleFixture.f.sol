@@ -11,7 +11,7 @@ import "../../../lib/forge-std/src/Test.sol";
 import "../../../lib/ds-test/src/test.sol";
 import "../../../lib/forge-std/src/Vm.sol";
 import "../../utils/Constants.sol";
-import "../../ArcadiaOracle.sol";
+import "../../mockups/ArcadiaOracle.sol";
 
 contract ArcadiaOracleFixture is Test {
     uint8 public defaultDecimals = uint8(18);
@@ -44,10 +44,7 @@ contract ArcadiaOracleFixture is Test {
         string memory description,
         address asset_address,
         address transmitterAddress
-    )
-        public
-        returns (ArcadiaOracle)
-    {
+    ) public returns (ArcadiaOracle) {
         vm.startPrank(creatorAddress);
         ArcadiaOracle oracle = new ArcadiaOracle(
             uint8(decimals),
