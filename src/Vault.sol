@@ -441,11 +441,7 @@ contract Vault {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    )
-        external
-        payable
-        onlyOwner
-    {
+    ) external payable onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
@@ -504,11 +500,7 @@ contract Vault {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    )
-        external
-        payable
-        onlyOwner
-    {
+    ) external payable onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
