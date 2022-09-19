@@ -55,7 +55,7 @@ contract MainRegistry is Ownable {
      *
      */
     modifier onlyPricingModule() {
-        require(isPricingModule[msg.sender], "Caller is not a sub-registry.");
+        require(isPricingModule[msg.sender], "Caller is not a Price Module.");
         _;
     }
 

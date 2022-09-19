@@ -470,7 +470,7 @@ contract MainRegistryTest is Test {
 
     function testNonPricingModuleAddsAsset(address unprivilegedAddress) public {
         vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("Caller is not a sub-registry.");
+        vm.expectRevert("Caller is not a Price Module.");
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
     }
