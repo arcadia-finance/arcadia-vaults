@@ -8,9 +8,6 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
-import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
-import "./libraries/AssetConfiguration.sol";
-
 /**
  * @title Risk Module
  * @author Arcadia Finance
@@ -18,58 +15,11 @@ import "./libraries/AssetConfiguration.sol";
  * @dev No end-user should directly interact with the Risk Module
  */
 contract RiskModule is Ownable {
-    // TODO: This can be precalculated as bitmap
-    AssetConfiguration.AssetDetail defaultConfig = AssetConfiguration.AssetDetail({
-        collateralFactor: uint16(2000),
-        liquidityThreshold: uint16(3000),
-        liquidityReward: uint16(500),
-        protocolLiquidityFee: uint16(100),
-        decimals: uint8(16),
-        isActive: true,
-        isFrozen: false,
-        isPaused: false,
-        isBorrowing: false
-    });
-
-    mapping(address => AssetConfiguration.AssetDetailBitmap) public assetConfigurationDetails;
-
-    function addAsset(address assetAddress) external onlyOwner {
-        require(!(assetConfigurationDetails[assetAddress].data > 0), "RM: Asset is already added");
-        AssetConfiguration.AssetDetailBitmap memory config = AssetConfiguration.toBitmap(defaultConfig);
-        assetConfigurationDetails[assetAddress] = config;
-    }
-
-    function addAsset(address assetAddress, AssetConfiguration.AssetDetail memory assetDetail) external onlyOwner {
-        require(!(assetConfigurationDetails[assetAddress].data > 0), "RM: Asset is already added");
-        AssetConfiguration.AssetDetailBitmap memory config = AssetConfiguration.toBitmap(assetDetail);
-        assetConfigurationDetails[assetAddress] = config;
-    }
-
-    function setCollateralFactor(address assetAddress, uint16 collateralFactor) external onlyOwner {
-        AssetConfiguration.AssetDetailBitmap memory config = assetConfigurationDetails[assetAddress];
-        AssetConfiguration.setCollateralFactor(config, collateralFactor);
-        assetConfigurationDetails[assetAddress] = config;
-    }
-
     function getCollateralFactorHARDCODED(address assetAddress) public view returns (uint128) {
         return 150;
     }
 
-    function getCollateralFactor(address assetAddress) public view returns (uint128) {
-        return AssetConfiguration.getCollateralFactor(assetConfigurationDetails[assetAddress]);
-    }
-
-    function setLiquidationThreshold(address assetAddress, uint16 liquidationThreshold) external onlyOwner {
-        AssetConfiguration.AssetDetailBitmap memory config = assetConfigurationDetails[assetAddress];
-        AssetConfiguration.setLiquidationThreshold(config, liquidationThreshold);
-        assetConfigurationDetails[assetAddress] = config;
-    }
-
-    function getLiquidationThreshold(address assetAddress) public view returns (uint128) {
-        return AssetConfiguration.getLiquidationThreshold(assetConfigurationDetails[assetAddress]);
-    }
-
-    function getLiquidationThresholdHARDCODED(address assetAddress) public view returns (uint128) {
+    function getLiquidationThresholdHARDCODED(address assetAddress) public view returns (uint16) {
         return 110;
     }
 
@@ -149,7 +99,7 @@ contract RiskModule is Ownable {
     function calculateWeightedLiquidationThreshold(address[] calldata assetAddresses, uint256[] memory valuesPerAsset)
         public
         view
-        returns (uint256)
+        returns (uint16)
     {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CWLT: LENGTH_MISMATCH");
@@ -162,16 +112,16 @@ contract RiskModule is Ownable {
                 i++;
             }
         }
-        uint128 liqThreshold;
+        uint16 liqThreshold;
         for (uint256 j; j < assetAddressesLength;) {
             address assetAddress = assetAddresses[j];
             liqThreshold = getLiquidationThresholdHARDCODED(assetAddress);
-            liquidationThreshold += liqThreshold * (valuesPerAsset[j] / totalValue);
+            liquidationThreshold += uint256(liqThreshold) * valuesPerAsset[j] / totalValue;
             unchecked {
                 j++;
             }
         }
-        return liquidationThreshold;
+        return uint16(liquidationThreshold);
     }
 
     function calculateWeightedLiquidationValue(
