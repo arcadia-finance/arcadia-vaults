@@ -100,21 +100,17 @@ contract RiskModule is Ownable {
         require(assetAddressesLength == valuesPerAsset.length, "RM_CWCF: LENGTH_MISMATCH");
         uint256 totalValue;
 
-        for (uint256 i; i < valuesPerAsset.length;) {
+        uint128 collFact;
+        for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
+            address assetAddress = assetAddresses[i];
+            collFact = getCollateralFactorHARDCODED(assetAddress);
+            collateralFactor += collFact * valuesPerAsset[i];
             unchecked {
                 i++;
             }
         }
-        uint128 collFact;
-        for (uint256 j; j < assetAddressesLength;) {
-            address assetAddress = assetAddresses[j];
-            collFact = getCollateralFactorHARDCODED(assetAddress);
-            collateralFactor += collFact * (valuesPerAsset[j] / totalValue);
-            unchecked {
-                j++;
-            }
-        }
+        collateralFactor = collateralFactor / totalValue;
         return collateralFactor;
     }
 
@@ -134,21 +130,17 @@ contract RiskModule is Ownable {
         uint256 liquidationThreshold;
         uint256 totalValue;
 
-        for (uint256 i; i < valuesPerAsset.length;) {
+        uint16 liqThreshold;
+        for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
+            address assetAddress = assetAddresses[i];
+            liqThreshold = getLiquidationThresholdHARDCODED(assetAddress);
+            liquidationThreshold += uint256(liqThreshold) * valuesPerAsset[i];
             unchecked {
                 i++;
             }
         }
-        uint16 liqThreshold;
-        for (uint256 j; j < assetAddressesLength;) {
-            address assetAddress = assetAddresses[j];
-            liqThreshold = getLiquidationThresholdHARDCODED(assetAddress);
-            liquidationThreshold += uint256(liqThreshold) * valuesPerAsset[j] / totalValue;
-            unchecked {
-                j++;
-            }
-        }
+        liquidationThreshold = liquidationThreshold / totalValue;
         return uint16(liquidationThreshold);
     }
 
