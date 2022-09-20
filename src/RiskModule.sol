@@ -16,7 +16,7 @@ import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
  */
 contract RiskModule is Ownable {
     // TODO: To be deleted after the asset specific values are implemented
-    function getCollateralFactorHARDCODED(address assetAddress) public view returns (uint128) {
+    function getCollateralFactorHARDCODED(address assetAddress) public view returns (uint16) {
         return 150;
     }
 
@@ -77,7 +77,7 @@ contract RiskModule is Ownable {
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
             collFact = getCollateralFactorHARDCODED(assetAddress);
-            collateralValue += valuesPerAsset[i] * 100 / collFact;
+            collateralValue += valuesPerAsset[i] * 100 / uint256(collFact);
             unchecked {
                 ++i;
             }
@@ -94,13 +94,14 @@ contract RiskModule is Ownable {
     function calculateWeightedCollateralFactor(address[] calldata assetAddresses, uint256[] memory valuesPerAsset)
         public
         view
-        returns (uint256 collateralFactor)
+        returns (uint16)
     {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CWCF: LENGTH_MISMATCH");
         uint256 totalValue;
+        uint256 collateralFactor;
 
-        uint128 collFact;
+        uint16 collFact;
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
             address assetAddress = assetAddresses[i];
@@ -110,8 +111,10 @@ contract RiskModule is Ownable {
                 i++;
             }
         }
+
+        require(totalValue > 0, "RM_CWCF: Total asset value must be bigger than zero");
         collateralFactor = collateralFactor / totalValue;
-        return collateralFactor;
+        return uint16(collateralFactor);
     }
 
     /**
@@ -128,7 +131,7 @@ contract RiskModule is Ownable {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CWLT: LENGTH_MISMATCH");
         uint256 liquidationThreshold;
-        uint256 totalValue;
+        uint256 totalValue = 0;
 
         uint16 liqThreshold;
         for (uint256 i; i < assetAddressesLength;) {
@@ -140,6 +143,7 @@ contract RiskModule is Ownable {
                 i++;
             }
         }
+        require(totalValue > 0, "RM_CWLT: Total asset value must be bigger than zero");
         liquidationThreshold = liquidationThreshold / totalValue;
         return uint16(liquidationThreshold);
     }

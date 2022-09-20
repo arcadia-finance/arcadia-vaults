@@ -40,7 +40,7 @@ interface IRegistry {
     )
         external
         view
-        returns (uint256);
+        returns (uint16);
 
     function getLiquidationValue(
         address[] calldata _assetAddresses,

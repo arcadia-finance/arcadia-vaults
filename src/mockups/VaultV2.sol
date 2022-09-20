@@ -328,12 +328,12 @@ contract VaultV2 {
     function getCollateralValue(uint256 vaultValue) public view returns (uint256 collateralValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        uint256 collateralFactor =
+        uint16 collateralFactor =
             IRegistry(registryAddress).getCollateralFactor(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
         unchecked {
-            collateralValue = vaultValue * 100 / collateralFactor;
+            collateralValue = vaultValue * 100 / uint256(collateralFactor);
         }
     }
 

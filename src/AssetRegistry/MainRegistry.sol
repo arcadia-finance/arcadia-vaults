@@ -631,7 +631,7 @@ contract MainRegistry is Ownable, RiskModule {
     )
         public
         view
-        returns (uint256 collateralFactor)
+        returns (uint16 collateralFactor)
     {
         uint256 assetAddressesLength = _assetAddresses.length;
         require(
