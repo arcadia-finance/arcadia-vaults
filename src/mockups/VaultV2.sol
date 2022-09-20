@@ -408,7 +408,13 @@ contract VaultV2 {
 
         require(
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, openDebt, uint8(liquidityThreshold), baseCurrencyIdentifier
+                address(this),
+                life,
+                liquidationKeeper,
+                owner,
+                openDebt,
+                uint8(liquidityThreshold),
+                baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );

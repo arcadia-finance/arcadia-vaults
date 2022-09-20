@@ -1211,12 +1211,14 @@ contract vaultTests is Test {
       * 1000% interest rate
       * never synced any debt during 5 years
   **/
-    function testSyncDebtUnchecked(uint64 base, uint24 deltaBlocks, uint128 openDebt, uint16 additionalDeposit) public {
+    function testSyncDebtUnchecked(uint64 base, uint24 deltaBlocks, uint128 openDebt, uint16 additionalDeposit)
+        public
+    {
         vm.assume(base <= 10 * 10 ** 18); //1000%
         vm.assume(base >= 10 ** 18); //No negative interest rate possible
         vm.assume(deltaBlocks <= 13140000); //5 year
         vm.assume(additionalDeposit > 0);
-//        vm.assume(additionalDeposit < 10);
+        //        vm.assume(additionalDeposit < 10);
         vm.assume(openDebt <= type(uint128).max / (10 ** 5)); //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
 
         (uint16 collThres,,) = vault.vault();

@@ -32,7 +32,6 @@ import "./interfaces/ITrustedProtocol.sol";
  * For whitelists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
 contract Vault {
-
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
@@ -255,8 +254,11 @@ contract Vault {
         }
         success = getFreeMargin() >= amount;
         // Update the vault values
-        (address[] memory AllAssetAddresses, uint256[] memory AllAssetIds, uint256[] memory AllAssetAmounts) = generateAssetData();
-        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency);
+        (address[] memory AllAssetAddresses, uint256[] memory AllAssetIds, uint256[] memory AllAssetAmounts) =
+            generateAssetData();
+        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
+            AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency
+        );
     }
 
     /**
@@ -266,12 +268,15 @@ contract Vault {
      * @return success Boolean indicating if there the margin position is successfully decreased.
      * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
      */
-    function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
+    function decreaseMarginPosition(address baseCurrency, uint256) public onlyAuthorized returns (bool success) {
         success = baseCurrency == vault.baseCurrency;
 
         // Update the vault values
-        (address[] memory AllAssetAddresses, uint256[] memory AllAssetIds, uint256[] memory AllAssetAmounts) = generateAssetData();
-        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency);
+        (address[] memory AllAssetAddresses, uint256[] memory AllAssetIds, uint256[] memory AllAssetAmounts) =
+            generateAssetData();
+        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
+            AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency
+        );
     }
 
     /**
@@ -403,7 +408,7 @@ contract Vault {
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
             //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = uint256(vault.liqthres) * uint256(openDebt);
+            rightHand = uint256(vault.liqThres) * uint256(openDebt);
         }
 
         require(leftHand < rightHand, "V_LV: This vault is healthy");
@@ -412,7 +417,13 @@ contract Vault {
 
         require(
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, openDebt, uint8(liquidityThreshold), baseCurrencyIdentifier
+                address(this),
+                life,
+                liquidationKeeper,
+                owner,
+                openDebt,
+                vault.liqThres,
+                baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );

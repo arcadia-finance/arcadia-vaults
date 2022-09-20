@@ -635,7 +635,7 @@ contract MainRegistry is Ownable, RiskModule {
     {
         uint256 assetAddressesLength = _assetAddresses.length;
 
-    require(
+        require(
             assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
             "MR_GCV: LENGTH_MISMATCH"
         );
