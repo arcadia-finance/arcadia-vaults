@@ -118,7 +118,7 @@ contract Vault {
         owner = _owner;
         registryAddress = _registryAddress;
         vaultVersion = _vaultVersion;
-        //ToDo: riskmodule
+        //TODO: DELETE THIS DEFINITIONS WHEN RISKMODULE REACHES MATURITY. 20-09-22 - @zek
         vault.collFactor = 150;
         vault.liqThres = 110;
     }
@@ -243,6 +243,7 @@ contract Vault {
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
      * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
+     * @dev Since increasing margin position is financial activity, liquidation threshold update is done here.
      */
     function increaseMarginPosition(address baseCurrency, uint256 amount)
         public
@@ -266,6 +267,7 @@ contract Vault {
      * @param baseCurrency The Base-currency in which the margin position is denominated.
      * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
      * @return success Boolean indicating if there the margin position is successfully decreased.
+     * @dev Since decreasing margin position is financial activity, liquidation threshold update is done here.
      * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
      */
     function decreaseMarginPosition(address baseCurrency, uint256) public onlyAuthorized returns (bool success) {
@@ -301,11 +303,9 @@ contract Vault {
      * collateralised assets can fluctuate, the haircut guarantees that the vault
      * remains over-collateralised with a high confidence level (99,9%+). The size of the
      * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
-     * or the smaller the on-chain liquidity, the biggert the haircut will be.
+     * or the smaller the on-chain liquidity, the bigger the haircut will be.
      */
     function getCollateralValue() public view returns (uint256 collateralValue) {
-        //gas: cannot overflow unless currentValue is more than
-        // 1.15**57 *10**18 decimals, which is too many billions to write out
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         collateralValue =
@@ -322,7 +322,7 @@ contract Vault {
      * collateralised assets can fluctuate, the haircut guarantees that the vault
      * remains over-collateralised with a high confidence level (99,9%+). The size of the
      * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
-     * or the smaller the on-chain liquidity, the biggert the haircut will be.
+     * or the smaller the on-chain liquidity, the bigger the haircut will be.
      */
     function getCollateralValue(uint256 vaultValue) public view returns (uint256 collateralValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
