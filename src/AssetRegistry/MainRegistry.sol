@@ -625,9 +625,8 @@ contract MainRegistry is Ownable, RiskModule {
         view
         returns (uint256 liquidationThreshold)
     {
-        uint256 assetAddressesLength = _assetAddresses.length;
         require(
-            assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
+            _assetAddresses.length == _assetIds.length && _assetAddresses.length == _assetAmounts.length,
             "MR_GCF: LENGTH_MISMATCH"
         );
         uint256[] memory valuesPerAsset =
