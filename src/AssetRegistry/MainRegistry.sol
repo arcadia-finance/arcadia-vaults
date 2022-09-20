@@ -581,6 +581,17 @@ contract MainRegistry is Ownable, RiskModule {
         return valuesPerCreditRating;
     }
 
+    /**
+     * @notice Calculate the collateralValue given the asset details in given baseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     * for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency An address of the BaseCurrency contract
+     * @return collateralValue Collateral value of the given assets denominated in BaseCurrency.
+     */
+
     function getCollateralValue(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
@@ -602,6 +613,16 @@ contract MainRegistry is Ownable, RiskModule {
         collateralValue = calculateWeightedCollateralValue(_assetAddresses, valuesPerAsset);
     }
 
+    /**
+     * @notice Calculate the collateral factor given the asset details in given baseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     * for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency An address of the BaseCurrency contract
+     * @return collateralFactor Collateral factor of the given assets.
+     */
     function getCollateralFactor(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
@@ -622,6 +643,16 @@ contract MainRegistry is Ownable, RiskModule {
         collateralFactor = calculateWeightedCollateralFactor(_assetAddresses, valuesPerAsset);
     }
 
+    /**
+     * @notice Calculate the liquidation value given the asset details and the opendebt in given baseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     * for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency An address of the BaseCurrency contract
+     * @return liquidationValue of the given assets with the openDebt
+     */
     function getLiquidationValue(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
@@ -644,6 +675,16 @@ contract MainRegistry is Ownable, RiskModule {
         liquidationValue = calculateWeightedLiquidationValue(_assetAddresses, valuesPerAsset, openDebt);
     }
 
+    /**
+     * @notice Calculate the liquidation threshold given the asset details in given baseCurrency
+     * @param _assetAddresses The List of token addresses of the assets
+     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     * for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency An (address) of the BaseCurrency contract
+     * @return liquidationThreshold of the given assets
+     */
     function getLiquidationThreshold(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
