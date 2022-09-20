@@ -9,7 +9,7 @@ pragma solidity >=0.4.22 <0.9.0;
 import "./AbstractPricingModule.sol";
 
 /**
- * @title Pricing Logic for ERC721 tokens for which a oracle exists for the floor price of the collection
+ * @title Pricing Module for ERC721 tokens for which a oracle exists for the floor price of the collection
  * @author Arcadia Finance
  * @notice The FloorERC721PricingModule stores pricing logic and basic information for ERC721 tokens for which a direct price feeds exists
  * for the floor price of the collection
@@ -26,7 +26,7 @@ contract FloorERC721PricingModule is PricingModule {
     }
 
     /**
-     * @notice A Pricing Logic must always be initialised with the address of the Main-Registry and of the Oracle-Hub
+     * @notice A Pricing Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry The address of the Main-registry
      * @param oracleHub The address of the Oracle-Hub
      */
@@ -70,7 +70,7 @@ contract FloorERC721PricingModule is PricingModule {
     }
 
     /**
-     * @notice Returns the information that is stored in the Pricing Logic for a given asset
+     * @notice Returns the information that is stored in the Pricing Module for a given asset
      * @dev struct is not taken into memory; saves 6613 gas
      * @param asset The Token address of the asset
      * @return idRangeStart The id of the first token of the collection

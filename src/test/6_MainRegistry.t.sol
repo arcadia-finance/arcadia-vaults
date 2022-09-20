@@ -470,7 +470,7 @@ contract MainRegistryTest is Test {
 
     function testNonPricingModuleAddsAsset(address unprivilegedAddress) public {
         vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("Caller is not a sub-registry.");
+        vm.expectRevert("Caller is not a Price Module.");
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
     }
@@ -1096,9 +1096,7 @@ contract MainRegistryTest is Test {
         uint256 rateEthToUsdNew,
         uint256 amountLink,
         uint8 linkDecimals
-    )
-        public
-    {
+    ) public {
         vm.assume(linkDecimals <= 18);
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew > 0);
@@ -1178,9 +1176,7 @@ contract MainRegistryTest is Test {
         uint256 rateEthToUsdNew,
         uint256 amountLink,
         uint8 linkDecimals
-    )
-        public
-    {
+    ) public {
         vm.assume(linkDecimals < Constants.oracleEthToUsdDecimals);
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew > 0);

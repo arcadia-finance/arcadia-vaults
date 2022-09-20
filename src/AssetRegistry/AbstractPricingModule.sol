@@ -12,11 +12,11 @@ import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
 /**
- * @title Abstract Pricing Logic
+ * @title Abstract Pricing Module
  * @author Arcadia Finance
  * @notice Sub-Registries have the pricing logic and basic information for tokens that can, or could at some point, be deposited in the vaults
  * @dev No end-user should directly interact with Sub-Registries, only the Main-registry, Oracle-Hub or the contract owner
- * @dev This abstract contract contains the minimal functions that each Pricing Logic should have to properly work with the Main-Registry
+ * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main-Registry
  */
 abstract contract PricingModule is Ownable {
     using FixedPointMathLib for uint256;
@@ -38,7 +38,7 @@ abstract contract PricingModule is Ownable {
     }
 
     /**
-     * @notice A Pricing Logic must always be initialised with the address of the Main-Registry and the Oracle-Hub
+     * @notice A Pricing Module must always be initialised with the address of the Main-Registry and the Oracle-Hub
      * @param _mainRegistry The address of the Main-registry
      * @param _oracleHub The address of the Oracle-Hub
      */
