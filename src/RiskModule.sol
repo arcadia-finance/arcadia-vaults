@@ -27,11 +27,11 @@ contract RiskModule is Ownable {
 
     /**
      * @notice Calculate the minimum collateral factor given the assets
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @param assetAddresses The List of token addresses of the assets
+     * @param assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
      * @return minCollateralFactor is the minimum collateral factor of the given assets
      * @dev CAN BE DEPRECATED OR DELETED: Added here for possible later use, if in later stages it is not used delete.
      */
