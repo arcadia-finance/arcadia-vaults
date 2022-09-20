@@ -482,6 +482,7 @@ contract LiquidatorTest is Test {
     }
 
     function testNotAllowAuctionHealthyVault(uint128 amountEth, uint128 amountCredit) public {
+        vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         vm.assume(((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals / 150) * 100 >= amountCredit);
@@ -499,7 +500,7 @@ contract LiquidatorTest is Test {
     }
 
     function testStartAuction(uint128 amountEth, uint256 newPrice) public {
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
+        (uint16 collThresProxy, uint16 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -525,7 +526,7 @@ contract LiquidatorTest is Test {
     }
 
     function testShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public {
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
+        (uint16 collThresProxy, uint16 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -544,7 +545,7 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (,, uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (,, uint16 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
 
         (uint256 vaultPrice,, bool forSale) = liquidator.getPriceOfVault(address(proxy), 0);
 
@@ -555,7 +556,7 @@ contract LiquidatorTest is Test {
 
     function testAuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
+        (uint16 collThresProxy, uint16 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -574,7 +575,7 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt,, uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (uint128 openDebt,, uint16 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
         (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
         vm.roll(block.number + blocksToRoll);
@@ -596,7 +597,7 @@ contract LiquidatorTest is Test {
 
     function testBuyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
+        (uint16 collThresProxy, uint16 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -626,7 +627,7 @@ contract LiquidatorTest is Test {
 
     function testWithrawAssetsFromPurchasedVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
+        (uint16 collThresProxy, uint16 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -1030,7 +1031,7 @@ contract LiquidatorTest is Test {
 
     function testBreakeven(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll, uint8 breakevenTime) public {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * breakevenTime);
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
+        (uint16 collThresProxy, uint16 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -1052,7 +1053,7 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt,, uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (uint128 openDebt,, uint16 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
         (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
         vm.roll(block.number + blocksToRoll);

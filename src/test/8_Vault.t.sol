@@ -862,12 +862,12 @@ contract vaultTests is Test {
 
     function testBorrow(uint8 baseAmountDeposit, uint8 baseAmountCredit) public {
         uint256 amountDeposit = baseAmountDeposit * 10 ** Constants.daiDecimals;
+        vm.assume(amountDeposit > 0);
         uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.daiDecimals);
 
         (uint16 collThres,,) = vault.vault();
 
         vm.assume((amountDeposit * 100) / collThres >= amountCredit);
-
         depositEthInVault(baseAmountDeposit, vaultOwner);
 
         vm.startPrank(vaultOwner);
@@ -1211,10 +1211,12 @@ contract vaultTests is Test {
       * 1000% interest rate
       * never synced any debt during 5 years
   **/
-    function testSyncDebtUnchecked(uint64 base, uint24 deltaBlocks, uint128 openDebt) public {
+    function testSyncDebtUnchecked(uint64 base, uint24 deltaBlocks, uint128 openDebt, uint16 additionalDeposit) public {
         vm.assume(base <= 10 * 10 ** 18); //1000%
         vm.assume(base >= 10 ** 18); //No negative interest rate possible
         vm.assume(deltaBlocks <= 13140000); //5 year
+        vm.assume(additionalDeposit > 0);
+//        vm.assume(additionalDeposit < 10);
         vm.assume(openDebt <= type(uint128).max / (10 ** 5)); //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
 
         (uint16 collThres,,) = vault.vault();
@@ -1223,7 +1225,8 @@ contract vaultTests is Test {
                 (openDebt / rateEthToUsd / 10 ** 18) * 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals)
                     * collThres
             ) / 100
-        );
+        ); // This is always zero
+        amountEthToDeposit += uint128(additionalDeposit);
 
         uint256 yearlyBlocks = 2628000;
         uint128 exponent = uint128(((uint256(deltaBlocks)) * 1e18) / yearlyBlocks);
@@ -1247,15 +1250,18 @@ contract vaultTests is Test {
         assertEq(usedMarginExpected, usedMarginActual);
     }
 
-    function testGetOpenDebtUnchecked(uint32 blocksToRoll) public {
+    function testGetOpenDebtUnchecked(uint32 blocksToRoll, uint128 baseAmountEthToDeposit) public {
         vm.assume(blocksToRoll <= 255555555); //up to the year 2122
+        vm.assume(baseAmountEthToDeposit > 0);
+        vm.assume(baseAmountEthToDeposit < 10);
         (uint16 collThres,,) = vault.vault();
         uint128 amountEthToDeposit = uint128(
             (
                 ((10 * 10 ** 9 * 10 ** 18) / rateEthToUsd / 10 ** 18)
                     * 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals) * collThres
             ) / 100
-        ); //equivalent to 10bn USD debt
+        ); //equivalent to 10bn USD debt // This is always zero
+        amountEthToDeposit += baseAmountEthToDeposit;
         uint256 remainingCredit = depositEthAndTakeMaxCredit(amountEthToDeposit); //10bn USD debt
         uint256 _lastBlock = block.number;
 
@@ -1284,6 +1290,7 @@ contract vaultTests is Test {
 
     function testRemainingCreditUnchecked(uint128 amountEth, uint8 factor) public {
         vm.assume(amountEth < 10 * 10 ** 9 * 10 ** 18);
+        vm.assume(amountEth > 0);
 
         uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = Constants.ethCreditRatingUsd;

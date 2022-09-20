@@ -456,6 +456,7 @@ contract EndToEndTest is Test {
 
     function testAllowCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
         (uint16 collThres,,) = proxy.vault();
+        vm.assume(amountEth > 0);
         vm.assume(uint256(amountCredit) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
@@ -474,6 +475,7 @@ contract EndToEndTest is Test {
     }
 
     function testNotAllowTooMuchCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
+        vm.assume(amountEth > 0);
         (uint16 collThres,,) = proxy.vault();
         vm.assume(uint256(amountCredit) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -494,6 +496,7 @@ contract EndToEndTest is Test {
     }
 
     function testIncreaseOfDebtPerBlock(uint128 amountEth, uint128 amountCredit, uint32 amountOfBlocksToRoll) public {
+        vm.assume(amountEth > 0);
         uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
         uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) / uint128(pool.YEARLY_BLOCKS());
@@ -565,6 +568,7 @@ contract EndToEndTest is Test {
     function testAllowAdditionalCreditAfterPriceIncrease(uint128 amountEth, uint128 amountCredit, uint16 newPrice)
         public
     {
+        vm.assume(amountEth > 0);
         vm.assume(newPrice * 10 ** Constants.oracleEthToUsdDecimals > rateEthToUsd);
         (uint16 collThres,,) = proxy.vault();
         vm.assume(amountEth < type(uint128).max / collThres); //prevent overflow in takecredit with absurd values

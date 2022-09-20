@@ -67,6 +67,9 @@ contract gasBuyVault_2ERC20 is Test {
     Tranche tranche;
     DebtToken debt;
 
+    event log_named_array(string key, address[] val);
+    event log_named_array(string key, uint[] val);
+
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
@@ -653,7 +656,6 @@ contract gasBuyVault_2ERC20 is Test {
         oracleEthToUsd.transmit(int256(rateEthToUsd) / 2);
         vm.prank(oracleOwner);
         oracleLinkToUsd.transmit(int256(rateLinkToUsd) / 2);
-
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 

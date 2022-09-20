@@ -470,7 +470,7 @@ contract VaultV2Test is Test {
 
     struct VaultInfo {
         uint16 collThres;
-        uint8 liqThres;
+        uint16 liqThres;
         address baseCurrency;
     }
 
@@ -507,6 +507,7 @@ contract VaultV2Test is Test {
     }
 
     function testAssetsAfterUpgrade(uint128 amount) public {
+        vm.assume(amount > 0);
         depositERC20InVault(eth, amount, vaultOwner);
         uint128[] memory tokenIds = new uint128[](3);
         tokenIds[0] = 1;
@@ -541,7 +542,7 @@ contract VaultV2Test is Test {
         assertEq(factory.latestVaultVersion(), proxy.vaultVersion());
     }
 
-    function testAssetsAfterUpgradeFail(uint128 amount) public {
+    function testAssetsAfterUgradeFail(uint128 amount) public {
         depositERC20InVault(eth, amount, vaultOwner);
         uint128[] memory tokenIds = new uint128[](3);
         tokenIds[0] = 1;
