@@ -52,7 +52,7 @@ contract Vault {
 
     struct VaultInfo {
         uint16 collFactor; //2 decimals precision (factor 100)
-        uint8 liqThres; //2 decimals precision (factor 100)
+        uint16 liqThres; //2 decimals precision (factor 100)
         address baseCurrency;
     }
     //address baseCurrencyAddress;
@@ -747,6 +747,10 @@ contract Vault {
             _setBaseCurrency(baseCurrency);
         }
         success = getFreeMargin() >= amount;
+
+        // Update the vault values
+        (address[] memory AllAssetAddresses, uint256[] memory AllAssetIds, uint256[] memory AllAssetAmounts) = generateAssetData();
+        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -756,8 +760,12 @@ contract Vault {
      * @return success Boolean indicating if there the margin position is successfully decreased.
      * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
      */
-    function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
+    function decreaseMarginPosition(address baseCurrency, uint256) public onlyAuthorized returns (bool success) {
         success = baseCurrency == vault.baseCurrency;
+
+        // Update the vault values
+        (address[] memory AllAssetAddresses, uint256[] memory AllAssetIds, uint256[] memory AllAssetAmounts) = generateAssetData();
+        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -776,22 +784,17 @@ contract Vault {
      */
     function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
         //gas: 35 gas cheaper to not take debt into memory
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
         uint256 totalValue = getVaultValue(vault.baseCurrency);
         uint128 openDebt = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
-        uint256 liquidityThreshold = IRegistry(registryAddress).getLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
-        );
 
         unchecked {
             //gas: cannot overflow unless totalValue is
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
             //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = liquidityThreshold * uint256(openDebt);
+            rightHand = uint256(vault.liqThres) * uint256(openDebt);
         }
 
         require(leftHand < rightHand, "V_LV: This vault is healthy");
@@ -800,7 +803,7 @@ contract Vault {
 
         require(
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, openDebt, uint8(liquidityThreshold), baseCurrencyIdentifier
+                address(this), life, liquidationKeeper, owner, openDebt, uint8(vault.liqThres), baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );
