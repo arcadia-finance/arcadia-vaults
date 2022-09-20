@@ -20,10 +20,12 @@ import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
  * Current integration is only for mocked Chainlink oracles, and we assume the oracles are honest
  * and functioning properly, no unhappy flows are implemented yet
  * (oracle stops updating, circuit brakers activated...).
- * ToDo: implement sanety checks + unhappy flows
  */
 contract OracleHub is Ownable {
     using FixedPointMathLib for uint256;
+
+    mapping(address => bool) public inOracleHub;
+    mapping(address => OracleInformation) public oracleToOracleInformation;
 
     struct OracleInformation {
         uint64 oracleUnit;
@@ -35,13 +37,14 @@ contract OracleHub is Ownable {
         address quoteAssetAddress;
     }
 
-    mapping(address => bool) public inOracleHub;
-    mapping(address => OracleInformation) public oracleToOracleInformation;
-
     /**
      * @notice Constructor
      */
     constructor() {}
+
+    /*///////////////////////////////////////////////////////////////
+                          ORACLE MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Add a new oracle to the Oracle Hub
@@ -63,20 +66,6 @@ contract OracleHub is Ownable {
         require(oracleInformation.oracleUnit <= 1000000000000000000, "Oracle can have maximal 18 decimals");
         inOracleHub[oracleAddress] = true;
         oracleToOracleInformation[oracleAddress] = oracleInformation;
-    }
-
-    /**
-     * @notice Checks if two input strings are identical, if so returns true
-     * @param a The first string to be compared
-     * @param b The second string to be compared
-     * @return result Boolean that returns true if both input strings are equal, and false if both strings are different
-     */
-    function compareStrings(string memory a, string memory b) internal pure returns (bool result) {
-        if (bytes(a).length != bytes(b).length) {
-            return false;
-        } else {
-            result = keccak256(bytes(a)) == keccak256(bytes(b));
-        }
     }
 
     /**
@@ -113,6 +102,10 @@ contract OracleHub is Ownable {
             }
         }
     }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Returns the exchange rate of a certain asset, denominated in USD or in another BaseCurrency
@@ -173,5 +166,23 @@ contract OracleHub is Ownable {
         }
         //Since all series of oracles must end with USD, it should be impossible to arrive at this point
         revert("No oracle with USD or baseCurrency as bAsset");
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        HELPER FUNCTIONS
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Checks if two input strings are identical, if so returns true
+     * @param a The first string to be compared
+     * @param b The second string to be compared
+     * @return result Boolean that returns true if both input strings are equal, and false if both strings are different
+     */
+    function compareStrings(string memory a, string memory b) internal pure returns (bool result) {
+        if (bytes(a).length != bytes(b).length) {
+            return false;
+        } else {
+            result = keccak256(bytes(a)) == keccak256(bytes(b));
+        }
     }
 }

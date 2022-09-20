@@ -11,7 +11,7 @@ import "../../lib/forge-std/src/Test.sol";
 import "../mockups/ERC20SolmateMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../ArcadiaOracle.sol";
+import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract OracleHubTest is Test {

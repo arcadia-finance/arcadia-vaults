@@ -16,13 +16,13 @@ import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../mockups/ERC1155SolmateMock.sol";
 import "../AssetRegistry/MainRegistry.sol";
-import "../AssetRegistry/FloorERC721SubRegistry.sol";
-import "../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../AssetRegistry/FloorERC1155SubRegistry.sol";
+import "../AssetRegistry/FloorERC721PricingModule.sol";
+import "../AssetRegistry/StandardERC20PricingModule.sol";
+import "../AssetRegistry/FloorERC1155PricingModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../ArcadiaOracle.sol";
+import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 import {LendingPool, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
@@ -55,8 +55,8 @@ contract vaultTests is Test {
     ArcadiaOracle private oracleInterleaveToEth;
     MainRegistry private mainRegistry;
     StandardERC20Registry private standardERC20Registry;
-    FloorERC721SubRegistry private floorERC721SubRegistry;
-    FloorERC1155SubRegistry private floorERC1155SubRegistry;
+    FloorERC721PricingModule private floorERC721PricingModule;
+    FloorERC1155PricingModule private floorERC1155PricingModule;
     Liquidator private liquidator;
 
     LendingPool pool;
@@ -347,18 +347,18 @@ contract vaultTests is Test {
             address(mainRegistry),
             address(oracleHub)
         );
-        floorERC721SubRegistry = new FloorERC721SubRegistry(
+        floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
-        floorERC1155SubRegistry = new FloorERC1155SubRegistry(
+        floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
 
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
-        mainRegistry.addSubRegistry(address(floorERC1155SubRegistry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
+        mainRegistry.addPricingModule(address(floorERC1155PricingModule));
         vm.stopPrank();
 
         uint256 slot =
@@ -538,8 +538,8 @@ contract vaultTests is Test {
         assetCreditRatings[2] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -573,8 +573,8 @@ contract vaultTests is Test {
         assetCreditRatings[2] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -621,8 +621,8 @@ contract vaultTests is Test {
         assetCreditRatings[2] = Constants.interleaveCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC1155SubRegistry.setAssetInformation(
-            FloorERC1155SubRegistry.AssetInformation({
+        floorERC1155PricingModule.setAssetInformation(
+            FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
                 assetAddress: address(interleave)
@@ -686,8 +686,8 @@ contract vaultTests is Test {
         assetCreditRatingsEth[1] = Constants.ethCreditRatingDai;
         assetCreditRatingsEth[2] = Constants.ethCreditRatingEth;
 
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -763,8 +763,8 @@ contract vaultTests is Test {
         assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingDai;
         assetCreditRatingsInterleave[2] = Constants.interleaveCreditRatingEth;
 
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -788,8 +788,8 @@ contract vaultTests is Test {
             }),
             assetCreditRatingsEth
         );
-        floorERC1155SubRegistry.setAssetInformation(
-            FloorERC1155SubRegistry.AssetInformation({
+        floorERC1155PricingModule.setAssetInformation(
+            FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
                 assetAddress: address(interleave)
@@ -1357,87 +1357,14 @@ contract vaultTests is Test {
         assertEq(vaultOwner, vault.owner());
     }
 
-    function testAuthorizeAddress(address toAuth) public {
-        vm.assume(toAuth != address(this) && toAuth != address(0) && toAuth != address(factoryContr));
-        Vault vault_m = new Vault();
+    function testSetBaseCurrency(address authorised) public {
+        uint256 slot = stdstore.target(address(vault)).sig(vault.allowed.selector).with_key(authorised).find();
+        bytes32 loc = bytes32(slot);
+        bool allowed = true;
+        bytes32 value = bytes32(abi.encode(allowed));
+        vm.store(address(vault), loc, value);
 
-        uint256 slot3 = stdstore.target(address(vault_m)).sig(vault_m.owner.selector).find();
-        bytes32 loc3 = bytes32(slot3);
-        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc3, newOwner);
-
-        vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth, true);
-        vm.stopPrank();
-
-        assertTrue(vault_m.allowed(toAuth));
-    }
-
-    function testRevokeAuthAddress(address toAuth) public {
-        vm.assume(toAuth != address(this) && toAuth != address(0) && toAuth != address(factoryContr));
-        Vault vault_m = new Vault();
-
-        uint256 slot3 = stdstore.target(address(vault_m)).sig(vault_m.owner.selector).find();
-        bytes32 loc3 = bytes32(slot3);
-        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc3, newOwner);
-
-        vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth, true);
-        vm.stopPrank();
-
-        assertTrue(vault_m.allowed(toAuth));
-
-        vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth, false);
-        vm.stopPrank();
-
-        assertFalse(vault_m.allowed(toAuth));
-    }
-
-    function testAuthorizeAddressByNonOwner(address toAuth) public {
-        vm.assume(toAuth != address(this) && toAuth != address(0) && toAuth != address(factoryContr));
-        Vault vault_m = new Vault();
-        address notOwner = address(789);
-
-        vm.startPrank(notOwner);
-        vm.expectRevert("VL: You are not the owner");
-        vault_m.authorize(toAuth, true);
-        vm.stopPrank();
-
-        assertFalse(vault_m.allowed(toAuth));
-    }
-
-    function testRevokeAuthAddressByNonOwner(address toAuth) public {
-        vm.assume(toAuth != address(this) && toAuth != address(0) && toAuth != address(factoryContr));
-        Vault vault_m = new Vault();
-        address notOwner = address(789);
-
-        uint256 slot3 = stdstore.target(address(vault_m)).sig(vault_m.owner.selector).find();
-        bytes32 loc3 = bytes32(slot3);
-        bytes32 newOwner = bytes32(abi.encode(address(vaultOwner)));
-        vm.store(address(vault_m), loc3, newOwner);
-
-        vm.startPrank(vaultOwner);
-        vault_m.authorize(toAuth, true);
-        vm.stopPrank();
-
-        assertTrue(vault_m.allowed(toAuth));
-
-        vm.startPrank(notOwner);
-        vm.expectRevert("VL: You are not the owner");
-        vault_m.authorize(toAuth, false);
-        vm.stopPrank();
-
-        assertTrue(vault_m.allowed(toAuth));
-    }
-
-    function testSetBaseCurrency(address toAuth) public {
-        vm.startPrank(vaultOwner);
-        vault.authorize(toAuth, true);
-        vm.stopPrank();
-
-        vm.startPrank(toAuth);
+        vm.startPrank(authorised);
         vault.setBaseCurrency(address(eth));
         vm.stopPrank();
 
@@ -1458,9 +1385,15 @@ contract vaultTests is Test {
         assertEq(baseCurrency, address(dai));
     }
 
-    function testSetBaseCurrencyWithDebt(address toAuth) public {
-        uint256 slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
+    function testSetBaseCurrencyWithDebt(address authorised) public {
+        uint256 slot = stdstore.target(address(vault)).sig(vault.allowed.selector).with_key(authorised).find();
         bytes32 loc = bytes32(slot);
+        bool allowed = true;
+        bytes32 value = bytes32(abi.encode(allowed));
+        vm.store(address(vault), loc, value);
+
+        slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
+        loc = bytes32(slot);
         bytes32 addDebt = bytes32(abi.encode(1));
         vm.store(address(debt), loc, addDebt);
 
@@ -1472,11 +1405,7 @@ contract vaultTests is Test {
         loc = bytes32(slot);
         vm.store(address(debt), loc, addDebt);
 
-        vm.startPrank(vaultOwner);
-        vault.authorize(toAuth, true);
-        vm.stopPrank();
-
-        vm.startPrank(toAuth);
+        vm.startPrank(authorised);
         vm.expectRevert("VL_SBC: Can't change baseCurrency when Used Margin > 0");
         vault.setBaseCurrency(address(eth));
         vm.stopPrank();
@@ -1674,8 +1603,8 @@ contract vaultTests is Test {
         assetCreditRatings[2] = Constants.baycCreditRatingEth;
 
         vm.prank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,

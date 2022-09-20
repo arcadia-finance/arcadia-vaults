@@ -6,9 +6,9 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./AbstractSubRegistry.sol";
+import "./AbstractPricingModule.sol";
 import "../interfaces/IERC4626.sol";
-import "../interfaces/ISubRegistry.sol";
+import "../interfaces/IPricingModule.sol";
 import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
@@ -18,8 +18,10 @@ import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
  * @notice The StandardERC4626Registry stores pricing logic and basic information for ERC4626 tokens for which the underlying assets have direct price feed.
  * @dev No end-user should directly interact with the StandardERC4626Registry, only the Main-registry, Oracle-Hub or the contract owner
  */
-contract StandardERC4626SubRegistry is SubRegistry {
+contract StandardERC4626PricingModule is PricingModule {
     using FixedPointMathLib for uint256;
+
+    mapping(address => AssetInformation) public assetToInformation;
 
     struct AssetInformation {
         uint64 assetUnit;
@@ -28,17 +30,19 @@ contract StandardERC4626SubRegistry is SubRegistry {
         address[] underlyingAssetOracleAddresses;
     }
 
-    mapping(address => AssetInformation) public assetToInformation;
-
     /**
      * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry The address of the Main-registry
      * @param oracleHub The address of the Oracle-Hub
      */
-    constructor(address mainRegistry, address oracleHub) SubRegistry(mainRegistry, oracleHub) {}
+    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+
+    /*///////////////////////////////////////////////////////////////
+                        ASSET MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Adds a new asset to the ATokenSubRegistry, or overwrites an existing asset.
+     * @notice Adds a new asset to the ATokenPricingModule, or overwrites an existing asset.
      * @param assetAddress The contract address of the asset
      * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencies.
      * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
@@ -54,7 +58,7 @@ contract StandardERC4626SubRegistry is SubRegistry {
     function setAssetInformation(address assetAddress, uint256[] calldata assetCreditRatings) external onlyOwner {
         address underlyingAddress = address(IERC4626(assetAddress).asset());
         (uint64 assetUnit, address underlyingAssetAddress, address[] memory underlyingAssetOracleAddresses) =
-        ISubRegistry(IMainRegistry(mainRegistry).assetToSubRegistry(underlyingAddress)).getAssetInformation(
+        IPricingModule(IMainRegistry(mainRegistry).assetToPricingModule(underlyingAddress)).getAssetInformation(
             underlyingAddress
         );
 
@@ -65,9 +69,9 @@ contract StandardERC4626SubRegistry is SubRegistry {
         address[] memory tokens = new address[](1);
         tokens[0] = underlyingAssetAddress;
 
-        if (!inSubRegistry[assetAddress]) {
-            inSubRegistry[assetAddress] = true;
-            assetsInSubRegistry.push(assetAddress);
+        if (!inPricingModule[assetAddress]) {
+            inPricingModule[assetAddress] = true;
+            assetsInPricingModule.push(assetAddress);
         }
         assetToInformation[assetAddress].assetAddress = assetAddress;
         assetToInformation[assetAddress].assetUnit = assetUnit;
@@ -95,6 +99,10 @@ contract StandardERC4626SubRegistry is SubRegistry {
         );
     }
 
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
      * @param assetAddress The address of the asset
@@ -108,6 +116,10 @@ contract StandardERC4626SubRegistry is SubRegistry {
 
         return false;
     }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency
@@ -123,8 +135,8 @@ contract StandardERC4626SubRegistry is SubRegistry {
      * will return the value of the asset in USD.
      * Only one of the two values can be different from 0.
      * @dev Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
-     * @dev If the asset is not first added to subregistry this function will return value 0 without throwing an error.
-     * However no check in StandardERC4626Registry is necessary, since the check if the asset is whitelisted (and hence added to subregistry)
+     * @dev If the asset is not first added to PricingModule this function will return value 0 without throwing an error.
+     * However no check in StandardERC4626Registry is necessary, since the check if the asset is whitelisted (and hence added to PricingModule)
      * is already done in the Main-Registry.
      */
     function getValue(GetValueInput memory getValueInput)
