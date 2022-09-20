@@ -542,7 +542,7 @@ contract VaultV2Test is Test {
         assertEq(factory.latestVaultVersion(), proxy.vaultVersion());
     }
 
-    function testAssetsAfterUgradeFail(uint128 amount) public {
+    function testAssetsAfterUpgradeFail(uint128 amount) public {
         depositERC20InVault(eth, amount, vaultOwner);
         uint128[] memory tokenIds = new uint128[](3);
         tokenIds[0] = 1;
