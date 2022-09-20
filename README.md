@@ -44,7 +44,7 @@ It is foreseen that vertical protocols integrating Arcadia Vaults can determine 
 
 Thanks to our modular pricing architecture, new token primitives and new token standards can be added to existing vaults without the need for any upgrade or asset migration.
 
-![Modular pricing](https://i.ibb.co/kyWXZ6C/Arca-Fi-pricing.png)
+![Modular pricing](https://ibb.co/q5vpRHD)
 
 ## Pricing logic
 
