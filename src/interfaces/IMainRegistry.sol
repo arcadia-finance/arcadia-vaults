@@ -14,7 +14,10 @@ interface IMainRegistry {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    ) external view returns (uint256);
+    )
+        external
+        view
+        returns (uint256);
 
     function factoryAddress() external view returns (address);
 

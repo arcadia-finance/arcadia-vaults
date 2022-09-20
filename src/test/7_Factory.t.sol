@@ -354,7 +354,9 @@ contract factoryTest is Test {
     function testOwnerSetsNewVaultInfoWithDifferentLendingPoolContractInMainRegistry(
         address randomAssetAddress,
         address logic
-    ) public {
+    )
+        public
+    {
         vm.assume(logic != address(0));
         vm.assume(randomAssetAddress != 0x0000000000000000000000000000000000000000);
 
@@ -567,7 +569,9 @@ contract factoryTest is Test {
         uint16 vaultVersion,
         uint16 versionsToMake,
         uint16[] calldata versionsToBlock
-    ) public {
+    )
+        public
+    {
         vm.assume(versionsToBlock.length < 10 && versionsToBlock.length > 0);
         vm.assume(uint256(versionsToMake) + 1 < type(uint16).max);
         vm.assume(vaultVersion <= versionsToMake + 1);

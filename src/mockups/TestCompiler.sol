@@ -10,7 +10,11 @@ contract TestCompiler {
         address mainRegAddr,
         address[] calldata assets,
         uint256[] calldata baseCurrencies
-    ) public view returns (uint256[] memory) {
+    )
+        public
+        view
+        returns (uint256[] memory)
+    {
         uint256[] memory ratings = new uint256[](assets.length);
 
         for (uint256 i; i < assets.length; i++) {

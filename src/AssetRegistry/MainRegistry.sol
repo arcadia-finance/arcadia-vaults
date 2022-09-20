@@ -119,7 +119,10 @@ contract MainRegistry is Ownable, RiskModule {
     function addBaseCurrency(
         BaseCurrencyInformation calldata baseCurrencyInformation,
         uint256[] calldata assetCreditRatings
-    ) external onlyOwner {
+    )
+        external
+        onlyOwner
+    {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
@@ -287,7 +290,10 @@ contract MainRegistry is Ownable, RiskModule {
         address[] calldata assets,
         uint256[] calldata _baseCurrencies,
         uint256[] calldata newCreditRating
-    ) external onlyOwner {
+    )
+        external
+        onlyOwner
+    {
         uint256 assetsLength = assets.length;
         require(
             assetsLength == _baseCurrencies.length && assetsLength == newCreditRating.length, "MR_BSCR: LENGTH_MISMATCH"
@@ -321,7 +327,11 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 valueInBaseCurrency) {
+    )
+        public
+        view
+        returns (uint256 valueInBaseCurrency)
+    {
         valueInBaseCurrency =
             getTotalValue(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
@@ -342,7 +352,11 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    ) public view returns (uint256 valueInBaseCurrency) {
+    )
+        public
+        view
+        returns (uint256 valueInBaseCurrency)
+    {
         uint256 valueInUsd;
 
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
@@ -412,7 +426,11 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    ) public view returns (uint256[] memory valuesPerAsset) {
+    )
+        public
+        view
+        returns (uint256[] memory valuesPerAsset)
+    {
         valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
@@ -432,7 +450,11 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    ) public view returns (uint256[] memory valuesPerAsset) {
+    )
+        public
+        view
+        returns (uint256[] memory valuesPerAsset)
+    {
         valuesPerAsset = new uint256[](_assetAddresses.length);
 
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
@@ -510,7 +532,11 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    ) public view returns (uint256[] memory valuesPerCreditRating) {
+    )
+        public
+        view
+        returns (uint256[] memory valuesPerCreditRating)
+    {
         valuesPerCreditRating =
             getListOfValuesPerCreditRating(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
@@ -533,7 +559,11 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    ) public view returns (uint256[] memory valuesPerCreditRating) {
+    )
+        public
+        view
+        returns (uint256[] memory valuesPerCreditRating)
+    {
         valuesPerCreditRating = new uint256[](CREDIT_RATING_CATOGERIES);
         uint256[] memory valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrency);

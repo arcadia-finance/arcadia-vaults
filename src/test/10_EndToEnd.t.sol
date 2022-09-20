@@ -632,7 +632,9 @@ contract EndToEndTest is Test {
         uint128 amountEth,
         uint128 amountEthWithdrawal,
         uint128 amountCredit
-    ) public {
+    )
+        public
+    {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
         (uint16 collThres,,) = proxy.vault();
         vm.assume(amountEth < type(uint128).max / collThres);

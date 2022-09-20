@@ -306,7 +306,9 @@ contract OracleHubTest is Test {
     function testReturnUsdRateWhenBaseCurrencyIsUsdForSingleOracleSuccess(
         uint256 rateEthToUsd,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleEthToUsdDecimals less than equal to 18, rateEthToUsd less than equal to max uint256 value,
         // rateEthToUsd is less than max uint256 value divided by WAD
         vm.assume(oracleEthToUsdDecimals <= 18);
@@ -351,7 +353,9 @@ contract OracleHubTest is Test {
     function testReturnUsdRateWhenBaseCurrencyIsUsdForSingleOracleOverflow(
         uint256 rateEthToUsd,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleEthToUsdDecimals less than equal to 18, rateEthToUsd less than equal to max uint256 value,
         // rateEthToUsd is more than max uint256 value divided by WAD
         vm.assume(oracleEthToUsdDecimals <= 18);
@@ -394,7 +398,9 @@ contract OracleHubTest is Test {
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleSnxToEthDecimals and oracleEthToUsdDecimals is less than equal to 18,
         // rateSnxToEth and rateEthToUsd is less than equal to uint256 max value, rateSnxToEth is less than equal to uint256 max value divided by WAD
         vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
@@ -468,7 +474,9 @@ contract OracleHubTest is Test {
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleSnxToEthDecimals and oracleEthToUsdDecimals is less than equal to 18,
         // rateSnxToEth and rateEthToUsd is less than equal to uint256 max value, rateSnxToEth is bigger than uint256 max value divided by WAD
         vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
@@ -526,7 +534,9 @@ contract OracleHubTest is Test {
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleSnxToEthDecimals and oracleEthToUsdDecimals is less than equal to 18,
         // rateSnxToEth and rateEthToUsd is less than equal uint256 max value, rateSnxToEth is bigger than 0
         vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
@@ -589,7 +599,9 @@ contract OracleHubTest is Test {
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleSnxToEthDecimals and oracleEthToUsdDecimals is less than equal to 18,
         // rateEthToUsd is less than equal to uint256 max value, rateSnxToEth is 0
         uint256 rateSnxToEth = 0;
@@ -652,7 +664,9 @@ contract OracleHubTest is Test {
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleSnxToEthDecimals and oracleEthToUsdDecimals is less than equal to 18,
         // rateSnxToEth and rateEthToUsd is less than equal to uint256 max value, rateSnxToEth is less than equak to max uint256 value divided by WAD
         vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
@@ -715,7 +729,9 @@ contract OracleHubTest is Test {
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleSnxToEthDecimals and oracleEthToUsdDecimals is less than equal to 18,
         // rateSnxToEth and rateEthToUsd is less than equal to uint256 max value, rateSnxToEth is 0
         vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
@@ -773,7 +789,9 @@ contract OracleHubTest is Test {
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleSnxToEthDecimals and oracleEthToUsdDecimals is less than equal to 18,
         // rateSnxToEth and rateEthToUsd is less than equal to uint256 max value, rateSnxToEth is less than equak to max uint256 value divided by WAD
         vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
@@ -847,7 +865,9 @@ contract OracleHubTest is Test {
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleSnxToEthDecimals and oracleEthToUsdDecimals is less than equal to 18,
         // rateSnxToEth and rateEthToUsd is less than equal to uint256 max value
         vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
@@ -905,7 +925,9 @@ contract OracleHubTest is Test {
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleSnxToEthDecimals and oracleEthToUsdDecimals is less than equal to 18,
         // rateSnxToEth and rateEthToUsd is less than equal to uint256 max value, rateSnxToEth is bigger than 0
         vm.assume(oracleSnxToEthDecimals <= 18 && oracleEthToUsdDecimals <= 18);
@@ -968,7 +990,9 @@ contract OracleHubTest is Test {
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
-    ) public {
+    )
+        public
+    {
         // Given: oracleSnxToEthDecimals and oracleEthToUsdDecimals is less than equal to 18,
         // rateEthToUsd is less than equal to uint256 max value, rateSnxToEth is 0
         uint256 rateSnxToEth = 0;

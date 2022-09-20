@@ -417,13 +417,7 @@ contract Vault {
 
         require(
             ILiquidator(liquidator).startAuction(
-                address(this),
-                life,
-                liquidationKeeper,
-                owner,
-                openDebt,
-                vault.liqThres,
-                baseCurrencyIdentifier
+                address(this), life, liquidationKeeper, owner, openDebt, vault.liqThres, baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );
@@ -467,7 +461,11 @@ contract Vault {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    ) external payable onlyOwner {
+    )
+        external
+        payable
+        onlyOwner
+    {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
@@ -526,7 +524,11 @@ contract Vault {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    ) external payable onlyOwner {
+    )
+        external
+        payable
+        onlyOwner
+    {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
