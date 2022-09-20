@@ -64,7 +64,7 @@ contract VaultV2 {
 
     struct VaultInfo {
         uint16 collFactor; //2 decimals precision (factor 100)
-        uint8 liqThres; //2 decimals precision (factor 100)
+        uint16 liqThres; //2 decimals precision (factor 100)
         address baseCurrency;
     }
 
@@ -99,9 +99,9 @@ contract VaultV2 {
 
     constructor() {}
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Initiates the variables of the vault
@@ -143,9 +143,9 @@ contract VaultV2 {
         }
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         OWNERSHIP MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
@@ -171,9 +171,9 @@ contract VaultV2 {
         emit OwnershipTransferred(oldOwner, newOwner);
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         BASE CURRENCY LOGIC
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Sets the baseCurrency of a vault.
@@ -194,9 +194,9 @@ contract VaultV2 {
         vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                     MARGIN ACCOUNT SETTINGS
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Initiates a margin account on the vault for one trusted application..
@@ -234,9 +234,9 @@ contract VaultV2 {
         allowed[trustedProtocol] = false;
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                           MARGIN REQUIREMENTS
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Can be called by authorised applications to open or increase a margin position.
@@ -254,6 +254,12 @@ contract VaultV2 {
             _setBaseCurrency(baseCurrency);
         }
         success = getFreeMargin() >= amount;
+        // Update the vault values
+        (address[] memory AllAssetAddresses, uint256[] memory AllAssetIds, uint256[] memory AllAssetAmounts) =
+            generateAssetData();
+        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
+            AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency
+        );
     }
 
     /**
@@ -263,8 +269,15 @@ contract VaultV2 {
      * @return success Boolean indicating if there the margin position is successfully decreased.
      * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
      */
-    function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
+    function decreaseMarginPosition(address baseCurrency, uint256) public onlyAuthorized returns (bool success) {
         success = baseCurrency == vault.baseCurrency;
+
+        // Update the vault values
+        (address[] memory AllAssetAddresses, uint256[] memory AllAssetIds, uint256[] memory AllAssetAmounts) =
+            generateAssetData();
+        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
+            AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency
+        );
     }
 
     /**
@@ -368,9 +381,9 @@ contract VaultV2 {
         }
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                           LIQUIDATION LOGIC
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Function called to start a vault liquidation.
@@ -390,16 +403,13 @@ contract VaultV2 {
         uint128 openDebt = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
-        uint256 liquidityThreshold = IRegistry(registryAddress).getLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
-        );
 
         unchecked {
             //gas: cannot overflow unless totalValue is
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
             //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = liquidityThreshold * uint256(openDebt);
+            rightHand = uint256(vault.liqThres) * uint256(openDebt);
         }
 
         require(leftHand < rightHand, "V_LV: This vault is healthy");
@@ -408,13 +418,7 @@ contract VaultV2 {
 
         require(
             ILiquidator(liquidator).startAuction(
-                address(this),
-                life,
-                liquidationKeeper,
-                owner,
-                openDebt,
-                uint8(liquidityThreshold),
-                baseCurrencyIdentifier
+                address(this), life, liquidationKeeper, owner, openDebt, vault.liqThres, baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );
@@ -427,9 +431,9 @@ contract VaultV2 {
         return (true, liquidator);
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                     ASSET DEPOSIT/WITHDRAWN LOGIC
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Deposits assets into the proxy vault by the proxy vault owner.
@@ -748,9 +752,9 @@ contract VaultV2 {
         IERC1155(ERC1155Address).safeTransferFrom(address(this), to, id, amount, "");
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         HELPER FUNCTIONS
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Generates three arrays about the stored assets in the proxy vault
