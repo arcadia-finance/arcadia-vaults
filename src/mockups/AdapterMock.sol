@@ -11,8 +11,6 @@ contract AdapterMock is AdapterBase {
         AdapterBase(_integrationManager)
     {}
 
-
-    //Make this 
     function _selector(
         address _vaultProxy,
         bytes calldata _actionData,
@@ -22,7 +20,7 @@ contract AdapterMock is AdapterBase {
             address[] memory path,
             uint256 outgoingAssetAmount,
             uint256 minIncomingAssetAmount
-        ) = __decodeTakeOrderCallArgs(_actionData);
+        ) = __decodeSelectorCallArgs(_actionData);
     }
     function parseAssetsForAction(
         address,
@@ -33,62 +31,42 @@ contract AdapterMock is AdapterBase {
         view
         override
         returns (
-            address[] memory spendAssets_,
-            uint256[] memory spendAssetAmounts_,
-            address[] memory incomingAssets_,
-            uint256[] memory minIncomingAssetAmounts_
+            address actionAddress,
+            uint256 actionAmount,
         )
     {
-        require(_selector == TAKE_ORDER_SELECTOR, "parseAssetsForAction: _selector invalid");
+        require(_selector == bytes4(keccak256("_selector(address,bytes,bytes)")), "parseAssetsForAction: _selector invalid");
 
-        return __parseAssetsForTakeOrder(_actionData);
+        return __parseAssetsForSelector(_actionData);
     }
 
-    function __parseAssetsForTakeOrder(bytes calldata _actionData)
+    function __parseAssetsForSelector(bytes calldata _actionData)
         private
         pure
         returns (
-            address[] memory spendAssets_,
-            uint256[] memory spendAssetAmounts_,
-            address[] memory incomingAssets_,
-            uint256[] memory minIncomingAssetAmounts_
+            address actionAddress,
+            uint256 actionAmount,
         )
     {
         (
-            address[] memory path,
-            uint256 outgoingAssetAmount,
-            uint256 minIncomingAssetAmount
-        ) = __decodeTakeOrderCallArgs(_actionData);
-
-        require(path.length >= 2, "__parseAssetsForTakeOrder: _path must be >= 2");
-
-        spendAssets_ = new address[](1);
-        spendAssets_[0] = path[0];
-        spendAssetAmounts_ = new uint256[](1);
-        spendAssetAmounts_[0] = outgoingAssetAmount;
-
-        incomingAssets_ = new address[](1);
-        incomingAssets_[0] = path[path.length - 1];
-        minIncomingAssetAmounts_ = new uint256[](1);
-        minIncomingAssetAmounts_[0] = minIncomingAssetAmount;
+            address actionAddress_,
+            uint256 actionAmount_,
+        ) = __decodeSelectorCallArgs(_actionData);
 
         return (
-            spendAssets_,
-            spendAssetAmounts_,
-            incomingAssets_,
-            minIncomingAssetAmounts_
+            actionAddress_,
+            actionAmount_,
         );
     }
 
-     function __decodeTakeOrderCallArgs(bytes memory _actionData)
+     function __decodeSelectorCallArgs(bytes memory _actionData)
         private
         pure
         returns (
-            address[] memory path_,
-            uint256 outgoingAssetAmount_,
-            uint256 minIncomingAssetAmount_
+            address actionAddress,
+            uint256 actionAmount,
         )
     {
-        return abi.decode(_actionData, (address[], uint256, uint256));
+        return abi.decode(_actionData, (address, uint256));
     }
 }
