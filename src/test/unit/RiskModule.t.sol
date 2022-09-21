@@ -32,11 +32,12 @@ contract RiskModuleTest is Test {
     )
         public
     {
+        // Given: 2 Assets with 2 values and values has to be bigger than zero for success
         vm.assume(firstValue > 0); // value of the asset can not be zero
         vm.assume(secondValue > 0); // value of the asset can not be zero
 
-        vm.assume(firstValue < 100_000_000_000_000 * 10 ** 18);
-        vm.assume(secondValue < 100_000_000_000_000 * 10 ** 18);
+        vm.assume(firstValue < type(uint256).max / 2);
+        vm.assume(secondValue < type(uint256).max / 2);
 
         address[] memory addresses = new address[](2);
         addresses[0] = firstAsset;
@@ -46,12 +47,16 @@ contract RiskModuleTest is Test {
         values[0] = firstValue;
         values[1] = secondValue;
 
+        // When: The liquidation threshold is calculated with given values
         uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values);
 
+        // Then: The liquidation threshold has to be bigger than zero
         assertTrue(liqThres > 0);
     }
 
     function testCalculateWeightedLiquidationThresholdFail(address firstAsset, address secondAsset) public {
+
+        // Given: The address of assets and the values of assets. The values of assets are zero
         uint256 firstValue = 0;
         uint256 secondValue = 0;
 
@@ -63,6 +68,7 @@ contract RiskModuleTest is Test {
         values[0] = firstValue;
         values[1] = secondValue;
 
+        // When Then: Calculation of the liquidation threshold should fail since the total value can't be zero
         vm.expectRevert("RM_CWLT: Total asset value must be bigger than zero");
         uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values);
     }
@@ -75,6 +81,7 @@ contract RiskModuleTest is Test {
     )
         public
     {
+        // Given: 2 Assets with 2 values and values has to be bigger than zero for success
         vm.assume(firstValue > 0); // value of the asset can not be zero
         vm.assume(secondValue > 0); // value of the asset can not be zero
 
@@ -89,12 +96,16 @@ contract RiskModuleTest is Test {
         values[0] = firstValue;
         values[1] = secondValue;
 
+        // When: The collateral factor is calculated with given values
         uint16 collFactor = riskModule.calculateWeightedCollateralFactor(addresses, values);
 
+        // Then: The collateral factor has to be bigger than zero
         assertTrue(collFactor > 0);
     }
 
     function testCalculateWeightedCollateralFactorFail(address firstAsset, address secondAsset) public {
+
+        // Given: The address of assets and the values of assets. The values of assets are zero
         uint256 firstValue = 0;
         uint256 secondValue = 0;
 
@@ -106,6 +117,7 @@ contract RiskModuleTest is Test {
         values[0] = firstValue;
         values[1] = secondValue;
 
+        // When Then: Calculation of the collateral factor should fail since the total value can't be zero
         vm.expectRevert("RM_CWCF: Total asset value must be bigger than zero");
         uint16 collFactor = riskModule.calculateWeightedCollateralFactor(addresses, values);
     }
