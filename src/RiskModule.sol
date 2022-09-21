@@ -55,6 +55,9 @@ contract RiskModule is Ownable {
             if (collFact < minCollateralFactor) {
                 minCollateralFactor = collFact;
             }
+            unchecked {
+                ++i;
+            }
         }
         return minCollateralFactor;
     }
