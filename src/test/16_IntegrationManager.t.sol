@@ -126,5 +126,39 @@ contract CallOnIntegrationTest is IntegrationManagerTest {
         );
         vm.stopPrank();
     }
+
+        function testSuccess_callAdapterExpectedReturnData(address actionAddress, uint256 actionAmount) public {
+        
+        bytes4 _selector =  bytes4(keccak256("_selector(address,bytes,bytes)"));
+        address _vaultProxy = address(vault);
+        bytes memory _integrationData = abi.encode(actionAddress, actionAmount);
+
+        vm.startPrank(address(im));
+        (bool success, bytes memory returnData) = address(adapter).call(
+            abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes(""))
+        );
+        vm.stopPrank();
+
+
+        assertEq(success, true);
+        
+        (
+            address[] memory spendAssets_,
+            uint256[] memory spendAssetAmounts_,
+            address[] memory incomingAssets_,
+            uint256[] memory minIncomingAssetAmounts_
+        ) = abi.decode(returnData, (address[], uint256[],address[], uint256[]));
+
+        assertEq(spendAssets_.length, 1);
+        assertEq(spendAssetAmounts_.length, 1);
+        assertEq(incomingAssets_.length, 1);
+        assertEq(minIncomingAssetAmounts_.length, 1);
+        
+        assertEq(spendAssets_[0], actionAddress);
+        assertEq(spendAssetAmounts_[0], actionAmount);
+        assertEq(incomingAssets_[0], actionAddress);
+        assertEq(minIncomingAssetAmounts_[0], actionAmount);
+
+    }
     
 }
