@@ -7,6 +7,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./utils/FixedPointMathLib.sol";
 
 /**
  * @title Risk Module
@@ -15,6 +16,8 @@ import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
  * @dev No end-user should directly interact with the Risk Module
  */
 contract RiskModule is Ownable {
+    using FixedPointMathLib for uint256;
+
     // TODO: To be deleted after the asset specific values are implemented
     function getCollateralFactorHARDCODED(address assetAddress) public view returns (uint16) {
         return 150;
@@ -77,7 +80,7 @@ contract RiskModule is Ownable {
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
             collFact = getCollateralFactorHARDCODED(assetAddress);
-            collateralValue += valuesPerAsset[i] * 100 / uint256(collFact);
+            collateralValue += valuesPerAsset[i].mulDivDown(100, uint256(collFact));
             unchecked {
                 ++i;
             }
@@ -106,7 +109,7 @@ contract RiskModule is Ownable {
             totalValue += valuesPerAsset[i];
             address assetAddress = assetAddresses[i];
             collFact = getCollateralFactorHARDCODED(assetAddress);
-            collateralFactor += collFact * valuesPerAsset[i];
+            collateralFactor += valuesPerAsset[i].mulDivDown(uint256(collFact), 1);
             unchecked {
                 i++;
             }
@@ -131,20 +134,20 @@ contract RiskModule is Ownable {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CWLT: LENGTH_MISMATCH");
         uint256 liquidationThreshold;
-        uint256 totalValue = 0;
+        uint256 totalValue;
 
         uint16 liqThreshold;
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
             address assetAddress = assetAddresses[i];
             liqThreshold = getLiquidationThresholdHARDCODED(assetAddress);
-            liquidationThreshold += uint256(liqThreshold) * valuesPerAsset[i];
+            liquidationThreshold += valuesPerAsset[i].mulDivDown(uint256(liqThreshold), 1);
             unchecked {
                 i++;
             }
         }
         require(totalValue > 0, "RM_CWLT: Total asset value must be bigger than zero");
-        liquidationThreshold = liquidationThreshold / totalValue;
+        liquidationThreshold = liquidationThreshold.mulDivDown(1, totalValue);
         return uint16(liquidationThreshold);
     }
 
