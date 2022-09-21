@@ -255,7 +255,7 @@ contract VaultV2 {
         }
         success = getFreeMargin() >= amount;
         // Update the vault values
-        (address[] memory AllAssetAddresses, uint256[] memory AllAssetIds, uint256[] memory AllAssetAmounts) =
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
             AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency
@@ -273,7 +273,7 @@ contract VaultV2 {
         success = baseCurrency == vault.baseCurrency;
 
         // Update the vault values
-        (address[] memory AllAssetAddresses, uint256[] memory AllAssetIds, uint256[] memory AllAssetAmounts) =
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
             AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency
