@@ -107,7 +107,7 @@ contract RiskModule is Ownable {
         uint256 totalValue;
         uint256 collateralFactor;
         uint16 collFact;
-        address assetAddresses;
+        address assetAddress;
 
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
