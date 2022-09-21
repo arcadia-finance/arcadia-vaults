@@ -17,9 +17,8 @@ contract AdapterMock is AdapterBase {
         bytes calldata
     ) external onlyIntegrationManager {
         (
-            address[] memory path,
-            uint256 outgoingAssetAmount,
-            uint256 minIncomingAssetAmount
+            address actionAddress,
+            uint256 actionAmount
         ) = __decodeSelectorCallArgs(_actionData);
     }
     function parseAssetsForAction(
@@ -31,8 +30,10 @@ contract AdapterMock is AdapterBase {
         view
         override
         returns (
-            address actionAddress,
-            uint256 actionAmount,
+            address[] memory spendAssets_,
+            uint256[] memory spendAssetAmounts_,
+            address[] memory incomingAssets_,
+            uint256[] memory minIncomingAssetAmounts_
         )
     {
         require(_selector == bytes4(keccak256("_selector(address,bytes,bytes)")), "parseAssetsForAction: _selector invalid");
@@ -44,18 +45,33 @@ contract AdapterMock is AdapterBase {
         private
         pure
         returns (
-            address actionAddress,
-            uint256 actionAmount,
+            address[] memory spendAssets_,
+            uint256[] memory spendAssetAmounts_,
+            address[] memory incomingAssets_,
+            uint256[] memory minIncomingAssetAmounts_
         )
     {
         (
             address actionAddress_,
-            uint256 actionAmount_,
+            uint256 actionAmount_
         ) = __decodeSelectorCallArgs(_actionData);
 
+        spendAssets_ = new address[](1);
+        spendAssets_[0] = actionAddress_;
+        spendAssetAmounts_ = new uint256[](1);
+        spendAssetAmounts_[0] = actionAmount_;
+
+        incomingAssets_ = new address[](1);
+        incomingAssets_[0] = actionAddress_;
+        minIncomingAssetAmounts_ = new uint256[](1);
+        minIncomingAssetAmounts_[0] = actionAmount_;
+
+
         return (
-            actionAddress_,
-            actionAmount_,
+            spendAssets_,
+            spendAssetAmounts_,
+            incomingAssets_,
+            minIncomingAssetAmounts_
         );
     }
 
@@ -64,7 +80,7 @@ contract AdapterMock is AdapterBase {
         pure
         returns (
             address actionAddress,
-            uint256 actionAmount,
+            uint256 actionAmount
         )
     {
         return abi.decode(_actionData, (address, uint256));

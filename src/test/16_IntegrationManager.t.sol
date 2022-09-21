@@ -99,13 +99,28 @@ contract CallOnIntegrationTest is IntegrationManagerTest {
         vm.stopPrank();
     }
 
-    function testSuccess_callAdapter() public {
+    function testSuccess_callAdapter(address actionAddress, uint256 actionAmount) public {
         
         bytes4 _selector =  bytes4(keccak256("_selector(address,bytes,bytes)"));
         address _vaultProxy = address(vault);
-        bytes memory _integrationData = bytes("");
+        bytes memory _integrationData = abi.encode(actionAddress, actionAmount);
 
         vm.startPrank(address(im));
+        (bool success, bytes memory returnData) = address(adapter).call(
+            abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes(""))
+        );
+        vm.stopPrank();
+    }
+    function testSuccess_callAdapterNotIntegrationManager(address notIntegrationManager, address actionAddress, uint256 actionAmount) public {
+        vm.assume(notIntegrationManager != address(im));
+
+        bytes4 _selector =  bytes4(keccak256("_selector(address,bytes,bytes)"));
+        address _vaultProxy = address(vault);
+        bytes memory _integrationData = abi.encode(actionAddress, actionAmount);
+
+        vm.startPrank(notIntegrationManager);
+
+        vm.expectRevert("Only the IntegrationManager can call this function");
         (bool success, bytes memory returnData) = address(adapter).call(
             abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes(""))
         );
