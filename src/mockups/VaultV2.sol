@@ -258,7 +258,7 @@ contract VaultV2 {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
-            AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency
+            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
         );
     }
 
@@ -276,7 +276,7 @@ contract VaultV2 {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
-            AllAssetAddresses, AllAssetIds, AllAssetAmounts, vault.baseCurrency
+            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
         );
     }
 
