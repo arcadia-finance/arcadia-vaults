@@ -3,9 +3,8 @@ pragma solidity >=0.8.0 <0.9.0;
 /// @title IIntegrationManager interface
 /// @notice Interface for the IntegrationManager
 interface IIntegrationManager {
-        function __callOnIntegration(
+        function receiveCallFromVault(
         address _caller,
-        address _vaultProxy,
-        bytes memory _callArgs
-        ) external returns (bool);
+        bytes calldata _callArgs
+        ) external;
 }

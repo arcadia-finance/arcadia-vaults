@@ -58,7 +58,6 @@ contract IntegrationManager is Ownable
         bytes calldata _callArgs
     ) external {
         address vaultProxy = msg.sender;
-
         require(
             IVault(vaultProxy).owner() == _caller, //
             "receiveCallFromVaultProxy: Unauthorized"

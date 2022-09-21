@@ -7,8 +7,8 @@
 pragma solidity ^0.8.13;
 
 import "../../lib/forge-std/src/Test.sol";
-
 import "../Integrations/IntegrationManager.sol";
+import "../mockups/AdapterMock.sol";
 import "../Vault.sol";
 
 abstract contract IntegrationManagerTest is Test {
@@ -16,6 +16,7 @@ abstract contract IntegrationManagerTest is Test {
 
     Vault vault;
     IntegrationManager im;
+    AdapterMock adapter;
 
     address deployer = address(1);
     address vaultOwner = address(2);
@@ -30,7 +31,7 @@ abstract contract IntegrationManagerTest is Test {
         vm.startPrank(deployer);
         vault = new Vault();
         im = new IntegrationManager();
-        adapter = new MockAdapter();
+        adapter = new AdapterMock(address(im));
         vm.stopPrank();
 
         // Cheat owner
@@ -66,6 +67,7 @@ contract DeploymentTest is IntegrationManagerTest {
     }
 }
 
+
 /*//////////////////////////////////////////////////////////////
                         COI LOGIC
 //////////////////////////////////////////////////////////////*/
@@ -73,12 +75,41 @@ contract CallOnIntegrationTest is IntegrationManagerTest {
     
     function setUp() public override {
         super.setUp();
+
     }
 
-    function testSuccess_callOnIntegration() public {
+    // double check possible exploit that implements owner()??
+    function testSuccess_receiveCallFromVaultNotVault(address notVault) public {
+        vm.assume(notVault != address(vault));
+        bytes memory callArgs_ = abi.encode(address(adapter),bytes4(keccak256("takeOrder(address,bytes,bytes)")), abi.encode("test"));
 
-        callArgs_ = abi.encode("adapter",bytes4(keccak256("takeOrder(address,bytes,bytes)")), gg );
-
-        im.__callOnIntegration(vaultOwner, address(vault), _callArgs);
+        vm.startPrank(notVault);
+        vm.expectRevert(bytes(""));
+        im.receiveCallFromVault(vaultOwner, callArgs_);
+        vm.stopPrank();
     }
+    function testSuccess_receiveCallFromVaultNotVaultOwner(address notVaultOwner) public {
+        vm.assume(notVaultOwner != address(vaultOwner));
+        vm.assume(notVaultOwner != address(vault));
+        bytes memory callArgs_ = abi.encode(address(adapter),bytes4(keccak256("takeOrder(address,bytes,bytes)")), abi.encode("test"));
+
+        vm.startPrank(address(vault));
+        vm.expectRevert("receiveCallFromVaultProxy: Unauthorized");
+        im.receiveCallFromVault(notVaultOwner, callArgs_);
+        vm.stopPrank();
+    }
+
+    function testSuccess_callAdapter() public {
+        
+        bytes4 _selector =  bytes4(keccak256("_selector(address,bytes,bytes)"));
+        address _vaultProxy = address(vault);
+        bytes memory _integrationData = bytes("");
+
+        vm.startPrank(address(im));
+        (bool success, bytes memory returnData) = address(adapter).call(
+            abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes(""))
+        );
+        vm.stopPrank();
+    }
+    
 }

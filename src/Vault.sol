@@ -806,12 +806,10 @@ contract Vault {
                         INTEGRATION FUNCTIONS
     ///////////////////////////////////////////////////////////////*/
     function callOnIntegration(
-        address _caller,
-        address _vaultProxy,
         bytes memory _callArgs) public payable onlyOwner returns (bool success) {
 
-        IIntegrationManager(integrationManager).__callOnIntegration(_caller, _vaultProxy, _callArgs);
-        return true;
+        IIntegrationManager(integrationManager).receiveCallFromVault(msg.sender, _callArgs);
+        return true; //change return value
     }
 
 
