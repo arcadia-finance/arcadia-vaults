@@ -65,7 +65,7 @@ contract OracleHubTest is Test {
         oracleHub = new OracleHub();
     }
 
-    function testOwnerAddsOracleSucces(uint64 oracleEthToUsdUnit) public {
+    function testSuccess_addOracle_Owner(uint64 oracleEthToUsdUnit) public {
         // Given: oracleEthToUsdUnit is less than equal to 1 ether
         vm.assume(oracleEthToUsdUnit <= 10 ** 18);
         vm.startPrank(creatorAddress);
@@ -87,7 +87,7 @@ contract OracleHubTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerOverwritesOracleFail() public {
+    function testRevert_addOracle_OwnerOverwritesOracle() public {
         vm.startPrank(creatorAddress);
         // Given: creatorAddress addOracle with OracleInformation
         oracleHub.addOracle(
@@ -119,7 +119,7 @@ contract OracleHubTest is Test {
         vm.stopPrank();
     }
 
-    function testNonOwnerAddsOracleFail(address unprivilegedAddress) public {
+    function testRevert_addOracle_NonOwner(address unprivilegedAddress) public {
         // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         // When: unprivilegedAddress addOracle
@@ -140,7 +140,7 @@ contract OracleHubTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsOracleBigOracleUnitFail(uint64 oracleEthToUsdUnit) public {
+    function testRevert_addOracle_OwnerAddsOracleBigOracleUnit(uint64 oracleEthToUsdUnit) public {
         // Given: oracleEthToUsdUnit is bigger than 1 ether
         vm.assume(oracleEthToUsdUnit > 10 ** 18);
         // When: creatorAddress addOracle
@@ -161,7 +161,7 @@ contract OracleHubTest is Test {
         vm.stopPrank();
     }
 
-    function testCheckOracleSequenceSingleOracleToUsd() public {
+    function testSuccess_checkOracleSequence_SingleOracleToUsd() public {
         vm.startPrank(creatorAddress);
         // Given: creatorAddress addOracle with OracleInformation
         oracleHub.addOracle(
@@ -182,7 +182,7 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesEthToUsd);
     }
 
-    function testCheckOracleSequenceMultipleOraclesToUsd() public {
+    function testSuccess_checkOracleSequence_MultipleOraclesToUsd() public {
         vm.startPrank(creatorAddress);
         // Given: creatorAddress addOracle for ETH-USD and SNX-USD
         oracleHub.addOracle(
@@ -215,7 +215,7 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesSnxToUsd);
     }
 
-    function testCheckOracleSequenceUnknownOracle() public {
+    function testRevert_checkOracleSequence_UnknownOracle() public {
         // Given: oraclesLinkToUsd index 0 equal to
         oraclesLinkToUsd[0] = address(oracleLinkToUsd);
         // When: checkOracleSequence
@@ -225,7 +225,7 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesSnxToUsd);
     }
 
-    function testCheckOracleSequenceNonMatchingBaseAndQuoteAssets() public {
+    function testRevert_checkOracleSequence_NonMatchingBaseAndQuoteAssets() public {
         vm.startPrank(creatorAddress);
         // Given: creatorAddress addOracle with OracleInformation for SNX-ETH and LINK-USD
         oracleHub.addOracle(
@@ -259,7 +259,7 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesSnxToUsd);
     }
 
-    function testCheckOracleSequenceLastBaseAssetNotUsd() public {
+    function testRevert_checkOracleSequence_LastBaseAssetNotUsd() public {
         vm.startPrank(creatorAddress);
         // Given: creatorAddress addOracle with OracleInformation for SNX-ETH
         oracleHub.addOracle(
@@ -281,7 +281,7 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesSnxToEth);
     }
 
-    function testCheckOracleSequenceMoreThanThreeOracles() public {
+    function testRevert_checkOracleSequence_MoreThanThreeOracles() public {
         vm.startPrank(creatorAddress);
         // Given: creatorAddress addOracle with OracleInformation for SNX-ETH
         oracleHub.addOracle(
@@ -303,7 +303,7 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesSequence);
     }
 
-    function testReturnUsdRateWhenBaseCurrencyIsUsdForSingleOracleSuccess(
+    function testSuccess_getRate_WhenBaseCurrencyIsUsdForSingleOracle(
         uint256 rateEthToUsd,
         uint8 oracleEthToUsdDecimals
     ) public {
@@ -348,7 +348,7 @@ contract OracleHubTest is Test {
         assertEq(actualRateInBaseCurrency, expectedRateInBaseCurrency);
     }
 
-    function testReturnUsdRateWhenBaseCurrencyIsUsdForSingleOracleOverflow(
+    function testRevert_getRate_WhenBaseCurrencyIsUsdForSingleOracleOverflow(
         uint256 rateEthToUsd,
         uint8 oracleEthToUsdDecimals
     ) public {
@@ -389,7 +389,7 @@ contract OracleHubTest is Test {
         oracleHub.getRate(oraclesEthToUsd, Constants.UsdBaseCurrency);
     }
 
-    function testReturnUsdRateWhenBaseCurrencyIsUsdForMultipleOraclesSucces(
+    function testSuccess_getRate_WhenBaseCurrencyIsUsdForMultipleOracles(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -463,7 +463,7 @@ contract OracleHubTest is Test {
         assertEq(expectedRateInBaseCurrency, actualRateInBaseCurrency);
     }
 
-    function testReturnUsdRateWhenBaseCurrencyIsUsdForMultipleOraclesOverflow1(
+    function testRevert_getRate_WhenBaseCurrencyIsUsdForMultipleOraclesOverflow1(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -521,7 +521,7 @@ contract OracleHubTest is Test {
         oracleHub.getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
     }
 
-    function testReturnUsdRateWhenBaseCurrencyIsUsdForMultipleOraclesOverflow2(
+    function testRevert_getRate_WhenBaseCurrencyIsUsdForMultipleOraclesOverflow2(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -585,7 +585,7 @@ contract OracleHubTest is Test {
         oracleHub.getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
     }
 
-    function testReturnUsdRateWhenBaseCurrencyIsUsdForMultipleOraclesFirstRateIsZero(
+    function testSuccess_getRate_WhenBaseCurrencyIsUsdForMultipleOraclesFirstRateIsZero(
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
@@ -647,7 +647,7 @@ contract OracleHubTest is Test {
         assertEq(expectedRateInBaseCurrency, actualRateInBaseCurrency);
     }
 
-    function testReturnBaseCurrencyRateWhenBaseCurrencyIsNotUsdSucces(
+    function testSuccess_getRate_WhenBaseCurrencyIsNotUsd(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -710,7 +710,7 @@ contract OracleHubTest is Test {
         assertEq(expectedRateInBaseCurrency, actualRateInBaseCurrency);
     }
 
-    function testReturnBaseCurrencyRateWhenBaseCurrencyIsNotUsdOverflow(
+    function testRevert_getRate_WhenBaseCurrencyIsNotUsdOverflow(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -768,7 +768,7 @@ contract OracleHubTest is Test {
         oracleHub.getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
     }
 
-    function testReturnUsdRateWhenBaseCurrencyIsNotUsdSucces(
+    function testSuccess_getRate_WhenBaseCurrencyIsNotUsdSucces(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -842,7 +842,7 @@ contract OracleHubTest is Test {
         assertEq(expectedRateInBaseCurrency, actualRateInBaseCurrency);
     }
 
-    function testReturnUsdRateWhenBaseCurrencyIsNotUsdOverflow1(
+    function testRevert_getRate_WhenBaseCurrencyIsNotUsdOverflow1(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -900,7 +900,7 @@ contract OracleHubTest is Test {
         oracleHub.getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
     }
 
-    function testReturnUsdRateWhenBaseCurrencyIsNotUsdOverflow2(
+    function testRevert_getRate_WhenBaseCurrencyIsNotUsdOverflow2(
         uint256 rateSnxToEth,
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
@@ -964,7 +964,7 @@ contract OracleHubTest is Test {
         oracleHub.getRate(oraclesSnxToUsd, Constants.UsdBaseCurrency);
     }
 
-    function testReturnUsdRateWhenBaseCurrencyIsNotUsdFirstRateIsZero(
+    function testSuccess_getRate_WhenBaseCurrencyIsNotUsdFirstRateIsZero(
         uint256 rateEthToUsd,
         uint8 oracleSnxToEthDecimals,
         uint8 oracleEthToUsdDecimals
