@@ -49,6 +49,25 @@ contract RiskModuleTest is Test {
 
         // Then: The liquidation threshold has to be bigger than zero
         assertTrue(liqThres > 0);
+
+        // It should be equal to calculated liquidity threshold
+        uint256 calcLiqThreshold;
+        uint16 calcLiqThres;
+        uint256 totalValue;
+        address assetAddress;
+
+        for (uint256 i; i < addresses.length;) {
+            totalValue += values[i];
+            assetAddress = addresses[i];
+            calcLiqThres = riskModule.getLiquidationThresholdHARDCODED(assetAddress);
+            calcLiqThreshold += values[i] * uint256(calcLiqThres);
+            unchecked {
+                ++i;
+            }
+        }
+        calcLiqThreshold = calcLiqThreshold / totalValue;
+
+        assertEq(liqThres, calcLiqThreshold);
     }
 
     function testCalculateWeightedLiquidationThresholdFail(address firstAsset, address secondAsset) public {
@@ -121,6 +140,25 @@ contract RiskModuleTest is Test {
 
         // Then: The collateral factor has to be bigger than zero
         assertTrue(collFactor > 0);
+
+        // It should be equal to calculated collateral factor
+        uint256 calcCollFactor;
+        uint16 calcCollFact;
+        uint256 totalValue;
+        address assetAddress;
+
+        for (uint256 i; i < addresses.length;) {
+            totalValue += values[i];
+            assetAddress = addresses[i];
+            calcCollFact = riskModule.getCollateralFactorHARDCODED(assetAddress);
+            calcCollFactor += values[i].mulDivDown(100, uint256(calcCollFact));
+            unchecked {
+                ++i;
+            }
+        }
+        calcCollFactor = calcCollFactor / totalValue;
+
+        assertEq(collFactor, calcCollFact);
     }
 
     function testCalculateWeightedCollateralFactorFail(address firstAsset, address secondAsset) public {
