@@ -8,7 +8,7 @@ library ArrayHelpers {
      * @param _data An uint256 array.
      * @return sum The combined sum of uints in the array.
      */
-    function sumElementsOfArray(uint256[] memory _data) public payable returns (uint256 sum) {
+    function sumElementsOfArray(uint256[] memory _data) public returns (uint256 sum) {
         //cache
         uint256 len = _data.length;
 
@@ -18,9 +18,9 @@ library ArrayHelpers {
                 sum := add(sum, mload(add(add(_data, 0x20), mul(i, 0x20))))
             }
 
-        unchecked {
-            ++i;
-        }
+            unchecked {
+                ++i;
+            }
         }
     }
 }
