@@ -888,9 +888,7 @@ contract vaultTests is Test {
         uint8 baseAmountDeposit,
         uint32 baseAmountCredit,
         uint8 baseAmountWithdraw
-    )
-        public
-    {
+    ) public {
         uint256 valueDeposit = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * baseAmountDeposit / 10 ** (18 - Constants.daiDecimals);
         uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.daiDecimals);
@@ -920,9 +918,7 @@ contract vaultTests is Test {
         uint8 baseAmountDeposit,
         uint24 baseAmountCredit,
         uint8 baseAmountWithdraw
-    )
-        public
-    {
+    ) public {
         vm.assume(baseAmountCredit > 0);
         vm.assume(baseAmountWithdraw > 0);
         vm.assume(baseAmountWithdraw < baseAmountDeposit);
@@ -954,8 +950,7 @@ contract vaultTests is Test {
 
         (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
 
-        uint256 randomAmounts =
-            assetIds.length > 0
+        uint256 randomAmounts = assetIds.length > 0
             ? uint256(
                 keccak256(
                     abi.encodeWithSignature(

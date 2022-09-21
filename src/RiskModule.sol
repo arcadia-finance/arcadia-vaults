@@ -42,10 +42,7 @@ contract RiskModule is Ownable {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts
-    )
-        public
-        returns (uint256 minCollateralFactor)
-    {
+    ) public returns (uint256 minCollateralFactor) {
         uint256 assetAddressesLength = assetAddresses.length;
         require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
@@ -109,7 +106,7 @@ contract RiskModule is Ownable {
             totalValue += valuesPerAsset[i];
             address assetAddress = assetAddresses[i];
             collFact = getCollateralFactorHARDCODED(assetAddress);
-            collateralFactor += valuesPerAsset[i].mulDivDown(uint256(collFact), 1);
+            collateralFactor += valuesPerAsset[i] * uint256(collFact);
             unchecked {
                 i++;
             }
@@ -141,13 +138,13 @@ contract RiskModule is Ownable {
             totalValue += valuesPerAsset[i];
             address assetAddress = assetAddresses[i];
             liqThreshold = getLiquidationThresholdHARDCODED(assetAddress);
-            liquidationThreshold += valuesPerAsset[i].mulDivDown(uint256(liqThreshold), 1);
+            liquidationThreshold += valuesPerAsset[i] * uint256(liqThreshold);
             unchecked {
                 i++;
             }
         }
         require(totalValue > 0, "RM_CWLT: Total asset value must be bigger than zero");
-        liquidationThreshold = liquidationThreshold.mulDivDown(1, totalValue);
+        liquidationThreshold = liquidationThreshold / totalValue;
         return uint16(liquidationThreshold);
     }
 
@@ -163,11 +160,7 @@ contract RiskModule is Ownable {
         address[] calldata assetAddresses,
         uint256[] memory valuesPerAsset,
         uint256 debt
-    )
-        public
-        view
-        returns (uint256)
-    {
+    ) public view returns (uint256) {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
         uint256 liquidationThreshold = calculateWeightedLiquidationThreshold(assetAddresses, valuesPerAsset);

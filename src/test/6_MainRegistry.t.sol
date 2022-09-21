@@ -1096,9 +1096,7 @@ contract MainRegistryTest is Test {
         uint256 rateEthToUsdNew,
         uint256 amountLink,
         uint8 linkDecimals
-    )
-        public
-    {
+    ) public {
         vm.assume(linkDecimals <= 18);
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew > 0);
@@ -1178,9 +1176,7 @@ contract MainRegistryTest is Test {
         uint256 rateEthToUsdNew,
         uint256 amountLink,
         uint8 linkDecimals
-    )
-        public
-    {
+    ) public {
         vm.assume(linkDecimals < Constants.oracleEthToUsdDecimals);
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew > 0);

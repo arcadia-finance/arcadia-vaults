@@ -80,9 +80,9 @@ contract MainRegistry is Ownable, RiskModule {
         }
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         EXTERNAL CONTRACTS
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Sets the Factory address
@@ -92,9 +92,9 @@ contract MainRegistry is Ownable, RiskModule {
         factoryAddress = _factoryAddress;
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         BASE CURRENCY MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Add a new baseCurrency (a unit in which price is measured, like USD or ETH) to the Main Registry, or overwrite an existing one
@@ -119,10 +119,7 @@ contract MainRegistry is Ownable, RiskModule {
     function addBaseCurrency(
         BaseCurrencyInformation calldata baseCurrencyInformation,
         uint256[] calldata assetCreditRatings
-    )
-        external
-        onlyOwner
-    {
+    ) external onlyOwner {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
@@ -145,9 +142,9 @@ contract MainRegistry is Ownable, RiskModule {
         }
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         PRICE MODULE MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Add a Sub-registry Address to the list of Sub-Registries
@@ -159,9 +156,9 @@ contract MainRegistry is Ownable, RiskModule {
         pricingModules.push(subAssetRegistryAddress);
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Disables the updatability of assets. In the disabled states, asset properties become immutable
@@ -209,9 +206,9 @@ contract MainRegistry is Ownable, RiskModule {
         }
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         WHITE LIST LOGIC
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Checks for a list of tokens and a list of corresponding IDs if all tokens are white-listed
@@ -271,9 +268,9 @@ contract MainRegistry is Ownable, RiskModule {
         return whiteList;
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         CREDIT RATING LOGIC
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Change the Credit Rating Category for one or more assets for one or more baseCurrencies
@@ -290,10 +287,7 @@ contract MainRegistry is Ownable, RiskModule {
         address[] calldata assets,
         uint256[] calldata _baseCurrencies,
         uint256[] calldata newCreditRating
-    )
-        external
-        onlyOwner
-    {
+    ) external onlyOwner {
         uint256 assetsLength = assets.length;
         require(
             assetsLength == _baseCurrencies.length && assetsLength == newCreditRating.length, "MR_BSCR: LENGTH_MISMATCH"
@@ -308,9 +302,9 @@ contract MainRegistry is Ownable, RiskModule {
         }
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                           PRICING LOGIC
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     /**
      * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
@@ -327,11 +321,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    )
-        public
-        view
-        returns (uint256 valueInBaseCurrency)
-    {
+    ) public view returns (uint256 valueInBaseCurrency) {
         valueInBaseCurrency =
             getTotalValue(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
@@ -352,11 +342,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    )
-        public
-        view
-        returns (uint256 valueInBaseCurrency)
-    {
+    ) public view returns (uint256 valueInBaseCurrency) {
         uint256 valueInUsd;
 
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
@@ -426,11 +412,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    )
-        public
-        view
-        returns (uint256[] memory valuesPerAsset)
-    {
+    ) public view returns (uint256[] memory valuesPerAsset) {
         valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
@@ -450,11 +432,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    )
-        public
-        view
-        returns (uint256[] memory valuesPerAsset)
-    {
+    ) public view returns (uint256[] memory valuesPerAsset) {
         valuesPerAsset = new uint256[](_assetAddresses.length);
 
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
@@ -532,11 +510,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    )
-        public
-        view
-        returns (uint256[] memory valuesPerCreditRating)
-    {
+    ) public view returns (uint256[] memory valuesPerCreditRating) {
         valuesPerCreditRating =
             getListOfValuesPerCreditRating(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
@@ -559,11 +533,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    )
-        public
-        view
-        returns (uint256[] memory valuesPerCreditRating)
-    {
+    ) public view returns (uint256[] memory valuesPerCreditRating) {
         valuesPerCreditRating = new uint256[](CREDIT_RATING_CATOGERIES);
         uint256[] memory valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrency);
@@ -597,11 +567,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    )
-        public
-        view
-        returns (uint256 collateralValue)
-    {
+    ) public view returns (uint256 collateralValue) {
         uint256 assetAddressesLength = _assetAddresses.length;
 
         require(
@@ -628,11 +594,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    )
-        public
-        view
-        returns (uint16 collateralFactor)
-    {
+    ) public view returns (uint16 collateralFactor) {
         uint256 assetAddressesLength = _assetAddresses.length;
         require(
             assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
@@ -659,11 +621,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetAmounts,
         address baseCurrency,
         uint256 openDebt
-    )
-        public
-        view
-        returns (uint256 liquidationValue)
-    {
+    ) public view returns (uint256 liquidationValue) {
         uint256 assetAddressesLength = _assetAddresses.length;
 
         require(
@@ -690,11 +648,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    )
-        public
-        view
-        returns (uint256 liquidationThreshold)
-    {
+    ) public view returns (uint256 liquidationThreshold) {
         require(
             _assetAddresses.length == _assetIds.length && _assetAddresses.length == _assetAmounts.length,
             "MR_GCF: LENGTH_MISMATCH"

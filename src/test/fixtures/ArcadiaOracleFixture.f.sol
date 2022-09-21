@@ -44,10 +44,7 @@ contract ArcadiaOracleFixture is Test {
         string memory description,
         address asset_address,
         address transmitterAddress
-    )
-        public
-        returns (ArcadiaOracle)
-    {
+    ) public returns (ArcadiaOracle) {
         vm.startPrank(creatorAddress);
         ArcadiaOracle oracle = new ArcadiaOracle(
             uint8(decimals),

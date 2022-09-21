@@ -30,18 +30,11 @@ contract RiskModuleTest is Test {
         address secondAsset,
         uint240 firstValue,
         uint240 secondValue
-    )
-        public
-    {
+    ) public {
         // Given: 2 Assets with 2 values and values has to be bigger than zero for success
+        // Values are uint240 to prevent overflow in multiplication
         vm.assume(firstValue > 0); // value of the asset can not be zero
         vm.assume(secondValue > 0); // value of the asset can not be zero
-
-        //        // Maximum value is uint240 where it is not practically possible with the values of asset. It is set to this to
-        //        // prevent arithmetic underflow
-        //        uint max_val = type(uint240).max;
-        //        vm.assume(firstValue < max_val);
-        //        vm.assume(secondValue < max_val);
 
         address[] memory addresses = new address[](2);
         addresses[0] = firstAsset;
@@ -81,9 +74,7 @@ contract RiskModuleTest is Test {
         address secondAsset,
         uint8 firstValueShift,
         uint8 secondValueShift
-    )
-        public
-    {
+    ) public {
         // Given: The address of assets and the values of assets.
         // The values of assets should be so big to trigger arithmetic
         uint256 min_val = type(uint256).max / 3;
@@ -102,24 +93,20 @@ contract RiskModuleTest is Test {
         values[1] = secondValue;
 
         // When Then: Calculation of the liquidation threshold should fail and reverted since liquidation calculation overflow
-        vm.expectRevert(bytes(""));
+        vm.expectRevert(stdError.arithmeticError);
         uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values);
     }
 
     function testCalculateWeightedCollateralFactorSuccess(
         address firstAsset,
         address secondAsset,
-        uint256 firstValue,
-        uint256 secondValue
-    )
-        public
-    {
-        // Given: 2 Assets with 2 values and values has to be bigger than zero for success
+        uint240 firstValue,
+        uint240 secondValue
+    ) public {
+        // Given: 2 Assets with 2 values and values has to be bigger than zero for success.
+        // Values are uint240 to prevent overflow in multiplication
         vm.assume(firstValue > 0); // value of the asset can not be zero
         vm.assume(secondValue > 0); // value of the asset can not be zero
-
-        vm.assume(firstValue < 100_000_000_000_000 * 10 ** 18);
-        vm.assume(secondValue < 100_000_000_000_000 * 10 ** 18);
 
         address[] memory addresses = new address[](2);
         addresses[0] = firstAsset;
@@ -159,9 +146,7 @@ contract RiskModuleTest is Test {
         address secondAsset,
         uint8 firstValueShift,
         uint8 secondValueShift
-    )
-        public
-    {
+    ) public {
         // Given: The address of assets and the values of assets.
         // The values of assets should be so big to trigger arithmetic
         uint256 min_val = type(uint256).max / 3;
@@ -180,7 +165,7 @@ contract RiskModuleTest is Test {
         values[1] = secondValue;
 
         // When Then: Calculation of the collateral factor should fail and reverted since collateral calculation overflow
-        vm.expectRevert(bytes(""));
+        vm.expectRevert(stdError.arithmeticError);
         uint16 liqThres = riskModule.calculateWeightedCollateralFactor(addresses, values);
     }
 }
