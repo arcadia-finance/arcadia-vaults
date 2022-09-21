@@ -42,16 +42,18 @@ contract RiskModule is Ownable {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts
-    ) public returns (uint256 minCollateralFactor) {
+    ) public returns (uint16 minCollateralFactor) {
         uint256 assetAddressesLength = assetAddresses.length;
         require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
             "RM_CMCF: LENGTH_MISMATCH"
         );
-        minCollateralFactor = type(uint128).max;
+        minCollateralFactor = type(uint16).max;
+        address assetAddress;
+        uint16 collFact;
         for (uint256 i; i < assetAddressesLength;) {
-            address assetAddress = assetAddresses[i];
-            uint128 collFact = getCollateralFactorHARDCODED(assetAddress);
+            assetAddress = assetAddresses[i];
+            collFact = getCollateralFactorHARDCODED(assetAddress);
             if (collFact < minCollateralFactor) {
                 minCollateralFactor = collFact;
             }
@@ -101,13 +103,15 @@ contract RiskModule is Ownable {
     {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CWCF: LENGTH_MISMATCH");
+
         uint256 totalValue;
         uint256 collateralFactor;
-
         uint16 collFact;
+        address assetAddresses;
+
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
-            address assetAddress = assetAddresses[i];
+            assetAddress = assetAddresses[i];
             collFact = getCollateralFactorHARDCODED(assetAddress);
             collateralFactor += valuesPerAsset[i] * uint256(collFact);
             unchecked {
@@ -133,13 +137,15 @@ contract RiskModule is Ownable {
     {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CWLT: LENGTH_MISMATCH");
+
         uint256 liquidationThreshold;
         uint256 totalValue;
-
         uint16 liqThreshold;
+        address assetAddress;
+
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
-            address assetAddress = assetAddresses[i];
+            assetAddress = assetAddresses[i];
             liqThreshold = getLiquidationThresholdHARDCODED(assetAddress);
             liquidationThreshold += valuesPerAsset[i] * uint256(liqThreshold);
             unchecked {
@@ -164,8 +170,7 @@ contract RiskModule is Ownable {
         uint256[] memory valuesPerAsset,
         uint256 debt
     ) public view returns (uint256) {
-        uint256 assetAddressesLength = assetAddresses.length;
-        require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
+        require(assetAddresses.length == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
         uint256 liquidationThreshold = calculateWeightedLiquidationThreshold(assetAddresses, valuesPerAsset);
         return liquidationThreshold * debt;
     }
