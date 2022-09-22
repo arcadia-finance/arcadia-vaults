@@ -950,8 +950,7 @@ contract vaultTests is Test {
 
         (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
 
-        uint256 randomAmounts =
-            assetIds.length > 0
+        uint256 randomAmounts = assetIds.length > 0
             ? uint256(
                 keccak256(
                     abi.encodeWithSignature(
