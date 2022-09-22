@@ -29,7 +29,7 @@ import {LendingPool, ERC20} from "../../../lib/arcadia-lending/src/LendingPool.s
 import {DebtToken} from "../../../lib/arcadia-lending/src/DebtToken.sol";
 import {Tranche} from "../../../lib/arcadia-lending/src/Tranche.sol";
 
-contract gasBuyVault_2EC202ERC721 is Test {
+contract gasBuyVault_2ERC202ERC721 is Test {
     using stdStorage for StdStorage;
 
     Factory private factory;
