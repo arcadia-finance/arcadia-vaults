@@ -145,7 +145,7 @@ contract factoryTest is Test {
         emit log_address(address(1));
     }
 
-    function testSuccess_safeTransferFrom_SafeTransferVault(address sender) public {
+    function testSuccess_safeTransferFrom(address sender) public {
         address receiver = unprivilegedAddress1;
         vm.assume(sender != address(0));
 
@@ -173,14 +173,13 @@ contract factoryTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_safeTransferFrom_SafeTransferVaultByNonOwner(address sender) public {
-        address receiver = unprivilegedAddress1;
-        address vaultOwner = address(1);
-        vm.assume(sender != address(0) && sender != vaultOwner);
+    function testRevert_safeTransferFrom_NonOwner(address sender, address receiver) public {
+        vm.assume(sender != address(0));
+        vm.assume(receiver != address(0));
+        vm.assume(receiver != address(1));
 
-        vm.startPrank(vaultOwner);
+        vm.prank(sender);
         address vault = factoryContr.createVault(0, 0);
-        vm.stopPrank();
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
@@ -191,13 +190,21 @@ contract factoryTest is Test {
         //Make sure erc721 is owned by sender
         assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), sender);
 
-        //Transfer vault to another address
-        vm.startPrank(sender);
-        factoryContr.safeTransferFrom(vaultOwner, receiver, factoryContr.vaultIndex(vault));
+        //Transfer vault to another address by not owner
+        uint256 index = factoryContr.vaultIndex(vault);
+        vm.startPrank(receiver);
+        vm.expectRevert("NOT_AUTHORIZED");
+        factoryContr.safeTransferFrom(sender, receiver, index);
         vm.stopPrank();
+
+        //Make sure vault itself is still owned by sender
+        assertEq(IVault(vault).owner(), sender);
+
+        //Make sure erc721 is still owned by sender
+        assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), sender);
     }
 
-    function testSuccess_transferFrom_TransferVault(address sender) public {
+    function testSuccess_transferFrom(address sender) public {
         address receiver = unprivilegedAddress1;
         vm.assume(sender != address(0));
 
@@ -224,56 +231,7 @@ contract factoryTest is Test {
         vm.stopPrank();
     }
 
-    function testFailTransferVaultByNonOwner(address sender) public {
-        address receiver = unprivilegedAddress1;
-        address vaultOwner = address(1);
-        vm.assume(sender != address(0) && sender != vaultOwner);
-
-        vm.startPrank(vaultOwner);
-        address vault = factoryContr.createVault(0, 0);
-        vm.stopPrank();
-
-        //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
-
-        //Make sure vault itself is owned by sender
-        assertEq(IVault(vault).owner(), sender);
-
-        //Make sure erc721 is owned by sender
-        assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), sender);
-
-        //Transfer vault to another address
-        vm.startPrank(sender);
-        factoryContr.transferFrom(vaultOwner, receiver, factoryContr.vaultIndex(vault));
-        vm.stopPrank();
-    }
-
-    function testSuccess_transferOwnership(address to) public {
-        vm.assume(to != address(0));
-        Factory factoryContr_m = new Factory();
-
-        assertEq(address(this), factoryContr_m.owner());
-
-        factoryContr_m.transferOwnership(to);
-        assertEq(to, factoryContr_m.owner());
-    }
-
-    function testRevert_transferOwnership_ByNonOwner(address from) public {
-        Factory factoryContr_m = new Factory();
-        vm.assume(from != address(this) && from != address(factoryContr_m));
-
-        address to = address(12345);
-
-        assertEq(address(this), factoryContr_m.owner());
-
-        vm.startPrank(from);
-        vm.expectRevert("Ownable: caller is not the owner");
-        factoryContr_m.transferOwnership(to);
-        assertEq(address(this), factoryContr_m.owner());
-    }
-
-    //TODO: Odd test behavior
-    function testRevert_safeTransferFrom_NotOwner(address sender, address receiver) public {
+    function testRevert_transferFrom_NonOwner(address sender, address receiver) public {
         vm.assume(sender != address(0));
         vm.assume(receiver != address(0));
         vm.assume(receiver != address(1));
@@ -290,16 +248,42 @@ contract factoryTest is Test {
         //Make sure erc721 is owned by sender
         assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), sender);
 
-        //Transfer vault to another address by not owner
+        //Transfer vault to another address
+        uint256 index = factoryContr.vaultIndex(vault);
         vm.startPrank(receiver);
-        vm.expectRevert("NOT_AUHTORIZED");
-        factoryContr.safeTransferFrom(sender, receiver, factoryContr.vaultIndex(vault));
+        vm.expectRevert("NOT_AUTHORIZED");
+        factoryContr.transferFrom(sender, receiver, index);
         vm.stopPrank();
+
         //Make sure vault itself is still owned by sender
         assertEq(IVault(vault).owner(), sender);
 
         //Make sure erc721 is still owned by sender
         assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), sender);
+    }
+
+    function testSuccess_transferOwnership(address to) public {
+        vm.assume(to != address(0));
+        Factory factoryContr_m = new Factory();
+
+        assertEq(address(this), factoryContr_m.owner());
+
+        factoryContr_m.transferOwnership(to);
+        assertEq(to, factoryContr_m.owner());
+    }
+
+    function testRevert_transferOwnership_NonOwner(address from) public {
+        Factory factoryContr_m = new Factory();
+        vm.assume(from != address(this) && from != address(factoryContr_m));
+
+        address to = address(12345);
+
+        assertEq(address(this), factoryContr_m.owner());
+
+        vm.startPrank(from);
+        vm.expectRevert("Ownable: caller is not the owner");
+        factoryContr_m.transferOwnership(to);
+        assertEq(address(this), factoryContr_m.owner());
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
