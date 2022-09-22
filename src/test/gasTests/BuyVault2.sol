@@ -653,6 +653,7 @@ contract gasBuyVault_2ERC20 is Test {
         oracleEthToUsd.transmit(int256(rateEthToUsd) / 2);
         vm.prank(oracleOwner);
         oracleLinkToUsd.transmit(int256(rateLinkToUsd) / 2);
+
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
