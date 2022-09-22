@@ -174,6 +174,7 @@ contract factoryTest is Test {
     }
 
     function testRevert_safeTransferFrom_NonOwner(address sender, address receiver) public {
+        vm.assume(sender != receiver);
         vm.assume(sender != address(0));
         vm.assume(receiver != address(0));
         vm.assume(receiver != address(1));
