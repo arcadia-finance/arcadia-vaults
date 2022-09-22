@@ -177,7 +177,6 @@ contract factoryTest is Test {
         vm.assume(sender != receiver);
         vm.assume(sender != address(0));
         vm.assume(receiver != address(0));
-        vm.assume(receiver != address(1));
 
         vm.prank(sender);
         address vault = factoryContr.createVault(0, 0);
@@ -233,9 +232,9 @@ contract factoryTest is Test {
     }
 
     function testRevert_transferFrom_NonOwner(address sender, address receiver) public {
+        vm.assume(sender != receiver);
         vm.assume(sender != address(0));
         vm.assume(receiver != address(0));
-        vm.assume(receiver != address(1));
 
         vm.prank(sender);
         address vault = factoryContr.createVault(0, 0);
