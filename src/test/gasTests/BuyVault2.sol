@@ -67,9 +67,6 @@ contract gasBuyVault_2ERC20 is Test {
     Tranche tranche;
     DebtToken debt;
 
-    event log_named_array(string key, address[] val);
-    event log_named_array(string key, uint256[] val);
-
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
