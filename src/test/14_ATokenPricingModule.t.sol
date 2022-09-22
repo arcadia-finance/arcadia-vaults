@@ -190,7 +190,7 @@ contract aTokenPricingModuleTest is Test {
         assertTrue(!aTokenPricingModule.isWhiteListed(randomAsset, 0));
     }
 
-    function testSuccess_setAssetInformation_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
         aTokenPricingModule.setAssetInformation(address(aEth), emptyList);

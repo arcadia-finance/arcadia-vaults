@@ -441,7 +441,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_AmountOfAllowedCredit(uint128 amountEth) public {
+    function testSuccess_getFreeMargin_AmountOfAllowedCredit(uint128 amountEth) public {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -493,7 +493,7 @@ contract EndToEndTest is Test {
         assertEq(dai.balanceOf(vaultOwner), 0);
     }
 
-    function testSuccess_IncreaseOfDebtPerBlock(uint128 amountEth, uint128 amountCredit, uint32 amountOfBlocksToRoll) public {
+    function testSuccess_borrow_IncreaseOfDebtPerBlock(uint128 amountEth, uint128 amountCredit, uint32 amountOfBlocksToRoll) public {
         uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
         uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) / uint128(pool.YEARLY_BLOCKS());
@@ -595,7 +595,7 @@ contract EndToEndTest is Test {
         assertEq(actualAvailableCredit, expectedAvailableCredit); //no blocks pass in foundry
     }
 
-    function testRevert_withdraw_IfOpenDebtIsTooLarge(uint128 amountEth, uint128 amountEthWithdrawal) public {
+    function testRevert_withdraw_OpenDebtIsTooLarge(uint128 amountEth, uint128 amountEthWithdrawal) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
         (uint16 collThres,,) = proxy.vault();
         vm.assume(amountEth < type(uint128).max / collThres);
@@ -624,7 +624,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_withdraw_IfOpenDebtIsNotTooLarge(
+    function testSuccess_withdraw_OpenDebtIsNotTooLarge(
         uint128 amountEth,
         uint128 amountEthWithdrawal,
         uint128 amountCredit
@@ -661,7 +661,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_IncreaseBalanceDebtContractSyncDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll)
+    function testSuccess_syncInterests_IncreaseBalanceDebtContract(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll)
         public
     {
         vm.assume(amountEth > 0);

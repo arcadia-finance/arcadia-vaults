@@ -236,7 +236,7 @@ contract factoryTest is Test {
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
 
-        /////Make sure vault itsZZZZZZ``````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````ZZZZZZ`Z`ZZ`ZZZZ``````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````ZZZZZZZZZZZZZZZZZ`````````````````````ZZZZZZ`elf is owned by sender
+        //Make sure vault itself is owned by sender
         assertEq(IVault(vault).owner(), sender);
 
         //Make sure erc721 is owned by sender
@@ -477,7 +477,6 @@ contract factoryTest is Test {
         assertEq(2, factoryContr.latestVaultVersion());
     }
 
-    //Test confirmNewVaultInfo
     function testRevert_confirmNewVaultInfo_NonOwner(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != address(0) && unprivilegedAddress != address(this));
         vm.startPrank(unprivilegedAddress);

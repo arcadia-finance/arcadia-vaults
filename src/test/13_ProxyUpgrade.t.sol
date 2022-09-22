@@ -447,7 +447,7 @@ contract VaultV2Test is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_NewVaultVersion(uint256 salt) public {
+    function testSuccess_confirmNewVaultInfo(uint256 salt) public {
         vm.assume(salt > 0);
 
         vm.startPrank(vaultOwner);
@@ -506,7 +506,7 @@ contract VaultV2Test is Test {
         return checks;
     }
 
-    function testSuccess_AssetsAfterUpgrade(uint128 amount) public {
+    function testSuccess_upgradeVaultVersion_StorageVariablesAfterUpgradeAreIdentical(uint128 amount) public {
         depositERC20InVault(eth, amount, vaultOwner);
         uint128[] memory tokenIds = new uint128[](3);
         tokenIds[0] = 1;
@@ -541,7 +541,7 @@ contract VaultV2Test is Test {
         assertEq(factory.latestVaultVersion(), proxy.vaultVersion());
     }
 
-    function testRevert_upgradeVaultVersion_AssetsAfterUpgradeFail(uint128 amount) public {
+    function testRevert_upgradeVaultVersion_IncompatibleVersionWithCurrentVault(uint128 amount) public {
         depositERC20InVault(eth, amount, vaultOwner);
         uint128[] memory tokenIds = new uint128[](3);
         tokenIds[0] = 1;
