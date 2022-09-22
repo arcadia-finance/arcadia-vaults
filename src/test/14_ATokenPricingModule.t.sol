@@ -132,7 +132,7 @@ contract aTokenPricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_NonOwnerAddsAsset(address unprivilegedAddress) public {
+    function testRevert_setAssetInformation_NonOwnerAddsAsset(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -140,7 +140,7 @@ contract aTokenPricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
@@ -149,7 +149,7 @@ contract aTokenPricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_OwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
         vm.stopPrank();
@@ -157,7 +157,7 @@ contract aTokenPricingModuleTest is Test {
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
-    function testSuccess_OwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
@@ -177,7 +177,7 @@ contract aTokenPricingModuleTest is Test {
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
-    function testSuccess_IsWhitelistedPositive() public {
+    function testSuccess_isWhiteListed() public {
         vm.startPrank(creatorAddress);
 
         aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
@@ -186,11 +186,11 @@ contract aTokenPricingModuleTest is Test {
         assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
     }
 
-    function testSuccess_IsWhitelistedNegative(address randomAsset) public {
+    function testSuccess_isWhiteListed_Negative(address randomAsset) public {
         assertTrue(!aTokenPricingModule.isWhiteListed(randomAsset, 0));
     }
 
-    function testReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
+    function testSuccess_setAssetInformation_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
         aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
@@ -213,7 +213,7 @@ contract aTokenPricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnValueSucces(uint256 rateEthToUsdNew, uint256 amountEth) public {
+    function testSuccess_getValue(uint256 rateEthToUsdNew, uint256 amountEth) public {
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew <= type(uint256).max / Constants.WAD);
 
@@ -251,7 +251,7 @@ contract aTokenPricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnValueOverflow(uint256 rateEthToUsdNew, uint256 amountEth) public {
+    function testRevert_getValue_Overflow(uint256 rateEthToUsdNew, uint256 amountEth) public {
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew <= type(uint256).max / Constants.WAD);
         vm.assume(rateEthToUsdNew > 0);

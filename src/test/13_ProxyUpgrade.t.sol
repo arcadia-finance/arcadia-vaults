@@ -447,7 +447,7 @@ contract VaultV2Test is Test {
         vm.stopPrank();
     }
 
-    function testNewVaultVersion(uint256 salt) public {
+    function testSuccess_NewVaultVersion(uint256 salt) public {
         vm.assume(salt > 0);
 
         vm.startPrank(vaultOwner);
@@ -506,7 +506,7 @@ contract VaultV2Test is Test {
         return checks;
     }
 
-    function testAssetsAfterUpgrade(uint128 amount) public {
+    function testSuccess_AssetsAfterUpgrade(uint128 amount) public {
         depositERC20InVault(eth, amount, vaultOwner);
         uint128[] memory tokenIds = new uint128[](3);
         tokenIds[0] = 1;
@@ -541,7 +541,7 @@ contract VaultV2Test is Test {
         assertEq(factory.latestVaultVersion(), proxy.vaultVersion());
     }
 
-    function testAssetsAfterUpgradeFail(uint128 amount) public {
+    function testRevert_upgradeVaultVersion_AssetsAfterUpgradeFail(uint128 amount) public {
         depositERC20InVault(eth, amount, vaultOwner);
         uint128[] memory tokenIds = new uint128[](3);
         tokenIds[0] = 1;
@@ -581,7 +581,7 @@ contract VaultV2Test is Test {
         emit log_named_bytes32("after", keccak256(abi.encode(checkAfter)));
     }
 
-    function testUpgradeVaultByNonOwner(address sender) public {
+    function testRevert_upgradeVaultVersion_UpgradeVaultByNonOwner(address sender) public {
         vm.assume(sender != address(6));
         vm.startPrank(vaultOwner);
         vaultV2 = new VaultV2();

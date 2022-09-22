@@ -451,7 +451,7 @@ contract LiquidatorTest is Test {
         dai.approve(address(liquidator), type(uint256).max);
     }
 
-    function testTransferOwnership(address to) public {
+    function testSuccess_transferOwnership(address to) public {
         vm.assume(to != address(0));
         Liquidator liquidator_m = new Liquidator(
             0x0000000000000000000000000000000000000000,
@@ -464,7 +464,7 @@ contract LiquidatorTest is Test {
         assertEq(to, liquidator_m.owner());
     }
 
-    function testTransferOwnershipByNonOwner(address from) public {
+    function testRevert_transferOwnership_ByNonOwner(address from) public {
         vm.assume(from != address(this) && from != address(factory));
 
         Liquidator liquidator_m = new Liquidator(
@@ -481,7 +481,7 @@ contract LiquidatorTest is Test {
         assertEq(address(this), liquidator_m.owner());
     }
 
-    function testNotAllowAuctionHealthyVault(uint128 amountEth, uint128 amountCredit) public {
+    function testRevert_liquidate_AuctionHealthyVault(uint128 amountEth, uint128 amountCredit) public {
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         vm.assume(((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals / 150) * 100 >= amountCredit);
@@ -498,7 +498,7 @@ contract LiquidatorTest is Test {
         assertEq(proxy.life(), 0);
     }
 
-    function testStartAuction(uint128 amountEth, uint256 newPrice) public {
+    function testSuccess_liquidate_StartAuction(uint128 amountEth, uint256 newPrice) public {
         (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
@@ -524,7 +524,7 @@ contract LiquidatorTest is Test {
         assertEq(proxy.life(), 1);
     }
 
-    function testShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public {
+    function testSuccess_liquidate_ShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public {
         (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
         vm.assume(amountEth > 0);
@@ -553,7 +553,7 @@ contract LiquidatorTest is Test {
         assertEq(vaultPrice, expectedPrice);
     }
 
-    function testAuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+    function testSuccess_liquidate_AuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * liquidator.breakevenTime());
         (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
@@ -594,7 +594,7 @@ contract LiquidatorTest is Test {
         assertEq(vaultPriceAfter, expectedPrice);
     }
 
-    function testBuyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+    function testSuccess_buyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
         (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
@@ -624,7 +624,7 @@ contract LiquidatorTest is Test {
         assertEq(proxy.owner(), auctionBuyer); //todo: check erc721 owner
     }
 
-    function testWithrawAssetsFromPurchasedVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+    function testSuccess_withdraw_FromPurchasedVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
         (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
@@ -677,7 +677,7 @@ contract LiquidatorTest is Test {
         uint256 originalOwner;
     }
 
-    function testClaimSingle(uint128 amountEth) public {
+    function testSuccess_claimProceeds_Single(uint128 amountEth) public {
         vm.assume(amountEth > 0);
         {
             uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -742,7 +742,7 @@ contract LiquidatorTest is Test {
         assertEq(pre.originalOwner + rewards.originalOwnerRecovery, post.originalOwner);
     }
 
-    function testClaimMultiple(uint128[] calldata amountsEth) public {
+    function testSuccess_claimProceeds_Multiple(uint128[] calldata amountsEth) public {
         vm.assume(amountsEth.length < 10);
         setAddresses();
 
@@ -826,7 +826,7 @@ contract LiquidatorTest is Test {
         assertEq(pre.originalOwner + rewardsSum.originalOwnerRecovery, post.originalOwner);
     }
 
-    function testClaimSingleMultipleVaults(uint128 amountEth) public {
+    function testSuccess_claimProceeds_SingleMultipleVaults(uint128 amountEth) public {
         vm.assume(amountEth > 0);
         {
             uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -919,7 +919,7 @@ contract LiquidatorTest is Test {
         assertEq(pre.originalOwner + 2 * rewards.originalOwnerRecovery, post.originalOwner);
     }
 
-    function testClaimSingleHighLife(uint128 amountEth, uint16 newLife) public {
+    function testSuccess_claimProceeds_SingleHighLife(uint128 amountEth, uint16 newLife) public {
         vm.assume(amountEth > 0);
         {
             uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -986,7 +986,7 @@ contract LiquidatorTest is Test {
         assertEq(pre.originalOwner + rewards.originalOwnerRecovery, post.originalOwner);
     }
 
-    function testClaimSingleWrongLife(uint128 amountEth, uint16 newLife, uint16 lifeToBuy) public {
+    function testRevert_buyVault_ClaimSingleWrongLife(uint128 amountEth, uint16 newLife, uint16 lifeToBuy) public {
         vm.assume(newLife != lifeToBuy);
         vm.assume(amountEth > 0);
         {
@@ -1028,7 +1028,7 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
     }
 
-    function testBreakeven(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll, uint8 breakevenTime) public {
+    function testSuccess_Breakeven(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll, uint8 breakevenTime) public {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * breakevenTime);
         (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);

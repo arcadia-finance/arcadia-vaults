@@ -441,7 +441,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testAmountOfAllowedCredit(uint128 amountEth) public {
+    function testSuccess_AmountOfAllowedCredit(uint128 amountEth) public {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -454,7 +454,7 @@ contract EndToEndTest is Test {
         assertEq(actualValue, expectedValue);
     }
 
-    function testAllowCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
+    function testSuccess_borrow_AllowCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
         (uint16 collThres,,) = proxy.vault();
         vm.assume(uint256(amountCredit) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -473,7 +473,7 @@ contract EndToEndTest is Test {
         assertEq(dai.balanceOf(vaultOwner), amountCredit);
     }
 
-    function testNotAllowTooMuchCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
+    function testRevert_borrow_NotAllowTooMuchCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
         (uint16 collThres,,) = proxy.vault();
         vm.assume(uint256(amountCredit) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -493,7 +493,7 @@ contract EndToEndTest is Test {
         assertEq(dai.balanceOf(vaultOwner), 0);
     }
 
-    function testIncreaseOfDebtPerBlock(uint128 amountEth, uint128 amountCredit, uint32 amountOfBlocksToRoll) public {
+    function testSuccess_IncreaseOfDebtPerBlock(uint128 amountEth, uint128 amountCredit, uint32 amountOfBlocksToRoll) public {
         uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
         uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) / uint128(pool.YEARLY_BLOCKS());
@@ -537,7 +537,7 @@ contract EndToEndTest is Test {
         assertEq(actualDebt, expectedDebt);
     }
 
-    function testNotAllowCreditAfterLargeUnrealizedDebt(uint128 amountEth) public {
+    function testRevert_borrow_NotAllowCreditAfterLargeUnrealizedDebt(uint128 amountEth) public {
         (uint16 collThres,,) = proxy.vault();
         vm.assume(uint256(amountEth) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         vm.assume(amountEth > 1e15);
@@ -562,7 +562,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testAllowAdditionalCreditAfterPriceIncrease(uint128 amountEth, uint128 amountCredit, uint16 newPrice)
+    function testSuccess_borrow_AllowAdditionalCreditAfterPriceIncrease(uint128 amountEth, uint128 amountCredit, uint16 newPrice)
         public
     {
         vm.assume(newPrice * 10 ** Constants.oracleEthToUsdDecimals > rateEthToUsd);
@@ -595,7 +595,7 @@ contract EndToEndTest is Test {
         assertEq(actualAvailableCredit, expectedAvailableCredit); //no blocks pass in foundry
     }
 
-    function testNotAllowWithdrawalIfOpenDebtIsTooLarge(uint128 amountEth, uint128 amountEthWithdrawal) public {
+    function testRevert_withdraw_IfOpenDebtIsTooLarge(uint128 amountEth, uint128 amountEthWithdrawal) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
         (uint16 collThres,,) = proxy.vault();
         vm.assume(amountEth < type(uint128).max / collThres);
@@ -624,7 +624,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testAllowWithdrawalIfOpenDebtIsNotTooLarge(
+    function testSuccess_withdraw_IfOpenDebtIsNotTooLarge(
         uint128 amountEth,
         uint128 amountEthWithdrawal,
         uint128 amountCredit
@@ -661,7 +661,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testIncreaseBalanceDebtContractSyncDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll)
+    function testSuccess_IncreaseBalanceDebtContractSyncDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll)
         public
     {
         vm.assume(amountEth > 0);
@@ -697,7 +697,7 @@ contract EndToEndTest is Test {
         assertEq(unrealisedDebt, balanceAfter - balanceBefore);
     }
 
-    function testRepayExactDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll) public {
+    function testSuccess_repay_ExactDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll) public {
         vm.assume(amountEth > 0);
         (uint16 collThres,,) = proxy.vault();
         vm.assume(amountEth < type(uint128).max / collThres);
@@ -731,7 +731,7 @@ contract EndToEndTest is Test {
         assertEq(proxy.getUsedMargin(), 0);
     }
 
-    function testRepayExessiveDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll, uint8 factor) public {
+    function testSuccess_repay_ExessiveDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll, uint8 factor) public {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
         (uint16 collThres,,) = proxy.vault();
@@ -771,7 +771,7 @@ contract EndToEndTest is Test {
         assertEq(proxy.getUsedMargin(), 0);
     }
 
-    function testRepayPartialDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll, uint128 toRepay)
+    function testSuccess_repay_PartialDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll, uint128 toRepay)
         public
     {
         // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
