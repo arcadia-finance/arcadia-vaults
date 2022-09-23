@@ -9,7 +9,7 @@ pragma solidity >=0.4.22 <0.9.0;
 import "./AbstractPricingModule.sol";
 
 /**
- * @title Test Pricing Module for ERC1155 tokens
+ * @title Pricing Module for ERC1155 tokens
  * @author Arcadia Finance
  * @notice The FloorERC1155PricingModule stores pricing logic and basic information for ERC721 tokens for which a direct price feeds exists
  * for the floor price of the collection
