@@ -46,9 +46,6 @@ contract EndToEndTest is Test {
     ERC20Mock private wbayc;
     ERC20Mock private wmayc;
     ERC1155Mock private interleave;
-    UniswapV2FactoryMock private uniswapV2Factory;
-    UniswapV2PairMock private uniswapV2Pair;
-    UniswapV2PairMock private pairSnxEth;
     OracleHub private oracleHub;
     ArcadiaOracle private oracleDaiToUsd;
     ArcadiaOracle private oracleEthToUsd;
@@ -351,16 +348,10 @@ contract EndToEndTest is Test {
             address(mainRegistry),
             address(oracleHub)
         );
-        uniswapV2SubRegistry = new UniswapV2SubRegistry(
-            address(mainRegistry),
-            address(oracleHub),
-            address(uniswapV2Factory)
-        );
 
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
-        mainRegistry.addSubRegistry(address(uniswapV2SubRegistry));
 
         uint256[] memory assetCreditRatings = new uint256[](3);
         assetCreditRatings[0] = 0;
@@ -399,10 +390,6 @@ contract EndToEndTest is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatings
-        );
-        uniswapV2SubRegistry.setAssetInformation(
-            address(pairSnxEth),
             assetCreditRatings
         );
 
@@ -925,47 +912,5 @@ contract EndToEndTest is Test {
         vm.startPrank(sender);
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
-    }
-
-    function depositUniswapV2InVault(
-        UniswapV2PairMock token,
-        uint256 amount0,
-        uint256 amount1,
-        address sender
-    )
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        uint256 amount = pairSnxEth.mint(
-            sender, 
-            amount0, 
-            amount1
-        );
-
-        assetAddresses = new address[](1);
-        assetAddresses[0] = address(token);
-
-        assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount;
-
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
-        vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
-    }
-
-    function assertInRange(uint256 expectedValue, uint256 actualValue) internal {
-        assertGe(expectedValue * 10001 / 10000, actualValue);
-        assertLe(expectedValue * 9999 / 10000, actualValue);
     }
 }

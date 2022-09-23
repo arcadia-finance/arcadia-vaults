@@ -8,13 +8,13 @@ import "../mockups/UniswapV2FactoryMock.sol";
 import "../mockups/UniswapV2PairMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../AssetRegistry/StandardERC20SubRegistry.sol";
-import "../AssetRegistry/UniswapV2SubRegistry.sol";
+import "../AssetRegistry/StandardERC20PricingModule.sol";
+import "../AssetRegistry/UniswapV2PricingModule.sol";
 import "../AssetRegistry/MainRegistry.sol";
-import "../ArcadiaOracle.sol";
+import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract UniswapV2SubRegistryTest is Test {
+contract UniswapV2PricingModuleTest is Test {
     using stdStorage for StdStorage;
 
     OracleHub private oracleHub;
@@ -33,7 +33,7 @@ contract UniswapV2SubRegistryTest is Test {
     ArcadiaOracle private oracleSnxToEth;
 
     StandardERC20Registry private standardERC20Registry;
-    UniswapV2SubRegistry private uniswapV2SubRegistry;
+    UniswapV2PricingModule private uniswapV2PricingModule;
 
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
@@ -150,7 +150,7 @@ contract UniswapV2SubRegistryTest is Test {
             address(mainRegistry),
             address(oracleHub)
         );
-        mainRegistry.addSubRegistry(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
             StandardERC20Registry.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -168,12 +168,12 @@ contract UniswapV2SubRegistryTest is Test {
             emptyList
         );
 
-        uniswapV2SubRegistry = new UniswapV2SubRegistry(
+        uniswapV2PricingModule = new UniswapV2PricingModule(
             address(mainRegistry),
             address(oracleHub),
             address(uniswapV2Factory)
         );
-        mainRegistry.addSubRegistry(address(uniswapV2SubRegistry));
+        mainRegistry.addPricingModule(address(uniswapV2PricingModule));
         vm.stopPrank();
     }
 
@@ -192,7 +192,7 @@ contract UniswapV2SubRegistryTest is Test {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
@@ -202,7 +202,7 @@ contract UniswapV2SubRegistryTest is Test {
     function testOwnerAddsAssetWithNonWhiteListedUnderlyingAsset() public {
         vm.startPrank(creatorAddress);
         vm.expectRevert("UV2_SAI: NOT_WHITELISTED");
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSafemoonEth),
             emptyList
         );
@@ -214,7 +214,7 @@ contract UniswapV2SubRegistryTest is Test {
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             assetCreditRatings
         );
@@ -223,13 +223,13 @@ contract UniswapV2SubRegistryTest is Test {
 
     function testOwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
         vm.stopPrank();
 
-        assertTrue(uniswapV2SubRegistry.inSubRegistry(address(pairSnxEth)));
+        assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
     }
 
     function testOwnerAddsAssetWithFullListCreditRatings() public {
@@ -237,44 +237,44 @@ contract UniswapV2SubRegistryTest is Test {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             assetCreditRatings
         );
         vm.stopPrank();
 
-        assertTrue(uniswapV2SubRegistry.inSubRegistry(address(pairSnxEth)));
+        assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
     }
 
     function testOwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
         vm.stopPrank();
 
-        assertTrue(uniswapV2SubRegistry.inSubRegistry(address(pairSnxEth)));
+        assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
     }
 
     //Test isWhiteListed
     function testIsWhitelistedPositive() public {
         vm.startPrank(creatorAddress);
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
         vm.stopPrank();
 
-        assertTrue(uniswapV2SubRegistry.isWhiteListed(address(pairSnxEth), 0));
+        assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth), 0));
     }
 
     function testIsWhitelistedNegative(address randomAsset) public {
-        assertTrue(!uniswapV2SubRegistry.isWhiteListed(randomAsset, 0));
+        assertTrue(!uniswapV2PricingModule.isWhiteListed(randomAsset, 0));
     }
 
     //Test getValue
@@ -282,7 +282,7 @@ contract UniswapV2SubRegistryTest is Test {
         public
     {
         vm.startPrank(creatorAddress);
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
@@ -304,7 +304,7 @@ contract UniswapV2SubRegistryTest is Test {
         uint256 valueEth = Constants.WAD * rateEthToUsd / 10**Constants.oracleEthToUsdDecimals * amountEth / 10**Constants.ethDecimals;
         uint256 expectedValueInBaseCurrency = valueSnx + valueEth;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+        PricingModule.GetValueInput memory getValueInput = PricingModule
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
@@ -314,7 +314,7 @@ contract UniswapV2SubRegistryTest is Test {
         (
             uint256 actualValueInUsd,
             uint256 actualValueInBaseCurrency
-        ) = uniswapV2SubRegistry.getValue(getValueInput);
+        ) = uniswapV2PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, 0);
         assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -324,7 +324,7 @@ contract UniswapV2SubRegistryTest is Test {
         public
     {
         vm.startPrank(creatorAddress);
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
@@ -346,7 +346,7 @@ contract UniswapV2SubRegistryTest is Test {
         uint256 valueEth = Constants.WAD * amountEth / 10**Constants.ethDecimals;
         uint256 expectedValueInBaseCurrency = valueSnx + valueEth;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+        PricingModule.GetValueInput memory getValueInput = PricingModule
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
@@ -356,7 +356,7 @@ contract UniswapV2SubRegistryTest is Test {
         (
             uint256 actualValueInUsd,
             uint256 actualValueInBaseCurrency
-        ) = uniswapV2SubRegistry.getValue(getValueInput);
+        ) = uniswapV2PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, 0);
         assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -366,7 +366,7 @@ contract UniswapV2SubRegistryTest is Test {
         public
     {
         vm.startPrank(creatorAddress);
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
@@ -395,7 +395,7 @@ contract UniswapV2SubRegistryTest is Test {
         vm.assume(amountEthSwapped < uint256(reserve1) * 10000000000);
         uint256 expectedValueInBaseCurrency = (valueSnx + valueEth) * lpGrowth**2 / FixedPointMathLib.WAD**2; //Approximation, we do two swaps of almost equal size -> lp-position acrues fees
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+        PricingModule.GetValueInput memory getValueInput = PricingModule
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
@@ -405,7 +405,7 @@ contract UniswapV2SubRegistryTest is Test {
         (
             uint256 actualValueInUsd,
             uint256 actualValueInBaseCurrency
-        ) = uniswapV2SubRegistry.getValue(getValueInput);
+        ) = uniswapV2PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, 0);
         assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -415,7 +415,7 @@ contract UniswapV2SubRegistryTest is Test {
         public
     {
         vm.startPrank(creatorAddress);
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
@@ -444,7 +444,7 @@ contract UniswapV2SubRegistryTest is Test {
         vm.assume(amountEthSwapped > uint256(reserve1) * 10000000000);
         uint256 expectedValueInBaseCurrency = (valueSnx + valueEth) * lpGrowth**2 / FixedPointMathLib.WAD**2; //Approximation, we do two swaps of almost equal size -> lp-position acrues fees
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+        PricingModule.GetValueInput memory getValueInput = PricingModule
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
@@ -454,7 +454,7 @@ contract UniswapV2SubRegistryTest is Test {
         (
             uint256 actualValueInUsd,
             uint256 actualValueInBaseCurrency
-        ) = uniswapV2SubRegistry.getValue(getValueInput);
+        ) = uniswapV2PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, 0);
         //for very big imbalances, the LP-value will always be underestimated -> no risk for protocol (see next test)
@@ -551,7 +551,7 @@ contract UniswapV2SubRegistryTest is Test {
             }),
             emptyList
         );
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
@@ -568,7 +568,7 @@ contract UniswapV2SubRegistryTest is Test {
         uint256 valueEth = Constants.WAD * _rateEthToUsd / 10**_oracleEthToUsdDecimals * amountEth / 10**_ethDecimals;
         uint256 expectedValueInBaseCurrency = valueSnx + valueEth;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+        PricingModule.GetValueInput memory getValueInput = PricingModule
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
@@ -578,7 +578,7 @@ contract UniswapV2SubRegistryTest is Test {
         (
             uint256 actualValueInUsd,
             uint256 actualValueInBaseCurrency
-        ) = uniswapV2SubRegistry.getValue(getValueInput);
+        ) = uniswapV2PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, 0);
         assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -673,7 +673,7 @@ contract UniswapV2SubRegistryTest is Test {
             }),
             emptyList
         );
-        uniswapV2SubRegistry.setAssetInformation(
+        uniswapV2PricingModule.setAssetInformation(
             address(pairSnxEth),
             emptyList
         );
@@ -684,7 +684,7 @@ contract UniswapV2SubRegistryTest is Test {
             amountEth
         );
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
+        PricingModule.GetValueInput memory getValueInput = PricingModule
             .GetValueInput({
                 assetAddress: address(pairSnxEth),
                 assetId: 0,
@@ -694,7 +694,7 @@ contract UniswapV2SubRegistryTest is Test {
 
         //Arithmetic overflow.
         vm.expectRevert(bytes(""));
-        uniswapV2SubRegistry.getValue(getValueInput);
+        uniswapV2PricingModule.getValue(getValueInput);
     }
 
     //Helper Functions

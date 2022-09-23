@@ -8,21 +8,21 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./AbstractSubRegistry.sol";
+import "./AbstractPricingModule.sol";
 import "../interfaces/IUniswapV2Pair.sol";
 import "../interfaces/IUniswapV2Factory.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 import {PRBMath} from "../utils/PRBMath.sol";
 
 /**
- * @title Sub-registry for Uniswap V2 LP tokens
+ * @title Pricing-Module for Uniswap V2 LP tokens
  * @author Arcadia Finance
- * @notice The UniswapV2SubRegistry stores pricing logic and basic information for Uniswap V2 LP tokens
- * @dev No end-user should directly interact with the UniswapV2SubRegistry, only the Main-registry, Oracle-Hub or the contract owner
+ * @notice The UniswapV2PricingModule stores pricing logic and basic information for Uniswap V2 LP tokens
+ * @dev No end-user should directly interact with the UniswapV2PricingModule, only the Main-registry, Oracle-Hub or the contract owner
  * @dev Most logic in this contract is a modifications of 
  *      https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2LiquidityMathLibrary.sol#L23
  */
-contract UniswapV2SubRegistry is SubRegistry {
+contract UniswapV2PricingModule is PricingModule {
     using FixedPointMathLib for uint256;
     using PRBMath for uint256;
 
@@ -39,7 +39,7 @@ contract UniswapV2SubRegistry is SubRegistry {
     mapping(address => AssetInformation) public assetToInformation;
 
     /**
-     * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and of the Oracle-Hub
+     * @notice A Pricing-Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param _mainRegistry The address of the Main-registry
      * @param _oracleHub The address of the Oracle-Hub 
      * @param _uniswapV2Factory The factory for Uniswap V2 pairs
@@ -48,7 +48,7 @@ contract UniswapV2SubRegistry is SubRegistry {
         address _mainRegistry,
         address _oracleHub,
         address _uniswapV2Factory
-    ) SubRegistry(_mainRegistry, _oracleHub) {
+    ) PricingModule(_mainRegistry, _oracleHub) {
         uniswapV2Factory = _uniswapV2Factory;
     }
 
@@ -60,7 +60,7 @@ contract UniswapV2SubRegistry is SubRegistry {
     }
 
     /**
-     * @notice Adds a new asset to the UniswapV2SubRegistry, or overwrites an existing asset.
+     * @notice Adds a new asset to the UniswapV2PricingModule, or overwrites an existing asset.
      * @param assetAddress Contract address of the Uniswap V2 Liquidity pair
      * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencys.
      * @dev The list of Credit Ratings should or be as long as the number of baseCurrencys added to the Main Registry,
@@ -87,9 +87,9 @@ contract UniswapV2SubRegistry is SubRegistry {
 
         require(IMainRegistry(mainRegistry).batchIsWhiteListed(tokens, new uint256[](2)), "UV2_SAI: NOT_WHITELISTED");
 
-        if (!inSubRegistry[assetAddress]) {
-            inSubRegistry[assetAddress] = true;
-            assetsInSubRegistry.push(assetAddress);
+        if (!inPricingModule[assetAddress]) {
+            inPricingModule[assetAddress] = true;
+            assetsInPricingModule.push(assetAddress);
         }
 
         assetToInformation[assetAddress] = assetInformation;
