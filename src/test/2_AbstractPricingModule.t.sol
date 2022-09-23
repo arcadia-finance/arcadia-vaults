@@ -76,14 +76,14 @@ contract AbstractPricingModuleTest is Test {
         );
     }
 
-    function testAssetWhitelistedWhenAddedToPricingModule(address assetAddress) public {
+    function testSuccess_setAssetInformation_AssetWhitelistedWhenAddedToPricingModule(address assetAddress) public {
         vm.prank(creatorAddress);
         abstractPricingModule.setAssetInformation(assetAddress);
 
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(assetAddress));
     }
 
-    function testNonOwnerAddsExistingAssetToWhitelist(address unprivilegedAddress) public {
+    function testRevert_addToWhiteList_NonOwnerAddsExistingAssetToWhitelist(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.prank(creatorAddress);
         abstractPricingModule.setAssetInformation(address(eth));
@@ -96,7 +96,7 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testOwnerAddsNonExistingAssetToWhitelist() public {
+    function testRevert_addToWhiteList_OwnerAddsNonExistingAssetToWhitelist() public {
         vm.startPrank(creatorAddress);
         vm.expectRevert("Asset not known in Pricing Module");
         abstractPricingModule.addToWhiteList(address(eth));
@@ -105,7 +105,7 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testOwnerAddsExistingAssetToWhitelist() public {
+    function testSuccess_addToWhiteList_OwnerAddsExistingAssetToWhitelist() public {
         vm.startPrank(creatorAddress);
         abstractPricingModule.setAssetInformation(address(eth));
         abstractPricingModule.addToWhiteList(address(eth));
@@ -114,7 +114,7 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testNonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress) public {
+    function testRevert_removeFromWhiteList_NonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
 
         vm.prank(creatorAddress);
@@ -131,7 +131,7 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testOwnerRemovesNonExistingAssetFromWhitelist() public {
+    function testRevert_removeFromWhiteList_OwnerRemovesNonExistingAssetFromWhitelist() public {
         vm.startPrank(creatorAddress);
         vm.expectRevert("Asset not known in Pricing Module");
         abstractPricingModule.removeFromWhiteList(address(eth));
@@ -140,7 +140,7 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testOwnerRemovesExistingAssetFromWhitelist() public {
+    function testSuccess_removeFromWhiteList_OwnerRemovesExistingAssetFromWhitelist() public {
         vm.startPrank(creatorAddress);
         abstractPricingModule.setAssetInformation(address(eth));
         abstractPricingModule.removeFromWhiteList(address(eth));
@@ -149,7 +149,7 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testNonOwnerAddsRemovedAssetToWhitelist(address unprivilegedAddress) public {
+    function testRevert_addToWhiteList_NonOwnerAddsRemovedAssetToWhitelist(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
 
         vm.startPrank(creatorAddress);
@@ -165,7 +165,7 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testOwnerAddsRemovedAssetToWhitelist() public {
+    function testSuccess_addToWhiteList_OwnerAddsRemovedAssetToWhitelist() public {
         vm.startPrank(creatorAddress);
         abstractPricingModule.setAssetInformation(address(eth));
         abstractPricingModule.removeFromWhiteList(address(eth));

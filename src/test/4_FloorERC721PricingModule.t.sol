@@ -152,7 +152,7 @@ contract FloorERC721PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testNonOwnerAddsAsset(address unprivilegedAddress) public {
+    function testRevert_setAssetInformation_NonOwnerAddsAsset(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -168,7 +168,7 @@ contract FloorERC721PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
@@ -186,7 +186,7 @@ contract FloorERC721PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -202,7 +202,7 @@ contract FloorERC721PricingModuleTest is Test {
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testOwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
@@ -221,7 +221,7 @@ contract FloorERC721PricingModuleTest is Test {
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testOwnerOverwritesExistingAsset() public {
+    function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -246,7 +246,7 @@ contract FloorERC721PricingModuleTest is Test {
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testIsWhitelistedPositive() public {
+    function testSuccess_isWhiteListed_Positive() public {
         vm.startPrank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -264,11 +264,11 @@ contract FloorERC721PricingModuleTest is Test {
         assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 5000));
     }
 
-    function testIsWhitelistedNegativeWrongAddress(address randomAsset) public {
+    function testSuccess_isWhiteListed_NegativeWrongAddress(address randomAsset) public {
         assertTrue(!floorERC721PricingModule.isWhiteListed(randomAsset, 0));
     }
 
-    function testIsWhitelistedNegativeIdOutsideRange(uint256 id) public {
+    function testSuccess_isWhiteListed_NegativeIdOutsideRange(uint256 id) public {
         vm.assume(id < 10 || id > 1000);
         vm.startPrank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
@@ -285,7 +285,7 @@ contract FloorERC721PricingModuleTest is Test {
         assertTrue(!floorERC721PricingModule.isWhiteListed(address(bayc), id));
     }
 
-    function testReturnUsdValueWhenBaseCurrencyIsUsd() public {
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd() public {
         vm.startPrank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -314,7 +314,7 @@ contract FloorERC721PricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testreturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd() public {
+    function testSuccess_getValue_ReturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -343,7 +343,7 @@ contract FloorERC721PricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnUsdValueWhenBaseCurrencyIsNotUsd() public {
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({

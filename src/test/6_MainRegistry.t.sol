@@ -241,7 +241,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testMainRegistryInitialisedWithUsdAsBaseCurrency() public {
+    function testSuccess_MainRegistryInitialisedWithUsdAsBaseCurrency() public {
         (,,,, string memory baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
         assertTrue(StringHelpers.compareStrings("USD", baseCurrencyLabel));
     }
@@ -250,7 +250,7 @@ contract MainRegistryTest is Test {
         assertEq(1, mainRegistry.baseCurrencyCounter());
     }
 
-    function testNonOwnerAddsBaseCurrency(address unprivilegedAddress) public {
+    function testRevert_addBaseCurrency_NonOwner(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -267,7 +267,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsBaseCurrencyWithWrongNumberOfCreditRatings() public {
+    function testRevert_addBaseCurrency_OwnerWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
@@ -303,7 +303,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsBaseCurrencyWithNonExistingCreditRatingCategory() public {
+    function testRevert_addBaseCurrency_OwnerWithNonExistingCreditRatingCategory() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
@@ -340,7 +340,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsBaseCurrencyWithEmptyListOfCreditRatings() public {
+    function testSuccess_addBaseCurrency_OwnerWithEmptyListOfCreditRatings() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
@@ -385,7 +385,7 @@ contract MainRegistryTest is Test {
         assertEq(3, mainRegistry.baseCurrencyCounter());
     }
 
-    function testOwnerAddsBaseCurrencyWithFullListOfCreditRatings() public {
+    function testSuccess_addBaseCurrency_OwnerWithFullListOfCreditRatings() public {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
@@ -424,7 +424,7 @@ contract MainRegistryTest is Test {
         assertEq(2, mainRegistry.baseCurrencyCounter());
     }
 
-    function testNonOwnerAddsPricingModule(address unprivilegedAddress) public {
+    function testRevert_addPricingModule_NonOwner(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -432,7 +432,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsPricingModule() public {
+    function testSuccess_addPricingModule_Owner() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
@@ -440,7 +440,7 @@ contract MainRegistryTest is Test {
         assertTrue(mainRegistry.isPricingModule(address(standardERC20Registry)));
     }
 
-    function testOwnerOverwritesPricingModule() public {
+    function testRevert_addPricingModule_OwnerOverwritesPricingModule() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.expectRevert("Sub-Registry already exists");
@@ -448,11 +448,11 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testAssetUpgradabilityDefaultTrue() public {
+    function testSuccess_assetsUpdatable_DefaultTrue() public {
         assertTrue(mainRegistry.assetsUpdatable());
     }
 
-    function testNonOwnerSetsAssetsToNonUpdatable(address unprivilegedAddress) public {
+    function testRevert_setAssetsToNonUpdatable_NonOwner(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -460,7 +460,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerSetsAssetsToNonUpdatable() public {
+    function testSuccess_setAssetsToNonUpdatable_Owner() public {
         vm.startPrank(creatorAddress);
         mainRegistry.setAssetsToNonUpdatable();
         vm.stopPrank();
@@ -468,14 +468,14 @@ contract MainRegistryTest is Test {
         assertTrue(!mainRegistry.assetsUpdatable());
     }
 
-    function testNonPricingModuleAddsAsset(address unprivilegedAddress) public {
+    function testRevert_addAsset_NonPricingModule(address unprivilegedAddress) public {
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Caller is not a Price Module.");
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
     }
 
-    function testPricingModuleAddsAssetWithWrongNumberOfCreditRatings() public {
+    function testRevert_addAsset_PricingModuleAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -509,7 +509,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testPricingModuleAddsAssetWithNonExistingCreditRatingCategory() public {
+    function testRevert_addAsset_PricingModuleAddsAssetWithNonExistingCreditRatingCategory() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -545,7 +545,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testPricingModuleAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_addAsset_PricingModuleAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -577,7 +577,7 @@ contract MainRegistryTest is Test {
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
     }
 
-    function testPricingModuleAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_addAsset_PricingModuleAddsAssetWithFullListCreditRatings() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -614,7 +614,7 @@ contract MainRegistryTest is Test {
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
     }
 
-    function testPricingModuleOverwritesAssetPositive() public {
+    function testSuccess_addAsset_PricingModuleOverwritesAssetPositive() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -653,7 +653,7 @@ contract MainRegistryTest is Test {
         assertEq(address(floorERC721PricingModule), mainRegistry.assetToPricingModule(address(eth)));
     }
 
-    function testPricingModuleOverwritesAssetNegative() public {
+    function testRevert_addAsset_PricingModuleOverwrites() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -694,7 +694,7 @@ contract MainRegistryTest is Test {
         assertEq(address(standardERC20Registry), mainRegistry.assetToPricingModule(address(eth)));
     }
 
-    function testIsBatchWhitelistedPositive() public {
+    function testSuccess_batchIsWhiteListed_Positive() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -748,7 +748,7 @@ contract MainRegistryTest is Test {
         assertTrue(mainRegistry.batchIsWhiteListed(assetAddresses, assetIds));
     }
 
-    function testIsBatchWhitelistedNegativeNonEqualInputLists() public {
+    function testRevert_batchIsWhiteListed_NonEqualInputLists() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -802,7 +802,7 @@ contract MainRegistryTest is Test {
         mainRegistry.batchIsWhiteListed(assetAddresses, assetIds);
     }
 
-    function testIsBatchWhitelistedNegativeAssetNotWhitelisted() public {
+    function testSuccess_batchIsWhiteListed_NegativeAssetNotWhitelisted() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -856,7 +856,7 @@ contract MainRegistryTest is Test {
         assertTrue(!mainRegistry.batchIsWhiteListed(assetAddresses, assetIds));
     }
 
-    function testIsBatchWhitelistedNegativeAssetNotInMainregistry() public {
+    function testSuccess_batchIsWhiteListed_NegativeAssetNotInMainregistry() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -910,7 +910,7 @@ contract MainRegistryTest is Test {
         assertTrue(!mainRegistry.batchIsWhiteListed(assetAddresses, assetIds));
     }
 
-    function testGetWhitelistWithMultipleAssets() public {
+    function testSuccess_getWhiteList_MultipleAssets() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -970,7 +970,7 @@ contract MainRegistryTest is Test {
         assertTrue(CompareArrays.compareArrays(expectedWhiteList, actualWhiteList));
     }
 
-    function testGetWhitelistWithAfterRemovalOfAsset() public {
+    function testSuccess_getWhiteList_WithAfterRemovalOfAsset() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1030,7 +1030,7 @@ contract MainRegistryTest is Test {
         assertTrue(CompareArrays.compareArrays(expectedWhiteList, actualWhiteList));
     }
 
-    function testGetWhitelistWithAfterRemovalAndReaddingOfAsset() public {
+    function testSuccess_getWhiteList_WithAfterRemovalAndReaddingOfAsset() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1092,7 +1092,7 @@ contract MainRegistryTest is Test {
         assertTrue(CompareArrays.compareArrays(expectedWhiteList, actualWhiteList));
     }
 
-    function testGetTotalValueCalculateValueInBaseCurrencyFromValueInUsdSucces(
+    function testSucccess_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsd(
         uint256 rateEthToUsdNew,
         uint256 amountLink,
         uint8 linkDecimals
@@ -1172,7 +1172,7 @@ contract MainRegistryTest is Test {
         assertEq(expectedTotalValue, actualTotalValue);
     }
 
-    function testGetTotalValueCalculateValueInBaseCurrencyFromValueInUsdOverflow(
+    function testRevert_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsdOverflow(
         uint256 rateEthToUsdNew,
         uint256 amountLink,
         uint8 linkDecimals
@@ -1237,7 +1237,7 @@ contract MainRegistryTest is Test {
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
     }
 
-    function testGetTotalValueCalculateValueInBaseCurrencyFromValueInUsdWithRateZero(uint256 amountLink) public {
+    function testRevert_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsdWithRateZero(uint256 amountLink) public {
         vm.assume(amountLink > 0);
 
         vm.startPrank(creatorAddress);
@@ -1291,7 +1291,7 @@ contract MainRegistryTest is Test {
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
     }
 
-    function testGetTotalValueNegativeNonEqualInputLists() public {
+    function testRevert_getTotalValue_NegativeNonEqualInputLists() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -1360,7 +1360,7 @@ contract MainRegistryTest is Test {
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 
-    function testGetListOfValuesPerAssetNegativeNonEqualInputLists() public {
+    function testRevert_getListOfValuesPerAsset_NonEqualInputLists() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1428,7 +1428,7 @@ contract MainRegistryTest is Test {
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 
-    function testGetTotalValueNegativeUnknownBaseCurrency() public {
+    function testRevert_getTotalValue_UnknownBaseCurrency() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -1488,7 +1488,7 @@ contract MainRegistryTest is Test {
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.SafemoonBaseCurrency);
     }
 
-    function testGetListOfValuesPerAsseteNegativeUnknownBaseCurrency() public {
+    function testRevert_getListOfValuesPerAsset_UnknownBaseCurrency() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -1548,7 +1548,7 @@ contract MainRegistryTest is Test {
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.SafemoonBaseCurrency);
     }
 
-    function testGetTotalValueNegativeUnknownAsset() public {
+    function testRevert_getTotalValue_UnknownAsset() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -1608,7 +1608,7 @@ contract MainRegistryTest is Test {
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 
-    function testGetListOfValuesPerAsseteNegativeUnknownAsset() public {
+    function testRevert_getListOfValuesPerAsset_UnknownAsset() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -1668,7 +1668,7 @@ contract MainRegistryTest is Test {
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 
-    function testGetTotalValueSucces() public {
+    function testSuccess_getTotalValue() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -1757,7 +1757,7 @@ contract MainRegistryTest is Test {
         assertEq(expectedTotalValue, actualTotalValue);
     }
 
-    function testGetListOfValuesPerAssetSucces() public {
+    function testSuccess_getListOfValuesPerAsset() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1848,7 +1848,7 @@ contract MainRegistryTest is Test {
         assertTrue(CompareArrays.compareArrays(expectedListOfValuesPerAsset, actualListOfValuesPerAsset));
     }
 
-    function testGetListOfValuesPerCreditRatingSucces() public {
+    function testSuccess_getListOfValuesPerCreditRating() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1955,7 +1955,7 @@ contract MainRegistryTest is Test {
         assertTrue(CompareArrays.compareArrays(actualListOfValuesPerCreditRating, expectedListOfValuesPerCreditRating));
     }
 
-    function testNonOwnerSetsCreditRatings(address unprivilegedAddress) public {
+    function testRevert_batchSetCreditRating_NonOwner(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -2026,7 +2026,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerSetsCreditRatingsNonEqualInputLists() public {
+    function testRevert_batchSetCreditRating_OwnerSetsCreditRatingsNonEqualInputLists() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -2107,7 +2107,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerSetsCreditRatingsSucces() public {
+    function testSuccess_batchSetCreditRating_Owner() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -2184,7 +2184,7 @@ contract MainRegistryTest is Test {
         );
     }
 
-    function testOwnerSetsCreditRatingsWithNonExistingCreditRatingCategory() public {
+    function testRevert_batchSetCreditRating_OwnerSetsCreditRatingsWithNonExistingCreditRatingCategory() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -2254,7 +2254,7 @@ contract MainRegistryTest is Test {
     }
 
     //Test setFactory
-    function testNonOwnerSetsFactory(address unprivilegedAddress) public {
+    function testRevert_setFactory_NonOwner(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(creatorAddress);
         factory = new Factory();
@@ -2270,7 +2270,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerSetsFactoryWithMultipleBaseCurrencies() public {
+    function testSuccess_setFactory_OwnerSetsFactoryWithMultipleBaseCurrencies() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
