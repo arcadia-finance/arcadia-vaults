@@ -19,26 +19,41 @@ contract RiskModuleTest is Test {
 
     RiskModule public riskModule;
 
+    address firstAssetAddress = address(98);
+    address secondAssetAddress = address(99);
+
     constructor() {
         vm.startPrank(creator);
         riskModule = new RiskModule();
+
+        // Set liquidation threshold
+        stdstore.target(address(riskModule)).sig(riskModule.liquidationThresholds.selector).with_key(
+            address(firstAssetAddress)
+        ).checked_write(110);
+        stdstore.target(address(riskModule)).sig(riskModule.liquidationThresholds.selector).with_key(
+            address(secondAssetAddress)
+        ).checked_write(110);
+
+        // Set collateral factor
+        stdstore.target(address(riskModule)).sig(riskModule.collateralFactors.selector).with_key(
+            address(firstAssetAddress)
+        ).checked_write(150);
+        stdstore.target(address(riskModule)).sig(riskModule.collateralFactors.selector).with_key(
+            address(secondAssetAddress)
+        ).checked_write(150);
+
         vm.stopPrank();
     }
 
-    function testCalculateWeightedLiquidationThresholdSuccess(
-        address firstAsset,
-        address secondAsset,
-        uint240 firstValue,
-        uint240 secondValue
-    ) public {
+    function testCalculateWeightedLiquidationThresholdSuccess(uint240 firstValue, uint240 secondValue) public {
         // Given: 2 Assets with 2 values and values has to be bigger than zero for success
         // Values are uint240 to prevent overflow in multiplication
         vm.assume(firstValue > 0); // value of the asset can not be zero
         vm.assume(secondValue > 0); // value of the asset can not be zero
 
         address[] memory addresses = new address[](2);
-        addresses[0] = firstAsset;
-        addresses[1] = secondAsset;
+        addresses[0] = firstAssetAddress;
+        addresses[1] = secondAssetAddress;
 
         uint256[] memory values = new uint256[](2);
         values[0] = firstValue;
@@ -59,7 +74,7 @@ contract RiskModuleTest is Test {
         for (uint256 i; i < addresses.length;) {
             totalValue += values[i];
             assetAddress = addresses[i];
-            calcLiqThres = riskModule.getLiquidationThresholdHARDCODED(assetAddress);
+            calcLiqThres = riskModule.getLiquidationThreshold(assetAddress);
             calcLiqThreshold += values[i] * uint256(calcLiqThres);
             unchecked {
                 ++i;
@@ -70,14 +85,14 @@ contract RiskModuleTest is Test {
         assertEq(liqThres, calcLiqThreshold);
     }
 
-    function testCalculateWeightedLiquidationThresholdFail(address firstAsset, address secondAsset) public {
+    function testCalculateWeightedLiquidationThresholdFail() public {
         // Given: The address of assets and the values of assets. The values of assets are zero
         uint256 firstValue = 0;
         uint256 secondValue = 0;
 
         address[] memory addresses = new address[](2);
-        addresses[0] = firstAsset;
-        addresses[1] = secondAsset;
+        addresses[0] = firstAssetAddress;
+        addresses[1] = firstAssetAddress;
 
         uint256[] memory values = new uint256[](2);
         values[0] = firstValue;
@@ -88,12 +103,9 @@ contract RiskModuleTest is Test {
         uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values);
     }
 
-    function testCalculateWeightedLiquidationThresholdFailArithmetic(
-        address firstAsset,
-        address secondAsset,
-        uint8 firstValueShift,
-        uint8 secondValueShift
-    ) public {
+    function testCalculateWeightedLiquidationThresholdFaiArithmetic(uint8 firstValueShift, uint8 secondValueShift)
+        public
+    {
         // Given: The address of assets and the values of assets.
         // The values of assets should be so big to trigger arithmetic
         uint256 min_val = type(uint256).max / 3;
@@ -104,8 +116,8 @@ contract RiskModuleTest is Test {
         vm.assume(secondValue < (max_val / 2));
 
         address[] memory addresses = new address[](2);
-        addresses[0] = firstAsset;
-        addresses[1] = secondAsset;
+        addresses[0] = firstAssetAddress;
+        addresses[1] = secondAssetAddress;
 
         uint256[] memory values = new uint256[](2);
         values[0] = firstValue;
@@ -116,7 +128,7 @@ contract RiskModuleTest is Test {
         uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values);
     }
 
-    function testCalculateWeightedCollateralFactorSuccess(
+    function testRevert_calculateWeightedLiquidationThreshold_ZeroNotPossible(
         address firstAsset,
         address secondAsset,
         uint240 firstValue,
@@ -124,12 +136,35 @@ contract RiskModuleTest is Test {
     ) public {
         // Given: 2 Assets with 2 values and values has to be bigger than zero for success.
         // Values are uint240 to prevent overflow in multiplication
+        // Assets are not in the liquidation threshold mapping
         vm.assume(firstValue > 0); // value of the asset can not be zero
         vm.assume(secondValue > 0); // value of the asset can not be zero
+
+        vm.assume(firstAsset != firstAssetAddress);
+        vm.assume(secondAsset != secondAssetAddress);
 
         address[] memory addresses = new address[](2);
         addresses[0] = firstAsset;
         addresses[1] = secondAsset;
+
+        uint256[] memory values = new uint256[](2);
+        values[0] = firstValue;
+        values[1] = secondValue;
+
+        // When Then: Calculation of the collateral factor should fail and reverted since collateral calculation overflow
+        vm.expectRevert("RM_GLT: Liquidation Threshold has to bigger than zero");
+        uint16 liqThreshold = riskModule.calculateWeightedLiquidationThreshold(addresses, values);
+    }
+
+    function testCalculateWeightedCollateralFactorSuccess(uint240 firstValue, uint240 secondValue) public {
+        // Given: 2 Assets with 2 values and values has to be bigger than zero for success.
+        // Values are uint240 to prevent overflow in multiplication
+        vm.assume(firstValue > 0); // value of the asset can not be zero
+        vm.assume(secondValue > 0); // value of the asset can not be zero
+
+        address[] memory addresses = new address[](2);
+        addresses[0] = firstAssetAddress;
+        addresses[1] = secondAssetAddress;
 
         uint256[] memory values = new uint256[](2);
         values[0] = firstValue;
@@ -150,7 +185,7 @@ contract RiskModuleTest is Test {
         for (uint256 i; i < addresses.length;) {
             totalValue += values[i];
             assetAddress = addresses[i];
-            calcCollFact = riskModule.getCollateralFactorHARDCODED(assetAddress);
+            calcCollFact = riskModule.getCollateralFactor(assetAddress);
             calcCollFactor += values[i].mulDivDown(100, uint256(calcCollFact));
             unchecked {
                 ++i;
@@ -161,14 +196,14 @@ contract RiskModuleTest is Test {
         assertEq(collFactor, calcCollFact);
     }
 
-    function testCalculateWeightedCollateralFactorFail(address firstAsset, address secondAsset) public {
+    function testCalculateWeightedCollateralFactorFail() public {
         // Given: The address of assets and the values of assets. The values of assets are zero
         uint256 firstValue = 0;
         uint256 secondValue = 0;
 
         address[] memory addresses = new address[](2);
-        addresses[0] = firstAsset;
-        addresses[1] = secondAsset;
+        addresses[0] = firstAssetAddress;
+        addresses[1] = secondAssetAddress;
 
         uint256[] memory values = new uint256[](2);
         values[0] = firstValue;
@@ -179,12 +214,9 @@ contract RiskModuleTest is Test {
         uint16 collFactor = riskModule.calculateWeightedCollateralFactor(addresses, values);
     }
 
-    function testCalculateWeightedCollateralFactorFailArithmetic(
-        address firstAsset,
-        address secondAsset,
-        uint8 firstValueShift,
-        uint8 secondValueShift
-    ) public {
+    function testCalculateWeightedCollateralFactorFailArithmetic(uint8 firstValueShift, uint8 secondValueShift)
+        public
+    {
         // Given: The address of assets and the values of assets.
         // The values of assets should be so big to trigger arithmetic
         uint256 min_val = type(uint256).max / 3;
@@ -195,6 +227,34 @@ contract RiskModuleTest is Test {
         vm.assume(secondValue < (max_val / 2));
 
         address[] memory addresses = new address[](2);
+        addresses[0] = firstAssetAddress;
+        addresses[1] = secondAssetAddress;
+
+        uint256[] memory values = new uint256[](2);
+        values[0] = firstValue;
+        values[1] = secondValue;
+
+        // When Then: Calculation of the collateral factor should fail and reverted since collateral calculation overflow
+        vm.expectRevert(stdError.arithmeticError);
+        uint16 collFactor = riskModule.calculateWeightedCollateralFactor(addresses, values);
+    }
+
+    function testRevert_calculateWeightedCollateralFactor_ZeroNotPossible(
+        address firstAsset,
+        address secondAsset,
+        uint240 firstValue,
+        uint240 secondValue
+    ) public {
+        // Given: 2 Assets with 2 values and values has to be bigger than zero for success.
+        // Values are uint240 to prevent overflow in multiplication
+        // Assets are not in the collateralfactors mapping
+        vm.assume(firstValue > 0); // value of the asset can not be zero
+        vm.assume(secondValue > 0); // value of the asset can not be zero
+
+        vm.assume(firstAsset != firstAssetAddress);
+        vm.assume(secondAsset != secondAssetAddress);
+
+        address[] memory addresses = new address[](2);
         addresses[0] = firstAsset;
         addresses[1] = secondAsset;
 
@@ -203,7 +263,7 @@ contract RiskModuleTest is Test {
         values[1] = secondValue;
 
         // When Then: Calculation of the collateral factor should fail and reverted since collateral calculation overflow
-        vm.expectRevert(stdError.arithmeticError);
-        uint16 liqThres = riskModule.calculateWeightedCollateralFactor(addresses, values);
+        vm.expectRevert("RM_GCF: Collateral Factor has to bigger than zero");
+        uint16 collFactor = riskModule.calculateWeightedCollateralFactor(addresses, values);
     }
 }

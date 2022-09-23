@@ -145,22 +145,22 @@ contract FloorERC1155PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsAssetWithWrongNumberOfCreditRatings() public {
-        vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatings = new uint256[](1);
-        assetCreditRatings[0] = 0;
-        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-        floorERC1155PricingModule.setAssetInformation(
-            FloorERC1155PricingModule.AssetInformation({
-                oracleAddresses: oracleInterleaveToEthEthToUsd,
-                id: 1,
-                assetAddress: address(interleave)
-            }),
-            assetCreditRatings
-        );
-
-        vm.stopPrank();
-    }
+//    function testOwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+//        vm.startPrank(creatorAddress);
+//        uint256[] memory assetCreditRatings = new uint256[](1);
+//        assetCreditRatings[0] = 0;
+//        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
+//        floorERC1155PricingModule.setAssetInformation(
+//            FloorERC1155PricingModule.AssetInformation({
+//                oracleAddresses: oracleInterleaveToEthEthToUsd,
+//                id: 1,
+//                assetAddress: address(interleave)
+//            }),
+//            assetCreditRatings
+//        );
+//
+//        vm.stopPrank();
+//    }
 
     function testOwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);

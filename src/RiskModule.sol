@@ -18,14 +18,17 @@ import "./utils/FixedPointMathLib.sol";
 contract RiskModule is Ownable {
     using FixedPointMathLib for uint256;
 
-    // TODO: To be deleted after the asset specific values are implemented
-    function getCollateralFactorHARDCODED(address assetAddress) public view returns (uint16) {
-        return 150;
+    mapping(address => uint16) public collateralFactors;
+    mapping(address => uint16) public liquidationThresholds;
+
+    function getCollateralFactor(address assetAddress) public view returns (uint16) {
+        require(collateralFactors[assetAddress] > 0, "RM_GCF: Collateral Factor has to bigger than zero");
+        return collateralFactors[assetAddress];
     }
 
-    // TODO: To be deleted after the asset specific values are implemented
-    function getLiquidationThresholdHARDCODED(address assetAddress) public view returns (uint16) {
-        return 110;
+    function getLiquidationThreshold(address assetAddress) public view returns (uint16) {
+        require(collateralFactors[assetAddress] > 0, "RM_GLT: Liquidation Threshold has to bigger than zero");
+        return liquidationThresholds[assetAddress];
     }
 
     /**
@@ -53,7 +56,7 @@ contract RiskModule is Ownable {
         uint16 collFact;
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
-            collFact = getCollateralFactorHARDCODED(assetAddress);
+            collFact = getCollateralFactor(assetAddress);
             if (collFact < minCollateralFactor) {
                 minCollateralFactor = collFact;
             }
@@ -81,7 +84,7 @@ contract RiskModule is Ownable {
         uint256 collFact;
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
-            collFact = getCollateralFactorHARDCODED(assetAddress);
+            collFact = getCollateralFactor(assetAddress);
             collateralValue += valuesPerAsset[i].mulDivDown(100, uint256(collFact));
             unchecked {
                 ++i;
@@ -112,7 +115,7 @@ contract RiskModule is Ownable {
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
             assetAddress = assetAddresses[i];
-            collFact = getCollateralFactorHARDCODED(assetAddress);
+            collFact = getCollateralFactor(assetAddress);
             collateralFactor256 += valuesPerAsset[i] * uint256(collFact);
             unchecked {
                 i++;
@@ -152,7 +155,7 @@ contract RiskModule is Ownable {
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
             assetAddress = assetAddresses[i];
-            liqThreshold = getLiquidationThresholdHARDCODED(assetAddress);
+            liqThreshold = getLiquidationThreshold(assetAddress);
             liquidationThreshold256 += valuesPerAsset[i] * uint256(liqThreshold);
             unchecked {
                 i++;

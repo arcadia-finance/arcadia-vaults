@@ -140,14 +140,14 @@ contract aTokenPricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
-        vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatings = new uint256[](1);
-        assetCreditRatings[0] = 0;
-        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-        aTokenPricingModule.setAssetInformation(address(aEth), assetCreditRatings);
-        vm.stopPrank();
-    }
+//    function testRevert_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+//        vm.startPrank(creatorAddress);
+//        uint256[] memory assetCreditRatings = new uint256[](1);
+//        assetCreditRatings[0] = 0;
+//        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
+//        aTokenPricingModule.setAssetInformation(address(aEth), assetCreditRatings);
+//        vm.stopPrank();
+//    }
 
     function testSuccess_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);

@@ -125,18 +125,6 @@ contract MainRegistry is Ownable, RiskModule {
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
         baseCurrencies.push(baseCurrencyInformation.assetAddress);
 
-        uint256 assetCreditRatingsLength = assetCreditRatings.length;
-        require(
-            assetCreditRatingsLength == assetsInMainRegistry.length || assetCreditRatingsLength == 0, "MR_AN: length"
-        );
-        for (uint256 i; i < assetCreditRatingsLength;) {
-            require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AN: non existing credRat");
-            assetToBaseCurrencyToCreditRating[assetsInMainRegistry[i]][baseCurrencyCounter] = assetCreditRatings[i];
-            unchecked {
-                ++i;
-            }
-        }
-
         unchecked {
             ++baseCurrencyCounter;
         }
@@ -192,18 +180,26 @@ contract MainRegistry is Ownable, RiskModule {
         }
         assetToPricingModule[assetAddress] = msg.sender;
 
-        uint256 assetCreditRatingsLength = assetCreditRatings.length;
+        // Hardcode Risk Params for test
+        collateralFactors[assetAddress] = 150;
+        liquidationThresholds[assetAddress] = 110;
+    }
 
-        require(
-            assetCreditRatingsLength == baseCurrencyCounter || assetCreditRatingsLength == 0, "MR_AA: LENGTH_MISMATCH"
-        );
-        for (uint256 i; i < assetCreditRatingsLength;) {
-            require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AA: non-existing");
-            assetToBaseCurrencyToCreditRating[assetAddress][i] = assetCreditRatings[i];
-            unchecked {
-                ++i;
-            }
+    function addAsset(address assetAddress, uint16 collateralFactor, uint16 liquidationThreshold)
+        external
+        onlyPricingModule
+    {
+        if (inMainRegistry[assetAddress]) {
+            require(assetsUpdatable, "MR_AA: already known");
+        } else {
+            inMainRegistry[assetAddress] = true;
+            assetsInMainRegistry.push(assetAddress);
         }
+        assetToPricingModule[assetAddress] = msg.sender;
+
+        // Set Risk Parameters
+        collateralFactors[assetAddress] = collateralFactor;
+        liquidationThresholds[assetAddress] = liquidationThreshold;
     }
 
     /* ///////////////////////////////////////////////////////////////

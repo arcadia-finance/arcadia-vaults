@@ -313,30 +313,6 @@ contract Vault {
     }
 
     /**
-     * @notice Calculates the total collateral value of the vault.
-     * @param vaultValue The total spot value of all the assets in the vault.
-     * @return collateralValue The collateral value, returned in the decimals of the base currency.
-     * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
-     * @dev The collateral value of the vault is equal to the spot value of the underlying assets,
-     * discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
-     * collateralised assets can fluctuate, the haircut guarantees that the vault
-     * remains over-collateralised with a high confidence level (99,9%+). The size of the
-     * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
-     * or the smaller the on-chain liquidity, the bigger the haircut will be.
-     */
-    function getCollateralValue(uint256 vaultValue) public view returns (uint256 collateralValue) {
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
-        uint16 collateralFactor =
-            IRegistry(registryAddress).getCollateralFactor(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
-        //gas: cannot overflow unless currentValue is more than
-        // 1.15**57 *10**18 decimals, which is too many billions to write out
-        unchecked {
-            collateralValue = vaultValue * 100 / uint256(collateralFactor);
-        }
-    }
-
-    /**
      * @notice Returns the used margin of the proxy vault.
      * @return usedMargin The used amount of margin a user has taken
      * @dev The used margin is denominated in the baseCurrency of the proxy vault.
@@ -355,23 +331,6 @@ contract Vault {
      */
     function getFreeMargin() public returns (uint256 freeMargin) {
         uint256 collateralValue = getCollateralValue();
-        uint256 usedMargin = getUsedMargin();
-
-        //gas: explicit check is done to prevent underflow
-        unchecked {
-            freeMargin = collateralValue > usedMargin ? collateralValue - usedMargin : 0;
-        }
-    }
-
-    /**
-     * @notice Calculates the remaining margin the owner of the proxy vault can use.
-     * @param vaultValue The total spot value of all the assets in the vault.
-     * @dev Returns the remaining credit in the baseCurrency in which the proxy vault is initialised.
-     * @return freeMargin The remaining amount of margin a user can take,
-     * returned in the decimals of the base currency.
-     */
-    function getFreeMargin(uint256 vaultValue) public returns (uint256 freeMargin) {
-        uint256 collateralValue = getCollateralValue(vaultValue);
         uint256 usedMargin = getUsedMargin();
 
         //gas: explicit check is done to prevent underflow

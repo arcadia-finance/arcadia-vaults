@@ -140,14 +140,14 @@ contract standardERC4626PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
-        vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatings = new uint256[](1);
-        assetCreditRatings[0] = 0;
-        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-        standardERC4626PricingModule.setAssetInformation(address(ybEth), assetCreditRatings);
-        vm.stopPrank();
-    }
+//    function testRevert_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+//        vm.startPrank(creatorAddress);
+//        uint256[] memory assetCreditRatings = new uint256[](1);
+//        assetCreditRatings[0] = 0;
+//        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
+//        standardERC4626PricingModule.setAssetInformation(address(ybEth), assetCreditRatings);
+//        vm.stopPrank();
+//    }
 
     function testRevert_OwnerAddsAssetWithWrongNumberOfDecimals() public {
         ybEth = new ERC4626Mock(eth, "ybETH Mock", "mybETH", uint8(Constants.ethDecimals) - 1);
