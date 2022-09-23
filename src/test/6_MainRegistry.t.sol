@@ -46,7 +46,7 @@ contract MainRegistryTest is Test {
     ArcadiaOracle private oracleWmaycToUsd;
     ArcadiaOracle private oracleInterleaveToEth;
     MainRegistry private mainRegistry;
-    StandardERC20Registry private standardERC20Registry;
+    StandardERC20PricingModule private standardERC20Registry;
     FloorERC721PricingModule private floorERC721PricingModule;
     FloorERC1155PricingModule private floorERC1155PricingModule;
     Factory private factory;
@@ -226,7 +226,7 @@ contract MainRegistryTest is Test {
             })
         );
 
-        standardERC20Registry = new StandardERC20Registry(
+        standardERC20Registry = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -271,7 +271,7 @@ contract MainRegistryTest is Test {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -279,7 +279,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -307,7 +307,7 @@ contract MainRegistryTest is Test {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -315,7 +315,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -344,7 +344,7 @@ contract MainRegistryTest is Test {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -352,7 +352,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -393,7 +393,7 @@ contract MainRegistryTest is Test {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -401,7 +401,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -719,7 +719,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -773,7 +773,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -827,7 +827,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -881,7 +881,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -935,7 +935,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -943,7 +943,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
@@ -995,7 +995,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1003,7 +1003,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
@@ -1055,7 +1055,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1063,7 +1063,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
@@ -1136,7 +1136,7 @@ contract MainRegistryTest is Test {
         );
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** linkDecimals),
                 assetAddress: address(link)
@@ -1209,7 +1209,7 @@ contract MainRegistryTest is Test {
         );
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** linkDecimals),
                 assetAddress: address(link)
@@ -1263,7 +1263,7 @@ contract MainRegistryTest is Test {
         );
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -1317,7 +1317,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1385,7 +1385,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1454,7 +1454,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1514,7 +1514,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1574,7 +1574,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1634,7 +1634,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1694,7 +1694,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1702,7 +1702,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -1782,7 +1782,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1790,7 +1790,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -1878,7 +1878,7 @@ contract MainRegistryTest is Test {
         assetCreditRatings[1] = Constants.ethCreditRatingDai;
         assetCreditRatings[2] = Constants.ethCreditRatingEth;
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1890,7 +1890,7 @@ contract MainRegistryTest is Test {
         assetCreditRatings[1] = Constants.linkCreditRatingDai;
         assetCreditRatings[2] = Constants.linkCreditRatingEth;
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -1981,7 +1981,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -1989,7 +1989,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -2051,7 +2051,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -2059,7 +2059,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -2132,7 +2132,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -2140,7 +2140,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -2209,7 +2209,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -2217,7 +2217,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)

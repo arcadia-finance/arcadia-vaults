@@ -56,7 +56,7 @@ contract gasDeploys is Test {
     ArcadiaOracle private oracleWmaycToUsd;
     ArcadiaOracle private oracleInterleaveToEth;
     MainRegistry private mainRegistry;
-    StandardERC20Registry private standardERC20Registry;
+    StandardERC20PricingModule private standardERC20Registry;
     FloorERC721PricingModule private floorERC721PricingModule;
     FloorERC1155PricingModule private floorERC1155PricingModule;
     Liquidator private liquidator;
@@ -330,7 +330,7 @@ contract gasDeploys is Test {
             emptyList
         );
 
-        standardERC20Registry = new StandardERC20Registry(
+        standardERC20Registry = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -353,7 +353,7 @@ contract gasDeploys is Test {
         assetCreditRatings[2] = 0;
 
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -361,7 +361,7 @@ contract gasDeploys is Test {
             assetCreditRatings
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -369,7 +369,7 @@ contract gasDeploys is Test {
             assetCreditRatings
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
@@ -466,7 +466,7 @@ contract gasDeploys is Test {
     }
 
     function testDeployPricingModuleERC20() public {
-        new StandardERC20Registry(address(mainRegistry), address(oracleHub));
+        new StandardERC20PricingModule(address(mainRegistry), address(oracleHub));
     }
 
     function testDeployPricingModuleERC721() public {
