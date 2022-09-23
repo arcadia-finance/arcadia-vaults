@@ -58,7 +58,7 @@ contract gasVaultAuction_1ERC20 is Test {
     ArcadiaOracle private oracleInterleaveToEth;
     ArcadiaOracle private oracleGenericStoreFrontToEth;
     MainRegistry private mainRegistry;
-    StandardERC20Registry private standardERC20Registry;
+    StandardERC20PricingModule private standardERC20Registry;
     FloorERC721PricingModule private floorERC721PricingModule;
     FloorERC1155PricingModule private floorERC1155PricingModule;
     Liquidator private liquidator;
@@ -468,7 +468,7 @@ contract gasVaultAuction_1ERC20 is Test {
             emptyList
         );
 
-        standardERC20Registry = new StandardERC20Registry(
+        standardERC20Registry = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -491,7 +491,7 @@ contract gasVaultAuction_1ERC20 is Test {
         assetCreditRatings[2] = 0;
 
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -499,7 +499,7 @@ contract gasVaultAuction_1ERC20 is Test {
             assetCreditRatings
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -507,7 +507,7 @@ contract gasVaultAuction_1ERC20 is Test {
             assetCreditRatings
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)

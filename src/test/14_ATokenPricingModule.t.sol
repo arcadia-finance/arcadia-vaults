@@ -29,7 +29,7 @@ contract aTokenPricingModuleTest is Test {
 
     ArcadiaOracle private oracleEthToUsd;
 
-    StandardERC20Registry private standardERC20PricingModule;
+    StandardERC20PricingModule private standardERC20PricingModule;
     ATokenPricingModule private aTokenPricingModule;
 
     address private creatorAddress = address(1);
@@ -108,7 +108,7 @@ contract aTokenPricingModuleTest is Test {
             emptyList
         );
 
-        standardERC20PricingModule = new StandardERC20Registry(
+        standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -122,7 +122,7 @@ contract aTokenPricingModuleTest is Test {
         mainRegistry.addPricingModule(address(aTokenPricingModule));
 
         standardERC20PricingModule.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
