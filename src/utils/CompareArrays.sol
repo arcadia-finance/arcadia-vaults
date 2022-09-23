@@ -2,11 +2,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 library CompareArrays {
-    function compareArrays(address[] memory arr1, address[] memory arr2)
-        public
-        pure
-        returns (bool)
-    {
+    function compareArrays(address[] memory arr1, address[] memory arr2) public pure returns (bool) {
         if (arr1.length != arr2.length) {
             return false;
         }
@@ -18,11 +14,7 @@ library CompareArrays {
         return true;
     }
 
-    function compareArrays(uint256[] memory arr1, uint256[] memory arr2)
-        public
-        pure
-        returns (bool)
-    {
+    function compareArrays(uint256[] memory arr1, uint256[] memory arr2) public pure returns (bool) {
         if (arr1.length != arr2.length) {
             return false;
         }

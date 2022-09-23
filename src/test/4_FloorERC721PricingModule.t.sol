@@ -1,8 +1,8 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >0.8.10;
 
@@ -12,12 +12,12 @@ import "../mockups/ERC20SolmateMock.sol";
 import "../mockups/ERC721SolmateMock.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
-import "../AssetRegistry/FloorERC721SubRegistry.sol";
+import "../AssetRegistry/FloorERC721PricingModule.sol";
 import "../AssetRegistry/MainRegistry.sol";
-import "../ArcadiaOracle.sol";
+import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract FloorERC721SubRegistryTest is Test {
+contract FloorERC721PricingModuleTest is Test {
     using stdStorage for StdStorage;
 
     OracleHub private oracleHub;
@@ -32,15 +32,15 @@ contract FloorERC721SubRegistryTest is Test {
     ArcadiaOracle private oracleWbaycToEth;
     ArcadiaOracle private oracleWmaycToUsd;
 
-    FloorERC721SubRegistry private floorERC721SubRegistry;
+    FloorERC721PricingModule private floorERC721PricingModule;
 
     address private creatorAddress = address(1);
     address private tokenCreatorAddress = address(2);
     address private oracleOwner = address(3);
 
-    uint256 rateEthToUsd = 3000 * 10**Constants.oracleEthToUsdDecimals;
-    uint256 rateWbaycToEth = 85 * 10**Constants.oracleWbaycToEthDecimals;
-    uint256 rateWmaycToUsd = 50000 * 10**Constants.oracleWmaycToUsdDecimals;
+    uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
+    uint256 rateWbaycToEth = 85 * 10 ** Constants.oracleWbaycToEthDecimals;
+    uint256 rateWmaycToUsd = 50000 * 10 ** Constants.oracleWmaycToUsdDecimals;
 
     address[] public oracleWbaycToEthEthToUsd = new address[](2);
     address[] public oracleWmaycToUsdArr = new address[](1);
@@ -48,8 +48,7 @@ contract FloorERC721SubRegistryTest is Test {
     uint256[] emptyList = new uint256[](0);
 
     // FIXTURES
-    ArcadiaOracleFixture arcadiaOracleFixture =
-        new ArcadiaOracleFixture(oracleOwner);
+    ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
     //this is a before
     constructor() {
@@ -64,35 +63,27 @@ contract FloorERC721SubRegistryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                stableAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         oracleHub = new OracleHub();
         vm.stopPrank();
 
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleEthToUsdDecimals),
-            "ETH / USD",
-            rateEthToUsd
-        );
+        oracleEthToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
         oracleWbaycToEth = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWbaycToEthDecimals),
-            "LINK / USD",
-            rateWbaycToEth
+            uint8(Constants.oracleWbaycToEthDecimals), "LINK / USD", rateWbaycToEth
         );
         oracleWmaycToUsd = arcadiaOracleFixture.initMockedOracle(
-            uint8(Constants.oracleWmaycToUsdDecimals),
-            "SNX / ETH",
-            rateWmaycToUsd
+            uint8(Constants.oracleWmaycToUsdDecimals), "SNX / ETH", rateWmaycToUsd
         );
 
         vm.startPrank(creatorAddress);
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
                 oracleAddress: address(oracleEthToUsd),
@@ -103,7 +94,7 @@ contract FloorERC721SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetBaseCurrency: 1,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
                 oracleAddress: address(oracleWbaycToEth),
@@ -114,7 +105,7 @@ contract FloorERC721SubRegistryTest is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetBaseCurrency: 0,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
                 oracleAddress: address(oracleWmaycToUsd),
@@ -138,39 +129,35 @@ contract FloorERC721SubRegistryTest is Test {
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                stableAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
-                baseCurrencyUnit: 1
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(
-                    10**Constants.oracleEthToUsdDecimals
-                ),
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                stableAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
-                baseCurrencyUnit: uint64(10**Constants.ethDecimals)
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
             emptyList
         );
 
-        floorERC721SubRegistry = new FloorERC721SubRegistry(
+        floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
-        mainRegistry.addSubRegistry(address(floorERC721SubRegistry));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         vm.stopPrank();
     }
 
-    function testNonOwnerAddsAsset(address unprivilegedAddress) public {
+    function testRevert_setAssetInformation_NonOwnerAddsAsset(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -181,13 +168,13 @@ contract FloorERC721SubRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -199,10 +186,10 @@ contract FloorERC721SubRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -212,16 +199,16 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(floorERC721SubRegistry.inSubRegistry(address(bayc)));
+        assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testOwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -231,13 +218,13 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(floorERC721SubRegistry.inSubRegistry(address(bayc)));
+        assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testOwnerOverwritesExistingAsset() public {
+    function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -245,8 +232,8 @@ contract FloorERC721SubRegistryTest is Test {
             }),
             emptyList
         );
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
@@ -256,13 +243,13 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(floorERC721SubRegistry.inSubRegistry(address(bayc)));
+        assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testIsWhitelistedPositive() public {
+    function testSuccess_isWhiteListed_Positive() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
@@ -272,20 +259,20 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(floorERC721SubRegistry.isWhiteListed(address(bayc), 0));
-        assertTrue(floorERC721SubRegistry.isWhiteListed(address(bayc), 9999));
-        assertTrue(floorERC721SubRegistry.isWhiteListed(address(bayc), 5000));
+        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 0));
+        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 9999));
+        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 5000));
     }
 
-    function testIsWhitelistedNegativeWrongAddress(address randomAsset) public {
-        assertTrue(!floorERC721SubRegistry.isWhiteListed(randomAsset, 0));
+    function testSuccess_isWhiteListed_NegativeWrongAddress(address randomAsset) public {
+        assertTrue(!floorERC721PricingModule.isWhiteListed(randomAsset, 0));
     }
 
-    function testIsWhitelistedNegativeIdOutsideRange(uint256 id) public {
+    function testSuccess_isWhiteListed_NegativeIdOutsideRange(uint256 id) public {
         vm.assume(id < 10 || id > 1000);
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 10,
                 idRangeEnd: 999,
@@ -295,13 +282,13 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(!floorERC721SubRegistry.isWhiteListed(address(bayc), id));
+        assertTrue(!floorERC721PricingModule.isWhiteListed(address(bayc), id));
     }
 
-    function testReturnUsdValueWhenBaseCurrencyIsUsd() public {
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 999,
@@ -311,34 +298,26 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (rateWbaycToEth *
-            rateEthToUsd *
-            Constants.WAD) /
-            10 **
-                (Constants.oracleWbaycToEthDecimals +
-                    Constants.oracleEthToUsdDecimals);
+        uint256 expectedValueInUsd = (rateWbaycToEth * rateEthToUsd * Constants.WAD)
+            / 10 ** (Constants.oracleWbaycToEthDecimals + Constants.oracleEthToUsdDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(bayc),
-                assetId: 0,
-                assetAmount: 1,
-                baseCurrency: 0
-            });
-        (
-            uint256 actualValueInUsd,
-            uint256 actualValueInBaseCurrency
-        ) = floorERC721SubRegistry.getValue(getValueInput);
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+            assetAddress: address(bayc),
+            assetId: 0,
+            assetAmount: 1,
+            baseCurrency: uint8(Constants.UsdBaseCurrency)
+        });
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testreturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd() public {
+    function testSuccess_getValue_ReturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 999,
@@ -349,29 +328,25 @@ contract FloorERC721SubRegistryTest is Test {
         vm.stopPrank();
 
         uint256 expectedValueInUsd = 0;
-        uint256 expectedValueInBaseCurrency = (rateWbaycToEth * Constants.WAD) /
-            10**Constants.oracleWbaycToEthDecimals;
+        uint256 expectedValueInBaseCurrency =
+            (rateWbaycToEth * Constants.WAD) / 10 ** Constants.oracleWbaycToEthDecimals;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(bayc),
-                assetId: 0,
-                assetAmount: 1,
-                baseCurrency: 1
-            });
-        (
-            uint256 actualValueInUsd,
-            uint256 actualValueInBaseCurrency
-        ) = floorERC721SubRegistry.getValue(getValueInput);
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+            assetAddress: address(bayc),
+            assetId: 0,
+            assetAmount: 1,
+            baseCurrency: uint8(Constants.EthBaseCurrency)
+        });
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnUsdValueWhenBaseCurrencyIsNotUsd() public {
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
-        floorERC721SubRegistry.setAssetInformation(
-            FloorERC721SubRegistry.AssetInformation({
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWmaycToUsdArr,
                 idRangeStart: 0,
                 idRangeEnd: 999,
@@ -381,21 +356,16 @@ contract FloorERC721SubRegistryTest is Test {
         );
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (rateWmaycToUsd * Constants.WAD) /
-            10**Constants.oracleWmaycToUsdDecimals;
+        uint256 expectedValueInUsd = (rateWmaycToUsd * Constants.WAD) / 10 ** Constants.oracleWmaycToUsdDecimals;
         uint256 expectedValueInBaseCurrency = 0;
 
-        SubRegistry.GetValueInput memory getValueInput = SubRegistry
-            .GetValueInput({
-                assetAddress: address(mayc),
-                assetId: 0,
-                assetAmount: 1,
-                baseCurrency: 1
-            });
-        (
-            uint256 actualValueInUsd,
-            uint256 actualValueInBaseCurrency
-        ) = floorERC721SubRegistry.getValue(getValueInput);
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+            assetAddress: address(mayc),
+            assetId: 0,
+            assetAmount: 1,
+            baseCurrency: uint8(Constants.EthBaseCurrency)
+        });
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);

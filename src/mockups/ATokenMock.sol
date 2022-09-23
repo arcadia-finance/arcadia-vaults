@@ -8,11 +8,9 @@ import "../interfaces/IAToken.sol";
 contract ATokenMock is ERC20 {
     address public uToken;
 
-    constructor(
-        address _uToken,
-        string memory name,
-        string memory symbol
-    ) ERC20(name, symbol, ERC20(_uToken).decimals()) {
+    constructor(address _uToken, string memory name, string memory symbol)
+        ERC20(name, symbol, ERC20(_uToken).decimals())
+    {
         uToken = _uToken;
     }
 

@@ -1,12 +1,12 @@
-/** 
-    Created by Arcadia Finance
-    https://www.arcadia.finance
-
-    SPDX-License-Identifier: BUSL-1.1
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >=0.8.0;
 
-import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract ArcadiaOracle is Ownable {
     // Configs
@@ -23,14 +23,14 @@ contract ArcadiaOracle is Ownable {
         uint64 timestamp;
     }
 
-    mapping(uint32 => Transmission) /* aggregator round ID */
-        internal transmissions;
+    mapping(uint32 => Transmission) /* aggregator round ID */ internal transmissions;
 
     enum Role {
         Unset, // unset
         Transmitter, // Offchain data transmissions to the oracle
         Validator // Offchain data validator for the setted values
     }
+
     struct OffchainConnector {
         Role role; // role of the connector
         bool isActive; // is the connector still active
@@ -38,11 +38,7 @@ contract ArcadiaOracle is Ownable {
 
     mapping(address => OffchainConnector) internal offchain_connectors;
 
-    constructor(
-        uint8 _decimals,
-        string memory _description,
-        address _asset_address
-    ) {
+    constructor(uint8 _decimals, string memory _description, address _asset_address) {
         decimals = _decimals;
         description = _description;
         asset_address = _asset_address;
@@ -58,10 +54,7 @@ contract ArcadiaOracle is Ownable {
             offchain_connectors[_transmitter].role != Role.Transmitter,
             "Oracle: Address is already saved as Transmitter!"
         );
-        offchain_connectors[_transmitter] = OffchainConnector({
-            isActive: true,
-            role: Role.Transmitter
-        });
+        offchain_connectors[_transmitter] = OffchainConnector({isActive: true, role: Role.Transmitter});
     }
 
     /**
@@ -69,10 +62,7 @@ contract ArcadiaOracle is Ownable {
      * @param _transmitter address of the transmitter
      */
     function deactivateTransmitter(address _transmitter) public onlyOwner {
-        require(
-            offchain_connectors[_transmitter].role == Role.Transmitter,
-            "Oracle: Address is not Transmitter!"
-        );
+        require(offchain_connectors[_transmitter].role == Role.Transmitter, "Oracle: Address is not Transmitter!");
         offchain_connectors[_transmitter].isActive = false;
     }
 
@@ -81,13 +71,9 @@ contract ArcadiaOracle is Ownable {
      */
     modifier onlyTransmitter() {
         require(
-            offchain_connectors[_msgSender()].role == Role.Transmitter,
-            "Oracle: caller is not the valid transmitter"
+            offchain_connectors[_msgSender()].role == Role.Transmitter, "Oracle: caller is not the valid transmitter"
         );
-        require(
-            offchain_connectors[_msgSender()].isActive,
-            "Oracle: transmitter is not active"
-        );
+        require(offchain_connectors[_msgSender()].isActive, "Oracle: transmitter is not active");
         _;
     }
 
@@ -99,10 +85,7 @@ contract ArcadiaOracle is Ownable {
         unchecked {
             latestRoundId++;
         }
-        transmissions[latestRoundId] = Transmission(
-            _answer,
-            uint64(block.timestamp)
-        );
+        transmissions[latestRoundId] = Transmission(_answer, uint64(block.timestamp));
     }
 
     /**
@@ -116,13 +99,7 @@ contract ArcadiaOracle is Ownable {
     function latestRoundData()
         public
         view
-        returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        )
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
         roundId = latestRoundId;
         require(roundId != 0, "Oracle: No data present!");
