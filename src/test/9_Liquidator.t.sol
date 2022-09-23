@@ -464,7 +464,7 @@ contract LiquidatorTest is Test {
         assertEq(to, liquidator_m.owner());
     }
 
-    function testRevert_transferOwnership_ByNonOwner(address from) public {
+    function testRevert_transferOwnership_NonOwner_CallerNotOwner(address from) public {
         vm.assume(from != address(this) && from != address(factory));
 
         Liquidator liquidator_m = new Liquidator(

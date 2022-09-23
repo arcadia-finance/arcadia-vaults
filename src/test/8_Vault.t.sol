@@ -1403,7 +1403,7 @@ contract vaultTests is Test {
         assertEq(baseCurrency, address(dai));
     }
 
-    function testSuccess_liquidate_LiquidateVaultFactory(address liquidationKeeper) public {
+    function testSuccess_liquidate_UnhealthyVault_NewOwnerLiquidator(address liquidationKeeper) public {
         vm.assume(
             liquidationKeeper != address(this) && liquidationKeeper != address(0)
                 && liquidationKeeper != address(factoryContr)
