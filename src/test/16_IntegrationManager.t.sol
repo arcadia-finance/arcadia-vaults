@@ -20,6 +20,7 @@ abstract contract IntegrationManagerTest is Test {
 
     address deployer = address(1);
     address vaultOwner = address(2);
+    address mainRegistry = address(3);
 
     //Before
     constructor() {
@@ -30,7 +31,7 @@ abstract contract IntegrationManagerTest is Test {
     function setUp() public virtual {
         vm.startPrank(deployer);
         vault = new Vault();
-        im = new IntegrationManager();
+        im = new IntegrationManager(address(mainRegistry));
         adapter = new AdapterMock(address(im));
         vm.stopPrank();
 
@@ -127,7 +128,7 @@ contract CallOnIntegrationTest is IntegrationManagerTest {
         vm.stopPrank();
     }
 
-        function testSuccess_callAdapterExpectedReturnData(address actionAddress, uint256 actionAmount) public {
+        function testSuccess_callAdapterExpectSuccess(address actionAddress, uint256 actionAmount) public {
         
         bytes4 _selector =  bytes4(keccak256("_selector(address,bytes,bytes)"));
         address _vaultProxy = address(vault);
@@ -139,26 +140,8 @@ contract CallOnIntegrationTest is IntegrationManagerTest {
         );
         vm.stopPrank();
 
-
         assertEq(success, true);
-        
-        (
-            address[] memory spendAssets_,
-            uint256[] memory spendAssetAmounts_,
-            address[] memory incomingAssets_,
-            uint256[] memory minIncomingAssetAmounts_
-        ) = abi.decode(returnData, (address[], uint256[],address[], uint256[]));
-
-        assertEq(spendAssets_.length, 1);
-        assertEq(spendAssetAmounts_.length, 1);
-        assertEq(incomingAssets_.length, 1);
-        assertEq(minIncomingAssetAmounts_.length, 1);
-        
-        assertEq(spendAssets_[0], actionAddress);
-        assertEq(spendAssetAmounts_[0], actionAmount);
-        assertEq(incomingAssets_[0], actionAddress);
-        assertEq(minIncomingAssetAmounts_[0], actionAmount);
-
+    
     }
     
 }

@@ -20,6 +20,8 @@ contract AdapterMock is AdapterBase {
             address actionAddress,
             uint256 actionAmount
         ) = __decodeSelectorCallArgs(_actionData);
+
+        //Call to external service here.
     }
     function parseAssetsForAction(
         address,
@@ -30,10 +32,8 @@ contract AdapterMock is AdapterBase {
         view
         override
         returns (
-            address[] memory spendAssets_,
-            uint256[] memory spendAssetAmounts_,
-            address[] memory incomingAssets_,
-            uint256[] memory minIncomingAssetAmounts_
+            actionAssetsData memory spendAssets_,
+            actionAssetsData memory incomingAssets_
         )
     {
         require(_selector == bytes4(keccak256("_selector(address,bytes,bytes)")), "parseAssetsForAction: _selector invalid");
@@ -45,10 +45,8 @@ contract AdapterMock is AdapterBase {
         private
         pure
         returns (
-            address[] memory spendAssets_,
-            uint256[] memory spendAssetAmounts_,
-            address[] memory incomingAssets_,
-            uint256[] memory minIncomingAssetAmounts_
+            actionAssetsData memory spendAssets_,
+            actionAssetsData memory incomingAssets_
         )
     {
         (
@@ -56,22 +54,20 @@ contract AdapterMock is AdapterBase {
             uint256 actionAmount_
         ) = __decodeSelectorCallArgs(_actionData);
 
-        spendAssets_ = new address[](1);
-        spendAssets_[0] = actionAddress_;
-        spendAssetAmounts_ = new uint256[](1);
-        spendAssetAmounts_[0] = actionAmount_;
+        spendAssets_.assets = new address[](1);
+        spendAssets_.assets[0] = actionAddress_;
+        spendAssets_.minmaxAssetAmounts = new uint256[](1);
+        spendAssets_.minmaxAssetAmounts[0] = actionAmount_;
 
-        incomingAssets_ = new address[](1);
-        incomingAssets_[0] = actionAddress_;
-        minIncomingAssetAmounts_ = new uint256[](1);
-        minIncomingAssetAmounts_[0] = actionAmount_;
+        incomingAssets_.assets = new address[](1);
+        incomingAssets_.assets[0] = actionAddress_;
+        incomingAssets_.minmaxAssetAmounts = new uint256[](1);
+        incomingAssets_.minmaxAssetAmounts[0] = actionAmount_;
 
 
         return (
             spendAssets_,
-            spendAssetAmounts_,
-            incomingAssets_,
-            minIncomingAssetAmounts_
+            incomingAssets_
         );
     }
 

@@ -805,6 +805,12 @@ contract Vault {
     /*///////////////////////////////////////////////////////////////
                         INTEGRATION FUNCTIONS
     ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Calls on an integration via the IntegratioManager.
+     * @param _callArgs abi encoded data .
+     */
+
     function callOnIntegration(
         bytes memory _callArgs) public payable onlyOwner returns (bool success) {
 

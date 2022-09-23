@@ -11,10 +11,18 @@
 
 pragma solidity >=0.8.0 <0.9.0;
 
+struct actionAssetsData { 
+            address[] assets;
+            uint256[] assetIds;
+            uint256[] preCallAssetBalances;
+            uint256[] minmaxAssetAmounts;
+    }
+
 /// @title Integration Adapter interface
 /// @author Enzyme Council <security@enzyme.finance>
 /// @notice Interface for all integration adapters
 interface IIntegrationAdapter {
+
     function parseAssetsForAction(
         address _vaultProxy,
         bytes4 _selector,
@@ -23,9 +31,7 @@ interface IIntegrationAdapter {
         external
         view
         returns (
-            address[] memory spendAssets_,
-            uint256[] memory spendAssetAmounts_,
-            address[] memory incomingAssets_,
-            uint256[] memory minIncomingAssetAmounts_
+            actionAssetsData memory spendAssets_,
+            actionAssetsData memory incomingAssets_
         );
 }

@@ -7,14 +7,23 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "../interfaces/IVault.sol";
+import "../interfaces/IMainRegistry.sol";
+import "../interfaces/IIntegrationManager.sol";
 import "../../lib/solmate/src/tokens/ERC20.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import {AddressArrayLib} from "./utils/AddressArrayLib.sol";
 import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./utils/IIntegrationAdapter.sol";
+import "./utils/VaultActionMixin.sol";
 
 /// @title IntegrationManager
-contract IntegrationManager is Ownable
+contract IntegrationManager is 
+    Ownable,
+    IIntegrationManager,
+    VaultActionMixin
     {
     using FixedPointMathLib for uint256;
+    using AddressArrayLib for address[];
 
     event CallOnIntegrationExecutedForVault(
         address caller, // vaultOwner or vaultDelegate 
@@ -27,24 +36,12 @@ contract IntegrationManager is Ownable
         uint256[] spendAssetAmounts
     );
 
-    // figure out value interpreter
-    constructor() public {}
+    address private immutable MAIN_REGISTRY;
 
+    constructor(address _mainRegistry) public {
+        MAIN_REGISTRY = _mainRegistry;
+    }
 
-    // /////////////
-    // // GENERAL //
-    // /////////////
-
-    // /// @notice Enables the IntegrationManager to be used by a vault
-    // /// @param _comptrollerProxy The ComptrollerProxy of the fund
-    // /// @param _vaultProxy The VaultProxy of the fund
-    // function setConfigForFund(
-    //     address _comptrollerProxy,
-    //     address _vaultProxy,
-    //     bytes calldata
-    // ) external override onlyFundDeployer {
-    //     __setValidatedVaultProxy(_comptrollerProxy, _vaultProxy);
-    // }
 
     ///////////////////////////////
     // CALL-ON-EXTENSION ACTIONS //
@@ -58,15 +55,13 @@ contract IntegrationManager is Ownable
         bytes calldata _callArgs
     ) external {
         address vaultProxy = msg.sender;
+        //Check on facotry is its is effectively a vault!!!!
         require(
             IVault(vaultProxy).owner() == _caller, //
             "receiveCallFromVaultProxy: Unauthorized"
         );
-
         __callOnIntegration(_caller, vaultProxy, _callArgs);
     }
-
-
 
     /////////////////////////
     // CALL ON INTEGRATION //
@@ -92,10 +87,8 @@ contract IntegrationManager is Ownable
         ) = __decodeCallOnIntegrationArgs(_callArgs);
 
         (
-            address[] memory incomingAssets,
-            uint256[] memory incomingAssetAmounts,
-            address[] memory spendAssets,
-            uint256[] memory spendAssetAmounts
+            actionAssetsData memory incomingAssets,
+            actionAssetsData memory spendAssets
         ) = __callOnIntegrationInner(
                 _vaultProxy,
                 adapter,
@@ -108,10 +101,10 @@ contract IntegrationManager is Ownable
             adapter,
             selector,
             integrationData,
-            incomingAssets,
-            incomingAssetAmounts,
-            spendAssets,
-            spendAssetAmounts
+            incomingAssets.assets,
+            incomingAssets.minmaxAssetAmounts,
+            spendAssets.assets,
+            spendAssets.minmaxAssetAmounts
         );
     }
 
@@ -125,50 +118,32 @@ contract IntegrationManager is Ownable
     )
         private
         returns (
-            address[] memory incomingAssets_,
-            uint256[] memory incomingAssetAmounts_,
-            address[] memory spendAssets_,
-            uint256[] memory spendAssetAmounts_
+            actionAssetsData memory incomingAssets_,
+            actionAssetsData memory spendAssets_
         )
     {
-        uint256[] memory preCallIncomingAssetBalances;
-        uint256[] memory minIncomingAssetAmounts;
-        // SpendAssetsHandleType spendAssetsHandleType;
-        uint256[] memory maxSpendAssetAmounts;
-        uint256[] memory preCallSpendAssetBalances;
 
-        // (
-        //     incomingAssets_,
-        //     preCallIncomingAssetBalances,
-        //     minIncomingAssetAmounts,
-        //     spendAssetsHandleType,
-        //     spendAssets_,
-        //     maxSpendAssetAmounts,
-        //     preCallSpendAssetBalances
-        // ) = __preProcessCoI(_comptrollerProxy, _vaultProxy, _adapter, _selector, _integrationData);
+        (
+            incomingAssets_,
+            spendAssets_
+        ) = __preProcessCoI(_vaultProxy, _adapter, _selector, _integrationData);
 
         __executeCoI(
             _vaultProxy,
             _adapter,
             _selector,
             _integrationData,
-            abi.encode(spendAssets_, maxSpendAssetAmounts, incomingAssets_)
+            abi.encode(spendAssets_.assets, spendAssets_.minmaxAssetAmounts, incomingAssets_.assets)
         );
 
-        // (incomingAssetAmounts_, spendAssetAmounts_) = __postProcessCoI(
-        //     _comptrollerProxy,
-        //     _vaultProxy,
-        //     _adapter,
-        //     incomingAssets_,
-        //     preCallIncomingAssetBalances,
-        //     minIncomingAssetAmounts,
-        //     spendAssetsHandleType,
-        //     spendAssets_,
-        //     maxSpendAssetAmounts,
-        //     preCallSpendAssetBalances
-        // );
+        (incomingAssets_, spendAssets_) = __postProcessCoI(
+            _vaultProxy,
+            _adapter,
+            incomingAssets_,
+            spendAssets_
+        );
 
-        return (incomingAssets_, incomingAssetAmounts_, spendAssets_, spendAssetAmounts_);
+        return (incomingAssets_, spendAssets_);
     }
 
 
@@ -209,164 +184,157 @@ contract IntegrationManager is Ownable
         return abi.decode(_callArgs, (address, bytes4, bytes));
     }
 
-    // /// @dev Helper for the internal actions to take prior to executing CoI
-    // function __preProcessCoI(
-    //     address _comptrollerProxy,
-    //     address _vaultProxy,
-    //     address _adapter,
-    //     bytes4 _selector,
-    //     bytes memory _integrationData
-    // )
-    //     private
-    //     returns (
-    //         address[] memory incomingAssets_,
-    //         uint256[] memory preCallIncomingAssetBalances_,
-    //         uint256[] memory minIncomingAssetAmounts_,
-    //         SpendAssetsHandleType spendAssetsHandleType_,
-    //         address[] memory spendAssets_,
-    //         uint256[] memory maxSpendAssetAmounts_,
-    //         uint256[] memory preCallSpendAssetBalances_
-    //     )
-    // {
-    //     // Note that incoming and spend assets are allowed to overlap
-    //     // (e.g., a fee for the incomingAsset charged in a spend asset)
-    //     (
-    //         spendAssetsHandleType_,
-    //         spendAssets_,
-    //         maxSpendAssetAmounts_,
-    //         incomingAssets_,
-    //         minIncomingAssetAmounts_
-    //     ) = IIntegrationAdapter(_adapter).parseAssetsForAction(
-    //         _vaultProxy,
-    //         _selector,
-    //         _integrationData
-    //     );
-    //     require(
-    //         spendAssets_.length == maxSpendAssetAmounts_.length,
-    //         "__preProcessCoI: Spend assets arrays unequal"
-    //     );
-    //     require(
-    //         incomingAssets_.length == minIncomingAssetAmounts_.length,
-    //         "__preProcessCoI: Incoming assets arrays unequal"
-    //     );
-    //     require(spendAssets_.isUniqueSet(), "__preProcessCoI: Duplicate spend asset");
-    //     require(incomingAssets_.isUniqueSet(), "__preProcessCoI: Duplicate incoming asset");
+    /// @dev Helper for the internal actions to take prior to executing CoI
+    
+    function __preProcessCoI(
+        address _vaultProxy,
+        address _adapter,
+        bytes4 _selector,
+        bytes memory _integrationData
+    )
+        private
+        returns (
+            actionAssetsData memory incomingAssets_,
+            actionAssetsData memory spendAssets_
+        )
+    {
 
-    //     // INCOMING ASSETS
+        // Note that incoming and spend assets are allowed to overlap
+        // (e.g., a fee for the incomingAsset charged in a spend asset)
+        (
+            incomingAssets_, //switch?
+            spendAssets_
+        ) = IIntegrationAdapter(_adapter).parseAssetsForAction(
+            _vaultProxy,
+            _selector,
+            _integrationData
+        );
 
-    //     // Incoming asset balances must be recorded prior to spend asset balances in case there
-    //     // is an overlap (an asset that is both a spend asset and an incoming asset),
-    //     // as a spend asset can be immediately transferred after recording its balance
-    //     preCallIncomingAssetBalances_ = new uint256[](incomingAssets_.length);
-    //     for (uint256 i; i < incomingAssets_.length; i++) {
-    //         require(
-    //             IValueInterpreter(getValueInterpreter()).isSupportedAsset(incomingAssets_[i]),
-    //             "__preProcessCoI: Non-receivable incoming asset"
-    //         );
+        require(
+            spendAssets_.assets.length == spendAssets_.minmaxAssetAmounts.length,
+            "__preProcessCoI: Spend assets arrays unequal"
+        );
+        require(
+            incomingAssets_.assets.length == incomingAssets_.minmaxAssetAmounts.length,
+            "__preProcessCoI: Incoming assets arrays unequal"
+        );
+        require(
+            spendAssets_.assets.length == spendAssets_.assetIds.length,
+            "__preProcessCoI: Spend assets arrays unequal"
+        );
+        require(
+            incomingAssets_.assets.length == incomingAssets_.assetIds.length,
+            "__preProcessCoI: Incoming assets arrays unequal"
+        );
+        require(spendAssets_.assets.isUniqueSet(), "__preProcessCoI: Duplicate spend asset");
+        require(incomingAssets_.assets.isUniqueSet(), "__preProcessCoI: Duplicate incoming asset");
+        require(spendAssets_.assetIds.isUniqueSet(), "__preProcessCoI: Duplicate spend assetId");
+        require(incomingAssets_.assetIds.isUniqueSet(), "__preProcessCoI: Duplicate incoming assetId");
 
-    //         preCallIncomingAssetBalances_[i] = ERC20(incomingAssets_[i]).balanceOf(_vaultProxy);
-    //     }
+        // INCOMING ASSETS
 
-    //     // SPEND ASSETS
+        // Incoming asset balances must be recorded prior to spend asset balances in case there
+        // is an overlap (an asset that is both a spend asset and an incoming asset),
+        // as a spend asset can be immediately transferred after recording its balance
+        
+        incomingAssets_.preCallAssetBalances = new uint256[](incomingAssets_.assets.length);
+        require(
+                IMainRegistry(getMainRegistry()).batchIsWhiteListed(incomingAssets_.assets, incomingAssets_.assetIds),
+                "__preProcessCoI: Non-whitelisted incoming asset"
+        );
+        
+        for (uint256 i; i < incomingAssets_.assets.length; i++) {
+            incomingAssets_.preCallAssetBalances[i] = ERC20(incomingAssets_.assets[i]).balanceOf(_vaultProxy);
+        }
 
-    //     preCallSpendAssetBalances_ = new uint256[](spendAssets_.length);
-    //     for (uint256 i; i < spendAssets_.length; i++) {
-    //         preCallSpendAssetBalances_[i] = ERC20(spendAssets_[i]).balanceOf(_vaultProxy);
+        // SPEND ASSETS
 
-    //         // Grant adapter access to the spend assets.
-    //         // spendAssets_ is already asserted to be a unique set.
-    //         if (spendAssetsHandleType_ == SpendAssetsHandleType.Approve) {
-    //             // Use exact approve amount, and reset afterwards
-    //             __approveAssetSpender(
-    //                 _comptrollerProxy,
-    //                 spendAssets_[i],
-    //                 _adapter,
-    //                 maxSpendAssetAmounts_[i]
-    //             );
-    //         } else if (spendAssetsHandleType_ == SpendAssetsHandleType.Transfer) {
-    //             __withdrawAssetTo(
-    //                 _comptrollerProxy,
-    //                 spendAssets_[i],
-    //                 _adapter,
-    //                 maxSpendAssetAmounts_[i]
-    //             );
-    //         }
-    //     }
-    // }
+        spendAssets_.preCallAssetBalances = new uint256[](spendAssets_.assets.length);
+        for (uint256 i; i < spendAssets_.assets.length; i++) {
+            spendAssets_.preCallAssetBalances[i] = ERC20(spendAssets_.assets[i]).balanceOf(_vaultProxy);
 
-    // /// @dev Helper to reconcile incoming and spend assets after executing CoI
-    // function __postProcessCoI(
-    //     address _comptrollerProxy,
-    //     address _vaultProxy,
-    //     address _adapter,
-    //     address[] memory _incomingAssets,
-    //     uint256[] memory _preCallIncomingAssetBalances,
-    //     uint256[] memory _minIncomingAssetAmounts,
-    //     SpendAssetsHandleType _spendAssetsHandleType,
-    //     address[] memory _spendAssets,
-    //     uint256[] memory _maxSpendAssetAmounts,
-    //     uint256[] memory _preCallSpendAssetBalances
-    // )
-    //     private
-    //     returns (uint256[] memory incomingAssetAmounts_, uint256[] memory spendAssetAmounts_)
-    // {
-    //     // INCOMING ASSETS
+            // Grant adapter access to the spend assets.
+            // spendAssets_ is already asserted to be a unique set.       
+            // Use exact approve amount, and reset afterwards
+            __approveAssetSpender(
+                _vaultProxy,
+                spendAssets_.assets[i],
+                _adapter,
+                spendAssets_.minmaxAssetAmounts[i]
+                );
+         
+            }
+        }
 
-    //     incomingAssetAmounts_ = new uint256[](_incomingAssets.length);
-    //     for (uint256 i; i < _incomingAssets.length; i++) {
-    //         incomingAssetAmounts_[i] = __getVaultAssetBalance(_vaultProxy, _incomingAssets[i]).sub(
-    //             _preCallIncomingAssetBalances[i]
-    //         );
-    //         require(
-    //             incomingAssetAmounts_[i] >= _minIncomingAssetAmounts[i],
-    //             "__postProcessCoI: Received incoming asset less than expected"
-    //         );
+    /// @dev Helper to reconcile incoming and spend assets after executing CoI
+    function __postProcessCoI(
+        address _vaultProxy,
+        address _adapter,
+        actionAssetsData memory spendAssets_,
+        actionAssetsData memory incomingAssets_
+    )
+        private
+        returns (uint256[] memory incomingAssetAmounts_, uint256[] memory spendAssetAmounts_)
+        {
 
-    //         // Even if the asset's previous balance was >0, it might not have been tracked
-    //         __addTrackedAsset(_comptrollerProxy, _incomingAssets[i]);
-    //     }
+        //INCOMING ASSETS
 
-    //     // SPEND ASSETS
+        incomingAssetsAmounts_ = new uint256[](incomingAssets_.assets.length);
+        for (uint256 i; i < incomingAssets_.assets.length; i++) {
+            incomingAssetsAmounts_[i] = __getVaultAssetBalance(_vaultProxy, incomingAssets_.assets[i]).sub(
+                incomingAssets_.preCallAssetBalances[i]
+            );
+            require(
+                incomingAssetAmounts_[i] >= incomingAssets_.minmaxAssetAmounts[i],
+                "__postProcessCoI: Received incoming asset less than expected"
+            );
 
-    //     spendAssetAmounts_ = new uint256[](_spendAssets.length);
-    //     for (uint256 i; i < _spendAssets.length; i++) {
-    //         // Calculate the balance change of spend assets. Ignore if balance increased.
-    //         uint256 postCallSpendAssetBalance = __getVaultAssetBalance(
-    //             _vaultProxy,
-    //             _spendAssets[i]
-    //         );
-    //         if (postCallSpendAssetBalance < _preCallSpendAssetBalances[i]) {
-    //             spendAssetAmounts_[i] = _preCallSpendAssetBalances[i].sub(
-    //                 postCallSpendAssetBalance
-    //             );
-    //         }
+        }
 
-    //         // Reset any unused approvals
-    //         if (
-    //             _spendAssetsHandleType == SpendAssetsHandleType.Approve &&
-    //             ERC20(_spendAssets[i]).allowance(_vaultProxy, _adapter) > 0
-    //         ) {
-    //             __approveAssetSpender(_comptrollerProxy, _spendAssets[i], _adapter, 0);
-    //         } else if (_spendAssetsHandleType == SpendAssetsHandleType.None) {
-    //             // Only need to validate _maxSpendAssetAmounts if not SpendAssetsHandleType.Approve
-    //             // or SpendAssetsHandleType.Transfer, as each of those implicitly validate the max
-    //             require(
-    //                 spendAssetAmounts_[i] <= _maxSpendAssetAmounts[i],
-    //                 "__postProcessCoI: Spent amount greater than expected"
-    //             );
-    //         }
-    //     }
+        // RESET cl thres after swap
+        // SPEND ASSETS
 
-    //     return (incomingAssetAmounts_, spendAssetAmounts_);
-    // }
+        spendAssetAmounts_ = new uint256[](spendAssets_.assets.length);
+        for (uint256 i; i < _spendAssets.length; i++) {
+            // Calculate the balance change of spend assets. Ignore if balance increased.
+            uint256 postCallAssetBalance = __getVaultAssetBalance(
+                _vaultProxy,
+                _spendAssets.assets[i]
+            );
+            if (postCallAssetBalance < spendAssets_.preCallAssetBalances[i]) {
+                spendAssetAmounts_[i] = spendAssets_.preCallAssetBalances[i].sub(
+                    postCallSpendAssetBalance
+                );
+            }
 
-    ///////////////////
-    // STATE GETTERS //
-    ///////////////////
 
-    // /// @notice Gets the `VALUE_INTERPRETER` variable
-    // /// @return valueInterpreter_ The `VALUE_INTERPRETER` variable value
-    // function getValueInterpreter() public view returns (address valueInterpreter_) {
-    //     return VALUE_INTERPRETER;
-    // }
-}
+            //TODO Reset any unused approvals 
+            // calculate real time --> should trigger update of col htres and liq thress
+            if (
+                ERC20(spendAssets_.assets[i]).allowance(_vaultProxy, _adapter) > 0
+            ) {
+                __approveAssetSpender(_vaultProxy, _spendAssets.assets[i], _adapter, 0);
+            // } else if (_spendAssetsHandleType == SpendAssetsHandleType.None) {
+            //     // Only need to validate _maxSpendAssetAmounts if not SpendAssetsHandleType.Approve
+            //     // or SpendAssetsHandleType.Transfer, as each of those implicitly validate the max
+            //     require(
+            //         spendAssetAmounts_[i] <= spendAssets_.minmaxAssetAmounts[i],
+            //         "__postProcessCoI: Spent amount greater than expected"
+            //     );
+            // }
+            }
+        }
+
+        return (spendAssets__, incomingAssets__);
+    }
+
+    /////////////////
+    //STATE GETTERS //
+    /////////////////
+
+    /// @notice Gets the `MAIN_REGISTRY` variable
+    /// @return mainRegistry_ The `MAIN_REGISTRY` variable value
+   function getMainRegistry() public view returns (address mainRegistry_) {
+        return MAIN_REGISTRY;
+    }
+    }

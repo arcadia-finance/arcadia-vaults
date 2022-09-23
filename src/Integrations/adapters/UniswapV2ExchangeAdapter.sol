@@ -49,10 +49,7 @@ contract UniswapV2ExchangeAdapter is AdapterBase, UniswapV2ActionsMixin {
     /// @param _selector The function selector for the callOnIntegration
     /// @param _actionData Data specific to this action
     /// the adapter access to spend assets (`None` by default)
-    /// @return spendAssets_ The assets to spend in the call
-    /// @return spendAssetAmounts_ The max asset amounts to spend in the call
-    /// @return incomingAssets_ The assets to receive in the call
-    /// @return minIncomingAssetAmounts_ The min asset amounts to receive in the call
+
     function parseAssetsForAction(
         address,
         bytes4 _selector,
@@ -62,10 +59,8 @@ contract UniswapV2ExchangeAdapter is AdapterBase, UniswapV2ActionsMixin {
         view
         override
         returns (
-            address[] memory spendAssets_,
-            uint256[] memory spendAssetAmounts_,
-            address[] memory incomingAssets_,
-            uint256[] memory minIncomingAssetAmounts_
+            actionAssetsData memory spendAssets_,
+            actionAssetsData memory incomingAssets_
         )
     {
         require(_selector == TAKE_ORDER_SELECTOR, "parseAssetsForAction: _selector invalid");
@@ -79,10 +74,8 @@ contract UniswapV2ExchangeAdapter is AdapterBase, UniswapV2ActionsMixin {
         private
         pure
         returns (
-            address[] memory spendAssets_,
-            uint256[] memory spendAssetAmounts_,
-            address[] memory incomingAssets_,
-            uint256[] memory minIncomingAssetAmounts_
+            actionAssetsData memory spendAssets_,
+            actionAssetsData memory incomingAssets_
         )
     {
         (
@@ -93,21 +86,19 @@ contract UniswapV2ExchangeAdapter is AdapterBase, UniswapV2ActionsMixin {
 
         require(path.length >= 2, "__parseAssetsForTakeOrder: _path must be >= 2");
 
-        spendAssets_ = new address[](1);
-        spendAssets_[0] = path[0];
-        spendAssetAmounts_ = new uint256[](1);
-        spendAssetAmounts_[0] = outgoingAssetAmount;
+        spendAssets_.assets = new address[](1);
+        spendAssets_.assets[0] = path[0];
+        spendAssets_.minmaxAssetAmounts = new uint256[](1);
+        spendAssets_.minmaxAssetAmounts[0] = outgoingAssetAmount;
 
-        incomingAssets_ = new address[](1);
-        incomingAssets_[0] = path[path.length - 1];
-        minIncomingAssetAmounts_ = new uint256[](1);
-        minIncomingAssetAmounts_[0] = minIncomingAssetAmount;
+        incomingAssets_.assets = new address[](1);
+        incomingAssets_.assets[0] = path[path.length - 1];
+        incomingAssets_.minmaxAssetAmounts = new uint256[](1);
+        incomingAssets_.minmaxAssetAmounts[0] = minIncomingAssetAmount;
 
         return (
-            spendAssets_,
-            spendAssetAmounts_,
-            incomingAssets_,
-            minIncomingAssetAmounts_
+           spendAssets_,
+           incomingAssets_
         );
     }
 
