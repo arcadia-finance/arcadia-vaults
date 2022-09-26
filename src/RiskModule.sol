@@ -18,53 +18,30 @@ import "./utils/FixedPointMathLib.sol";
 contract RiskModule is Ownable {
     using FixedPointMathLib for uint256;
 
-    mapping(address => uint16) public collateralFactors;
-    mapping(address => uint16) public liquidationThresholds;
+    mapping(address => mapping(uint256 => uint16)) public collateralFactors;
+    mapping(address => mapping(uint256 => uint16)) public liquidationThresholds;
 
-    function getCollateralFactor(address assetAddress) public view returns (uint16) {
-        require(collateralFactors[assetAddress] > 0, "RM_GCF: Collateral Factor has to bigger than zero");
-        return collateralFactors[assetAddress];
+    uint16 VARIABLE_DECIMAL = 100;
+
+    uint16 MIN_COLLATERAL_FACTOR = 1;
+    uint16 MIN_LIQUIDATION_THRESHOLD = 1;
+
+    uint16 MAX_COLLATERAL_FACTOR = 10000;
+    uint16 MAX_LIQUIDATION_THRESHOLD = 10000;
+
+    uint16 DEFAULT_COLLATERAL_FACTOR = 150;
+    uint16 DEFAULT_LIQUIDATION_THRESHOLD = 110;
+
+    function getCollateralFactor(address assetAddress, uint256 baseCurrency) public view returns (uint16) {
+        require(collateralFactors[assetAddress][baseCurrency] > 0, "RM_GCF: Collateral Factor has to bigger than zero");
+        return collateralFactors[assetAddress][baseCurrency];
     }
 
-    function getLiquidationThreshold(address assetAddress) public view returns (uint16) {
-        require(collateralFactors[assetAddress] > 0, "RM_GLT: Liquidation Threshold has to bigger than zero");
-        return liquidationThresholds[assetAddress];
-    }
-
-    /**
-     * @notice Calculate the minimum collateral factor given the assets
-     * @param assetAddresses The List of token addresses of the assets
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @return minCollateralFactor is the minimum collateral factor of the given assets
-     * @dev CAN BE DEPRECATED OR DELETED: Added here for possible later use, if in later stages it is not used delete.
-     */
-    function calculateMinCollateralFactor(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts
-    ) public returns (uint16 minCollateralFactor) {
-        uint256 assetAddressesLength = assetAddresses.length;
+    function getLiquidationThreshold(address assetAddress, uint256 baseCurrency) public view returns (uint16) {
         require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
-            "RM_CMCF: LENGTH_MISMATCH"
+            collateralFactors[assetAddress][baseCurrency] > 0, "RM_GLT: Liquidation Threshold has to bigger than zero"
         );
-        minCollateralFactor = type(uint16).max;
-        address assetAddress;
-        uint16 collFact;
-        for (uint256 i; i < assetAddressesLength;) {
-            assetAddress = assetAddresses[i];
-            collFact = getCollateralFactor(assetAddress);
-            if (collFact < minCollateralFactor) {
-                minCollateralFactor = collFact;
-            }
-            unchecked {
-                ++i;
-            }
-        }
-        return minCollateralFactor;
+        return liquidationThresholds[assetAddress][baseCurrency];
     }
 
     /**
@@ -73,19 +50,19 @@ contract RiskModule is Ownable {
      * @param valuesPerAsset The list of corresponding monetary values of each asset address.
      * @return collateralValue is the weighted collateral value of the given assets
      */
-    function calculateWeightedCollateralValue(address[] calldata assetAddresses, uint256[] memory valuesPerAsset)
-        public
-        view
-        returns (uint256 collateralValue)
-    {
+    function calculateWeightedCollateralValue(
+        address[] calldata assetAddresses,
+        uint256[] memory valuesPerAsset,
+        uint256 baseCurrencyInd
+    ) public view returns (uint256 collateralValue) {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
         address assetAddress;
         uint256 collFact;
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
-            collFact = getCollateralFactor(assetAddress);
-            collateralValue += valuesPerAsset[i].mulDivDown(100, uint256(collFact));
+            collFact = getCollateralFactor(assetAddress, baseCurrencyInd);
+            collateralValue += valuesPerAsset[i].mulDivDown(VARIABLE_DECIMAL, uint256(collFact));
             unchecked {
                 ++i;
             }
@@ -94,56 +71,16 @@ contract RiskModule is Ownable {
     }
 
     /**
-     * @notice Calculate the weighted collateral factor given the assets
-     * @param assetAddresses The List of token addresses of the assets
-     * @param valuesPerAsset The list of corresponding monetary values of each asset address.
-     * @return collateralFactor is the weighted collateral factor of the given assets
-     */
-    function calculateWeightedCollateralFactor(address[] calldata assetAddresses, uint256[] memory valuesPerAsset)
-        public
-        view
-        returns (uint16 collateralFactor)
-    {
-        uint256 assetAddressesLength = assetAddresses.length;
-        require(assetAddressesLength == valuesPerAsset.length, "RM_CWCF: LENGTH_MISMATCH");
-
-        uint256 totalValue;
-        uint256 collateralFactor256;
-        uint16 collFact;
-        address assetAddress;
-
-        for (uint256 i; i < assetAddressesLength;) {
-            totalValue += valuesPerAsset[i];
-            assetAddress = assetAddresses[i];
-            collFact = getCollateralFactor(assetAddress);
-            collateralFactor256 += valuesPerAsset[i] * uint256(collFact);
-            unchecked {
-                i++;
-            }
-        }
-
-        require(totalValue > 0, "RM_CWCF: Total asset value must be bigger than zero");
-        // Not possible to overflow
-        // given total_value = value_x + value_y + ... + value_n
-        // collateralFactor = (colFact_x * value_x + colFact_y * value_y + ... + colFact_n * value_n) / total_value
-        // so collateralFactor will be in line with the colFact_x, ... , colFact_n
-        unchecked {
-            collateralFactor = uint16(collateralFactor256 / totalValue);
-        }
-        return collateralFactor;
-    }
-
-    /**
      * @notice Calculate the weighted liquidation threshold given the assets
      * @param assetAddresses The List of token addresses of the assets
      * @param valuesPerAsset The list of corresponding monetary values of each asset address.
      * @return liquidationThreshold is the weighted liquidation threshold of the given assets
      */
-    function calculateWeightedLiquidationThreshold(address[] calldata assetAddresses, uint256[] memory valuesPerAsset)
-        public
-        view
-        returns (uint16 liquidationThreshold)
-    {
+    function calculateWeightedLiquidationThreshold(
+        address[] calldata assetAddresses,
+        uint256[] memory valuesPerAsset,
+        uint256 baseCurrencyInd
+    ) public view returns (uint16 liquidationThreshold) {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CWLT: LENGTH_MISMATCH");
 
@@ -155,7 +92,7 @@ contract RiskModule is Ownable {
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
             assetAddress = assetAddresses[i];
-            liqThreshold = getLiquidationThreshold(assetAddress);
+            liqThreshold = getLiquidationThreshold(assetAddress, baseCurrencyInd);
             liquidationThreshold256 += valuesPerAsset[i] * uint256(liqThreshold);
             unchecked {
                 i++;
@@ -170,23 +107,5 @@ contract RiskModule is Ownable {
             liquidationThreshold = uint16(liquidationThreshold256 / totalValue);
         }
         return liquidationThreshold;
-    }
-
-    /**
-     * @notice Calculate the weighted liquidation value given the assets
-     * @param assetAddresses The List of token addresses of the assets
-     * @param valuesPerAsset The list of corresponding monetary values of each asset address.
-     * @param debt The value of the debt.
-     * @return liquidation value is the weighted liquidation threshold of the given assets
-     * @dev CAN BE DEPRECATED OR DELETED: Added here for possible later use, if in later stages it is not used delete.
-     */
-    function calculateWeightedLiquidationValue(
-        address[] calldata assetAddresses,
-        uint256[] memory valuesPerAsset,
-        uint256 debt
-    ) public view returns (uint256) {
-        require(assetAddresses.length == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
-        uint256 liquidationThreshold = calculateWeightedLiquidationThreshold(assetAddresses, valuesPerAsset);
-        return liquidationThreshold * debt;
     }
 }
