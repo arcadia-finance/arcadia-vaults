@@ -180,6 +180,9 @@ contract MainRegistry is Ownable, RiskModule {
         for (uint256 i; i < baseCurrencyCounter;) {
             collateralFactors[assetAddress][i] = DEFAULT_COLLATERAL_FACTOR;
             liquidationThresholds[assetAddress][i] = DEFAULT_LIQUIDATION_THRESHOLD;
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -220,32 +223,39 @@ contract MainRegistry is Ownable, RiskModule {
             "MR_AA: LENGTH_MISMATCH"
         );
         // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
-//        if (assetCollateralFactorsLength == 0) {
-//            // Loop: Per base currency
+        if (assetCollateralFactorsLength == 0) {
+            // Loop: Per base currency
             for (uint256 i; i < baseCurrencyCounter;) {
                 // Write: Default variables for collateralFactor and liquidationThreshold
                 collateralFactors[assetAddress][i] = DEFAULT_COLLATERAL_FACTOR;
                 liquidationThresholds[assetAddress][i] = DEFAULT_LIQUIDATION_THRESHOLD;
+                unchecked {
+                    i++;
+                }
             }
             // Early termination
-//            return;
-//        }
-//        // Loop: Per value of collateral factor and liquidation threshold
-//        for (uint256 i; i < assetCollateralFactorsLength;) {
-//            // Check: Values in the allowed limit
-//            require(
-//                assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-//                "MR_AA: Collateral Factor should be in limits."
-//            );
-//            require(
-//                assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
-//                    && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-//                "MR_AA: Liquidation Threshold should be in the limits."
-//            );
-//
-//            collateralFactors[assetAddress][i] = assetCollateralFactors[i];
-//            liquidationThresholds[assetAddress][i] = assetLiquidationThresholds[i];
-//        }
+            return;
+        }
+        // Loop: Per value of collateral factor and liquidation threshold
+        for (uint256 i; i < assetCollateralFactorsLength;) {
+            // Check: Values in the allowed limit
+            require(
+                assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
+                "MR_AA: Collateral Factor should be in limits."
+            );
+            require(
+                assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
+                    && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
+                "MR_AA: Liquidation Threshold should be in the limits."
+            );
+
+            collateralFactors[assetAddress][i] = assetCollateralFactors[i];
+            liquidationThresholds[assetAddress][i] = assetLiquidationThresholds[i];
+
+            unchecked {
+                i++;
+            }
+        }
     }
 
     /* ///////////////////////////////////////////////////////////////

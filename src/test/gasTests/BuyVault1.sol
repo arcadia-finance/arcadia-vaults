@@ -487,7 +487,7 @@ contract gasBuyVault_1ERC20 is Test {
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
         collateralFactors[1] = 150;
-        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
         uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;

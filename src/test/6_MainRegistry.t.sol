@@ -212,7 +212,7 @@ contract MainRegistryTest is Test {
 
         oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
-        emit log_named_uint("Const complete", uint(1));
+        emit log_named_uint("Const complete", uint256(1));
     }
 
     //this is a before each
