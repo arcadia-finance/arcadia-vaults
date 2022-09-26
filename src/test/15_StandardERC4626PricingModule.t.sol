@@ -173,7 +173,7 @@ contract standardERC4626PricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
+        collateralFactors[1] = 150;
         uint16[] memory liquidationThresholds = new uint16[](2);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;

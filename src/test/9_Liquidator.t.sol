@@ -341,7 +341,7 @@ contract LiquidatorTest is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        uint16[] memory emptyListUint16 = new uint16[](3);
+        uint16[] memory emptyListUint16 = new uint16[](0);
 
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({

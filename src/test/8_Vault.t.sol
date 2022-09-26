@@ -457,12 +457,14 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_SingleERC20(uint16 amount) public {
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -495,12 +497,14 @@ contract vaultTests is Test {
 
     function testSuccess_deposit_MultipleSameERC20(uint16 amount) public {
         vm.assume(amount <= 50000);
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -536,12 +540,14 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_SingleERC721() public {
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.prank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
@@ -574,12 +580,14 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_MultipleERC721() public {
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.prank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
@@ -625,12 +633,14 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_SingleERC1155() public {
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.prank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
@@ -684,12 +694,14 @@ contract vaultTests is Test {
         assetTypes[2] = 1;
 
         vm.startPrank(creatorAddress);
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -753,12 +765,14 @@ contract vaultTests is Test {
         assetTypes[3] = 2;
 
         vm.startPrank(creatorAddress);
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -808,12 +822,14 @@ contract vaultTests is Test {
 
         vm.startPrank(sender);
 
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
         vm.stopPrank();
 
         vm.prank(creatorAddress);
@@ -1467,12 +1483,14 @@ contract vaultTests is Test {
     }
 
     function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -1526,12 +1544,14 @@ contract vaultTests is Test {
     }
 
     function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -1577,12 +1597,14 @@ contract vaultTests is Test {
             uint256[] memory assetTypes
         )
     {
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -1621,12 +1643,14 @@ contract vaultTests is Test {
             uint256[] memory assetTypes
         )
     {
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.prank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(

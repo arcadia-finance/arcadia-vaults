@@ -241,12 +241,12 @@ contract MainRegistry is Ownable, RiskModule {
             // Check: Values in the allowed limit
             require(
                 assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                "MR_AA: Collateral Factor should be in limits."
+                "MR_AA: Collateral Factor should be in limits"
             );
             require(
                 assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
                     && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                "MR_AA: Liquidation Threshold should be in the limits."
+                "MR_AA: Liquidation Threshold should be in the limits"
             );
 
             collateralFactors[assetAddress][i] = assetCollateralFactors[i];
@@ -353,12 +353,12 @@ contract MainRegistry is Ownable, RiskModule {
             // Check: Values in the allowed limit
             require(
                 newCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && newCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                "MR_AA: Collateral Factor should be lower than 10000"
+                "MR_AA: Collateral Factor should be in the limits"
             );
             require(
                 newLiquidationThresholds[i] < MAX_LIQUIDATION_THRESHOLD
                     && newLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                "MR_AA: Liquidation Threshold should be lower than 10000"
+                "MR_AA: Liquidation Threshold should be in the limits"
             );
             collateralFactors[assets[i]][_baseCurrencies[i]] = newCollateralFactors[i];
             liquidationThresholds[assets[i]][_baseCurrencies[i]] = newLiquidationThresholds[i];

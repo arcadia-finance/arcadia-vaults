@@ -268,40 +268,40 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_addBaseCurrency_OwnerWithWrongNumberOfCreditRatings() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addPricingModule(address(standardERC20Registry));
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-
-        vm.expectRevert("MR_AN: length");
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
-        );
-        vm.stopPrank();
-    }
+    //    function testRevert_addBaseCurrency_OwnerWithWrongNumberOfCreditRatings() public {
+    //        vm.startPrank(creatorAddress);
+    //        mainRegistry.addPricingModule(address(standardERC20Registry));
+    //        standardERC20Registry.setAssetInformation(
+    //            StandardERC20PricingModule.AssetInformation({
+    //                oracleAddresses: oracleEthToUsdArr,
+    //                assetUnit: uint64(10 ** Constants.ethDecimals),
+    //                assetAddress: address(eth)
+    //            }),
+    //            emptyListUint16,
+    //            emptyListUint16
+    //        );
+    //        standardERC20Registry.setAssetInformation(
+    //            StandardERC20PricingModule.AssetInformation({
+    //                oracleAddresses: oracleLinkToUsdArr,
+    //                assetUnit: uint64(10 ** Constants.linkDecimals),
+    //                assetAddress: address(link)
+    //            }),
+    //            emptyListUint16,
+    //            emptyListUint16
+    //        );
+    //
+    //        vm.expectRevert("MR_AN: length");
+    //        mainRegistry.addBaseCurrency(
+    //            MainRegistry.BaseCurrencyInformation({
+    //                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
+    //                assetAddress: address(eth),
+    //                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+    //                baseCurrencyLabel: "ETH",
+    //                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+    //            })
+    //        );
+    //        vm.stopPrank();
+    //    }
 
     //        function testRevert_addBaseCurrency_OwnerWithNonExistingCreditRatingCategory() public {
     //            vm.startPrank(creatorAddress);
@@ -409,13 +409,6 @@ contract MainRegistryTest is Test {
     //    }
 
     function testSuccess_addBaseCurrency_OwnerWithFullListOfCreditRatings() public {
-        uint16[] memory collateralFactors = new uint16[](2);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 155;
-        uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
@@ -424,8 +417,8 @@ contract MainRegistryTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            collateralFactors,
-            liquidationThresholds
+            emptyListUint16,
+            emptyListUint16
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -433,8 +426,8 @@ contract MainRegistryTest is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            collateralFactors,
-            liquidationThresholds
+            emptyListUint16,
+            emptyListUint16
         );
 
         mainRegistry.addBaseCurrency(
@@ -536,7 +529,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_PricingModuleAddsAssetWithNonExistingCreditRatingCategory() public {
+    function testRevert_addAsset_PricingModuleAddsAssetWithInvalidRiskVariables() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -560,17 +553,24 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
 
         uint16[] memory collateralFactors = new uint16[](3);
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        collateralFactors[0] = 1;
-        collateralFactors[1] = 2;
-        collateralFactors[2] = 3;
+        collateralFactors[0] = 0;
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
 
-        liquidationThresholds[0] = 1;
-        liquidationThresholds[1] = 2;
-        liquidationThresholds[2] = 3;
+        uint16[] memory liquidationThresholds = new uint16[](3);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.startPrank(address(standardERC20Registry));
-        vm.expectRevert("MR_AA: non-existing");
+        vm.expectRevert("MR_AA: Collateral Factor should be in limits");
+        mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
+        vm.stopPrank();
+
+        collateralFactors[0] = 150;
+        liquidationThresholds[0] = 0;
+        vm.startPrank(address(standardERC20Registry));
+        vm.expectRevert("MR_AA: Liquidation Threshold should be in the limits");
         mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
     }
@@ -642,7 +642,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testPricingModuleAddsAssetWithNonExistingCreditRatingCategory() public {
+    function testSuccess_addsAsset_WithInvalidRiskVariables() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -670,19 +670,19 @@ contract MainRegistryTest is Test {
         collateralFactors[1] = 150;
         collateralFactors[2] = 150;
         uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 11000;
+        liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
         liquidationThresholds[2] = 110;
 
         vm.startPrank(address(standardERC20Registry));
-        //            vm.expectRevert("MR_AA: non-existing");
+        vm.expectRevert("MR_AA: Collateral Factor should be in limits");
         mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
         vm.startPrank(address(standardERC20Registry));
         collateralFactors[0] = 150;
         liquidationThresholds[0] = 11000;
-        //            vm.expectRevert("MR_AA: non-existing");
+        vm.expectRevert("MR_AA: Liquidation Threshold should be in the limits");
         mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
     }
@@ -717,7 +717,7 @@ contract MainRegistryTest is Test {
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
     }
 
-    function testPricingModuleAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_addsAsset_withFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -742,12 +742,12 @@ contract MainRegistryTest is Test {
 
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
-        collateralFactors[0] = 150;
-        collateralFactors[0] = 150;
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
         uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         vm.startPrank(address(standardERC20Registry));
         mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
@@ -1990,111 +1990,111 @@ contract MainRegistryTest is Test {
         assertTrue(CompareArrays.compareArrays(expectedListOfValuesPerAsset, actualListOfValuesPerAsset));
     }
 
-    function testSuccess_getListOfValuesPerCreditRating() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            })
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
-        );
-        mainRegistry.addPricingModule(address(standardERC20Registry));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[0] = 150;
-        collateralFactors[0] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[0] = 110;
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            collateralFactors,
-            liquidationThresholds
-        );
-
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            collateralFactors,
-            liquidationThresholds
-        );
-
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            collateralFactors,
-            liquidationThresholds
-        );
-        vm.stopPrank();
-
-        vm.startPrank(oracleOwner);
-        oracleEthToUsd.transmit(int256(rateEthToUsd));
-        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-        oracleWbaycToEth.transmit(int256(rateWbaycToEth));
-        vm.stopPrank();
-
-        address[] memory assetAddresses = new address[](3);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(link);
-        assetAddresses[2] = address(bayc);
-
-        uint256[] memory assetIds = new uint256[](3);
-        assetIds[0] = 0;
-        assetIds[1] = 0;
-        assetIds[2] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](3);
-        assetAmounts[0] = 10 ** Constants.ethDecimals;
-        assetAmounts[1] = 10 ** Constants.linkDecimals;
-        assetAmounts[2] = 1;
-
-        uint256[] memory actualListOfValuesPerCreditRating = mainRegistry.getListOfValuesPerCreditRating(
-            assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency
-        );
-
-        uint256 ethValueInEth = assetAmounts[0];
-        uint256 linkValueInUsd = (Constants.WAD * rateLinkToUsd * assetAmounts[1])
-            / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
-        uint256 linkValueInEth = (linkValueInUsd * 10 ** Constants.oracleEthToUsdDecimals) / rateEthToUsd
-            / 10 ** (18 - Constants.ethDecimals);
-        uint256 baycValueInEth = (Constants.WAD * rateWbaycToEth * assetAmounts[2])
-            / 10 ** Constants.oracleWbaycToEthDecimals / 10 ** (18 - Constants.ethDecimals);
-
-        uint256[] memory expectedListOfValuesPerCreditRating = new uint256[](
-            mainRegistry.CREDIT_RATING_CATOGERIES()
-        );
-        expectedListOfValuesPerCreditRating[Constants.ethCreditRatingEth] += ethValueInEth;
-        expectedListOfValuesPerCreditRating[Constants.linkCreditRatingEth] += linkValueInEth;
-        expectedListOfValuesPerCreditRating[Constants.baycCreditRatingEth] += baycValueInEth;
-
-        assertTrue(CompareArrays.compareArrays(actualListOfValuesPerCreditRating, expectedListOfValuesPerCreditRating));
-    }
+    //    function testSuccess_getListOfValuesPerCreditRating() public {
+    //        vm.startPrank(creatorAddress);
+    //        mainRegistry.addBaseCurrency(
+    //            MainRegistry.BaseCurrencyInformation({
+    //                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+    //                assetAddress: address(dai),
+    //                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+    //                baseCurrencyLabel: "DAI",
+    //                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+    //            })
+    //        );
+    //        mainRegistry.addBaseCurrency(
+    //            MainRegistry.BaseCurrencyInformation({
+    //                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
+    //                assetAddress: address(eth),
+    //                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+    //                baseCurrencyLabel: "ETH",
+    //                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+    //            })
+    //        );
+    //        mainRegistry.addPricingModule(address(standardERC20Registry));
+    //        mainRegistry.addPricingModule(address(floorERC721PricingModule));
+    //
+    //        uint16[] memory collateralFactors = new uint16[](3);
+    //        collateralFactors[0] = 150;
+    //        collateralFactors[1] = 150;
+    //        collateralFactors[2] = 150;
+    //        uint16[] memory liquidationThresholds = new uint16[](3);
+    //        liquidationThresholds[0] = 110;
+    //        liquidationThresholds[1] = 110;
+    //        liquidationThresholds[2] = 110;
+    //        standardERC20Registry.setAssetInformation(
+    //            StandardERC20PricingModule.AssetInformation({
+    //                oracleAddresses: oracleEthToUsdArr,
+    //                assetUnit: uint64(10 ** Constants.ethDecimals),
+    //                assetAddress: address(eth)
+    //            }),
+    //            collateralFactors,
+    //            liquidationThresholds
+    //        );
+    //
+    //        standardERC20Registry.setAssetInformation(
+    //            StandardERC20PricingModule.AssetInformation({
+    //                oracleAddresses: oracleLinkToUsdArr,
+    //                assetUnit: uint64(10 ** Constants.linkDecimals),
+    //                assetAddress: address(link)
+    //            }),
+    //            collateralFactors,
+    //            liquidationThresholds
+    //        );
+    //
+    //        floorERC721PricingModule.setAssetInformation(
+    //            FloorERC721PricingModule.AssetInformation({
+    //                oracleAddresses: oracleWbaycToEthEthToUsd,
+    //                idRangeStart: 0,
+    //                idRangeEnd: type(uint256).max,
+    //                assetAddress: address(bayc)
+    //            }),
+    //            collateralFactors,
+    //            liquidationThresholds
+    //        );
+    //        vm.stopPrank();
+    //
+    //        vm.startPrank(oracleOwner);
+    //        oracleEthToUsd.transmit(int256(rateEthToUsd));
+    //        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
+    //        oracleWbaycToEth.transmit(int256(rateWbaycToEth));
+    //        vm.stopPrank();
+    //
+    //        address[] memory assetAddresses = new address[](3);
+    //        assetAddresses[0] = address(eth);
+    //        assetAddresses[1] = address(link);
+    //        assetAddresses[2] = address(bayc);
+    //
+    //        uint256[] memory assetIds = new uint256[](3);
+    //        assetIds[0] = 0;
+    //        assetIds[1] = 0;
+    //        assetIds[2] = 0;
+    //
+    //        uint256[] memory assetAmounts = new uint256[](3);
+    //        assetAmounts[0] = 10 ** Constants.ethDecimals;
+    //        assetAmounts[1] = 10 ** Constants.linkDecimals;
+    //        assetAmounts[2] = 1;
+    //
+    //        uint256[] memory actualListOfValuesPerCreditRating = mainRegistry.getListOfValuesPerCreditRating(
+    //            assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency
+    //        );
+    //
+    //        uint256 ethValueInEth = assetAmounts[0];
+    //        uint256 linkValueInUsd = (Constants.WAD * rateLinkToUsd * assetAmounts[1])
+    //            / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
+    //        uint256 linkValueInEth = (linkValueInUsd * 10 ** Constants.oracleEthToUsdDecimals) / rateEthToUsd
+    //            / 10 ** (18 - Constants.ethDecimals);
+    //        uint256 baycValueInEth = (Constants.WAD * rateWbaycToEth * assetAmounts[2])
+    //            / 10 ** Constants.oracleWbaycToEthDecimals / 10 ** (18 - Constants.ethDecimals);
+    //
+    //        uint256[] memory expectedListOfValuesPerCreditRating = new uint256[](
+    //            mainRegistry.CREDIT_RATING_CATOGERIES()
+    //        );
+    //        expectedListOfValuesPerCreditRating[Constants.ethCreditRatingEth] += ethValueInEth;
+    //        expectedListOfValuesPerCreditRating[Constants.linkCreditRatingEth] += linkValueInEth;
+    //        expectedListOfValuesPerCreditRating[Constants.baycCreditRatingEth] += baycValueInEth;
+    //
+    //        assertTrue(CompareArrays.compareArrays(actualListOfValuesPerCreditRating, expectedListOfValuesPerCreditRating));
+    //    }
 
     function testRevert_batchSetCreditRating_NonOwner(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
@@ -2331,14 +2331,8 @@ contract MainRegistryTest is Test {
         mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
-        assertEq(
-            Constants.ethCreditRatingUsd,
-            mainRegistry.assetToBaseCurrencyToCreditRating(address(eth), Constants.UsdBaseCurrency)
-        );
-        assertEq(
-            Constants.ethCreditRatingEth,
-            mainRegistry.assetToBaseCurrencyToCreditRating(address(eth), Constants.EthBaseCurrency)
-        );
+        assertEq(150, mainRegistry.collateralFactors(address(eth), Constants.UsdBaseCurrency));
+        assertEq(110, mainRegistry.liquidationThresholds(address(eth), Constants.EthBaseCurrency));
     }
 
     function testRevert_batchSetRiskVariables_OwnerSetsCollateralFactorWithInvalidValue() public {
@@ -2403,13 +2397,21 @@ contract MainRegistryTest is Test {
 
         uint16[] memory collateralFactors = new uint16[](2);
         collateralFactors[0] = 15000;
-        collateralFactors[0] = 150;
+        collateralFactors[1] = 150;
         uint16[] memory liquidationThresholds = new uint16[](2);
         liquidationThresholds[0] = 110;
-        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         vm.startPrank(creatorAddress);
-        //        vm.expectRevert("MR_BSCR: non-existing creditRat");
+        vm.expectRevert("MR_AA: Collateral Factor should be in the limits");
+        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
+        vm.stopPrank();
+
+        collateralFactors[0] = 150;
+        liquidationThresholds[0] = 11000;
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("MR_AA: Liquidation Threshold should be in the limits");
         mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
         vm.stopPrank();
     }
