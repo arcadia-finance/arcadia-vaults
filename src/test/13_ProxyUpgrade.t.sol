@@ -58,7 +58,7 @@ contract VaultV2Test is Test {
     ArcadiaOracle private oracleWmaycToUsd;
     ArcadiaOracle private oracleInterleaveToEth;
     MainRegistry private mainRegistry;
-    StandardERC20Registry private standardERC20Registry;
+    StandardERC20PricingModule private standardERC20Registry;
     FloorERC721PricingModule private floorERC721PricingModule;
     FloorERC1155PricingModule private floorERC1155PricingModule;
     Liquidator private liquidator;
@@ -324,7 +324,7 @@ contract VaultV2Test is Test {
             emptyList
         );
 
-        standardERC20Registry = new StandardERC20Registry(
+        standardERC20Registry = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -347,7 +347,7 @@ contract VaultV2Test is Test {
         assetCreditRatings[2] = 0;
 
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -355,7 +355,7 @@ contract VaultV2Test is Test {
             assetCreditRatings
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
@@ -363,7 +363,7 @@ contract VaultV2Test is Test {
             assetCreditRatings
         );
         standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
@@ -447,7 +447,7 @@ contract VaultV2Test is Test {
         vm.stopPrank();
     }
 
-    function testNewVaultVersion(uint256 salt) public {
+    function testSuccess_confirmNewVaultInfo(uint256 salt) public {
         vm.assume(salt > 0);
 
         vm.startPrank(vaultOwner);
@@ -506,7 +506,7 @@ contract VaultV2Test is Test {
         return checks;
     }
 
-    function testAssetsAfterUpgrade(uint128 amount) public {
+    function testSuccess_upgradeVaultVersion_StorageVariablesAfterUpgradeAreIdentical(uint128 amount) public {
         vm.assume(amount > 0);
         depositERC20InVault(eth, amount, vaultOwner);
         uint128[] memory tokenIds = new uint128[](3);
@@ -542,7 +542,7 @@ contract VaultV2Test is Test {
         assertEq(factory.latestVaultVersion(), proxy.vaultVersion());
     }
 
-    function testAssetsAfterUpgradeFail(uint128 amount) public {
+    function testRevert_upgradeVaultVersion_IncompatibleVersionWithCurrentVault(uint128 amount) public {
         depositERC20InVault(eth, amount, vaultOwner);
         uint128[] memory tokenIds = new uint128[](3);
         tokenIds[0] = 1;
@@ -582,7 +582,7 @@ contract VaultV2Test is Test {
         emit log_named_bytes32("after", keccak256(abi.encode(checkAfter)));
     }
 
-    function testUpgradeVaultByNonOwner(address sender) public {
+    function testRevert_upgradeVaultVersion_UpgradeVaultByNonOwner(address sender) public {
         vm.assume(sender != address(6));
         vm.startPrank(vaultOwner);
         vaultV2 = new VaultV2();

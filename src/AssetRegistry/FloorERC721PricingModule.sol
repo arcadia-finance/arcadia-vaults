@@ -137,8 +137,8 @@ contract FloorERC721PricingModule is PricingModule {
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
-     * @dev If the Oracle-Hub returns the rate in a baseCurrency different from USD, the StandardERC20Registry will return
-     * the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the StandardERC20Registry
+     * @dev If the Oracle-Hub returns the rate in a baseCurrency different from USD, the FloorERC721PricingModule will return
+     * the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the FloorERC721PricingModule
      * will return the value of the asset in USD.
      * Only one of the two values can be different from 0.
      * @dev If the asset is not first added to PricingModule this function will return value 0 without throwing an error.

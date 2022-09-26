@@ -129,7 +129,7 @@ contract FloorERC1155PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testNonOwnerAddsAsset(address unprivilegedAddress) public {
+    function testRevert_setAssetInformation_NonOwnerAddsAsset(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -145,7 +145,7 @@ contract FloorERC1155PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-//    function testOwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+//    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
 //        vm.startPrank(creatorAddress);
 //        uint256[] memory assetCreditRatings = new uint256[](1);
 //        assetCreditRatings[0] = 0;
@@ -162,7 +162,7 @@ contract FloorERC1155PricingModuleTest is Test {
 //        vm.stopPrank();
 //    }
 
-    function testOwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -177,7 +177,7 @@ contract FloorERC1155PricingModuleTest is Test {
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
-    function testOwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
@@ -195,7 +195,7 @@ contract FloorERC1155PricingModuleTest is Test {
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
-    function testOwnerOverwritesExistingAsset() public {
+    function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -218,7 +218,7 @@ contract FloorERC1155PricingModuleTest is Test {
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
-    function testIsWhitelistedPositive() public {
+    function testSuccess_isWhiteListed_Positive() public {
         vm.startPrank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -233,11 +233,11 @@ contract FloorERC1155PricingModuleTest is Test {
         assertTrue(floorERC1155PricingModule.isWhiteListed(address(interleave), 1));
     }
 
-    function testIsWhitelistedNegativeWrongAddress(address randomAsset) public {
+    function testSuccess_isWhiteListed_NegativeWrongAddress(address randomAsset) public {
         assertTrue(!floorERC1155PricingModule.isWhiteListed(randomAsset, 1));
     }
 
-    function testIsWhitelistedNegativeIdOutsideRange(uint256 id) public {
+    function testSuccess_isWhiteListed_NegativeIdOutsideRange(uint256 id) public {
         vm.assume(id != 1);
         vm.startPrank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
@@ -253,7 +253,7 @@ contract FloorERC1155PricingModuleTest is Test {
         assertTrue(!floorERC1155PricingModule.isWhiteListed(address(interleave), id));
     }
 
-    function testReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountInterleave) public {
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountInterleave) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
@@ -283,7 +283,7 @@ contract FloorERC1155PricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testreturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountInterleave) public {
+    function testSuccess_getValue_returnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountInterleave) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
@@ -313,7 +313,7 @@ contract FloorERC1155PricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountInterleave) public {
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountInterleave) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
@@ -343,7 +343,7 @@ contract FloorERC1155PricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnValueSucces(uint256 amountInterleave, uint256 rateInterleaveToEthNew) public {
+    function testSuccess_getValue_ReturnValue(uint256 amountInterleave, uint256 rateInterleaveToEthNew) public {
         vm.assume(rateInterleaveToEthNew <= uint256(type(int256).max));
         vm.assume(rateInterleaveToEthNew <= type(uint256).max / Constants.WAD);
 
@@ -390,7 +390,7 @@ contract FloorERC1155PricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnValueOverflow(uint256 amountInterleave, uint256 rateInterleaveToEthNew) public {
+    function testRevert_getValue_ReturnValueOverflow(uint256 amountInterleave, uint256 rateInterleaveToEthNew) public {
         vm.assume(rateInterleaveToEthNew <= uint256(type(int256).max));
         vm.assume(rateInterleaveToEthNew <= type(uint256).max / Constants.WAD);
         vm.assume(rateInterleaveToEthNew > 0);

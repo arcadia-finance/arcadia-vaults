@@ -29,7 +29,7 @@ contract standardERC4626PricingModuleTest is Test {
 
     ArcadiaOracle private oracleEthToUsd;
 
-    StandardERC20Registry private standardERC20PricingModule;
+    StandardERC20PricingModule private standardERC20PricingModule;
     StandardERC4626PricingModule private standardERC4626PricingModule;
 
     address private creatorAddress = address(1);
@@ -108,7 +108,7 @@ contract standardERC4626PricingModuleTest is Test {
             emptyList
         );
 
-        standardERC20PricingModule = new StandardERC20Registry(
+        standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -122,7 +122,7 @@ contract standardERC4626PricingModuleTest is Test {
         mainRegistry.addPricingModule(address(standardERC4626PricingModule));
 
         standardERC20PricingModule.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
+            StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
@@ -132,7 +132,7 @@ contract standardERC4626PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_NonOwnerAddsAsset(address unprivilegedAddress) public {
+    function testRevert_setAssetInformation_NonOwner(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -140,7 +140,7 @@ contract standardERC4626PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-//    function testRevert_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+//    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
 //        vm.startPrank(creatorAddress);
 //        uint256[] memory assetCreditRatings = new uint256[](1);
 //        assetCreditRatings[0] = 0;
@@ -149,7 +149,7 @@ contract standardERC4626PricingModuleTest is Test {
 //        vm.stopPrank();
 //    }
 
-    function testRevert_OwnerAddsAssetWithWrongNumberOfDecimals() public {
+    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfDecimals() public {
         ybEth = new ERC4626Mock(eth, "ybETH Mock", "mybETH", uint8(Constants.ethDecimals) - 1);
 
         vm.startPrank(creatorAddress);
@@ -158,7 +158,7 @@ contract standardERC4626PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_OwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
         vm.stopPrank();
@@ -166,7 +166,7 @@ contract standardERC4626PricingModuleTest is Test {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testSuccess_OwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
@@ -177,7 +177,7 @@ contract standardERC4626PricingModuleTest is Test {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testSuccess_OwnerOverwritesExistingAsset() public {
+    function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
         standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
@@ -186,7 +186,7 @@ contract standardERC4626PricingModuleTest is Test {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testSuccess_IsWhitelistedPositive() public {
+    function testSuccess_isWhiteListed_Positive() public {
         vm.startPrank(creatorAddress);
 
         standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyList);
@@ -195,11 +195,11 @@ contract standardERC4626PricingModuleTest is Test {
         assertTrue(standardERC4626PricingModule.isWhiteListed(address(ybEth), 0));
     }
 
-    function testSuccess_IsWhitelistedNegative(address randomAsset) public {
+    function testSuccess_isWhiteListed_Negative(address randomAsset) public {
         assertTrue(!standardERC4626PricingModule.isWhiteListed(randomAsset, 0));
     }
 
-    function testReturnValueZeroTotalSupply(uint256 rateEthToUsd_, uint256 totalAssets) public {
+    function testSuccess_getValue_ZeroTotalSupply(uint256 rateEthToUsd_, uint256 totalAssets) public {
         vm.assume(rateEthToUsd_ <= type(uint256).max / Constants.WAD);
 
         uint256 expectedValueInUsd = 0;
@@ -232,7 +232,7 @@ contract standardERC4626PricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnValueSucces(uint256 rateEthToUsd_, uint256 shares, uint256 totalSupply, uint256 totalAssets)
+    function testSuccess_getValue(uint256 rateEthToUsd_, uint256 shares, uint256 totalSupply, uint256 totalAssets)
         public
     {
         vm.assume(shares <= totalSupply);
@@ -288,7 +288,7 @@ contract standardERC4626PricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testReturnValueOverflow(uint256 rateEthToUsd_, uint256 shares, uint256 totalSupply, uint256 totalAssets)
+    function testRevert_getValue_Overflow(uint256 rateEthToUsd_, uint256 shares, uint256 totalSupply, uint256 totalAssets)
         public
     {
         vm.assume(shares <= totalSupply);
