@@ -136,7 +136,7 @@ contract IntegrationManager is
             abi.encode(spendAssets_.assets, spendAssets_.minmaxAssetAmounts, incomingAssets_.assets)
         );
 
-        (incomingAssets_, spendAssets_) = __postProcessCoI(
+        (incomingAssets_.assetAmounts, spendAssets_.assetAmounts) = __postProcessCoI(
             _vaultProxy,
             _adapter,
             incomingAssets_,
@@ -228,8 +228,8 @@ contract IntegrationManager is
         );
         require(spendAssets_.assets.isUniqueSet(), "__preProcessCoI: Duplicate spend asset");
         require(incomingAssets_.assets.isUniqueSet(), "__preProcessCoI: Duplicate incoming asset");
-        require(spendAssets_.assetIds.isUniqueSet(), "__preProcessCoI: Duplicate spend assetId");
-        require(incomingAssets_.assetIds.isUniqueSet(), "__preProcessCoI: Duplicate incoming assetId");
+        //require(spendAssets_.assetIds.isUniqueSet(), "__preProcessCoI: Duplicate spend assetId");
+       //require(incomingAssets_.assetIds.isUniqueSet(), "__preProcessCoI: Duplicate incoming assetId");
 
         // INCOMING ASSETS
 
@@ -277,13 +277,12 @@ contract IntegrationManager is
         returns (uint256[] memory incomingAssetAmounts_, uint256[] memory spendAssetAmounts_)
         {
 
+
         //INCOMING ASSETS
 
-        incomingAssetsAmounts_ = new uint256[](incomingAssets_.assets.length);
+        incomingAssetAmounts_ = new uint256[](incomingAssets_.assets.length);
         for (uint256 i; i < incomingAssets_.assets.length; i++) {
-            incomingAssetsAmounts_[i] = __getVaultAssetBalance(_vaultProxy, incomingAssets_.assets[i]).sub(
-                incomingAssets_.preCallAssetBalances[i]
-            );
+            incomingAssetAmounts_[i] = __getVaultAssetBalance(_vaultProxy, incomingAssets_.assets[i]) - incomingAssets_.preCallAssetBalances[i]; //check overflow
             require(
                 incomingAssetAmounts_[i] >= incomingAssets_.minmaxAssetAmounts[i],
                 "__postProcessCoI: Received incoming asset less than expected"
@@ -291,20 +290,19 @@ contract IntegrationManager is
 
         }
 
-        // RESET cl thres after swap
+        // RESET COL THRESH thres after swap
         // SPEND ASSETS
 
         spendAssetAmounts_ = new uint256[](spendAssets_.assets.length);
-        for (uint256 i; i < _spendAssets.length; i++) {
+        for (uint256 i; i < spendAssets_.assets.length; i++) {
             // Calculate the balance change of spend assets. Ignore if balance increased.
             uint256 postCallAssetBalance = __getVaultAssetBalance(
                 _vaultProxy,
-                _spendAssets.assets[i]
+                spendAssets_.assets[i]
             );
             if (postCallAssetBalance < spendAssets_.preCallAssetBalances[i]) {
-                spendAssetAmounts_[i] = spendAssets_.preCallAssetBalances[i].sub(
-                    postCallSpendAssetBalance
-                );
+                spendAssetAmounts_[i] = spendAssets_.preCallAssetBalances[i] - 
+                    postCallAssetBalance;
             }
 
 
@@ -313,7 +311,7 @@ contract IntegrationManager is
             if (
                 ERC20(spendAssets_.assets[i]).allowance(_vaultProxy, _adapter) > 0
             ) {
-                __approveAssetSpender(_vaultProxy, _spendAssets.assets[i], _adapter, 0);
+                __approveAssetSpender(_vaultProxy, spendAssets_.assets[i], _adapter, 0);
             // } else if (_spendAssetsHandleType == SpendAssetsHandleType.None) {
             //     // Only need to validate _maxSpendAssetAmounts if not SpendAssetsHandleType.Approve
             //     // or SpendAssetsHandleType.Transfer, as each of those implicitly validate the max
@@ -325,7 +323,7 @@ contract IntegrationManager is
             }
         }
 
-        return (spendAssets__, incomingAssets__);
+        return (incomingAssetAmounts_, spendAssetAmounts_);
     }
 
     /////////////////

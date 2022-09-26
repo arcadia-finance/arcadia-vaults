@@ -116,4 +116,4 @@ contract UniswapV2ExchangeAdapter is AdapterBase, UniswapV2ActionsMixin {
     {
         return abi.decode(_actionData, (address[], uint256, uint256));
     }
-}
+}   

@@ -16,6 +16,7 @@ struct actionAssetsData {
             uint256[] assetIds;
             uint256[] preCallAssetBalances;
             uint256[] minmaxAssetAmounts;
+            uint256[] assetAmounts;
     }
 
 /// @title Integration Adapter interface
