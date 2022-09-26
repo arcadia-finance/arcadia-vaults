@@ -445,7 +445,7 @@ contract gasWithdrawal1_1ERC20 is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
-        uint256[] memory emptyList = new uint256[](0);
+
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -453,8 +453,7 @@ contract gasWithdrawal1_1ERC20 is Test {
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyList
+            })
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -463,8 +462,7 @@ contract gasWithdrawal1_1ERC20 is Test {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyList
+            })
         );
 
         standardERC20Registry = new StandardERC20PricingModule(
@@ -484,10 +482,14 @@ contract gasWithdrawal1_1ERC20 is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = 0;
-        assetCreditRatings[1] = 0;
-        assetCreditRatings[2] = 0;
+        uint16[] memory collateralFactors = new uint16[](3);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        collateralFactors[2] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](3);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
 
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -495,7 +497,8 @@ contract gasWithdrawal1_1ERC20 is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -503,7 +506,8 @@ contract gasWithdrawal1_1ERC20 is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -511,7 +515,8 @@ contract gasWithdrawal1_1ERC20 is Test {
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         floorERC721PricingModule.setAssetInformation(
@@ -521,7 +526,8 @@ contract gasWithdrawal1_1ERC20 is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -530,7 +536,8 @@ contract gasWithdrawal1_1ERC20 is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(mayc)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -538,7 +545,8 @@ contract gasWithdrawal1_1ERC20 is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -546,7 +554,8 @@ contract gasWithdrawal1_1ERC20 is Test {
                 id: 1,
                 assetAddress: address(genericStoreFront)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         liquidator = new Liquidator(

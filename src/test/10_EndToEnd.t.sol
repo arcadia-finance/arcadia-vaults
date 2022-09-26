@@ -302,7 +302,7 @@ contract EndToEndTest is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
-        uint256[] memory emptyList = new uint256[](0);
+
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -310,8 +310,7 @@ contract EndToEndTest is Test {
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyList
+            })
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -320,8 +319,7 @@ contract EndToEndTest is Test {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyList
+            })
         );
 
         standardERC20Registry = new StandardERC20PricingModule(
@@ -341,10 +339,7 @@ contract EndToEndTest is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = 0;
-        assetCreditRatings[1] = 0;
-        assetCreditRatings[2] = 0;
+        uint16[] memory emptyListUint16 = new uint16[](3);
 
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -352,7 +347,8 @@ contract EndToEndTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -360,7 +356,8 @@ contract EndToEndTest is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -368,7 +365,8 @@ contract EndToEndTest is Test {
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
 
         floorERC721PricingModule.setAssetInformation(
@@ -378,7 +376,8 @@ contract EndToEndTest is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
 
         liquidator = new Liquidator(
@@ -495,7 +494,11 @@ contract EndToEndTest is Test {
         assertEq(dai.balanceOf(vaultOwner), 0);
     }
 
-    function testSuccess_borrow_IncreaseOfDebtPerBlock(uint128 amountEth, uint128 amountCredit, uint32 amountOfBlocksToRoll) public {
+    function testSuccess_borrow_IncreaseOfDebtPerBlock(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint32 amountOfBlocksToRoll
+    ) public {
         vm.assume(amountEth > 0);
         uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
@@ -565,9 +568,11 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_borrow_AllowAdditionalCreditAfterPriceIncrease(uint128 amountEth, uint128 amountCredit, uint16 newPrice)
-        public
-    {
+    function testSuccess_borrow_AllowAdditionalCreditAfterPriceIncrease(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint16 newPrice
+    ) public {
         vm.assume(amountEth > 0);
         vm.assume(newPrice * 10 ** Constants.oracleEthToUsdDecimals > rateEthToUsd);
         (uint16 collThres,,) = proxy.vault();
@@ -665,9 +670,11 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_syncInterests_IncreaseBalanceDebtContract(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll)
-        public
-    {
+    function testSuccess_syncInterests_IncreaseBalanceDebtContract(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint16 blocksToRoll
+    ) public {
         vm.assume(amountEth > 0);
         (uint16 collThres,,) = proxy.vault();
         vm.assume(amountEth < type(uint128).max / collThres);
@@ -735,7 +742,9 @@ contract EndToEndTest is Test {
         assertEq(proxy.getUsedMargin(), 0);
     }
 
-    function testSuccess_repay_ExessiveDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll, uint8 factor) public {
+    function testSuccess_repay_ExessiveDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll, uint8 factor)
+        public
+    {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
         (uint16 collThres,,) = proxy.vault();
@@ -775,9 +784,12 @@ contract EndToEndTest is Test {
         assertEq(proxy.getUsedMargin(), 0);
     }
 
-    function testSuccess_repay_PartialDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll, uint128 toRepay)
-        public
-    {
+    function testSuccess_repay_PartialDebt(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint16 blocksToRoll,
+        uint128 toRepay
+    ) public {
         // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
         vm.assume(amountEth > 0);
         (uint16 collThres,,) = proxy.vault();

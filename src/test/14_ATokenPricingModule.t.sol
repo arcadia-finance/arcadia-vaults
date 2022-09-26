@@ -41,6 +41,7 @@ contract aTokenPricingModuleTest is Test {
     address[] public oracleEthToUsdArr = new address[](1);
 
     uint256[] emptyList = new uint256[](0);
+    uint16[] emptyListUint16 = new uint16[](0);
 
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
@@ -104,8 +105,7 @@ contract aTokenPricingModuleTest is Test {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyList
+            })
         );
 
         standardERC20PricingModule = new StandardERC20PricingModule(
@@ -127,7 +127,8 @@ contract aTokenPricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
     }
@@ -136,33 +137,38 @@ contract aTokenPricingModuleTest is Test {
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyListUint16, emptyListUint16);
         vm.stopPrank();
     }
 
-//    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
-//        vm.startPrank(creatorAddress);
-//        uint256[] memory assetCreditRatings = new uint256[](1);
-//        assetCreditRatings[0] = 0;
-//        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-//        aTokenPricingModule.setAssetInformation(address(aEth), assetCreditRatings);
-//        vm.stopPrank();
-//    }
+    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
+        vm.startPrank(creatorAddress);
+        uint16[] memory collateralFactors = new uint16[](1);
+        collateralFactors[0] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](1);
+        liquidationThresholds[0] = 110;
+        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
+        aTokenPricingModule.setAssetInformation(address(aEth), collateralFactors, liquidationThresholds);
+        vm.stopPrank();
+    }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyListUint16, emptyListUint16);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatings = new uint256[](2);
-        assetCreditRatings[0] = 0;
-        assetCreditRatings[1] = 0;
-        aTokenPricingModule.setAssetInformation(address(aEth), assetCreditRatings);
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
+        aTokenPricingModule.setAssetInformation(address(aEth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
@@ -170,8 +176,8 @@ contract aTokenPricingModuleTest is Test {
 
     function testSuccess_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
-        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyListUint16, emptyListUint16);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyListUint16, emptyListUint16);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
@@ -180,7 +186,7 @@ contract aTokenPricingModuleTest is Test {
     function testSuccess_isWhiteListed() public {
         vm.startPrank(creatorAddress);
 
-        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyListUint16, emptyListUint16);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
@@ -193,7 +199,7 @@ contract aTokenPricingModuleTest is Test {
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyListUint16, emptyListUint16);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
@@ -231,7 +237,7 @@ contract aTokenPricingModuleTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyListUint16, emptyListUint16);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (
@@ -266,7 +272,7 @@ contract aTokenPricingModuleTest is Test {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.setAssetInformation(address(aEth), emptyList);
+        aTokenPricingModule.setAssetInformation(address(aEth), emptyListUint16, emptyListUint16);
         vm.stopPrank();
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({

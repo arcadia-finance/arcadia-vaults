@@ -325,7 +325,9 @@ contract factoryTest is Test {
         assertTrue(factoryContr.newVaultInfoSet());
     }
 
-    function testSuccess_setNewVaultInfo_OwnerSetsNewVaultInfoSecondTimeWithIdenticalMainRegistry(address logic) public {
+    function testSuccess_setNewVaultInfo_OwnerSetsNewVaultInfoSecondTimeWithIdenticalMainRegistry(address logic)
+        public
+    {
         vm.assume(logic != address(0));
 
         assertTrue(!factoryContr.newVaultInfoSet());
@@ -358,9 +360,10 @@ contract factoryTest is Test {
         assertEq(1, factoryContr.latestVaultVersion());
     }
 
-    function testRevert_setNewVaultInfo_OwnerSetsNewVaultWithInfoMissingBaseCurrencyInMainRegistry(address newAssetAddress, address logic)
-        public
-    {
+    function testRevert_setNewVaultInfo_OwnerSetsNewVaultWithInfoMissingBaseCurrencyInMainRegistry(
+        address newAssetAddress,
+        address logic
+    ) public {
         vm.assume(logic != address(0));
 
         vm.assume(newAssetAddress != address(0));
@@ -372,8 +375,7 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyList
+            })
         );
 
         registryContr2 = new MainRegistry(
@@ -390,9 +392,10 @@ contract factoryTest is Test {
         assertEq(1, factoryContr.latestVaultVersion());
     }
 
-    function testSuccess_setFactory_OwnerSetsNewVaultWithIdenticalBaseCurrenciesInMainRegistry(address newAssetAddress, address logic)
-        public
-    {
+    function testSuccess_setFactory_OwnerSetsNewVaultWithIdenticalBaseCurrenciesInMainRegistry(
+        address newAssetAddress,
+        address logic
+    ) public {
         vm.assume(logic != address(0));
 
         registryContr.addBaseCurrency(
@@ -402,8 +405,7 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyList
+            })
         );
 
         registryContr2 = new MainRegistry(
@@ -422,8 +424,7 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyList
+            })
         );
         factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
         factoryContr.confirmNewVaultInfo();
@@ -432,7 +433,10 @@ contract factoryTest is Test {
         assertEq(2, factoryContr.latestVaultVersion());
     }
 
-    function testSuccess_setFactory_OwnerSetsNewVaultWithMoreBaseCurrenciesInMainRegistry(address newAssetAddress, address logic) public {
+    function testSuccess_setFactory_OwnerSetsNewVaultWithMoreBaseCurrenciesInMainRegistry(
+        address newAssetAddress,
+        address logic
+    ) public {
         vm.assume(logic != address(0));
 
         registryContr2 = new MainRegistry(
@@ -451,8 +455,7 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyList
+            })
         );
         factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
         factoryContr.confirmNewVaultInfo();
@@ -469,7 +472,9 @@ contract factoryTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_confirmNewVaultInfo_OwnerConfirmsVaultInfoForFirstTime(address registry, address logic) public {
+    function testSuccess_confirmNewVaultInfo_OwnerConfirmsVaultInfoForFirstTime(address registry, address logic)
+        public
+    {
         vm.assume(logic != address(0));
 
         factoryContr = new Factory();

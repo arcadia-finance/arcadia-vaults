@@ -308,7 +308,7 @@ contract vaultTests is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
-        uint256[] memory emptyList = new uint256[](0);
+
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -316,8 +316,7 @@ contract vaultTests is Test {
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyList
+            })
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -326,8 +325,7 @@ contract vaultTests is Test {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyList
+            })
         );
         vm.stopPrank();
 
@@ -459,10 +457,12 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_SingleERC20(uint16 amount) public {
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingDai;
-        assetCreditRatings[2] = Constants.ethCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -471,7 +471,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         address[] memory assetAddresses = new address[](1);
@@ -494,10 +495,12 @@ contract vaultTests is Test {
 
     function testSuccess_deposit_MultipleSameERC20(uint16 amount) public {
         vm.assume(amount <= 50000);
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.linkCreditRatingUsd;
-        assetCreditRatings[1] = Constants.linkCreditRatingDai;
-        assetCreditRatings[2] = Constants.linkCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -506,7 +509,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         address[] memory assetAddresses = new address[](1);
@@ -532,10 +536,12 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_SingleERC721() public {
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatings[1] = Constants.baycCreditRatingDai;
-        assetCreditRatings[2] = Constants.baycCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         vm.prank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
@@ -545,7 +551,8 @@ contract vaultTests is Test {
                 idRangeEnd: 9999,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         address[] memory assetAddresses = new address[](1);
@@ -567,10 +574,12 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_MultipleERC721() public {
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatings[1] = Constants.baycCreditRatingDai;
-        assetCreditRatings[2] = Constants.baycCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         vm.prank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
@@ -580,7 +589,8 @@ contract vaultTests is Test {
                 idRangeEnd: 9999,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         address[] memory assetAddresses = new address[](1);
@@ -615,10 +625,12 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_SingleERC1155() public {
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.interleaveCreditRatingUsd;
-        assetCreditRatings[1] = Constants.interleaveCreditRatingDai;
-        assetCreditRatings[2] = Constants.interleaveCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         vm.prank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
@@ -627,7 +639,8 @@ contract vaultTests is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         address[] memory assetAddresses = new address[](1);
@@ -671,20 +684,12 @@ contract vaultTests is Test {
         assetTypes[2] = 1;
 
         vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatingsERC721 = new uint256[](3);
-        assetCreditRatingsERC721[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatingsERC721[1] = Constants.baycCreditRatingDai;
-        assetCreditRatingsERC721[2] = Constants.baycCreditRatingEth;
-
-        uint256[] memory assetCreditRatingsLink = new uint256[](3);
-        assetCreditRatingsLink[0] = Constants.linkCreditRatingUsd;
-        assetCreditRatingsLink[1] = Constants.linkCreditRatingDai;
-        assetCreditRatingsLink[2] = Constants.linkCreditRatingEth;
-
-        uint256[] memory assetCreditRatingsEth = new uint256[](3);
-        assetCreditRatingsEth[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatingsEth[1] = Constants.ethCreditRatingDai;
-        assetCreditRatingsEth[2] = Constants.ethCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -693,7 +698,8 @@ contract vaultTests is Test {
                 idRangeEnd: 9999,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatingsERC721
+            collateralFactors,
+            liquidationThresholds
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -701,7 +707,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            assetCreditRatingsLink
+            collateralFactors,
+            liquidationThresholds
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -709,7 +716,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatingsEth
+            collateralFactors,
+            liquidationThresholds
         );
         vm.stopPrank();
 
@@ -717,7 +725,9 @@ contract vaultTests is Test {
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function testSuccess_deposit_ERC20ERC721ERC1155(uint8 erc20Amount1, uint8 erc20Amount2, uint8 erc1155Amount) public {
+    function testSuccess_deposit_ERC20ERC721ERC1155(uint8 erc20Amount1, uint8 erc20Amount2, uint8 erc1155Amount)
+        public
+    {
         address[] memory assetAddresses = new address[](4);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(link);
@@ -743,25 +753,12 @@ contract vaultTests is Test {
         assetTypes[3] = 2;
 
         vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatingsERC721 = new uint256[](3);
-        assetCreditRatingsERC721[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatingsERC721[1] = Constants.baycCreditRatingDai;
-        assetCreditRatingsERC721[2] = Constants.baycCreditRatingEth;
-
-        uint256[] memory assetCreditRatingsLink = new uint256[](3);
-        assetCreditRatingsLink[0] = Constants.linkCreditRatingUsd;
-        assetCreditRatingsLink[1] = Constants.linkCreditRatingDai;
-        assetCreditRatingsLink[2] = Constants.linkCreditRatingEth;
-
-        uint256[] memory assetCreditRatingsEth = new uint256[](3);
-        assetCreditRatingsEth[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatingsEth[1] = Constants.ethCreditRatingDai;
-        assetCreditRatingsEth[2] = Constants.ethCreditRatingEth;
-
-        uint256[] memory assetCreditRatingsInterleave = new uint256[](3);
-        assetCreditRatingsInterleave[0] = Constants.interleaveCreditRatingUsd;
-        assetCreditRatingsInterleave[1] = Constants.interleaveCreditRatingDai;
-        assetCreditRatingsInterleave[2] = Constants.interleaveCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -770,7 +767,8 @@ contract vaultTests is Test {
                 idRangeEnd: 9999,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatingsERC721
+            collateralFactors,
+            liquidationThresholds
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -778,7 +776,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            assetCreditRatingsLink
+            collateralFactors,
+            liquidationThresholds
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -786,7 +785,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatingsEth
+            collateralFactors,
+            liquidationThresholds
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -794,7 +794,8 @@ contract vaultTests is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            assetCreditRatingsInterleave
+            collateralFactors,
+            liquidationThresholds
         );
         vm.stopPrank();
 
@@ -807,10 +808,12 @@ contract vaultTests is Test {
 
         vm.startPrank(sender);
 
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingDai;
-        assetCreditRatings[2] = Constants.ethCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
         vm.stopPrank();
 
         vm.prank(creatorAddress);
@@ -820,7 +823,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         address[] memory assetAddresses = new address[](1);
@@ -944,7 +948,9 @@ contract vaultTests is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_withdraw_ERC721AfterTakingCredit(uint128[] calldata tokenIdsDeposit, uint8 baseAmountCredit) public {
+    function testSuccess_withdraw_ERC721AfterTakingCredit(uint128[] calldata tokenIdsDeposit, uint8 baseAmountCredit)
+        public
+    {
         vm.assume(tokenIdsDeposit.length < 50); //test speed
         uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.daiDecimals);
 
@@ -1082,7 +1088,9 @@ contract vaultTests is Test {
         assertEq(expectedRemaining, vault.getFreeMargin());
     }
 
-    function testSuccess_getFreeMargin_AfterTopUp(uint8 amountEth, uint8 amountLink, uint128[] calldata tokenIds) public {
+    function testSuccess_getFreeMargin_AfterTopUp(uint8 amountEth, uint8 amountLink, uint128[] calldata tokenIds)
+        public
+    {
         vm.assume(tokenIds.length < 10 && tokenIds.length > 1);
         (uint16 collThres,,) = vault.vault();
 
@@ -1206,9 +1214,12 @@ contract vaultTests is Test {
       * 1000% interest rate
       * never synced any debt during 5 years
   **/
-    function testSuccess_syncInterests_SyncDebtUnchecked(uint64 base, uint24 deltaBlocks, uint128 openDebt, uint16 additionalDeposit)
-        public
-    {
+    function testSuccess_syncInterests_SyncDebtUnchecked(
+        uint64 base,
+        uint24 deltaBlocks,
+        uint128 openDebt,
+        uint16 additionalDeposit
+    ) public {
         vm.assume(base <= 10 * 10 ** 18); //1000%
         vm.assume(base >= 10 ** 18); //No negative interest rate possible
         vm.assume(deltaBlocks <= 13140000); //5 year
@@ -1247,7 +1258,9 @@ contract vaultTests is Test {
         assertEq(usedMarginExpected, usedMarginActual);
     }
 
-    function testSuccess_syncInterests_GetOpenDebtUnchecked(uint32 blocksToRoll, uint128 baseAmountEthToDeposit) public {
+    function testSuccess_syncInterests_GetOpenDebtUnchecked(uint32 blocksToRoll, uint128 baseAmountEthToDeposit)
+        public
+    {
         vm.assume(blocksToRoll <= 255555555); //up to the year 2122
         vm.assume(baseAmountEthToDeposit > 0);
         vm.assume(baseAmountEthToDeposit < 10);
@@ -1285,14 +1298,18 @@ contract vaultTests is Test {
         assertEq(usedMarginExpected, usedMarginActual);
     }
 
-    function testSucess_getFreeMargin_RemainingCreditUnchecked(uint128 amountEth, uint8 factor) public {
+    function testSuccess_getFreeMargin_RemainingCreditUnchecked(uint128 amountEth, uint8 factor) public {
         vm.assume(amountEth < 10 * 10 ** 9 * 10 ** 18);
         vm.assume(amountEth > 0);
 
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingDai;
-        assetCreditRatings[2] = Constants.ethCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](3);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -1300,7 +1317,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         depositERC20InVault(eth, amountEth, vaultOwner);
@@ -1449,10 +1467,12 @@ contract vaultTests is Test {
     }
 
     function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingDai;
-        assetCreditRatings[2] = Constants.ethCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -1461,7 +1481,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         emit log_named_uint("AmountInDepositandMax", amountEth);
@@ -1505,10 +1526,12 @@ contract vaultTests is Test {
     }
 
     function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.ethCreditRatingUsd;
-        assetCreditRatings[1] = Constants.ethCreditRatingDai;
-        assetCreditRatings[2] = Constants.ethCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -1517,7 +1540,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         address[] memory assetAddresses = new address[](1);
@@ -1553,10 +1577,12 @@ contract vaultTests is Test {
             uint256[] memory assetTypes
         )
     {
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.linkCreditRatingUsd;
-        assetCreditRatings[1] = Constants.linkCreditRatingDai;
-        assetCreditRatings[2] = Constants.linkCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -1565,7 +1591,8 @@ contract vaultTests is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         assetAddresses = new address[](1);
@@ -1594,10 +1621,12 @@ contract vaultTests is Test {
             uint256[] memory assetTypes
         )
     {
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = Constants.baycCreditRatingUsd;
-        assetCreditRatings[1] = Constants.baycCreditRatingDai;
-        assetCreditRatings[2] = Constants.baycCreditRatingEth;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 155;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
 
         vm.prank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
@@ -1607,7 +1636,8 @@ contract vaultTests is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         assetAddresses = new address[](tokenIds.length);
