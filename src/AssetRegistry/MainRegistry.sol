@@ -104,7 +104,7 @@ contract MainRegistry is Ownable, RiskModule {
      * - assetAddress: The contract address of the baseCurrency,
      * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
-     * @param assetCreditRatings The List of the Credit Rating Categories of the baseCurrency, for all the different assets in the Main registry
+     *
      * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
      * Tokens pegged to the native token do not count as native tokens
      * - USDC is not a native token for USD as BaseCurrency
@@ -116,10 +116,7 @@ contract MainRegistry is Ownable, RiskModule {
      * Category from 1 to 9 will be used to label groups of assets with similar risk profiles
      * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
      */
-    function addBaseCurrency(
-        BaseCurrencyInformation calldata baseCurrencyInformation,
-        uint256[] calldata assetCreditRatings
-    ) external onlyOwner {
+    function addBaseCurrency(BaseCurrencyInformation calldata baseCurrencyInformation) external onlyOwner {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
@@ -159,7 +156,6 @@ contract MainRegistry is Ownable, RiskModule {
     /**
      * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
      * @param assetAddress The address of the asset
-     * @param assetCreditRatings The List of Credit Rating Categories for the asset for the different BaseCurrencies
      * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
      * or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies
      * is initiated as credit rating with index 0 by default (worst credit rating).
@@ -171,7 +167,7 @@ contract MainRegistry is Ownable, RiskModule {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function addAsset(address assetAddress, uint256[] memory assetCreditRatings) external onlyPricingModule {
+    function addAsset(address assetAddress) external onlyPricingModule {
         if (inMainRegistry[assetAddress]) {
             require(assetsUpdatable, "MR_AA: already known");
         } else {
@@ -181,14 +177,31 @@ contract MainRegistry is Ownable, RiskModule {
         assetToPricingModule[assetAddress] = msg.sender;
 
         // Hardcode Risk Params for test
-        collateralFactors[assetAddress] = 150;
-        liquidationThresholds[assetAddress] = 110;
+        for (uint256 i; i < baseCurrencyCounter;) {
+            collateralFactors[assetAddress][i] = DEFAULT_COLLATERAL_FACTOR;
+            liquidationThresholds[assetAddress][i] = DEFAULT_LIQUIDATION_THRESHOLD;
+        }
     }
 
-    function addAsset(address assetAddress, uint16 collateralFactor, uint16 liquidationThreshold)
-        external
-        onlyPricingModule
-    {
+    /**
+     * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
+     * @param assetAddress The address of the asset
+     * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
+     * @param assetLiquidationThresholds The List of liquidation threshold for the asset for the different BaseCurrencies
+     * @dev The list of assetLiquidationThresholds and assetCollateralFactors should or be as long as
+     * the number of baseCurrencies added to the Main Registry or the list must have length 0.
+     * If the list has length zero, collateral factor and liquidation threshold of the asset for all baseCurrencies
+     * is initiated as default with index 0 by default (safest lowest variables).
+     * @dev By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
+     * (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
+     * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
+     * assets are no longer updatable.
+     */
+    function addAsset(
+        address assetAddress,
+        uint16[] memory assetCollateralFactors,
+        uint16[] memory assetLiquidationThresholds
+    ) external onlyPricingModule {
         if (inMainRegistry[assetAddress]) {
             require(assetsUpdatable, "MR_AA: already known");
         } else {
@@ -197,9 +210,42 @@ contract MainRegistry is Ownable, RiskModule {
         }
         assetToPricingModule[assetAddress] = msg.sender;
 
-        // Set Risk Parameters
-        collateralFactors[assetAddress] = collateralFactor;
-        liquidationThresholds[assetAddress] = liquidationThreshold;
+        // Check: Valid length of arrays
+        uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
+        require(
+            (
+                assetCollateralFactorsLength == baseCurrencyCounter
+                    && assetCollateralFactorsLength == assetLiquidationThresholds.length
+            ) || (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
+            "MR_AA: LENGTH_MISMATCH"
+        );
+        // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
+//        if (assetCollateralFactorsLength == 0) {
+//            // Loop: Per base currency
+            for (uint256 i; i < baseCurrencyCounter;) {
+                // Write: Default variables for collateralFactor and liquidationThreshold
+                collateralFactors[assetAddress][i] = DEFAULT_COLLATERAL_FACTOR;
+                liquidationThresholds[assetAddress][i] = DEFAULT_LIQUIDATION_THRESHOLD;
+            }
+            // Early termination
+//            return;
+//        }
+//        // Loop: Per value of collateral factor and liquidation threshold
+//        for (uint256 i; i < assetCollateralFactorsLength;) {
+//            // Check: Values in the allowed limit
+//            require(
+//                assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
+//                "MR_AA: Collateral Factor should be in limits."
+//            );
+//            require(
+//                assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
+//                    && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
+//                "MR_AA: Liquidation Threshold should be in the limits."
+//            );
+//
+//            collateralFactors[assetAddress][i] = assetCollateralFactors[i];
+//            liquidationThresholds[assetAddress][i] = assetLiquidationThresholds[i];
+//        }
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -272,26 +318,40 @@ contract MainRegistry is Ownable, RiskModule {
      * @notice Change the Credit Rating Category for one or more assets for one or more baseCurrencies
      * @param assets The List of addresses of the assets
      * @param _baseCurrencies The corresponding List of BaseCurrencies
-     * @param newCreditRating The corresponding List of new Credit Ratings
+     * @param newCollateralFactors The corresponding List of new Collateral Factors
+     * @param newLiquidationThresholds The corresponding List of new Liquidation Thresholds
      * @dev The function loops over all indexes, and changes for each index the Credit Rating Category of the combination of asset and baseCurrency.
      * In case multiple Credit Rating Categories for the same assets need to be changed, the address must be repeated in the assets.
      * Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
      * Category from 1 to 9 will be used to label groups of assets with similar risk profiles
      * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
      */
-    function batchSetCreditRating(
+    function batchSetRiskVariables(
         address[] calldata assets,
         uint256[] calldata _baseCurrencies,
-        uint256[] calldata newCreditRating
+        uint16[] calldata newCollateralFactors,
+        uint16[] calldata newLiquidationThresholds
     ) external onlyOwner {
         uint256 assetsLength = assets.length;
         require(
-            assetsLength == _baseCurrencies.length && assetsLength == newCreditRating.length, "MR_BSCR: LENGTH_MISMATCH"
+            assetsLength == _baseCurrencies.length && assetsLength == newCollateralFactors.length
+                && assetsLength == newLiquidationThresholds.length,
+            "MR_BSCR: LENGTH_MISMATCH"
         );
 
         for (uint256 i; i < assetsLength;) {
-            require(newCreditRating[i] < CREDIT_RATING_CATOGERIES, "MR_BSCR: non-existing creditRat");
-            assetToBaseCurrencyToCreditRating[assets[i]][_baseCurrencies[i]] = newCreditRating[i];
+            // Check: Values in the allowed limit
+            require(
+                newCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && newCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
+                "MR_AA: Collateral Factor should be lower than 10000"
+            );
+            require(
+                newLiquidationThresholds[i] < MAX_LIQUIDATION_THRESHOLD
+                    && newLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
+                "MR_AA: Liquidation Threshold should be lower than 10000"
+            );
+            collateralFactors[assets[i]][_baseCurrencies[i]] = newCollateralFactors[i];
+            liquidationThresholds[assets[i]][_baseCurrencies[i]] = newLiquidationThresholds[i];
             unchecked {
                 ++i;
             }
@@ -570,63 +630,10 @@ contract MainRegistry is Ownable, RiskModule {
             assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
             "MR_GCV: LENGTH_MISMATCH"
         );
+        uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
         uint256[] memory valuesPerAsset =
-            getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrency);
-        collateralValue = calculateWeightedCollateralValue(_assetAddresses, valuesPerAsset);
-    }
-
-    /**
-     * @notice Calculate the collateral factor given the asset details in given baseCurrency
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An address of the BaseCurrency contract
-     * @return collateralFactor Collateral factor of the given assets.
-     */
-    function getCollateralFactor(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
-        address baseCurrency
-    ) public view returns (uint16 collateralFactor) {
-        uint256 assetAddressesLength = _assetAddresses.length;
-        require(
-            assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
-            "MR_GCF: LENGTH_MISMATCH"
-        );
-        uint256[] memory valuesPerAsset =
-            getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrency);
-        collateralFactor = calculateWeightedCollateralFactor(_assetAddresses, valuesPerAsset);
-    }
-
-    /**
-     * @notice Calculate the liquidation value given the asset details and the opendebt in given baseCurrency
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An address of the BaseCurrency contract
-     * @return liquidationValue of the given assets with the openDebt
-     */
-    function getLiquidationValue(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
-        address baseCurrency,
-        uint256 openDebt
-    ) public view returns (uint256 liquidationValue) {
-        uint256 assetAddressesLength = _assetAddresses.length;
-
-        require(
-            assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
-            "MR_GCV: LENGTH_MISMATCH"
-        );
-        uint256[] memory valuesPerAsset =
-            getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrency);
-        liquidationValue = calculateWeightedLiquidationValue(_assetAddresses, valuesPerAsset, openDebt);
+            getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
+        collateralValue = calculateWeightedCollateralValue(_assetAddresses, valuesPerAsset, baseCurrencyInd);
     }
 
     /**
@@ -649,8 +656,9 @@ contract MainRegistry is Ownable, RiskModule {
             _assetAddresses.length == _assetIds.length && _assetAddresses.length == _assetAmounts.length,
             "MR_GCF: LENGTH_MISMATCH"
         );
+        uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
         uint256[] memory valuesPerAsset =
-            getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrency);
-        liquidationThreshold = calculateWeightedLiquidationThreshold(_assetAddresses, valuesPerAsset);
+            getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
+        liquidationThreshold = calculateWeightedLiquidationThreshold(_assetAddresses, valuesPerAsset, baseCurrencyInd);
     }
 }
