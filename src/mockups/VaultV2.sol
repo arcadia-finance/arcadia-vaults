@@ -397,8 +397,6 @@ contract VaultV2 {
      */
     function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
         //gas: 35 gas cheaper to not take debt into memory
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
         uint256 totalValue = getVaultValue(vault.baseCurrency);
         uint128 openDebt = getUsedMargin();
         uint256 leftHand;

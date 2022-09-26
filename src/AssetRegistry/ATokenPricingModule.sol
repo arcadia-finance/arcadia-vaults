@@ -44,8 +44,8 @@ contract ATokenPricingModule is PricingModule {
     /**
      * @notice Adds a new asset to the ATokenPricingModule, or overwrites an existing asset.
      * @param assetAddress The contract address of the asset
-     * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencies.
-     * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
+     * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
+     * @param assetLiquidationThresholds The List of liquidation threshold for the asset for the different BaseCurrencies     * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
      * or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies is
      * is initiated as credit rating with index 0 by default (worst credit rating).
      * @dev The assets are added/overwritten in the Main-Registry as well.
@@ -55,7 +55,11 @@ contract ATokenPricingModule is PricingModule {
      * assets are no longer updatable.
      * @dev Assets can't have more than 18 decimals.
      */
-    function setAssetInformation(address assetAddress, uint256[] calldata assetCreditRatings) external onlyOwner {
+    function setAssetInformation(
+        address assetAddress,
+        uint16[] calldata assetCollateralFactors,
+        uint16[] calldata assetLiquidationThresholds
+    ) external onlyOwner {
         address underlyingAddress = IAToken(assetAddress).UNDERLYING_ASSET_ADDRESS();
         (uint64 assetUnit, address underlyingAssetAddress, address[] memory underlyingAssetOracleAddresses) =
         IPricingModule(IMainRegistry(mainRegistry).assetToPricingModule(underlyingAddress)).getAssetInformation(
@@ -74,7 +78,7 @@ contract ATokenPricingModule is PricingModule {
         assetToInformation[assetAddress].underlyingAssetAddress = underlyingAssetAddress;
         assetToInformation[assetAddress].underlyingAssetOracleAddresses = underlyingAssetOracleAddresses;
         isAssetAddressWhiteListed[assetAddress] = true;
-        IMainRegistry(mainRegistry).addAsset(assetAddress, assetCreditRatings);
+        IMainRegistry(mainRegistry).addAsset(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
     }
 
     /**
