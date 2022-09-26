@@ -267,41 +267,41 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testOwnerAddsBaseCurrencyWithWrongNumberOfCreditRatings() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addPricingModule(address(standardERC20Registry));
-        standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyList
-        );
-        standardERC20Registry.setAssetInformation(
-            StandardERC20Registry.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyList
-        );
-
-        uint256[] memory assetCreditRatings = new uint256[](1);
-        assetCreditRatings[0] = 0;
-        vm.expectRevert("MR_AN: length");
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            assetCreditRatings
-        );
-        vm.stopPrank();
-    }
+//    function testOwnerAddsBaseCurrencyWithWrongNumberOfCreditRatings() public {
+//        vm.startPrank(creatorAddress);
+//        mainRegistry.addPricingModule(address(standardERC20Registry));
+//        standardERC20Registry.setAssetInformation(
+//            StandardERC20Registry.AssetInformation({
+//                oracleAddresses: oracleEthToUsdArr,
+//                assetUnit: uint64(10 ** Constants.ethDecimals),
+//                assetAddress: address(eth)
+//            }),
+//            emptyList
+//        );
+//        standardERC20Registry.setAssetInformation(
+//            StandardERC20Registry.AssetInformation({
+//                oracleAddresses: oracleLinkToUsdArr,
+//                assetUnit: uint64(10 ** Constants.linkDecimals),
+//                assetAddress: address(link)
+//            }),
+//            emptyList
+//        );
+//
+//        uint256[] memory assetCreditRatings = new uint256[](1);
+//        assetCreditRatings[0] = 0;
+//        vm.expectRevert("MR_AN: length");
+//        mainRegistry.addBaseCurrency(
+//            MainRegistry.BaseCurrencyInformation({
+//                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
+//                assetAddress: address(eth),
+//                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+//                baseCurrencyLabel: "ETH",
+//                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+//            }),
+//            assetCreditRatings
+//        );
+//        vm.stopPrank();
+//    }
 
 //    function testOwnerAddsBaseCurrencyWithNonExistingCreditRatingCategory() public {
 //        vm.startPrank(creatorAddress);
