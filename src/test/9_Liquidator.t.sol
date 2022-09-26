@@ -553,7 +553,9 @@ contract LiquidatorTest is Test {
         assertEq(vaultPrice, expectedPrice);
     }
 
-    function testSuccess_liquidate_AuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+    function testSuccess_liquidate_AuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll)
+        public
+    {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * liquidator.breakevenTime());
         (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
@@ -1028,7 +1030,9 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_Breakeven(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll, uint8 breakevenTime) public {
+    function testSuccess_Breakeven(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll, uint8 breakevenTime)
+        public
+    {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * breakevenTime);
         (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
         vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);

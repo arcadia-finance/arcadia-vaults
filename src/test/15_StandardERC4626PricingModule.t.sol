@@ -288,9 +288,12 @@ contract standardERC4626PricingModuleTest is Test {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testRevert_getValue_Overflow(uint256 rateEthToUsd_, uint256 shares, uint256 totalSupply, uint256 totalAssets)
-        public
-    {
+    function testRevert_getValue_Overflow(
+        uint256 rateEthToUsd_,
+        uint256 shares,
+        uint256 totalSupply,
+        uint256 totalAssets
+    ) public {
         vm.assume(shares <= totalSupply);
         vm.assume(totalSupply > 0);
         vm.assume(totalAssets > 0);
