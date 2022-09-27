@@ -46,12 +46,14 @@ contract StandardERC4626PricingModule is PricingModule {
      * @param assetAddress The contract address of the asset
      * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
      * @param assetLiquidationThresholds The List of liquidation threshold for the asset for the different BaseCurrencies
-     * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
-     * or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies is
-     * is initiated as credit rating with index 0 by default (worst credit rating).
+     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should or be as long as
+     * the number of assets added to the Main Registry,or the list must have length 0.
+     * If the list has length zero, the risk variables of the baseCurrency for all assets
+     * is initiated as default (safest lowest rating).
+     * Risk variable are variables with decimal by 100
      * @dev The assets are added/overwritten in the Main-Registry as well.
      * By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     * (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
+     * (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      * @dev Assets can't have more than 18 decimals.
