@@ -109,18 +109,35 @@ contract MainRegistry is Ownable, RiskModule {
      * Tokens pegged to the native token do not count as native tokens
      * - USDC is not a native token for USD as BaseCurrency
      * - WETH is a native token for ETH as BaseCurrency
-     * @dev The list of Credit Rating Categories should or be as long as the number of assets added to the Main Registry,
-     * or the list must have length 0. If the list has length zero, the credit ratings of the baseCurrency for all assets
-     * is initiated as credit rating with index 0 by default (worst credit rating).
-     * Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-     * Category from 1 to 9 will be used to label groups of assets with similar risk profiles
-     * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
+     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should or be as long as
+     * the number of assets added to the Main Registry,or the list must have length 0.
+     * If the list has length zero, the risk variables of the baseCurrency for all assets
+     * is initiated as default (safest lowest rating).
+     * Risk variable are variables with decimal by 100
      */
-    function addBaseCurrency(BaseCurrencyInformation calldata baseCurrencyInformation) external onlyOwner {
+    function addBaseCurrency(
+        BaseCurrencyInformation calldata baseCurrencyInformation
+//        uint16[] memory baseCurrencyCollateralFactors,
+//        uint16[] memory baseCurrencyLiquidationThresholds
+    ) external onlyOwner {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
         baseCurrencies.push(baseCurrencyInformation.assetAddress);
+
+//        uint256 assetCreditRatingsLength = assetCreditRatings.length;
+//        require(
+//            assetCreditRatingsLength == assetsInMainRegistry.length || assetCreditRatingsLength == 0, "MR_AN: length"
+//        );
+//        for (uint256 i; i < assetCreditRatingsLength;) {
+//            require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AN: non existing credRat");
+//            assetToBaseCurrencyToCreditRating[assetsInMainRegistry[i]][baseCurrencyCounter] = assetCreditRatings[i];
+//        unchecked {
+//            ++i;
+//        }
+//        }
+
+
 
         unchecked {
             ++baseCurrencyCounter;
