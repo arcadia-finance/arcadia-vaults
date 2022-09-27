@@ -447,8 +447,6 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
-
-        uint16[] memory emptyListUint16 = new uint16[](0);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
