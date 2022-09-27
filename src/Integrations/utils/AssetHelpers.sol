@@ -15,7 +15,6 @@ import {ERC20} from "../../../lib/solmate/src/tokens/ERC20.sol";
 /// @author Enzyme Council <security@enzyme.finance>
 /// @notice A util contract for common token actions
 abstract contract AssetHelpers {
-
     /// @dev Helper to aggregate amounts of the same assets
     function __aggregateAssetAmounts(address[] memory _rawAssets, uint256[] memory _rawAmounts)
         internal
@@ -67,11 +66,7 @@ abstract contract AssetHelpers {
     /// @dev Helper to approve a target account with the max amount of an asset.
     /// This is helpful for fully trusted contracts, such as adapters that
     /// interact with external protocol like Uniswap, Compound, etc.
-    function __approveAssetMaxAsNeeded(
-        address _asset,
-        address _target,
-        uint256 _neededAmount
-    ) internal {
+    function __approveAssetMaxAsNeeded(address _asset, address _target, uint256 _neededAmount) internal {
         uint256 allowance = ERC20(_asset).allowance(address(this), _target);
         if (allowance < _neededAmount) {
             if (allowance > 0) {

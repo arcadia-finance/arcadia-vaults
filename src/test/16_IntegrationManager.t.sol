@@ -23,9 +23,7 @@ abstract contract IntegrationManagerTest is Test {
     address mainRegistry = address(3);
 
     //Before
-    constructor() {
-        
-    }
+    constructor() {}
 
     //Before Each
     function setUp() public virtual {
@@ -40,7 +38,7 @@ abstract contract IntegrationManagerTest is Test {
         bytes32 loc = bytes32(slot);
         bytes32 owner = bytes32(abi.encode(address(2)));
         vm.store(address(vault), loc, owner);
-        
+
         // Cheat IM in vault contract cause I don't want to break all old tests by changing vault initiate function just yet
         uint256 slot2 = stdstore.target(address(vault)).sig(vault.integrationManager.selector).find();
         bytes32 loc2 = bytes32(slot2);
@@ -48,8 +46,6 @@ abstract contract IntegrationManagerTest is Test {
         vm.store(address(vault), loc2, integrationMan);
 
         // Cheat some assets to test some integrations.
-
-
     }
 }
 
@@ -58,6 +54,7 @@ abstract contract IntegrationManagerTest is Test {
 //////////////////////////////////////////////////////////////*/
 contract DeploymentTest is IntegrationManagerTest {
     using stdStorage for StdStorage;
+
     function setUp() public override {
         super.setUp();
     }
@@ -68,31 +65,31 @@ contract DeploymentTest is IntegrationManagerTest {
     }
 }
 
-
 /*//////////////////////////////////////////////////////////////
                         COI LOGIC
 //////////////////////////////////////////////////////////////*/
 contract CallOnIntegrationTest is IntegrationManagerTest {
-    
     function setUp() public override {
         super.setUp();
-
     }
 
     // double check possible exploit that implements owner()??
     function testSuccess_receiveCallFromVaultNotVault(address notVault) public {
         vm.assume(notVault != address(vault));
-        bytes memory callArgs_ = abi.encode(address(adapter),bytes4(keccak256("takeOrder(address,bytes,bytes)")), abi.encode("test"));
+        bytes memory callArgs_ =
+            abi.encode(address(adapter), bytes4(keccak256("takeOrder(address,bytes,bytes)")), abi.encode("test"));
 
         vm.startPrank(notVault);
         vm.expectRevert(bytes(""));
         im.receiveCallFromVault(vaultOwner, callArgs_);
         vm.stopPrank();
     }
+
     function testSuccess_receiveCallFromVaultNotVaultOwner(address notVaultOwner) public {
         vm.assume(notVaultOwner != address(vaultOwner));
         vm.assume(notVaultOwner != address(vault));
-        bytes memory callArgs_ = abi.encode(address(adapter),bytes4(keccak256("takeOrder(address,bytes,bytes)")), abi.encode("test"));
+        bytes memory callArgs_ =
+            abi.encode(address(adapter), bytes4(keccak256("takeOrder(address,bytes,bytes)")), abi.encode("test"));
 
         vm.startPrank(address(vault));
         vm.expectRevert("receiveCallFromVaultProxy: Unauthorized");
@@ -101,47 +98,45 @@ contract CallOnIntegrationTest is IntegrationManagerTest {
     }
 
     function testSuccess_callAdapter(address actionAddress, uint256 actionAmount) public {
-        
-        bytes4 _selector =  bytes4(keccak256("_selector(address,bytes,bytes)"));
+        bytes4 _selector = bytes4(keccak256("_selector(address,bytes,bytes)"));
         address _vaultProxy = address(vault);
         bytes memory _integrationData = abi.encode(actionAddress, actionAmount);
 
         vm.startPrank(address(im));
-        (bool success, bytes memory returnData) = address(adapter).call(
-            abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes(""))
-        );
+        (bool success, bytes memory returnData) =
+            address(adapter).call(abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes("")));
         vm.stopPrank();
     }
-    function testSuccess_callAdapterNotIntegrationManager(address notIntegrationManager, address actionAddress, uint256 actionAmount) public {
+
+    function testSuccess_callAdapterNotIntegrationManager(
+        address notIntegrationManager,
+        address actionAddress,
+        uint256 actionAmount
+    ) public {
         vm.assume(notIntegrationManager != address(im));
 
-        bytes4 _selector =  bytes4(keccak256("_selector(address,bytes,bytes)"));
+        bytes4 _selector = bytes4(keccak256("_selector(address,bytes,bytes)"));
         address _vaultProxy = address(vault);
         bytes memory _integrationData = abi.encode(actionAddress, actionAmount);
 
         vm.startPrank(notIntegrationManager);
 
         vm.expectRevert("Only the IntegrationManager can call this function");
-        (bool success, bytes memory returnData) = address(adapter).call(
-            abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes(""))
-        );
+        (bool success, bytes memory returnData) =
+            address(adapter).call(abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes("")));
         vm.stopPrank();
     }
 
-        function testSuccess_callAdapterExpectSuccess(address actionAddress, uint256 actionAmount) public {
-        
-        bytes4 _selector =  bytes4(keccak256("_selector(address,bytes,bytes)"));
+    function testSuccess_callAdapterExpectSuccess(address actionAddress, uint256 actionAmount) public {
+        bytes4 _selector = bytes4(keccak256("_selector(address,bytes,bytes)"));
         address _vaultProxy = address(vault);
         bytes memory _integrationData = abi.encode(actionAddress, actionAmount);
 
         vm.startPrank(address(im));
-        (bool success, bytes memory returnData) = address(adapter).call(
-            abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes(""))
-        );
+        (bool success, bytes memory returnData) =
+            address(adapter).call(abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes("")));
         vm.stopPrank();
 
         assertEq(success, true);
-    
     }
-    
 }

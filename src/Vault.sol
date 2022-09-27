@@ -203,11 +203,7 @@ contract Vault {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    )
-        external
-        payable
-        onlyOwner
-    {
+    ) external payable onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
@@ -343,11 +339,7 @@ contract Vault {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    )
-        external
-        payable
-        onlyOwner
-    {
+    ) external payable onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
@@ -811,13 +803,10 @@ contract Vault {
      * @param _callArgs abi encoded data .
      */
 
-    function callOnIntegration(
-        bytes memory _callArgs) public payable onlyOwner returns (bool success) {
-
+    function callOnIntegration(bytes memory _callArgs) public payable onlyOwner returns (bool success) {
         IIntegrationManager(integrationManager).receiveCallFromVault(msg.sender, _callArgs);
         return true; //change return value
     }
-
 
     /*///////////////////////////////////////////////////////////////
                         HELPER FUNCTIONS

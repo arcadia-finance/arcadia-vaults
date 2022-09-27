@@ -121,11 +121,7 @@ contract Liquidator is Ownable {
         uint128 openDebt,
         uint8 liqThres,
         uint8 baseCurrency
-    )
-        public
-        elevated
-        returns (bool success)
-    {
+    ) public elevated returns (bool success) {
         require(auctionInfo[vaultAddress][life].startBlock == 0, "Liquidation already ongoing");
 
         ILendingPool(IVault(vaultAddress).trustedProtocol()).liquidateVault(vaultAddress, openDebt);
@@ -153,11 +149,7 @@ contract Liquidator is Ownable {
         uint256[] memory assetIds,
         uint256[] memory assetAmounts,
         uint8 baseCurrencyOfDebt
-    )
-        public
-        view
-        returns (uint256 totalValue)
-    {
+    ) public view returns (uint256 totalValue) {
         totalValue =
             IMainRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrencyOfDebt);
     }

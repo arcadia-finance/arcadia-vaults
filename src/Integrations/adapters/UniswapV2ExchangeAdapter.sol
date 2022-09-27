@@ -17,16 +17,12 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
     /// @notice Trades assets on Uniswap
     /// @param _vaultProxy The VaultProxy of the calling fund
     /// @param _actionData Data specific to this action
-    function takeOrder(
-        address _vaultProxy,
-        bytes calldata _actionData,
-        bytes calldata
-    ) external onlyIntegrationManager {
-        (
-            address[] memory path,
-            uint256 outgoingAssetAmount,
-            uint256 minIncomingAssetAmount
-        ) = __decodeTakeOrderCallArgs(_actionData);
+    function takeOrder(address _vaultProxy, bytes calldata _actionData, bytes calldata)
+        external
+        onlyIntegrationManager
+    {
+        (address[] memory path, uint256 outgoingAssetAmount, uint256 minIncomingAssetAmount) =
+            __decodeTakeOrderCallArgs(_actionData);
 
         __uniswapV2Swap(_vaultProxy, outgoingAssetAmount, minIncomingAssetAmount, path);
     }
@@ -40,18 +36,11 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
     /// @param _actionData Data specific to this action
     /// the adapter access to spend assets (`None` by default)
 
-    function parseAssetsForAction(
-        address,
-        bytes4 _selector,
-        bytes calldata _actionData
-    )
+    function parseAssetsForAction(address, bytes4 _selector, bytes calldata _actionData)
         external
         view
         override
-        returns (
-            actionAssetsData memory spendAssets_,
-            actionAssetsData memory incomingAssets_
-        )
+        returns (actionAssetsData memory spendAssets_, actionAssetsData memory incomingAssets_)
     {
         require(_selector == TAKE_ORDER_SELECTOR, "parseAssetsForAction: _selector invalid");
 
@@ -63,16 +52,10 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
     function __parseAssetsForTakeOrder(bytes calldata _actionData)
         private
         pure
-        returns (
-            actionAssetsData memory spendAssets_,
-            actionAssetsData memory incomingAssets_
-        )
+        returns (actionAssetsData memory spendAssets_, actionAssetsData memory incomingAssets_)
     {
-        (
-            address[] memory path,
-            uint256 outgoingAssetAmount,
-            uint256 minIncomingAssetAmount
-        ) = __decodeTakeOrderCallArgs(_actionData);
+        (address[] memory path, uint256 outgoingAssetAmount, uint256 minIncomingAssetAmount) =
+            __decodeTakeOrderCallArgs(_actionData);
 
         require(path.length >= 2, "__parseAssetsForTakeOrder: _path must be >= 2");
 
@@ -86,10 +69,7 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
         incomingAssets_.minmaxAssetAmounts = new uint256[](1);
         incomingAssets_.minmaxAssetAmounts[0] = minIncomingAssetAmount;
 
-        return (
-           spendAssets_,
-           incomingAssets_
-        );
+        return (spendAssets_, incomingAssets_);
     }
 
     // PRIVATE FUNCTIONS
@@ -98,12 +78,8 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
     function __decodeTakeOrderCallArgs(bytes memory _actionData)
         private
         pure
-        returns (
-            address[] memory path_,
-            uint256 outgoingAssetAmount_,
-            uint256 minIncomingAssetAmount_
-        )
+        returns (address[] memory path_, uint256 outgoingAssetAmount_, uint256 minIncomingAssetAmount_)
     {
         return abi.decode(_actionData, (address[], uint256, uint256));
     }
-}   
+}

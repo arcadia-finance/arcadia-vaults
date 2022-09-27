@@ -7,14 +7,10 @@ import "../interfaces/IAdapter.sol";
 ///
 /// @notice A base contract for adapters
 abstract contract AdapterCore is IAdapter {
-
     address internal immutable INTEGRATION_MANAGER;
 
     modifier onlyIntegrationManager() {
-        require(
-            msg.sender == INTEGRATION_MANAGER,
-            "AC: Only the IntegrationManager can call this function"
-        );
+        require(msg.sender == INTEGRATION_MANAGER, "AC: Only the IntegrationManager can call this function");
         _;
     }
 
@@ -28,11 +24,7 @@ abstract contract AdapterCore is IAdapter {
     function _decodeActionData(bytes memory _actionData)
         internal
         pure
-        returns (
-            address[] memory spendAssets_,
-            uint256[] memory spendAssetAmounts_,
-            address[] memory incomingAssets_
-        )
+        returns (address[] memory spendAssets_, uint256[] memory spendAssetAmounts_, address[] memory incomingAssets_)
     {
         return abi.decode(_actionData, (address[], uint256[], address[]));
     }
