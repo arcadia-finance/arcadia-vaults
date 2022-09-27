@@ -44,6 +44,7 @@ contract factoryTest is Test {
     address private liquidityProvider = address(7);
 
     uint256[] emptyList = new uint256[](0);
+    uint16[] emptyListUint16 = new uint16[](0);
 
     event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 length);
 
@@ -375,7 +376,9 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
 
         registryContr2 = new MainRegistry(
@@ -405,7 +408,9 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
 
         registryContr2 = new MainRegistry(
@@ -424,7 +429,9 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
         factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
         factoryContr.confirmNewVaultInfo();
@@ -455,7 +462,9 @@ contract factoryTest is Test {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
         factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
         factoryContr.confirmNewVaultInfo();

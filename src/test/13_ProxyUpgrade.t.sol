@@ -90,6 +90,8 @@ contract VaultV2Test is Test {
     address[] public oracleWmaycToUsdArr = new address[](1);
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
 
+    uint16[] emptyListUint16 = new uint16[](0);
+
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
@@ -310,7 +312,9 @@ contract VaultV2Test is Test {
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            })
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -319,7 +323,9 @@ contract VaultV2Test is Test {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
 
         standardERC20Registry = new StandardERC20PricingModule(
@@ -338,8 +344,6 @@ contract VaultV2Test is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
-
-        uint16[] memory emptyListUint16 = new uint16[](0);
 
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({

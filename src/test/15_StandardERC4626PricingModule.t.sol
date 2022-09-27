@@ -105,7 +105,9 @@ contract standardERC4626PricingModuleTest is Test {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
 
         standardERC20PricingModule = new StandardERC20PricingModule(

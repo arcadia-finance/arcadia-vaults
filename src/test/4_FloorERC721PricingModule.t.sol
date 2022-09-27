@@ -141,7 +141,9 @@ contract FloorERC721PricingModuleTest is Test {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
 
         floorERC721PricingModule = new FloorERC721PricingModule(

@@ -116,28 +116,62 @@ contract MainRegistry is Ownable, RiskModule {
      * Risk variable are variables with decimal by 100
      */
     function addBaseCurrency(
-        BaseCurrencyInformation calldata baseCurrencyInformation
-//        uint16[] memory baseCurrencyCollateralFactors,
-//        uint16[] memory baseCurrencyLiquidationThresholds
+        BaseCurrencyInformation calldata baseCurrencyInformation,
+        uint16[] calldata baseCurrencyCollateralFactors,
+        uint16[] calldata baseCurrencyLiquidationThresholds
     ) external onlyOwner {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
         baseCurrencies.push(baseCurrencyInformation.assetAddress);
 
-//        uint256 assetCreditRatingsLength = assetCreditRatings.length;
-//        require(
-//            assetCreditRatingsLength == assetsInMainRegistry.length || assetCreditRatingsLength == 0, "MR_AN: length"
-//        );
-//        for (uint256 i; i < assetCreditRatingsLength;) {
-//            require(assetCreditRatings[i] < CREDIT_RATING_CATOGERIES, "MR_AN: non existing credRat");
-//            assetToBaseCurrencyToCreditRating[assetsInMainRegistry[i]][baseCurrencyCounter] = assetCreditRatings[i];
-//        unchecked {
-//            ++i;
-//        }
-//        }
+        // Check: Valid length of arrays
+        uint256 baseCurrencyCollateralFactorsLength = baseCurrencyCollateralFactors.length;
+        require(
+            (
+                baseCurrencyCollateralFactorsLength == assetsInMainRegistry.length
+                    && baseCurrencyCollateralFactorsLength == baseCurrencyLiquidationThresholds.length
+            ) || (baseCurrencyCollateralFactorsLength == 0 && baseCurrencyLiquidationThresholds.length == 0),
+            "MR_ABC: LENGTH_MISMATCH"
+        );
+        // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
+        if (baseCurrencyCollateralFactorsLength == 0) {
+            // Loop: Per base currency
+            for (uint256 i; i < assetsInMainRegistry.length;) {
+                // Write: Default variables for collateralFactor and liquidationThreshold
+                collateralFactors[assetsInMainRegistry[i]][baseCurrencyCounter] = DEFAULT_COLLATERAL_FACTOR;
+                liquidationThresholds[assetsInMainRegistry[i]][baseCurrencyCounter] = DEFAULT_LIQUIDATION_THRESHOLD;
+                unchecked {
+                    i++;
+                }
+            }
+            unchecked {
+                ++baseCurrencyCounter;
+            }
+            // Early termination
+            return;
+        }
+        // Loop: Per value of collateral factor and liquidation threshold
+        for (uint256 i; i < baseCurrencyCollateralFactorsLength;) {
+            // Check: Values in the allowed limit
+            require(
+                baseCurrencyCollateralFactors[i] <= MAX_COLLATERAL_FACTOR
+                    && baseCurrencyCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
+                "MR_ABC: Collateral Factor should be in limits"
+            );
+            require(
+                baseCurrencyLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
+                    && baseCurrencyLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
+                "MR_ABC: Liquidation Threshold should be in the limits"
+            );
 
+            collateralFactors[assetsInMainRegistry[i]][baseCurrencyCounter] = baseCurrencyCollateralFactors[i];
+            liquidationThresholds[assetsInMainRegistry[i]][baseCurrencyCounter] = baseCurrencyLiquidationThresholds[i];
 
+            unchecked {
+                i++;
+            }
+        }
 
         unchecked {
             ++baseCurrencyCounter;

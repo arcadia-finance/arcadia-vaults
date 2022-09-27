@@ -98,6 +98,8 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
     uint256[] public s_3;
     uint256[] public s_4;
 
+    uint16[] emptyListUint16 = new uint16[](0);
+
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
@@ -454,7 +456,9 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            })
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -463,8 +467,12 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
+        uint256 baseCurrencycountr = mainRegistry.baseCurrencyCounter();
+        emit log_named_uint("countr", baseCurrencycountr);
 
         standardERC20Registry = new StandardERC20PricingModule(
             address(mainRegistry),
@@ -483,23 +491,14 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            collateralFactors,
-            liquidationThresholds
+            emptyListUint16,
+            emptyListUint16
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -507,8 +506,8 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            collateralFactors,
-            liquidationThresholds
+            emptyListUint16,
+            emptyListUint16
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -516,8 +515,8 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
             }),
-            collateralFactors,
-            liquidationThresholds
+            emptyListUint16,
+            emptyListUint16
         );
 
         floorERC721PricingModule.setAssetInformation(
@@ -527,8 +526,8 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            collateralFactors,
-            liquidationThresholds
+            emptyListUint16,
+            emptyListUint16
         );
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -537,8 +536,8 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(mayc)
             }),
-            collateralFactors,
-            liquidationThresholds
+            emptyListUint16,
+            emptyListUint16
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -546,8 +545,8 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            collateralFactors,
-            liquidationThresholds
+            emptyListUint16,
+            emptyListUint16
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -555,8 +554,8 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 id: 1,
                 assetAddress: address(genericStoreFront)
             }),
-            collateralFactors,
-            liquidationThresholds
+            emptyListUint16,
+            emptyListUint16
         );
 
         liquidator = new Liquidator(
