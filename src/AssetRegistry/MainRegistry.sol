@@ -26,7 +26,6 @@ contract MainRegistry is Ownable, RiskModule {
 
     bool public assetsUpdatable = true;
 
-    uint256 public constant CREDIT_RATING_CATOGERIES = 10;
     uint256 public baseCurrencyCounter;
 
     address public factoryAddress;
@@ -41,7 +40,6 @@ contract MainRegistry is Ownable, RiskModule {
     mapping(address => uint256) public assetToBaseCurrency;
     mapping(address => address) public assetToPricingModule;
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
-    mapping(address => mapping(uint256 => uint256)) public assetToBaseCurrencyToCreditRating;
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
@@ -208,12 +206,6 @@ contract MainRegistry is Ownable, RiskModule {
     /**
      * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
      * @param assetAddress The address of the asset
-     * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
-     * or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies
-     * is initiated as credit rating with index 0 by default (worst credit rating).
-     * Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-     * Category from 1 to 9 will be used to label groups of assets with similar risk profiles
-     * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
      * @dev By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
      * (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
@@ -608,65 +600,6 @@ contract MainRegistry is Ownable, RiskModule {
             }
         }
         return valuesPerAsset;
-    }
-
-    /**
-     * @notice Calculate the value per Credit Rating Category of a list of assets denominated in a given BaseCurrency
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency The contract address of the BaseCurrency
-     * @return valuesPerCreditRating The list of values per Credit Rating Category denominated in BaseCurrency
-     * @dev Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-     * Category from 1 to 10 will be used to label groups of assets with similar risk profiles
-     * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
-     */
-    function getListOfValuesPerCreditRating(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
-        address baseCurrency
-    ) public view returns (uint256[] memory valuesPerCreditRating) {
-        valuesPerCreditRating =
-            getListOfValuesPerCreditRating(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
-    }
-
-    /**
-     * @notice Calculate the value per Credit Rating Category of a list of assets denominated in a given BaseCurrency
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An identifier (uint256) of the BaseCurrency
-     * @return valuesPerCreditRating The list of values per Credit Rating Category denominated in BaseCurrency
-     * @dev Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-     * Category from 1 to 10 will be used to label groups of assets with similar risk profiles
-     * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
-     */
-    function getListOfValuesPerCreditRating(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
-        uint256 baseCurrency
-    ) public view returns (uint256[] memory valuesPerCreditRating) {
-        valuesPerCreditRating = new uint256[](CREDIT_RATING_CATOGERIES);
-        uint256[] memory valuesPerAsset =
-            getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrency);
-
-        uint256 valuesPerAssetLength = valuesPerAsset.length;
-        address assetAdress;
-        for (uint256 i; i < valuesPerAssetLength;) {
-            assetAdress = _assetAddresses[i];
-            valuesPerCreditRating[assetToBaseCurrencyToCreditRating[assetAdress][baseCurrency]] += valuesPerAsset[i];
-            unchecked {
-                ++i;
-            }
-        }
-
-        return valuesPerCreditRating;
     }
 
     /**

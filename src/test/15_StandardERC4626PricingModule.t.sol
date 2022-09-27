@@ -163,7 +163,7 @@ contract standardERC4626PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyListUint16, emptyListUint16);
         vm.stopPrank();
@@ -171,7 +171,7 @@ contract standardERC4626PricingModuleTest is Test {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
         collateralFactors[0] = 150;

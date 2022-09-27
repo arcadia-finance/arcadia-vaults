@@ -193,7 +193,7 @@ contract StandardERC20PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
         // Turn this into invalid uint16
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](1);
@@ -213,7 +213,7 @@ contract StandardERC20PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -229,7 +229,7 @@ contract StandardERC20PricingModuleTest is Test {
         assertTrue(standardERC20Registry.inPricingModule(address(eth)));
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
         collateralFactors[0] = 150;

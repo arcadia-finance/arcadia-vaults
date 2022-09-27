@@ -154,7 +154,7 @@ contract aTokenPricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.setAssetInformation(address(aEth), emptyListUint16, emptyListUint16);
         vm.stopPrank();

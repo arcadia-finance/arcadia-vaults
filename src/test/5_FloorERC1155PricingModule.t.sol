@@ -168,7 +168,7 @@ contract FloorERC1155PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -184,7 +184,7 @@ contract FloorERC1155PricingModuleTest is Test {
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
         collateralFactors[0] = 150;
