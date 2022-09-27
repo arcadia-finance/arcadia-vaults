@@ -56,11 +56,7 @@ contract Factory is ERC721, Ownable {
 
         require(vaultVersionBlocked[vaultVersion] == false, "FTRY_CV: This vault version cannot be created");
 
-        vault = address(
-            new Proxy{salt: bytes32(salt)}(
-                                                    vaultDetails[vaultVersion].logic
-                                                )
-        );
+        vault = address(new Proxy{salt: bytes32(salt)}(vaultDetails[vaultVersion].logic));
 
         IVault(vault).initialize(msg.sender, vaultDetails[vaultVersion].registryAddress, uint16(vaultVersion));
 
