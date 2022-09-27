@@ -45,7 +45,9 @@ contract RiskModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testCalculateWeightedLiquidationThresholdSuccess(uint240 firstValue, uint240 secondValue) public {
+    function testSuccess_calculateWeightedLiquidationThreshold_Success(uint240 firstValue, uint240 secondValue)
+        public
+    {
         // Given: 2 Assets with 2 values and values has to be bigger than zero for success
         // Values are uint240 to prevent overflow in multiplication
         vm.assume(firstValue > 0); // value of the asset can not be zero
@@ -85,7 +87,7 @@ contract RiskModuleTest is Test {
         assertEq(liqThres, calcLiqThreshold);
     }
 
-    function testCalculateWeightedLiquidationThresholdFail() public {
+    function testRevert_calculateWeightedLiquidationThreshold_totalAssetValue() public {
         // Given: The address of assets and the values of assets. The values of assets are zero
         uint256 firstValue = 0;
         uint256 secondValue = 0;
@@ -103,7 +105,7 @@ contract RiskModuleTest is Test {
         riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
     }
 
-    function testCalculateWeightedLiquidationThresholdFaiArithmetic(uint8 firstValueShift, uint8 secondValueShift)
+    function testRevert_calculateWeightedLiquidationThreshold_arithmetic(uint8 firstValueShift, uint8 secondValueShift)
         public
     {
         // Given: The address of assets and the values of assets.
@@ -216,32 +218,32 @@ contract RiskModuleTest is Test {
         assertEq(collateralValue, 0);
     }
 
-    //    function testRevert_calculateWeightedCollateralFactor_Arithmetic(uint8 firstValueShift, uint8 secondValueShift)
-    //        public
-    //    {
-    //        // Given: The address of assets and the values of assets.
-    //        // The values of assets should be so big to trigger arithmetic
-    //        uint256 min_val = type(uint256).max / 3;
-    //        uint256 firstValue = min_val + firstValueShift;
-    //        uint256 secondValue = min_val + secondValueShift;
-    //        uint256 max_val = type(uint256).max;
-    //        vm.assume(firstValue < (max_val / 2));
-    //        vm.assume(secondValue < (max_val / 2));
-    //
-    //        address[] memory addresses = new address[](2);
-    //        addresses[0] = firstAssetAddress;
-    //        addresses[1] = secondAssetAddress;
-    //
-    //        uint256[] memory values = new uint256[](2);
-    //        values[0] = firstValue;
-    //        values[1] = secondValue;
-    //
-    //        // When Then: Calculation of the collateral factor should fail and reverted since collateral calculation overflow
-    //        vm.expectRevert(stdError.arithmeticError);
-    //        uint256 collateralValue = riskModule.calculateWeightedCollateralValue(addresses, values, 0);
-    //    }
+    function testRevert_calculateWeightedCollateralFactor_EvmAritmetic(uint8 firstValueShift, uint8 secondValueShift)
+        public
+    {
+        // Given: The address of assets and the values of assets.
+        // The values of assets should be so big to trigger arithmetic
+        uint256 min_val = type(uint256).max / 3;
+        uint256 firstValue = min_val + firstValueShift;
+        uint256 secondValue = min_val + secondValueShift;
+        uint256 max_val = type(uint256).max;
+        vm.assume(firstValue < (max_val / 2));
+        vm.assume(secondValue < (max_val / 2));
 
-    function testRevert_calculateWeightedCollateralFactor_ZeroNotPossible(
+        address[] memory addresses = new address[](2);
+        addresses[0] = firstAssetAddress;
+        addresses[1] = secondAssetAddress;
+
+        uint256[] memory values = new uint256[](2);
+        values[0] = firstValue;
+        values[1] = secondValue;
+
+        // When Then: Calculation of the collateral factor should fail and reverted since collateral calculation overflow
+        vm.expectRevert(bytes(""));
+        riskModule.calculateWeightedCollateralValue(addresses, values, 0);
+    }
+
+    function testRevert_calculateWeightedCollateralValue_ZeroNotPossible(
         address firstAsset,
         address secondAsset,
         uint240 firstValue,
