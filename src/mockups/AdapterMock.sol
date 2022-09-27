@@ -2,13 +2,13 @@
 pragma solidity >0.8.10;
 
 // interfaces
-import "../Integrations/AdapterBase.sol";
+import "../Integrations/AdapterCore.sol";
 
-contract AdapterMock is AdapterBase {
+contract AdapterMock is AdapterCore {
 
    constructor(address _integrationManager)
         public
-        AdapterBase(_integrationManager)
+        AdapterCore(_integrationManager)
     {}
 
     function _selector(
@@ -71,7 +71,7 @@ contract AdapterMock is AdapterBase {
         );
     }
 
-     function __decodeSelectorCallArgs(bytes memory _actionData)
+     function _decodeSelectorCallArgs(bytes memory _actionData)
         private
         pure
         returns (

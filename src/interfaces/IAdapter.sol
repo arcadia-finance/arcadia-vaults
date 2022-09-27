@@ -11,18 +11,16 @@
 
 pragma solidity >=0.8.0 <0.9.0;
 
-struct actionAssetsData { 
+/// @title Integration Adapter interface
+
+interface IAdapter {
+    struct actionAssetsData { 
             address[] assets;
             uint256[] assetIds;
             uint256[] preCallAssetBalances;
             uint256[] minmaxAssetAmounts;
             uint256[] assetAmounts;
     }
-
-/// @title Integration Adapter interface
-/// @author Enzyme Council <security@enzyme.finance>
-/// @notice Interface for all integration adapters
-interface IIntegrationAdapter {
 
     function parseAssetsForAction(
         address _vaultProxy,
