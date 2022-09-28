@@ -10,7 +10,7 @@ import "../AdapterCore.sol";
 contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
     constructor(address _integrationManager, address _router)
         public
-        AdapterBase(_integrationManager)
+        AdapterCore(_integrationManager)
         UniswapV2ActionsMixin(_router)
     {}
 
@@ -42,34 +42,34 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
         override
         returns (actionAssetsData memory spendAssets_, actionAssetsData memory incomingAssets_)
     {
-        require(_selector == TAKE_ORDER_SELECTOR, "parseAssetsForAction: _selector invalid");
-
-        return __parseAssetsForTakeOrder(_actionData);
+        //require(_selector == TAKE_ORDER_SELECTOR, "parseAssetsForAction: _selector invalid");
+        //ToDO: check selector things
+        return _parseAssetsForSwap(_actionData);
     }
 
     /// @dev Helper function to parse spend and incoming assets from encoded call args
     /// during takeOrder() calls
-    function __parseAssetsForTakeOrder(bytes calldata _actionData)
+    function _parseAssetsForSwap(bytes calldata _actionData)
         private
         pure
-        returns (actionAssetsData memory spendAssets_, actionAssetsData memory incomingAssets_)
+        returns (actionAssetsData memory outgoingAssets_, actionAssetsData memory incomingAssets_)
     {
         (address[] memory path, uint256 outgoingAssetAmount, uint256 minIncomingAssetAmount) =
             __decodeTakeOrderCallArgs(_actionData);
 
-        require(path.length >= 2, "__parseAssetsForTakeOrder: _path must be >= 2");
+        require(path.length >= 2, "AUV2: _path must be >= 2");
 
-        spendAssets_.assets = new address[](1);
-        spendAssets_.assets[0] = path[0];
-        spendAssets_.minmaxAssetAmounts = new uint256[](1);
-        spendAssets_.minmaxAssetAmounts[0] = outgoingAssetAmount;
+        outgoingAssets_.assets = new address[](1);
+        outgoingAssets_.assets[0] = path[0];
+        outgoingAssets_.minmaxAssetAmounts = new uint256[](1);
+        outgoingAssets_.minmaxAssetAmounts[0] = outgoingAssetAmount;
 
         incomingAssets_.assets = new address[](1);
         incomingAssets_.assets[0] = path[path.length - 1];
         incomingAssets_.minmaxAssetAmounts = new uint256[](1);
         incomingAssets_.minmaxAssetAmounts[0] = minIncomingAssetAmount;
 
-        return (spendAssets_, incomingAssets_);
+        return (outgoingAssets_, incomingAssets_);
     }
 
     // PRIVATE FUNCTIONS

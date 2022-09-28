@@ -14,6 +14,21 @@ import "../interfaces/IIntegrationManager.sol";
 import "../../lib/solmate/src/tokens/ERC20.sol";
 import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
+// Adapter Call Flow
+
+// vaultOwner calls 'performAdapterCall' on vault with encoded callArgs.
+// VAULT: delegates call to IM -> 'receiveCallFromVault'
+// IM: 'receiveCallFromVault' calls _performCallAdapter
+// #### msg.sender = vaultAddress
+// #### _callArgs = encoded Args
+// IM: '_performCallToAdapter' decodes _callArgs
+// #### adapterAddress, adapterSelector,
+// #### adapterData = encoded data the adapter need to perform the requested action.
+// IM: '_preProcess' checks and calculates extra arguments needed to perform the requested action it returns actionAssetData for incoming and outgoing assets.
+// #### Approve adapter to spend the outgoingAssets of the vault.
+// IM: '_performCall' encode actionAssetData for incoming and outgoing assets and pass it along to delegatecall to 'adapterAddress'
+// IM: '_postProcess' if the adapterAction went as expected and the balances are what expected
+
 /// @title IntegrationManager
 contract IntegrationManager is Ownable, IIntegrationManager {
     address public MAIN_REGISTRY;
@@ -119,12 +134,11 @@ contract IntegrationManager is Ownable, IIntegrationManager {
         );
         for (uint256 i; i < outgoingAssets_.assets.length; i++) {
             outgoingAssets_.preCallAssetBalances[i] = ERC20(outgoingAssets_.assets[i]).balanceOf(_vaultAddress);
-            
+
             // Grant adapter access to the spend assets.
             // outgoingAssets_ is already asserted to be a unique set. TODO
             // Use exact approve amount, and reset afterwards
             ERC20(outgoingAssets_.assets[i]).approve(_adapter, outgoingAssets_.minmaxAssetAmounts[i]);
-
         }
 
         return (incomingAssets_, outgoingAssets_);
@@ -148,7 +162,7 @@ contract IntegrationManager is Ownable, IIntegrationManager {
                 "IM: Received incoming asset less than expected"
             );
         }
-        // OUGOING ASSETS
+        // OUTGOING ASSETS
 
         outgoingAssetAmounts_ = new uint256[](outgoingAssets_.assets.length);
         for (uint256 i; i < outgoingAssets_.assets.length; i++) {
@@ -167,7 +181,7 @@ contract IntegrationManager is Ownable, IIntegrationManager {
                 // __approveAssetSpender(_vaultAddress, outgoingAssets_.assets[i], _adapter, 0);
                 require(
                     outgoingAssetAmounts_[i] <= outgoingAssets_.minmaxAssetAmounts[i],
-                    "IM: Spent amount greater than expected"
+                    "IM: Outgoing amount greater than expected"
                 );
             }
         }

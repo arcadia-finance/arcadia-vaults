@@ -803,9 +803,8 @@ contract Vault {
      * @param _callArgs abi encoded data .
      */
 
-    function callOnIntegration(bytes memory _callArgs) public payable onlyOwner returns (bool success) {
-        IIntegrationManager(integrationManager).receiveCallFromVault(msg.sender, _callArgs);
-        return true; //change return value
+    function performIntegrationCall(bytes memory _callArgs) public payable onlyOwner {
+        IIntegrationManager(integrationManager).receiveCallFromVault(_callArgs);
     }
 
     /*///////////////////////////////////////////////////////////////

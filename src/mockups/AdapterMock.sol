@@ -7,11 +7,11 @@ import "../Integrations/AdapterCore.sol";
 contract AdapterMock is AdapterCore {
     constructor(address _integrationManager) public AdapterCore(_integrationManager) {}
 
-    function _selector(address _vaultProxy, bytes calldata _actionData, bytes calldata)
+    function _selector(address _vaultAddress, bytes calldata _actionData, bytes calldata)
         external
         onlyIntegrationManager
     {
-        (address actionAddress, uint256 actionAmount) = __decodeSelectorCallArgs(_actionData);
+        (address actionAddress, uint256 actionAmount) = _decodeSelectorCallArgs(_actionData);
 
         //Call to external service here.
     }
@@ -20,21 +20,21 @@ contract AdapterMock is AdapterCore {
         external
         view
         override
-        returns (actionAssetsData memory spendAssets_, actionAssetsData memory incomingAssets_)
+        returns (actionAssetsData memory _outgoingAssets, actionAssetsData memory _incomingAssets)
     {
         require(
             _selector == bytes4(keccak256("_selector(address,bytes,bytes)")), "parseAssetsForAction: _selector invalid"
         );
 
-        return __parseAssetsForSelector(_actionData);
+        return _parseAssetsForSelector(_actionData);
     }
 
-    function __parseAssetsForSelector(bytes calldata _actionData)
+    function _parseAssetsForSelector(bytes calldata _actionData)
         private
         pure
         returns (actionAssetsData memory spendAssets_, actionAssetsData memory incomingAssets_)
     {
-        (address actionAddress_, uint256 actionAmount_) = __decodeSelectorCallArgs(_actionData);
+        (address actionAddress_, uint256 actionAmount_) = _decodeSelectorCallArgs(_actionData);
 
         spendAssets_.assets = new address[](1);
         spendAssets_.assets[0] = actionAddress_;
