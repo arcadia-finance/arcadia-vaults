@@ -68,20 +68,20 @@ contract DeploymentTest is IntegrationManagerTest {
 /*//////////////////////////////////////////////////////////////
                         COI LOGIC
 //////////////////////////////////////////////////////////////*/
-contract CallOnIntegrationTest is IntegrationManagerTest {
+contract PerformCallToAdapterTest is IntegrationManagerTest {
     function setUp() public override {
         super.setUp();
     }
 
-    // double check possible exploit that implements owner()??
+    //Should fail because notVault is not IVault
     function testSuccess_receiveCallFromVaultNotVault(address notVault) public {
         vm.assume(notVault != address(vault));
         bytes memory callArgs_ =
-            abi.encode(address(adapter), bytes4(keccak256("takeOrder(address,bytes,bytes)")), abi.encode("test"));
+            abi.encode(address(adapter), bytes4(keccak256("_selector(address,bytes,bytes)")), abi.encode("test"));
 
         vm.startPrank(notVault);
-        vm.expectRevert(bytes(""));
-        im.receiveCallFromVault(callArgs_);
+        vm.expectRevert(bytes("")); //This is a revert because caller does not implement IVault "owner" 
+        im.receiveCallFromVault(msg.sender,callArgs_);
         vm.stopPrank();
     }
 
@@ -121,13 +121,13 @@ contract CallOnIntegrationTest is IntegrationManagerTest {
 
         vm.startPrank(notIntegrationManager);
 
-        vm.expectRevert("Only the IntegrationManager can call this function");
+        vm.expectRevert("AC: Only the IntegrationManager can call this function");
         (bool success, bytes memory returnData) =
             address(adapter).call(abi.encodeWithSelector(_selector, _vaultProxy, _integrationData, bytes("")));
         vm.stopPrank();
     }
 
-    function testSuccess_callAdapterExpectSuccess(address actionAddress, uint256 actionAmount) public {
+    function testSuccess_callAdapterIntegrationManager(address actionAddress, uint256 actionAmount) public {
         bytes4 _selector = bytes4(keccak256("_selector(address,bytes,bytes)"));
         address _vaultProxy = address(vault);
         bytes memory _integrationData = abi.encode(actionAddress, actionAmount);
@@ -139,4 +139,6 @@ contract CallOnIntegrationTest is IntegrationManagerTest {
 
         assertEq(success, true);
     }
+
+    // Change some
 }

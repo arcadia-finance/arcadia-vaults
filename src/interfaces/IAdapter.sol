@@ -9,5 +9,5 @@ interface IAdapter {
     function parseAssetsForAction(address _vaultProxy, bytes4 _selector, bytes calldata _encodedCallArgs)
         external
         view
-        returns (actionAssetsData memory spendAssets_, actionAssetsData memory incomingAssets_);
+        returns (actionAssetsData memory outgoingAssets_, actionAssetsData memory incomingAssets_);
 }

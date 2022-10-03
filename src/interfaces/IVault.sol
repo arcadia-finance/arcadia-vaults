@@ -20,4 +20,8 @@ interface IVault {
     function vaultVersion() external view returns (uint8);
 
     function trustedProtocol() external view returns (address);
+
+    function getCollateralValue() external view returns (uint256);
+
+    function approveAssetForAdapter(address _adapter, address asset, uint256 amount) external;
 }

@@ -40,8 +40,9 @@ contract IntegrationManager is Ownable, IIntegrationManager {
 
     /// @notice Receives a dispatched `action` from a vault
     /// @param _callArgs The encoded args for the action
-    function receiveCallFromVault(bytes calldata _callArgs) external {
-        //calls the helper function
+    function receiveCallFromVault(address caller, bytes calldata _callArgs) external {
+        //calls the helper function add check back
+        require(IVault(msg.sender).owner() == caller, "IM: Caller needs to own the vault");
         _performCallToAdapter(msg.sender, _callArgs);
     }
 
@@ -85,7 +86,7 @@ contract IntegrationManager is Ownable, IIntegrationManager {
 
     /// @dev Helper for the internal actions to take prior to executing CoI
 
-    function _preProcessCall(address _vaultAddress, address _adapter, bytes4 _selector, bytes memory _integrationData)
+    function _preProcessCall(address _vaultAddress, address _adapter, bytes4 _selector, bytes memory _adapterData)
         private
         returns (actionAssetsData memory incomingAssets_, actionAssetsData memory outgoingAssets_)
     {
@@ -94,15 +95,16 @@ contract IntegrationManager is Ownable, IIntegrationManager {
         (
             incomingAssets_, //switch?
             outgoingAssets_
-        ) = IAdapter(_adapter).parseAssetsForAction(_vaultAddress, _selector, _integrationData);
+        ) = IAdapter(_adapter).parseAssetsForAction(_vaultAddress, _selector, _adapterData);
 
-        // assetActionData
+        // Check if inputs are correct
         require(
-            incomingAssets_.assets.length == incomingAssets_.minmaxAssetAmounts.length,
+            incomingAssets_.assets.length == incomingAssets_.limitAssetAmounts.length,
             "IM: Incoming assets arrays unequal"
         );
+
         require(
-            outgoingAssets_.assets.length == outgoingAssets_.minmaxAssetAmounts.length,
+            outgoingAssets_.assets.length == outgoingAssets_.limitAssetAmounts.length,
             "IM: Outgoing assets arrays unequal"
         );
 
@@ -111,19 +113,18 @@ contract IntegrationManager is Ownable, IIntegrationManager {
 
         // INCOMING ASSETS
 
-        // Incoming asset balances must be recorded prior to spend asset balances in case there
-        // is an overlap (an asset that is both a spend asset and an incoming asset),
-        // as a spend asset can be immediately transferred after recording its balance
-
-        incomingAssets_.preCallAssetBalances = new uint256[](
-            incomingAssets_.assets.length
-        );
+        // Check if incoming assets are Arcadia whitelisted assets
         require(
             IMainRegistry(MAIN_REGISTRY).batchIsWhiteListed(incomingAssets_.assets, incomingAssets_.assetIds),
             "IM: Non-whitelisted incoming asset"
         );
 
+        incomingAssets_.preCallAssetBalances = new uint256[](
+            incomingAssets_.assets.length
+        );
+
         for (uint256 i; i < incomingAssets_.assets.length; i++) {
+            // Save all incoming asset balances preCall
             incomingAssets_.preCallAssetBalances[i] = ERC20(incomingAssets_.assets[i]).balanceOf(_vaultAddress);
         }
 
@@ -133,12 +134,11 @@ contract IntegrationManager is Ownable, IIntegrationManager {
             outgoingAssets_.assets.length
         );
         for (uint256 i; i < outgoingAssets_.assets.length; i++) {
+            // Save all outgoing asset balances preCall
             outgoingAssets_.preCallAssetBalances[i] = ERC20(outgoingAssets_.assets[i]).balanceOf(_vaultAddress);
 
-            // Grant adapter access to the spend assets.
-            // outgoingAssets_ is already asserted to be a unique set. TODO
-            // Use exact approve amount, and reset afterwards
-            ERC20(outgoingAssets_.assets[i]).approve(_adapter, outgoingAssets_.minmaxAssetAmounts[i]);
+            // Approve vault assets
+            IVault(_vaultAddress).approveAssetForAdapter(_adapter, outgoingAssets_.assets[i], outgoingAssets_.limitAssetAmounts[i]);
         }
 
         return (incomingAssets_, outgoingAssets_);
@@ -151,14 +151,17 @@ contract IntegrationManager is Ownable, IIntegrationManager {
         actionAssetsData memory outgoingAssets_,
         actionAssetsData memory incomingAssets_
     ) private view returns (uint256[] memory incomingAssetAmounts_, uint256[] memory outgoingAssetAmounts_) {
+
         //INCOMING ASSETS
 
         incomingAssetAmounts_ = new uint256[](incomingAssets_.assets.length);
         for (uint256 i; i < incomingAssets_.assets.length; i++) {
             incomingAssetAmounts_[i] = _getVaultAssetBalance(_vaultAddress, incomingAssets_.assets[i])
-                - incomingAssets_.preCallAssetBalances[i]; //check overflow
+                - incomingAssets_.preCallAssetBalances[i]; //TODO check overflow?
+
+            // Check incoming assets are as expected
             require(
-                incomingAssetAmounts_[i] >= incomingAssets_.minmaxAssetAmounts[i],
+                incomingAssetAmounts_[i] >= incomingAssets_.limitAssetAmounts[i],
                 "IM: Received incoming asset less than expected"
             );
         }
@@ -172,19 +175,22 @@ contract IntegrationManager is Ownable, IIntegrationManager {
                 outgoingAssetAmounts_[i] = outgoingAssets_.preCallAssetBalances[i] - postCallAssetBalance;
             }
 
-            // CHECK LIQ AND STUFF HERE
-            // RESET COL THRESH thres after swap
-            // AFTER
-            //TODO Reset any unused approvals
-            // calculate real time --> should trigger update of col htres and liq thress
-            if (ERC20(outgoingAssets_.assets[i]).allowance(_vaultAddress, _adapter) > 0) {
-                // __approveAssetSpender(_vaultAddress, outgoingAssets_.assets[i], _adapter, 0);
-                require(
-                    outgoingAssetAmounts_[i] <= outgoingAssets_.minmaxAssetAmounts[i],
+            // Check outgoing assets are as expected
+            require(
+                    outgoingAssetAmounts_[i] <= outgoingAssets_.limitAssetAmounts[i],
                     "IM: Outgoing amount greater than expected"
                 );
-            }
+
+            //TODO Reset any unused approvals
+            //TODO make sure assets are withdrawn to vault in case they got tx'd to adapter.
+            //TODO check coll thresh after swap.
         }
+
+        // uint256 collThresh = IVault(_vaultAddress).getCollateralValue();
+                // require(
+                // //     outgoingAssetAmounts_[i] <= outgoingAssets_.limitAssetAmounts[i],
+                // //     "IM: Outgoing amount greater than expected"
+                // // );
 
         return (incomingAssetAmounts_, outgoingAssetAmounts_);
     }

@@ -38,13 +38,13 @@ contract AdapterMock is AdapterCore {
 
         spendAssets_.assets = new address[](1);
         spendAssets_.assets[0] = actionAddress_;
-        spendAssets_.minmaxAssetAmounts = new uint256[](1);
-        spendAssets_.minmaxAssetAmounts[0] = actionAmount_;
+        spendAssets_.limitAssetAmounts = new uint256[](1);
+        spendAssets_.limitAssetAmounts[0] = actionAmount_;
 
         incomingAssets_.assets = new address[](1);
         incomingAssets_.assets[0] = actionAddress_;
-        incomingAssets_.minmaxAssetAmounts = new uint256[](1);
-        incomingAssets_.minmaxAssetAmounts[0] = actionAmount_;
+        incomingAssets_.limitAssetAmounts = new uint256[](1);
+        incomingAssets_.limitAssetAmounts[0] = actionAmount_;
 
         return (spendAssets_, incomingAssets_);
     }

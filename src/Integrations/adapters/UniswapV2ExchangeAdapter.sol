@@ -9,7 +9,6 @@ import "../AdapterCore.sol";
 /// @notice Adapter for interacting with Uniswap v2 swaps
 contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
     constructor(address _integrationManager, address _router)
-        public
         AdapterCore(_integrationManager)
         UniswapV2ActionsMixin(_router)
     {}
@@ -42,7 +41,7 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
         override
         returns (actionAssetsData memory spendAssets_, actionAssetsData memory incomingAssets_)
     {
-        //require(_selector == TAKE_ORDER_SELECTOR, "parseAssetsForAction: _selector invalid");
+        // require(_selector == TAKE_ORDER_SELECTOR, "parseAssetsForAction: _selector invalid");
         //ToDO: check selector things
         return _parseAssetsForSwap(_actionData);
     }
@@ -61,13 +60,13 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
 
         outgoingAssets_.assets = new address[](1);
         outgoingAssets_.assets[0] = path[0];
-        outgoingAssets_.minmaxAssetAmounts = new uint256[](1);
-        outgoingAssets_.minmaxAssetAmounts[0] = outgoingAssetAmount;
+        outgoingAssets_.assetAmounts = new uint256[](1);
+        outgoingAssets_.assetAmounts[0] = outgoingAssetAmount; 
 
         incomingAssets_.assets = new address[](1);
         incomingAssets_.assets[0] = path[path.length - 1];
-        incomingAssets_.minmaxAssetAmounts = new uint256[](1);
-        incomingAssets_.minmaxAssetAmounts[0] = minIncomingAssetAmount;
+        incomingAssets_.limitAssetAmounts = new uint256[](1);
+        incomingAssets_.limitAssetAmounts[0] = minIncomingAssetAmount;
 
         return (outgoingAssets_, incomingAssets_);
     }

@@ -94,6 +94,7 @@ contract Vault {
         //ToDo: riskmodule
         vault.collThres = 150;
         vault.liqThres = 110;
+        //ToDo: integrationManager (now set via cheating in tests)
     }
 
     /**
@@ -118,6 +119,13 @@ contract Vault {
      */
     modifier onlyFactory() {
         require(msg.sender == IMainRegistry(registryAddress).factoryAddress(), "VL: You are not the factory");
+        _;
+    }
+    /**
+     * @dev Throws if called by any account other than the factory adress.
+     */
+    modifier onlyIntegrationManager() {
+        require(msg.sender == integrationManager, "VL: You are not the IM");
         _;
     }
 
@@ -804,8 +812,14 @@ contract Vault {
      */
 
     function performIntegrationCall(bytes memory _callArgs) public payable onlyOwner {
-        IIntegrationManager(integrationManager).receiveCallFromVault(_callArgs);
+        IIntegrationManager(integrationManager).receiveCallFromVault(msg.sender, _callArgs);
     }
+
+    function approveAssetForAdapter(address _adapter, address asset, uint256 amount) public onlyIntegrationManager {
+        //IAsset approve?
+        IERC20(asset).approve(_adapter, amount);
+    }
+
 
     /*///////////////////////////////////////////////////////////////
                         HELPER FUNCTIONS
