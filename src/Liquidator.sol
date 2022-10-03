@@ -279,8 +279,7 @@ contract Liquidator is Ownable {
 
         uint256 leftover = auction.assetPaid - auction.openDebt - keeperReward;
 
-        claimables[1] =
-            claimableBitmapMem & (1 << (4 * life + 1)) == 0
+        claimables[1] = claimableBitmapMem & (1 << (4 * life + 1)) == 0
             ? (leftover >= protocolReward ? protocolReward : leftover)
             : 0;
         leftover = leftover >= protocolReward ? leftover - protocolReward : 0;

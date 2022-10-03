@@ -124,6 +124,7 @@ contract Vault {
     /**
      * @dev Throws if called by any account other than the factory adress.
      */
+
     modifier onlyIntegrationManager() {
         require(msg.sender == integrationManager, "VL: You are not the IM");
         _;
@@ -819,7 +820,6 @@ contract Vault {
         //IAsset approve?
         IERC20(asset).approve(_adapter, amount);
     }
-
 
     /*///////////////////////////////////////////////////////////////
                         HELPER FUNCTIONS

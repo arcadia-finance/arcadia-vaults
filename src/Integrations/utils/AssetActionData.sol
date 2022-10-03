@@ -3,11 +3,10 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 struct actionAssetsData {
-    address[] assets;
-    uint256[] assetIds;
-    uint256[] assetAmounts;
-    uint256[] limitAssetAmounts;
-    uint256[] preCallAssetBalances;
-    uint256[] postCallAssetBalances;
-    uint256 collatThres;
+    address[] assets; // Assets addresses
+    uint256[] assetIds; // Protocol asset ids (internal ids given to arcadia's whitelisted assets)
+    uint256[] assetAmounts; // Effective action amounts (TODO: redundant?)
+    uint256[] limitAssetAmounts; // Maximum outgoing or minimum incoming
+    uint256[] preCallAssetBalances; // Account asset balances pre action
+    uint256 preCallCollThresh; // Pre action coll tresh
 }

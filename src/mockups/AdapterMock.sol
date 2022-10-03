@@ -32,21 +32,21 @@ contract AdapterMock is AdapterCore {
     function _parseAssetsForSelector(bytes calldata _actionData)
         private
         pure
-        returns (actionAssetsData memory spendAssets_, actionAssetsData memory incomingAssets_)
+        returns (actionAssetsData memory outgoingAssets_, actionAssetsData memory incomingAssets_)
     {
         (address actionAddress_, uint256 actionAmount_) = _decodeSelectorCallArgs(_actionData);
 
-        spendAssets_.assets = new address[](1);
-        spendAssets_.assets[0] = actionAddress_;
-        spendAssets_.limitAssetAmounts = new uint256[](1);
-        spendAssets_.limitAssetAmounts[0] = actionAmount_;
+        outgoingAssets_.assets = new address[](1);
+        outgoingAssets_.assets[0] = actionAddress_;
+        outgoingAssets_.limitAssetAmounts = new uint256[](1);
+        outgoingAssets_.limitAssetAmounts[0] = actionAmount_;
 
         incomingAssets_.assets = new address[](1);
         incomingAssets_.assets[0] = actionAddress_;
         incomingAssets_.limitAssetAmounts = new uint256[](1);
         incomingAssets_.limitAssetAmounts[0] = actionAmount_;
 
-        return (spendAssets_, incomingAssets_);
+        return (outgoingAssets_, incomingAssets_);
     }
 
     function _decodeSelectorCallArgs(bytes memory _actionData)

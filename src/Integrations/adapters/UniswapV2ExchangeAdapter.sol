@@ -14,16 +14,16 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
     {}
 
     /// @notice Trades assets on Uniswap
-    /// @param _vaultProxy The VaultProxy of the calling fund
+    /// @param _vaultAddress The address of the calling vault.
     /// @param _actionData Data specific to this action
-    function takeOrder(address _vaultProxy, bytes calldata _actionData, bytes calldata)
+    function takeOrder(address _vaultAddress, bytes calldata _actionData, bytes calldata)
         external
         onlyIntegrationManager
     {
         (address[] memory path, uint256 outgoingAssetAmount, uint256 minIncomingAssetAmount) =
             __decodeTakeOrderCallArgs(_actionData);
 
-        __uniswapV2Swap(_vaultProxy, outgoingAssetAmount, minIncomingAssetAmount, path);
+        __uniswapV2Swap(_vaultAddress, outgoingAssetAmount, minIncomingAssetAmount, path);
     }
 
     /////////////////////////////
@@ -37,12 +37,11 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
 
     function parseAssetsForAction(address, bytes4 _selector, bytes calldata _actionData)
         external
-        view
+        pure
         override
-        returns (actionAssetsData memory spendAssets_, actionAssetsData memory incomingAssets_)
+        returns (actionAssetsData memory outgoingAssets_, actionAssetsData memory incomingAssets_)
     {
-        // require(_selector == TAKE_ORDER_SELECTOR, "parseAssetsForAction: _selector invalid");
-        //ToDO: check selector things
+        require(_selector == bytes4(keccak256("_takeOrder(address,bytes,bytes)")), "AUV2: invalid _selector");
         return _parseAssetsForSwap(_actionData);
     }
 
@@ -61,7 +60,7 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
         outgoingAssets_.assets = new address[](1);
         outgoingAssets_.assets[0] = path[0];
         outgoingAssets_.assetAmounts = new uint256[](1);
-        outgoingAssets_.assetAmounts[0] = outgoingAssetAmount; 
+        outgoingAssets_.assetAmounts[0] = outgoingAssetAmount;
 
         incomingAssets_.assets = new address[](1);
         incomingAssets_.assets[0] = path[path.length - 1];
@@ -73,7 +72,7 @@ contract UniswapV2ExchangeAdapter is AdapterCore, UniswapV2ActionsMixin {
 
     // PRIVATE FUNCTIONS
 
-    /// @dev Helper to decode the take order encoded call arguments
+    /// @dev Helper to decode the take order encoded call arguments (overrides AdapterCore)
     function __decodeTakeOrderCallArgs(bytes memory _actionData)
         private
         pure

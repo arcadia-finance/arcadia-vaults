@@ -39,7 +39,7 @@ abstract contract IntegrationManagerTest is Test {
         bytes32 owner = bytes32(abi.encode(address(2)));
         vm.store(address(vault), loc, owner);
 
-        // Cheat IM in vault contract cause I don't want to break all old tests by changing vault initiate function just yet
+        //TODO Cheat IM in vault contract cause I don't want to break all old tests by changing vault initiate function just yet
         uint256 slot2 = stdstore.target(address(vault)).sig(vault.integrationManager.selector).find();
         bytes32 loc2 = bytes32(slot2);
         bytes32 integrationMan = bytes32(abi.encode(address(im)));
@@ -66,8 +66,9 @@ contract DeploymentTest is IntegrationManagerTest {
 }
 
 /*//////////////////////////////////////////////////////////////
-                        COI LOGIC
+                        ADAPTER LOGIC
 //////////////////////////////////////////////////////////////*/
+
 contract PerformCallToAdapterTest is IntegrationManagerTest {
     function setUp() public override {
         super.setUp();
@@ -77,11 +78,22 @@ contract PerformCallToAdapterTest is IntegrationManagerTest {
     function testSuccess_receiveCallFromVaultNotVault(address notVault) public {
         vm.assume(notVault != address(vault));
         bytes memory callArgs_ =
-            abi.encode(address(adapter), bytes4(keccak256("_selector(address,bytes,bytes)")), abi.encode("test"));
+            abi.encode(address(adapter), bytes4(keccak256("_selector(address,bytes,bytes)")), abi.encode("testData"));
 
         vm.startPrank(notVault);
-        vm.expectRevert(bytes("")); //This is a revert because caller does not implement IVault "owner" 
-        im.receiveCallFromVault(msg.sender,callArgs_);
+        vm.expectRevert(bytes("")); //This is a revert because caller does not implement IVault "owner"
+        im.receiveCallFromVault(msg.sender, callArgs_);
+        vm.stopPrank();
+    }
+
+    function testSuccess_receiveCallFromVaultNotVaultButHasOwner(address notVault) public {
+        vm.assume(notVault != address(vault));
+        bytes memory callArgs_ =
+            abi.encode(address(adapter), bytes4(keccak256("_selector(address,bytes,bytes)")), abi.encode("testData"));
+
+        vm.startPrank(notVault);
+        vm.expectRevert("IM: Caller needs to own the vault"); //This is a revert because caller does not implement IVault "owner"
+        im.receiveCallFromVault(msg.sender, callArgs_);
         vm.stopPrank();
     }
 

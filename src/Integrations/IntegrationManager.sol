@@ -42,7 +42,7 @@ contract IntegrationManager is Ownable, IIntegrationManager {
     /// @param _callArgs The encoded args for the action
     function receiveCallFromVault(address caller, bytes calldata _callArgs) external {
         //calls the helper function add check back
-        require(IVault(msg.sender).owner() == caller, "IM: Caller needs to own the vault");
+        require(IVault(msg.sender).owner() == caller, "IM: Caller needs to own the Vault");
         _performCallToAdapter(msg.sender, _callArgs);
     }
 
@@ -59,12 +59,14 @@ contract IntegrationManager is Ownable, IIntegrationManager {
     {
         (address adapter, bytes4 selector, bytes memory adapterData) = abi.decode(_callArgs, (address, bytes4, bytes));
 
+        require(adapterWhitelist[adapter], "IM: Adapter not whitelisted");
+
         (_outgoingAssets, _incomingAssets) = _preProcessCall(_vaultAddress, adapter, selector, adapterData);
 
         _performCall(_vaultAddress, adapter, selector, adapterData, abi.encode(_outgoingAssets, _incomingAssets));
 
         (_outgoingAssets.assetAmounts, _incomingAssets.assetAmounts) =
-            _postProcessCall(_vaultAddress, adapter, _outgoingAssets, _incomingAssets);
+            _postProcessCall(_vaultAddress, _outgoingAssets, _incomingAssets);
     }
 
     function _performCall(
@@ -79,12 +81,7 @@ contract IntegrationManager is Ownable, IIntegrationManager {
         require(success, string(returnData));
     }
 
-    /// @dev Helper to get the vault's balance of a particular asset
-    function _getVaultAssetBalance(address _vaultAddress, address _asset) private view returns (uint256) {
-        return ERC20(_asset).balanceOf(_vaultAddress);
-    }
-
-    /// @dev Helper for the internal actions to take prior to executing CoI
+    /// @dev Helper for the internal actions to take prior to executing action
 
     function _preProcessCall(address _vaultAddress, address _adapter, bytes4 _selector, bytes memory _adapterData)
         private
@@ -138,7 +135,9 @@ contract IntegrationManager is Ownable, IIntegrationManager {
             outgoingAssets_.preCallAssetBalances[i] = ERC20(outgoingAssets_.assets[i]).balanceOf(_vaultAddress);
 
             // Approve vault assets
-            IVault(_vaultAddress).approveAssetForAdapter(_adapter, outgoingAssets_.assets[i], outgoingAssets_.limitAssetAmounts[i]);
+            IVault(_vaultAddress).approveAssetForAdapter(
+                _adapter, outgoingAssets_.assets[i], outgoingAssets_.limitAssetAmounts[i]
+            );
         }
 
         return (incomingAssets_, outgoingAssets_);
@@ -147,17 +146,16 @@ contract IntegrationManager is Ownable, IIntegrationManager {
     /// @dev Helper to reconcile incoming and spend assets after executing CoI
     function _postProcessCall(
         address _vaultAddress,
-        address _adapter,
+        // address _adapter,
         actionAssetsData memory outgoingAssets_,
         actionAssetsData memory incomingAssets_
     ) private view returns (uint256[] memory incomingAssetAmounts_, uint256[] memory outgoingAssetAmounts_) {
-
         //INCOMING ASSETS
 
         incomingAssetAmounts_ = new uint256[](incomingAssets_.assets.length);
         for (uint256 i; i < incomingAssets_.assets.length; i++) {
-            incomingAssetAmounts_[i] = _getVaultAssetBalance(_vaultAddress, incomingAssets_.assets[i])
-                - incomingAssets_.preCallAssetBalances[i]; //TODO check overflow?
+            incomingAssetAmounts_[i] =
+                ERC20(incomingAssets_.assets[i]).balanceOf(_vaultAddress) - incomingAssets_.preCallAssetBalances[i]; //TODO check overflow?
 
             // Check incoming assets are as expected
             require(
@@ -170,27 +168,27 @@ contract IntegrationManager is Ownable, IIntegrationManager {
         outgoingAssetAmounts_ = new uint256[](outgoingAssets_.assets.length);
         for (uint256 i; i < outgoingAssets_.assets.length; i++) {
             // Calculate the balance change of spend assets. Ignore if balance increased.
-            uint256 postCallAssetBalance = _getVaultAssetBalance(_vaultAddress, outgoingAssets_.assets[i]);
+            uint256 postCallAssetBalance = ERC20(outgoingAssets_.assets[i]).balanceOf(_vaultAddress);
             if (postCallAssetBalance < outgoingAssets_.preCallAssetBalances[i]) {
                 outgoingAssetAmounts_[i] = outgoingAssets_.preCallAssetBalances[i] - postCallAssetBalance;
             }
 
             // Check outgoing assets are as expected
             require(
-                    outgoingAssetAmounts_[i] <= outgoingAssets_.limitAssetAmounts[i],
-                    "IM: Outgoing amount greater than expected"
-                );
+                outgoingAssetAmounts_[i] <= outgoingAssets_.limitAssetAmounts[i],
+                "IM: Outgoing amount greater than expected"
+            );
 
             //TODO Reset any unused approvals
             //TODO make sure assets are withdrawn to vault in case they got tx'd to adapter.
             //TODO check coll thresh after swap.
-        }
 
-        // uint256 collThresh = IVault(_vaultAddress).getCollateralValue();
-                // require(
-                // //     outgoingAssetAmounts_[i] <= outgoingAssets_.limitAssetAmounts[i],
-                // //     "IM: Outgoing amount greater than expected"
-                // // );
+            // uint256 collThresh = IVault(_vaultAddress).getCollateralValue();
+            //     require(
+            //         outgoingAssetAmounts_[i] <= outgoingAssets_.limitAssetAmounts[i],
+            //         "IM: Outgoing amount greater than expected"
+            //     );
+        }
 
         return (incomingAssetAmounts_, outgoingAssetAmounts_);
     }

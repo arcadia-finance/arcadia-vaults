@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "../interfaces/IAdapter.sol";
+import "./utils/AssetActionData.sol";
 
 /// @title AdapterCore Contract
 ///
@@ -19,14 +20,14 @@ abstract contract AdapterCore is IAdapter {
     }
 
     /// @dev Helper to decode the _assetData param passed to adapter call
-    /// Shoudl return actionData structs for incoming vs outgoing
+    /// Should return actionData structs for incoming vs outgoing
     // Refactor
     function _decodeActionData(bytes memory _actionData)
         internal
         pure
-        returns (address[] memory spendAssets_, uint256[] memory spendAssetAmounts_, address[] memory incomingAssets_)
+        returns (actionAssetsData memory outgoingAssets, actionAssetsData memory incomingAssets)
     {
-        return abi.decode(_actionData, (address[], uint256[], address[]));
+        return abi.decode(_actionData, (actionAssetsData, actionAssetsData));
     }
 
     /// @notice Gets the `INTEGRATION_MANAGER` variable
