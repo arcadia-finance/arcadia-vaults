@@ -62,7 +62,6 @@ contract Vault {
     }
 
     struct VaultInfo {
-        uint16 collFactor; //2 decimals precision (factor 100)
         uint16 liqThres; //2 decimals precision (factor 100)
         address baseCurrency;
     }
@@ -119,7 +118,6 @@ contract Vault {
         registryAddress = _registryAddress;
         vaultVersion = _vaultVersion;
         //TODO: DELETE THIS DEFINITIONS WHEN RISKMODULE REACHES MATURITY. 20-09-22 - @zek
-        vault.collFactor = 150;
         vault.liqThres = 110;
     }
 

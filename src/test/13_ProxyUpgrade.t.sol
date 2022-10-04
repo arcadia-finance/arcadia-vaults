@@ -504,7 +504,7 @@ contract VaultV2Test is Test {
         checks.trustedProtocol = proxy.trustedProtocol();
         checks.life = proxy.life();
         checks.owner = proxy.owner();
-        (vaultVar.collThres, vaultVar.liqThres, vaultVar.baseCurrency) = proxy.vault();
+        (vaultVar.liqThres, vaultVar.baseCurrency) = proxy.vault();
         checks.vaultVar = vaultVar;
 
         return checks;

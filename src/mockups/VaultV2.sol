@@ -39,7 +39,7 @@ contract VaultV2 {
      */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
-    bool isTrustedProtocolSet;
+    bool public isTrustedProtocolSet;
 
     uint16 public vaultVersion;
     uint256 public life;
@@ -63,7 +63,6 @@ contract VaultV2 {
     }
 
     struct VaultInfo {
-        uint16 collFactor; //2 decimals precision (factor 100)
         uint16 liqThres; //2 decimals precision (factor 100)
         address baseCurrency;
     }
@@ -120,7 +119,6 @@ contract VaultV2 {
         registryAddress = _registryAddress;
         vaultVersion = _vaultVersion;
         //TODO: DELETE THIS DEFINITIONS WHEN RISKMODULE REACHES MATURITY. 20-09-22 - @zek
-        vault.collFactor = 150;
         vault.liqThres = 110;
     }
 

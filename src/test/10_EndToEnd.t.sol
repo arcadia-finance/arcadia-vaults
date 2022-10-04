@@ -448,7 +448,7 @@ contract EndToEndTest is Test {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
 
         uint256 expectedValue = (((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) * 100) / collThres
             / 10 ** (18 - Constants.daiDecimals);
@@ -458,7 +458,7 @@ contract EndToEndTest is Test {
     }
 
     function testSuccess_borrow_AllowCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
         vm.assume(amountEth > 0);
         vm.assume(uint256(amountCredit) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -479,7 +479,7 @@ contract EndToEndTest is Test {
 
     function testRevert_borrow_NotAllowTooMuchCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
         vm.assume(amountEth > 0);
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
         vm.assume(uint256(amountCredit) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
@@ -512,7 +512,7 @@ contract EndToEndTest is Test {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.daiDecimals)) * 100
@@ -548,7 +548,7 @@ contract EndToEndTest is Test {
     }
 
     function testRevert_borrow_NotAllowCreditAfterLargeUnrealizedDebt(uint128 amountEth) public {
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
         vm.assume(uint256(amountEth) * collThres < type(uint128).max); //prevent overflow in takecredit with absurd values
         vm.assume(amountEth > 1e15);
         uint128 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals);
@@ -579,7 +579,7 @@ contract EndToEndTest is Test {
     ) public {
         vm.assume(amountEth > 0);
         vm.assume(newPrice * 10 ** Constants.oracleEthToUsdDecimals > rateEthToUsd);
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
         vm.assume(amountEth < type(uint128).max / collThres); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals);
 
@@ -610,7 +610,7 @@ contract EndToEndTest is Test {
 
     function testRevert_withdraw_OpenDebtIsTooLarge(uint128 amountEth, uint128 amountEthWithdrawal) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
         vm.assume(amountEth < type(uint128).max / collThres);
         vm.assume(amountEth >= amountEthWithdrawal);
 
@@ -643,7 +643,7 @@ contract EndToEndTest is Test {
         uint128 amountCredit
     ) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
         vm.assume(amountEth < type(uint128).max / collThres);
         vm.assume(amountEth >= amountEthWithdrawal);
 
@@ -680,7 +680,7 @@ contract EndToEndTest is Test {
         uint16 blocksToRoll
     ) public {
         vm.assume(amountEth > 0);
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
         vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -714,7 +714,7 @@ contract EndToEndTest is Test {
 
     function testSuccess_repay_ExactDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll) public {
         vm.assume(amountEth > 0);
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
         vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -751,7 +751,7 @@ contract EndToEndTest is Test {
     {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
         vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -796,7 +796,7 @@ contract EndToEndTest is Test {
     ) public {
         // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
         vm.assume(amountEth > 0);
-        (uint16 collThres,,) = proxy.vault();
+        uint16 collThres = 150;
         vm.assume(amountEth < type(uint128).max / collThres);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
