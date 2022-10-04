@@ -23,37 +23,37 @@ import "../utils/CompareArrays.sol";
 import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract MainRegistryTest is Test {
+abstract contract MainRegistryTest is Test {
     using stdStorage for StdStorage;
 
-    ERC20Mock private dai;
-    ERC20Mock private eth;
-    ERC20Mock private snx;
-    ERC20Mock private link;
-    ERC20Mock private safemoon;
-    ERC721Mock private bayc;
-    ERC721Mock private mayc;
-    ERC721Mock private dickButs;
-    ERC20Mock private wbayc;
-    ERC20Mock private wmayc;
-    ERC1155Mock private interleave;
-    OracleHub private oracleHub;
-    ArcadiaOracle private oracleDaiToUsd;
-    ArcadiaOracle private oracleEthToUsd;
-    ArcadiaOracle private oracleLinkToUsd;
-    ArcadiaOracle private oracleSnxToEth;
-    ArcadiaOracle private oracleWbaycToEth;
-    ArcadiaOracle private oracleWmaycToUsd;
-    ArcadiaOracle private oracleInterleaveToEth;
-    MainRegistry private mainRegistry;
-    StandardERC20PricingModule private standardERC20PricingModule;
-    FloorERC721PricingModule private floorERC721PricingModule;
-    FloorERC1155PricingModule private floorERC1155PricingModule;
-    Factory private factory;
+    ERC20Mock public dai;
+    ERC20Mock public eth;
+    ERC20Mock public snx;
+    ERC20Mock public link;
+    ERC20Mock public safemoon;
+    ERC721Mock public bayc;
+    ERC721Mock public mayc;
+    ERC721Mock public dickButs;
+    ERC20Mock public wbayc;
+    ERC20Mock public wmayc;
+    ERC1155Mock public interleave;
+    OracleHub public oracleHub;
+    ArcadiaOracle public oracleDaiToUsd;
+    ArcadiaOracle public oracleEthToUsd;
+    ArcadiaOracle public oracleLinkToUsd;
+    ArcadiaOracle public oracleSnxToEth;
+    ArcadiaOracle public oracleWbaycToEth;
+    ArcadiaOracle public oracleWmaycToUsd;
+    ArcadiaOracle public oracleInterleaveToEth;
+    MainRegistry public mainRegistry;
+    StandardERC20PricingModule public standardERC20PricingModule;
+    FloorERC721PricingModule public floorERC721PricingModule;
+    FloorERC1155PricingModule public floorERC1155PricingModule;
+    Factory public factory;
 
-    address private creatorAddress = address(1);
-    address private tokenCreatorAddress = address(2);
-    address private oracleOwner = address(3);
+    address public creatorAddress = address(1);
+    address public tokenCreatorAddress = address(2);
+    address public oracleOwner = address(3);
 
     uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
     uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
@@ -215,7 +215,7 @@ contract MainRegistryTest is Test {
     }
 
     //this is a before each
-    function setUp() public {
+    function setUp() public virtual {
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
@@ -241,14 +241,92 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
     }
+}
 
-    function testSuccess_MainRegistryInitialisedWithUsdAsBaseCurrency() public {
+/* ///////////////////////////////////////////////////////////////
+                        DEPLOYMENT
+/////////////////////////////////////////////////////////////// */
+contract DeploymentTest is MainRegistryTest {
+    function setUp() public override {
+        super.setUp();
+    }
+
+    function testSuccess_deployment_UsdAsBaseCurrency() public {
         (,,,, string memory baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
         assertTrue(StringHelpers.compareStrings("USD", baseCurrencyLabel));
     }
 
-    function testMainRegistryInitialisedWithBaseCurrencyCounterOfZero() public {
+    function testSuccess_deployment_BaseCurrencyCounterIsZero() public {
         assertEq(1, mainRegistry.baseCurrencyCounter());
+    }
+}
+
+/* ///////////////////////////////////////////////////////////////
+                    EXTERNAL CONTRACTS
+/////////////////////////////////////////////////////////////// */
+contract ExternalContractsTest is MainRegistryTest {
+    function setUp() public override {
+        super.setUp();
+    }
+
+    function testRevert_setFactory_NonOwner(address unprivilegedAddress) public {
+        vm.assume(unprivilegedAddress != creatorAddress);
+        vm.startPrank(creatorAddress);
+        factory = new Factory();
+        factory.setNewVaultInfo(
+            address(mainRegistry), 0x0000000000000000000000000000001234567890, Constants.upgradeProof1To2
+        );
+        factory.confirmNewVaultInfo();
+        vm.stopPrank();
+
+        vm.startPrank(unprivilegedAddress);
+        vm.expectRevert("Ownable: caller is not the owner");
+        mainRegistry.setFactory(address(factory));
+        vm.stopPrank();
+    }
+
+    function testSuccess_setFactory_MultipleBaseCurrencies() public {
+        vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
+                assetAddress: address(eth),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        factory = new Factory();
+        factory.setNewVaultInfo(
+            address(mainRegistry), 0x0000000000000000000000000000001234567890, Constants.upgradeProof1To2
+        );
+        factory.confirmNewVaultInfo();
+        mainRegistry.setFactory(address(factory));
+        vm.stopPrank();
+
+        assertEq(address(factory), mainRegistry.factoryAddress());
+    }
+}
+
+/* ///////////////////////////////////////////////////////////////
+                    BASE CURRENCY MANAGEMENT
+/////////////////////////////////////////////////////////////// */
+contract BaseCurrencyManagementTest is MainRegistryTest {
+    function setUp() public override {
+        super.setUp();
     }
 
     function testRevert_addBaseCurrency_NonOwner(address unprivilegedAddress) public {
@@ -269,7 +347,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_addBaseCurrency_OwnerWithWrongNumberOfRiskVariables() public {
+    function testRevert_addBaseCurrency_WrongNumberOfRiskVariables() public {
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 150;
         collateralFactors[1] = 150;
@@ -315,7 +393,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_addBaseCurrency_OwnerWithNonValidRiskVariable() public {
+    function testRevert_addBaseCurrency_NonValidRiskVariable() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         standardERC20PricingModule.setAssetInformation(
@@ -375,7 +453,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_addBaseCurrency_OwnerWithEmptyListOfRiskVariables() public {
+    function testSuccess_addBaseCurrency_EmptyListOfRiskVariables() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         standardERC20PricingModule.setAssetInformation(
@@ -424,7 +502,7 @@ contract MainRegistryTest is Test {
         assertEq(3, mainRegistry.baseCurrencyCounter());
     }
 
-    function testSuccess_addBaseCurrency_OwnerWithFullListOfRiskVariables() public {
+    function testSuccess_addBaseCurrency_FullListOfRiskVariables() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         standardERC20PricingModule.setAssetInformation(
@@ -468,6 +546,15 @@ contract MainRegistryTest is Test {
 
         assertEq(2, mainRegistry.baseCurrencyCounter());
     }
+}
+
+/* ///////////////////////////////////////////////////////////////
+                    PRICE MODULE MANAGEMENT
+/////////////////////////////////////////////////////////////// */
+contract PriceModuleManagementTest is MainRegistryTest {
+    function setUp() public override {
+        super.setUp();
+    }
 
     function testRevert_addPricingModule_NonOwner(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
@@ -477,18 +564,53 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_addPricingModule_Owner() public {
+    function testRevert_addPricingModule_AddExistingPricingModule() public {
+        vm.startPrank(creatorAddress);
+        mainRegistry.addPricingModule(address(standardERC20PricingModule));
+        vm.expectRevert("MR_APM: Price Module already exists");
+        mainRegistry.addPricingModule(address(standardERC20PricingModule));
+        vm.stopPrank();
+    }
+
+    function testSuccess_addPricingModule() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         vm.stopPrank();
 
         assertTrue(mainRegistry.isPricingModule(address(standardERC20PricingModule)));
     }
+}
 
-    function testRevert_addPricingModule_OwnerOverwritesPricingModule() public {
+/* ///////////////////////////////////////////////////////////////
+                    ASSET MANAGEMENT
+/////////////////////////////////////////////////////////////// */
+contract AssetManagementTest is MainRegistryTest {
+    function setUp() public override {
+        super.setUp();
+
         vm.startPrank(creatorAddress);
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        vm.expectRevert("Sub-Registry already exists");
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
+                assetAddress: address(eth),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         vm.stopPrank();
     }
@@ -505,7 +627,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetsToNonUpdatable_Owner() public {
+    function testSuccess_setAssetsToNonUpdatable() public {
         vm.startPrank(creatorAddress);
         mainRegistry.setAssetsToNonUpdatable();
         vm.stopPrank();
@@ -520,33 +642,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_PricingModuleAddsAssetWithWrongNumberOfRiskVariables() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        vm.stopPrank();
-
+    function testRevert_addAsset_WrongNumberOfRiskVariables() public {
         uint16[] memory collateralFactors = new uint16[](1);
         uint16[] memory liquidationThresholds = new uint16[](1);
         collateralFactors[0] = 1;
@@ -558,33 +654,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_PricingModuleAddsAssetWithInvalidRiskVariables() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        vm.stopPrank();
-
+    function testRevert_addAsset_RiskVariablesTooSmall() public {
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 0;
         collateralFactors[1] = 150;
@@ -608,108 +678,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_addAsset_PricingModuleAddsAssetWithEmptyListRiskVariables() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        vm.stopPrank();
-
-        vm.startPrank(address(standardERC20PricingModule));
-        mainRegistry.addAsset(address(eth), emptyListUint16, emptyListUint16);
-        vm.stopPrank();
-
-        assertTrue(mainRegistry.inMainRegistry(address(eth)));
-    }
-
-    function testSuccess_addAsset_PricingModuleAddsAssetWithFullListRiskVariables() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        vm.stopPrank();
-
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 140;
-        collateralFactors[1] = 130;
-        collateralFactors[2] = 120;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
-        vm.startPrank(address(standardERC20PricingModule));
-        mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
-        vm.stopPrank();
-    }
-
-    function testSuccess_addsAsset_WithInvalidRiskVariables() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        vm.stopPrank();
-
+    function testRevert_addAsset_RiskVariablesTooBig() public {
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 15000;
         collateralFactors[1] = 150;
@@ -732,33 +701,7 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_addsAsset_PricingModuleWithEmptyListRiskVariables() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        vm.stopPrank();
-
+    function testSuccess_addAsset_EmptyListRiskVariables() public {
         vm.startPrank(address(standardERC20PricingModule));
         mainRegistry.addAsset(address(eth), emptyListUint16, emptyListUint16);
         vm.stopPrank();
@@ -766,37 +709,11 @@ contract MainRegistryTest is Test {
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
     }
 
-    function testSuccess_addsAsset_withFullListRiskVariables() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        vm.stopPrank();
-
+    function testSuccess_addAsset_FullListRiskVariables() public {
         uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
+        collateralFactors[0] = 140;
+        collateralFactors[1] = 130;
+        collateralFactors[2] = 120;
         uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = 110;
         liquidationThresholds[1] = 110;
@@ -805,35 +722,10 @@ contract MainRegistryTest is Test {
         vm.startPrank(address(standardERC20PricingModule));
         mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
-
-        assertTrue(mainRegistry.inMainRegistry(address(eth)));
     }
 
-    function testSuccess_addAsset_PricingModuleOverwritesAssetPositive() public {
+    function testSuccess_addAsset_OverwriteAssetPositive() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         vm.stopPrank();
 
@@ -850,31 +742,8 @@ contract MainRegistryTest is Test {
         assertEq(address(floorERC721PricingModule), mainRegistry.assetToPricingModule(address(eth)));
     }
 
-    function testRevert_addAsset_PricingModuleOverwrites() public {
+    function testRevert_addAsset_OverwriteAssetNegative() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.setAssetsToNonUpdatable();
         vm.stopPrank();
@@ -892,8 +761,15 @@ contract MainRegistryTest is Test {
 
         assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
     }
+}
 
-    function testSuccess_batchIsWhiteListed_Positive() public {
+/* ///////////////////////////////////////////////////////////////
+                    WHITE LIST LOGIC
+/////////////////////////////////////////////////////////////// */
+contract WhiteListLogicTest is MainRegistryTest {
+    function setUp() public override {
+        super.setUp();
+
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -919,6 +795,11 @@ contract MainRegistryTest is Test {
         );
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
+        vm.stopPrank();
+    }
+
+    function testSuccess_batchIsWhiteListed_AllAssetsWhiteListed() public {
+        vm.startPrank(creatorAddress);
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -953,30 +834,6 @@ contract MainRegistryTest is Test {
 
     function testRevert_batchIsWhiteListed_NonEqualInputLists() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1009,32 +866,8 @@ contract MainRegistryTest is Test {
         mainRegistry.batchIsWhiteListed(assetAddresses, assetIds);
     }
 
-    function testSuccess_batchIsWhiteListed_NegativeAssetNotWhitelisted() public {
+    function testSuccess_batchIsWhiteListed_SingleAssetNotWhitelisted() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1067,32 +900,8 @@ contract MainRegistryTest is Test {
         assertTrue(!mainRegistry.batchIsWhiteListed(assetAddresses, assetIds));
     }
 
-    function testSuccess_batchIsWhiteListed_NegativeAssetNotInMainregistry() public {
+    function testSuccess_batchIsWhiteListed_AssetNotInMainregistry() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1127,30 +936,6 @@ contract MainRegistryTest is Test {
 
     function testSuccess_getWhiteList_MultipleAssets() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1190,32 +975,8 @@ contract MainRegistryTest is Test {
         assertTrue(CompareArrays.compareArrays(expectedWhiteList, actualWhiteList));
     }
 
-    function testSuccess_getWhiteList_WithAfterRemovalOfAsset() public {
+    function testSuccess_getWhiteList_RemovalOfAsset() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1255,32 +1016,8 @@ contract MainRegistryTest is Test {
         assertTrue(CompareArrays.compareArrays(expectedWhiteList, actualWhiteList));
     }
 
-    function testSuccess_getWhiteList_WithAfterRemovalAndReaddingOfAsset() public {
+    function testSuccess_getWhiteList_RemovalAndRestoringOfAsset() public {
         vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -1321,27 +1058,14 @@ contract MainRegistryTest is Test {
         address[] memory actualWhiteList = mainRegistry.getWhiteList();
         assertTrue(CompareArrays.compareArrays(expectedWhiteList, actualWhiteList));
     }
+}
 
-    function testSucccess_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsd(
-        uint256 rateEthToUsdNew,
-        uint256 amountLink,
-        uint8 linkDecimals
-    ) public {
-        vm.assume(linkDecimals <= 18);
-        vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
-        vm.assume(rateEthToUsdNew > 0);
-        vm.assume(
-            amountLink
-                <= type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD
-                    / 10 ** (Constants.oracleEthToUsdDecimals - Constants.oracleLinkToUsdDecimals)
-        );
-        vm.assume(
-            amountLink
-                <= (
-                    ((type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD) * 10 ** Constants.oracleEthToUsdDecimals)
-                        / 10 ** Constants.oracleLinkToUsdDecimals
-                ) * 10 ** linkDecimals
-        );
+/* ///////////////////////////////////////////////////////////////
+                RISK VARIABLES MANAGEMENT
+/////////////////////////////////////////////////////////////// */
+contract RiskVariablesManagementTest is MainRegistryTest {
+    function setUp() public override {
+        super.setUp();
 
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -1367,6 +1091,242 @@ contract MainRegistryTest is Test {
             emptyListUint16
         );
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
+        standardERC20PricingModule.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10 ** Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        standardERC20PricingModule.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleLinkToUsdArr,
+                assetUnit: uint64(10 ** Constants.linkDecimals),
+                assetAddress: address(link)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        vm.stopPrank();
+    }
+
+    function testRevert_batchSetRiskVariables_NonOwner(address unprivilegedAddress) public {
+        vm.assume(unprivilegedAddress != creatorAddress);
+
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(eth);
+
+        uint256[] memory baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
+
+        uint16[] memory collateralFactors = new uint16[](3);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
+
+        vm.startPrank(unprivilegedAddress);
+        vm.expectRevert("Ownable: caller is not the owner");
+        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
+        vm.stopPrank();
+    }
+
+    function testRevert_batchSetRiskVariables_NonEqualInputLists() public {
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(eth);
+
+        uint256[] memory baseCurrencies = new uint256[](1);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+
+        uint16[] memory collateralFactors = new uint16[](3);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](3);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
+        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
+        vm.stopPrank();
+
+        baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
+
+        collateralFactors = new uint16[](1);
+        collateralFactors[0] = 150;
+        liquidationThresholds = new uint16[](1);
+        liquidationThresholds[0] = 110;
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
+        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
+        vm.stopPrank();
+    }
+
+    function testRevert_batchSetRiskVariables_InvalidValue() public {
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(eth);
+
+        uint256[] memory baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
+
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 15000;
+        collateralFactors[1] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("MR_AA: Collateral Factor should be in the limits");
+        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
+        vm.stopPrank();
+
+        collateralFactors[0] = 150;
+        liquidationThresholds[0] = 11000;
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("MR_AA: Liquidation Threshold should be in the limits");
+        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
+        vm.stopPrank();
+    }
+
+
+    function testSuccess_batchSetRiskVariables() public {
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(eth);
+
+        uint256[] memory baseCurrencies = new uint256[](2);
+        baseCurrencies[0] = Constants.UsdBaseCurrency;
+        baseCurrencies[1] = Constants.EthBaseCurrency;
+
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 150;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
+
+        vm.startPrank(creatorAddress);
+        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
+        vm.stopPrank();
+
+        assertEq(150, mainRegistry.collateralFactors(address(eth), Constants.UsdBaseCurrency));
+        assertEq(110, mainRegistry.liquidationThresholds(address(eth), Constants.EthBaseCurrency));
+    }
+}
+
+/* ///////////////////////////////////////////////////////////////
+                        PRICING LOGIC
+/////////////////////////////////////////////////////////////// */
+contract PricingLogicTest is MainRegistryTest {
+    function setUp() public override {
+        super.setUp();
+
+        vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
+                assetAddress: address(eth),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        mainRegistry.addPricingModule(address(standardERC20PricingModule));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
+        standardERC20PricingModule.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10 ** Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        standardERC20PricingModule.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleLinkToUsdArr,
+                assetUnit: uint64(10 ** Constants.linkDecimals),
+                assetAddress: address(link)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        vm.stopPrank();
+    }
+
+    function testSucccess_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsd(
+        uint256 rateEthToUsdNew,
+        uint256 amountLink,
+        uint8 linkDecimals
+    ) public {
+        vm.assume(linkDecimals <= 18);
+        vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
+        vm.assume(rateEthToUsdNew > 0);
+        vm.assume(
+            amountLink
+                <= type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD
+                    / 10 ** (Constants.oracleEthToUsdDecimals - Constants.oracleLinkToUsdDecimals)
+        );
+        vm.assume(
+            amountLink
+                <= (
+                    ((type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD) * 10 ** Constants.oracleEthToUsdDecimals)
+                        / 10 ** Constants.oracleLinkToUsdDecimals
+                ) * 10 ** linkDecimals
+        );
+
+        vm.startPrank(creatorAddress);
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
@@ -1420,29 +1380,6 @@ contract MainRegistryTest is Test {
         );
 
         vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
@@ -1478,41 +1415,6 @@ contract MainRegistryTest is Test {
     {
         vm.assume(amountLink > 0);
 
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(0));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
@@ -1534,52 +1436,6 @@ contract MainRegistryTest is Test {
 
     function testRevert_getTotalValue_NegativeNonEqualInputLists() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -1606,52 +1462,6 @@ contract MainRegistryTest is Test {
     }
 
     function testRevert_getListOfValuesPerAsset_NonEqualInputLists() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -1679,52 +1489,6 @@ contract MainRegistryTest is Test {
 
     function testRevert_getTotalValue_UnknownBaseCurrency() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -1743,52 +1507,6 @@ contract MainRegistryTest is Test {
 
     function testRevert_getListOfValuesPerAsset_UnknownBaseCurrency() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -1807,52 +1525,6 @@ contract MainRegistryTest is Test {
 
     function testRevert_getTotalValue_UnknownAsset() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(safemoon);
         assetAddresses[1] = address(bayc);
@@ -1871,52 +1543,6 @@ contract MainRegistryTest is Test {
 
     function testRevert_getListOfValuesPerAsset_UnknownAsset() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(safemoon);
         assetAddresses[1] = address(bayc);
@@ -1935,61 +1561,6 @@ contract MainRegistryTest is Test {
 
     function testSuccess_getTotalValue() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
@@ -2028,61 +1599,6 @@ contract MainRegistryTest is Test {
     }
 
     function testSuccess_getListOfValuesPerAsset() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
@@ -2123,391 +1639,4 @@ contract MainRegistryTest is Test {
         assertTrue(CompareArrays.compareArrays(expectedListOfValuesPerAsset, actualListOfValuesPerAsset));
     }
 
-    function testRevert_batchSetCreditRating_NonOwner(address unprivilegedAddress) public {
-        vm.assume(unprivilegedAddress != creatorAddress);
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(eth);
-
-        uint256[] memory baseCurrencies = new uint256[](2);
-        baseCurrencies[0] = Constants.UsdBaseCurrency;
-        baseCurrencies[1] = Constants.EthBaseCurrency;
-
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
-        vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("Ownable: caller is not the owner");
-        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
-        vm.stopPrank();
-    }
-
-    function testRevert_batchSetCreditRating_OwnerSetsRiskVariablesNonEqualInputLists() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(eth);
-
-        uint256[] memory baseCurrencies = new uint256[](1);
-        baseCurrencies[0] = Constants.UsdBaseCurrency;
-
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
-        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
-        vm.stopPrank();
-
-        baseCurrencies = new uint256[](2);
-        baseCurrencies[0] = Constants.UsdBaseCurrency;
-        baseCurrencies[1] = Constants.EthBaseCurrency;
-
-        collateralFactors = new uint16[](1);
-        collateralFactors[0] = 150;
-        liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = 110;
-
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
-        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
-        vm.stopPrank();
-    }
-
-    function testSuccess_batchSetCreditRating_Owner() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(eth);
-
-        uint256[] memory baseCurrencies = new uint256[](2);
-        baseCurrencies[0] = Constants.UsdBaseCurrency;
-        baseCurrencies[1] = Constants.EthBaseCurrency;
-
-        uint16[] memory collateralFactors = new uint16[](2);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-
-        vm.startPrank(creatorAddress);
-        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
-        vm.stopPrank();
-
-        assertEq(150, mainRegistry.collateralFactors(address(eth), Constants.UsdBaseCurrency));
-        assertEq(110, mainRegistry.liquidationThresholds(address(eth), Constants.EthBaseCurrency));
-    }
-
-    function testRevert_batchSetRiskVariables_OwnerSetsCollateralFactorWithInvalidValue() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        vm.stopPrank();
-
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(eth);
-
-        uint256[] memory baseCurrencies = new uint256[](2);
-        baseCurrencies[0] = Constants.UsdBaseCurrency;
-        baseCurrencies[1] = Constants.EthBaseCurrency;
-
-        uint16[] memory collateralFactors = new uint16[](2);
-        collateralFactors[0] = 15000;
-        collateralFactors[1] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("MR_AA: Collateral Factor should be in the limits");
-        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
-        vm.stopPrank();
-
-        collateralFactors[0] = 150;
-        liquidationThresholds[0] = 11000;
-
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("MR_AA: Liquidation Threshold should be in the limits");
-        mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
-        vm.stopPrank();
-    }
-
-    //Test setFactory
-    function testRevert_setFactory_NonOwner(address unprivilegedAddress) public {
-        vm.assume(unprivilegedAddress != creatorAddress);
-        vm.startPrank(creatorAddress);
-        factory = new Factory();
-        factory.setNewVaultInfo(
-            address(mainRegistry), 0x0000000000000000000000000000001234567890, Constants.upgradeProof1To2
-        );
-        factory.confirmNewVaultInfo();
-        vm.stopPrank();
-
-        vm.startPrank(unprivilegedAddress);
-        vm.expectRevert("Ownable: caller is not the owner");
-        mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-    }
-
-    function testSuccess_setFactory_OwnerSetsFactoryWithMultipleBaseCurrencies() public {
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        factory = new Factory();
-        factory.setNewVaultInfo(
-            address(mainRegistry), 0x0000000000000000000000000000001234567890, Constants.upgradeProof1To2
-        );
-        factory.confirmNewVaultInfo();
-        mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-
-        assertEq(address(factory), mainRegistry.factoryAddress());
-    }
 }
