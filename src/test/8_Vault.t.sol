@@ -32,43 +32,43 @@ import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 contract vaultTests is Test {
     using stdStorage for StdStorage;
 
-    Factory private factoryContr;
-    Vault private vault;
-    ERC20Mock private dai;
-    ERC20Mock private eth;
-    ERC20Mock private snx;
-    ERC20Mock private link;
-    ERC20Mock private safemoon;
-    ERC721Mock private bayc;
-    ERC721Mock private mayc;
-    ERC721Mock private dickButs;
-    ERC20Mock private wbayc;
-    ERC20Mock private wmayc;
-    ERC1155Mock private interleave;
-    OracleHub private oracleHub;
-    ArcadiaOracle private oracleDaiToUsd;
-    ArcadiaOracle private oracleEthToUsd;
-    ArcadiaOracle private oracleLinkToUsd;
-    ArcadiaOracle private oracleSnxToEth;
-    ArcadiaOracle private oracleWbaycToEth;
-    ArcadiaOracle private oracleWmaycToUsd;
-    ArcadiaOracle private oracleInterleaveToEth;
-    MainRegistry private mainRegistry;
-    StandardERC20PricingModule private standardERC20Registry;
-    FloorERC721PricingModule private floorERC721PricingModule;
-    FloorERC1155PricingModule private floorERC1155PricingModule;
-    Liquidator private liquidator;
+    Factory public factoryContr;
+    Vault public vault;
+    ERC20Mock public dai;
+    ERC20Mock public eth;
+    ERC20Mock public snx;
+    ERC20Mock public link;
+    ERC20Mock public safemoon;
+    ERC721Mock public bayc;
+    ERC721Mock public mayc;
+    ERC721Mock public dickButs;
+    ERC20Mock public wbayc;
+    ERC20Mock public wmayc;
+    ERC1155Mock public interleave;
+    OracleHub public oracleHub;
+    ArcadiaOracle public oracleDaiToUsd;
+    ArcadiaOracle public oracleEthToUsd;
+    ArcadiaOracle public oracleLinkToUsd;
+    ArcadiaOracle public oracleSnxToEth;
+    ArcadiaOracle public oracleWbaycToEth;
+    ArcadiaOracle public oracleWmaycToUsd;
+    ArcadiaOracle public oracleInterleaveToEth;
+    MainRegistry public mainRegistry;
+    StandardERC20PricingModule public standardERC20Registry;
+    FloorERC721PricingModule public floorERC721PricingModule;
+    FloorERC1155PricingModule public floorERC1155PricingModule;
+    Liquidator public liquidator;
 
     LendingPool pool;
     Tranche tranche;
     DebtToken debt;
 
-    address private creatorAddress = address(1);
-    address private tokenCreatorAddress = address(2);
-    address private oracleOwner = address(3);
-    address private unprivilegedAddress = address(4);
-    address private vaultOwner = address(6);
-    address private liquidityProvider = address(7);
+    address public creatorAddress = address(1);
+    address public tokenCreatorAddress = address(2);
+    address public oracleOwner = address(3);
+    address public unprivilegedAddress = address(4);
+    address public vaultOwner = address(6);
+    address public liquidityProvider = address(7);
 
     uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
     uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
@@ -86,6 +86,16 @@ contract vaultTests is Test {
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
 
     uint16[] emptyListUint16 = new uint16[](0);
+
+    uint16[] public collateralFactors = new uint16[](3);
+    uint16[] public liquidationThresholds = new uint16[](3);
+
+    struct Assets {
+        address[] assetAddresses;
+        uint256[] assetIds;
+        uint256[] assetAmounts;
+        uint256[] assetTypes;
+    }
 
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
@@ -272,6 +282,14 @@ contract vaultTests is Test {
         oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
 
+        collateralFactors[0] = 150;
+        collateralFactors[1] = 150;
+        collateralFactors[2] = 150;
+
+        liquidationThresholds[0] = 110;
+        liquidationThresholds[1] = 110;
+        liquidationThresholds[2] = 110;
+
         vm.startPrank(tokenCreatorAddress);
         dai.mint(liquidityProvider, type(uint128).max);
         vm.stopPrank();
@@ -388,6 +406,297 @@ contract vaultTests is Test {
         vm.stopPrank();
     }
 
+/* ///////////////////////////////////////////////////////////////
+                        VAULT MANAGEMENT
+/////////////////////////////////////////////////////////////// */
+
+//ToDo: initialize, upgradeVault, getAddressSlot
+
+/* ///////////////////////////////////////////////////////////////
+                    OWNERSHIP MANAGEMENT
+/////////////////////////////////////////////////////////////// */
+
+    function testRevert_transferOwnership_OfVaultByNonOwner(address sender) public {
+        vm.assume(sender != address(factoryContr));
+        vm.startPrank(sender);
+        vm.expectRevert("VL: You are not the factory");
+        vault.transferOwnership(address(10));
+        vm.stopPrank();
+    }
+
+    function testSuccess_transferOwnership(address to) public {
+        vm.assume(to != address(0));
+
+        assertEq(vaultOwner, vault.owner());
+
+        vm.prank(address(factoryContr));
+        vault.transferOwnership(to);
+        assertEq(to, vault.owner());
+    }
+
+    function testRevert_transferOwnership_ByNonOwner(address from) public {
+        vm.assume(from != address(factoryContr));
+
+        assertEq(vaultOwner, vault.owner());
+
+        vm.startPrank(from);
+        vm.expectRevert("VL: You are not the factory");
+        vault.transferOwnership(from);
+        assertEq(vaultOwner, vault.owner());
+    }
+
+/* ///////////////////////////////////////////////////////////////
+                    BASE CURRENCY LOGIC
+/////////////////////////////////////////////////////////////// */
+
+    function testSuccess_setBaseCurrency(address authorised) public {
+        uint256 slot = stdstore.target(address(vault)).sig(vault.allowed.selector).with_key(authorised).find();
+        bytes32 loc = bytes32(slot);
+        bool allowed = true;
+        bytes32 value = bytes32(abi.encode(allowed));
+        vm.store(address(vault), loc, value);
+
+        vm.startPrank(authorised);
+        vault.setBaseCurrency(address(eth));
+        vm.stopPrank();
+
+        (, address baseCurrency) = vault.vault();
+        assertEq(baseCurrency, address(eth));
+    }
+
+    function testRevert_setBaseCurrency_ByNonAuthorized(address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != vaultOwner);
+        vm.assume(unprivilegedAddress_ != address(pool));
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("VL: You are not authorized");
+        vault.setBaseCurrency(address(eth));
+        vm.stopPrank();
+
+        (, address baseCurrency) = vault.vault();
+        assertEq(baseCurrency, address(dai));
+    }
+
+    function testRevert_setBaseCurrency_WithDebt(address authorised) public {
+        uint256 slot = stdstore.target(address(vault)).sig(vault.allowed.selector).with_key(authorised).find();
+        bytes32 loc = bytes32(slot);
+        bool allowed = true;
+        bytes32 value = bytes32(abi.encode(allowed));
+        vm.store(address(vault), loc, value);
+
+        slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
+        loc = bytes32(slot);
+        bytes32 addDebt = bytes32(abi.encode(1));
+        vm.store(address(debt), loc, addDebt);
+
+        slot = stdstore.target(address(debt)).sig(debt.totalDebt.selector).find();
+        loc = bytes32(slot);
+        vm.store(address(debt), loc, addDebt);
+
+        slot = stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault)).find();
+        loc = bytes32(slot);
+        vm.store(address(debt), loc, addDebt);
+
+        vm.startPrank(authorised);
+        vm.expectRevert("VL_SBC: Can't change baseCurrency when Used Margin > 0");
+        vault.setBaseCurrency(address(eth));
+        vm.stopPrank();
+
+        (, address baseCurrency) = vault.vault();
+        assertEq(baseCurrency, address(dai));
+    }
+
+/* ///////////////////////////////////////////////////////////////
+                MARGIN ACCOUNT SETTINGS
+/////////////////////////////////////////////////////////////// */
+
+//ToDo: openTrustedMarginAccount, closeTrustedMarginAccount
+
+/* ///////////////////////////////////////////////////////////////
+                        MARGIN REQUIREMENTS
+/////////////////////////////////////////////////////////////// */
+
+//ToDo: increaseMarginPosition, decreaseMarginPosition, getCollateralValue
+
+    function testSuccess_getVaultValue(uint8 depositAmount) public {
+        depositEthInVault(depositAmount, vaultOwner);
+
+        uint256 expectedValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
+            * depositAmount / 10 ** (18 - Constants.daiDecimals);
+        uint256 actualValue = vault.getVaultValue(address(dai));
+
+        assertEq(expectedValue, actualValue);
+    }
+
+    function testSuccess_getVaultValue_GasUsage(uint8 depositAmount, uint128[] calldata tokenIds) public {
+        vm.assume(tokenIds.length <= 5);
+        vm.assume(depositAmount > 0);
+        depositEthInVault(depositAmount, vaultOwner);
+        depositLinkInVault(depositAmount, vaultOwner);
+        depositBaycInVault(tokenIds, vaultOwner);
+
+        uint256 gasStart = gasleft();
+        vault.getVaultValue(address(dai));
+        uint256 gasAfter = gasleft();
+        emit log_int(int256(gasStart - gasAfter));
+        assertLt(gasStart - gasAfter, 200000);
+    }
+
+    function testSuccess_getUsedMargin_ZeroInitially() public {
+        uint256 openDebt = vault.getUsedMargin();
+        assertEq(openDebt, 0);
+    }
+
+    function testSuccess_getFreeMargin_ZeroInitially() public {
+        uint256 remainingCredit = vault.getFreeMargin();
+        assertEq(remainingCredit, 0);
+    }
+
+    function testSuccess_getFreeMargin_AfterFirstDeposit(uint8 amount) public {
+        depositEthInVault(amount, vaultOwner);
+
+        uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amount
+            / 10 ** (18 - Constants.daiDecimals);
+        uint16 collThres = 150;
+
+        uint256 expectedRemaining = (depositValue * 100) / collThres;
+        assertEq(expectedRemaining, vault.getFreeMargin());
+    }
+
+    function testSuccess_getFreeMargin_AfterTopUp(uint8 amountEth, uint8 amountLink, uint128[] calldata tokenIds)
+        public
+    {
+        vm.assume(tokenIds.length < 10 && tokenIds.length > 1);
+        uint16 collThres = 150;
+
+        depositEthInVault(amountEth, vaultOwner);
+        uint256 depositValueEth = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth;
+        assertEq((depositValueEth / 10 ** (18 - Constants.daiDecimals) * 100) / collThres, vault.getFreeMargin());
+
+        depositLinkInVault(amountLink, vaultOwner);
+        uint256 depositValueLink =
+            ((Constants.WAD * rateLinkToUsd) / 10 ** Constants.oracleLinkToUsdDecimals) * amountLink;
+        assertEq(
+            ((depositValueEth + depositValueLink) / 10 ** (18 - Constants.daiDecimals) * 100) / collThres,
+            vault.getFreeMargin()
+        );
+
+        (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIds, vaultOwner);
+        uint256 depositBaycValue = (
+            (Constants.WAD * rateWbaycToEth * rateEthToUsd)
+                / 10 ** (Constants.oracleEthToUsdDecimals + Constants.oracleWbaycToEthDecimals)
+        ) * assetIds.length;
+        assertEq(
+            ((depositValueEth + depositValueLink + depositBaycValue) / 10 ** (18 - Constants.daiDecimals) * 100)
+                / collThres,
+            vault.getFreeMargin()
+        );
+    }
+
+    function testSuccess_getFreeMargin_AfterTakingCredit(uint8 amountEth, uint128 amountCredit) public {
+        uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth
+            / 10 ** (18 - Constants.daiDecimals);
+
+        uint16 collThres = 150;
+
+        vm.assume((depositValue * 100) / collThres > amountCredit);
+        depositEthInVault(amountEth, vaultOwner);
+
+        vm.prank(vaultOwner);
+        pool.borrow(amountCredit, address(vault), vaultOwner);
+
+        uint256 actualRemainingCredit = vault.getFreeMargin();
+        uint256 expectedRemainingCredit = (depositValue * 100) / collThres - amountCredit;
+
+        assertEq(expectedRemainingCredit, actualRemainingCredit);
+    }
+
+
+    function testSuccess_getFreeMargin_NoOverflows(uint128 amountEth, uint8 factor) public {
+        vm.assume(amountEth < 10 * 10 ** 9 * 10 ** 18);
+        vm.assume(amountEth > 0);
+
+        vm.prank(creatorAddress);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10 ** Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            collateralFactors,
+            liquidationThresholds
+        );
+
+        depositERC20InVault(eth, amountEth, vaultOwner);
+        vm.prank(vaultOwner);
+        pool.borrow((((amountEth * 100) / 150) * factor) / 255, address(vault), vaultOwner);
+
+        uint256 currentValue = vault.getVaultValue(address(dai));
+        uint256 openDebt = vault.getUsedMargin();
+        uint16 collThres = 150;
+
+        uint256 maxAllowedCreditLocal;
+        uint256 remainingCreditLocal;
+        //gas: cannot overflow unless currentValue is more than
+        // 1.15**57 *10**18 decimals, which is too many billions to write out
+        maxAllowedCreditLocal = (currentValue * 100) / collThres;
+
+        //gas: explicit check is done to prevent underflow
+        remainingCreditLocal = maxAllowedCreditLocal > openDebt ? maxAllowedCreditLocal - openDebt : 0;
+
+        uint256 remainingCreditFetched = vault.getFreeMargin();
+
+        //remainingCreditFetched has a lot of unchecked operations 
+        //-> we check that the checked operations never reverts and is
+        //always equal to the unchecked operations
+        assertEq(remainingCreditLocal, remainingCreditFetched);
+    }
+
+/* ///////////////////////////////////////////////////////////////
+                        LIQUIDATION LOGIC
+/////////////////////////////////////////////////////////////// */
+
+    function testSuccess_liquidate_NewOwnerIsLiquidator(address liquidationKeeper) public {
+        vm.assume(
+            liquidationKeeper != address(this) && liquidationKeeper != address(0)
+                && liquidationKeeper != address(factoryContr)
+        );
+
+        uint256 slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
+        bytes32 loc = bytes32(slot);
+        bytes32 addDebt = bytes32(abi.encode(100000000));
+        vm.store(address(debt), loc, addDebt);
+
+        slot = stdstore.target(address(debt)).sig(debt.totalDebt.selector).find();
+        loc = bytes32(slot);
+        vm.store(address(debt), loc, addDebt);
+
+        slot = stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault)).find();
+        loc = bytes32(slot);
+        vm.store(address(debt), loc, addDebt);
+
+        vm.startPrank(liquidationKeeper);
+        factoryContr.liquidate(address(vault));
+        vm.stopPrank();
+
+        assertEq(vault.owner(), address(liquidator));
+    }
+
+    function testRevert_liquidateVault_NonFactory(address liquidationKeeper) public {
+        vm.assume(liquidationKeeper != address(factoryContr));
+
+        assertEq(vault.owner(), vaultOwner);
+
+        vm.expectRevert("VL: You are not the factory");
+        vault.liquidateVault(liquidationKeeper);
+
+        assertEq(vault.owner(), vaultOwner);
+    }
+
+/* ///////////////////////////////////////////////////////////////
+                ASSET DEPOSIT/WITHDRAWN LOGIC
+/////////////////////////////////////////////////////////////// */
+
     //input as uint8 to prevent too long lists as fuzz input
     function testRevert_deposit_LengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen, uint8 typesLen)
         public
@@ -463,15 +772,6 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_SingleERC20(uint16 amount) public {
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -503,14 +803,6 @@ contract vaultTests is Test {
 
     function testSuccess_deposit_MultipleSameERC20(uint16 amount) public {
         vm.assume(amount <= 50000);
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -546,15 +838,6 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_SingleERC721() public {
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
         vm.prank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -586,15 +869,6 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_MultipleERC721() public {
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
         vm.prank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -639,15 +913,6 @@ contract vaultTests is Test {
     }
 
     function testSuccess_deposit_SingleERC1155() public {
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
         vm.prank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -700,15 +965,6 @@ contract vaultTests is Test {
         assetTypes[2] = 1;
 
         vm.startPrank(creatorAddress);
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -771,15 +1027,6 @@ contract vaultTests is Test {
         assetTypes[3] = 2;
 
         vm.startPrank(creatorAddress);
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -825,18 +1072,6 @@ contract vaultTests is Test {
 
     function testRevert_deposit_ByNonOwner(address sender) public {
         vm.assume(sender != vaultOwner);
-
-        vm.startPrank(sender);
-
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-        vm.stopPrank();
 
         vm.prank(creatorAddress);
         standardERC20Registry.setAssetInformation(
@@ -884,30 +1119,6 @@ contract vaultTests is Test {
         uint256 vaultValueAfter = vault.getVaultValue(address(dai));
         assertEq(vaultValueAfter, 0);
         vm.stopPrank();
-    }
-
-    function testSuccess_borrow(uint8 baseAmountDeposit, uint8 baseAmountCredit) public {
-        uint256 amountDeposit = baseAmountDeposit * 10 ** Constants.daiDecimals;
-        vm.assume(amountDeposit > 0);
-        uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.daiDecimals);
-
-        uint16 collThres = 150;
-
-        vm.assume((amountDeposit * 100) / collThres >= amountCredit);
-        depositEthInVault(baseAmountDeposit, vaultOwner);
-
-        vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(vault), vaultOwner);
-
-        assertEq(dai.balanceOf(vaultOwner), amountCredit);
-        assertEq(vault.getUsedMargin(), amountCredit); //no blocks have passed
-    }
-
-    struct Assets {
-        address[] assetAddresses;
-        uint256[] assetIds;
-        uint256[] assetAmounts;
-        uint256[] assetTypes;
     }
 
     function testSuccess_withdraw_ERC20fterTakingCredit(
@@ -1065,98 +1276,207 @@ contract vaultTests is Test {
         vault.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
     }
 
-    function testSuccess_getVaultValue(uint8 depositAmount) public {
-        depositEthInVault(depositAmount, vaultOwner);
+/* ///////////////////////////////////////////////////////////////
+                    HELPER FUNCTIONS
+/////////////////////////////////////////////////////////////// */
 
-        uint256 expectedValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
-            * depositAmount / 10 ** (18 - Constants.daiDecimals);
-        uint256 actualValue = vault.getVaultValue(address(dai));
+    function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
+        vm.prank(creatorAddress);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10 ** Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            collateralFactors,
+            liquidationThresholds
+        );
 
-        assertEq(expectedValue, actualValue);
-    }
+        emit log_named_uint("AmountInDepositandMax", amountEth);
 
-    function testSuccess_getVaultValue_GasUsage(uint8 depositAmount, uint128[] calldata tokenIds) public {
-        vm.assume(tokenIds.length <= 5);
-        vm.assume(depositAmount > 0);
-        depositEthInVault(depositAmount, vaultOwner);
-        depositLinkInVault(depositAmount, vaultOwner);
-        depositBaycInVault(tokenIds, vaultOwner);
-
-        uint256 gasStart = gasleft();
-        vault.getVaultValue(address(dai));
-        uint256 gasAfter = gasleft();
-        emit log_int(int256(gasStart - gasAfter));
-        assertLt(gasStart - gasAfter, 200000);
-    }
-
-    function testSuccess_getUsedMargin_GetDebtAtStart() public {
-        uint256 openDebt = vault.getUsedMargin();
-        assertEq(openDebt, 0);
-    }
-
-    function testSuccess_getFreeMargin_GetRemainingCreditAtStart() public {
+        depositERC20InVault(eth, amountEth, vaultOwner);
+        vm.startPrank(vaultOwner);
         uint256 remainingCredit = vault.getFreeMargin();
-        assertEq(remainingCredit, 0);
+        pool.borrow(uint128(remainingCredit), address(vault), vaultOwner);
+        vm.stopPrank();
+
+        return remainingCredit;
     }
 
-    function testSuccess_getFreeMargin_GetRemainingCredit(uint8 amount) public {
-        depositEthInVault(amount, vaultOwner);
-
-        uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amount
-            / 10 ** (18 - Constants.daiDecimals);
-        uint16 collThres = 150;
-
-        uint256 expectedRemaining = (depositValue * 100) / collThres;
-        assertEq(expectedRemaining, vault.getFreeMargin());
-    }
-
-    function testSuccess_getFreeMargin_AfterTopUp(uint8 amountEth, uint8 amountLink, uint128[] calldata tokenIds)
+    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
     {
-        vm.assume(tokenIds.length < 10 && tokenIds.length > 1);
-        uint16 collThres = 150;
+        assetAddresses = new address[](1);
+        assetAddresses[0] = address(token);
 
-        depositEthInVault(amountEth, vaultOwner);
-        uint256 depositValueEth = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth;
-        assertEq((depositValueEth / 10 ** (18 - Constants.daiDecimals) * 100) / collThres, vault.getFreeMargin());
+        assetIds = new uint256[](1);
+        assetIds[0] = 0;
 
-        depositLinkInVault(amountLink, vaultOwner);
-        uint256 depositValueLink =
-            ((Constants.WAD * rateLinkToUsd) / 10 ** Constants.oracleLinkToUsdDecimals) * amountLink;
-        assertEq(
-            ((depositValueEth + depositValueLink) / 10 ** (18 - Constants.daiDecimals) * 100) / collThres,
-            vault.getFreeMargin()
-        );
+        assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount;
 
-        (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIds, vaultOwner);
-        uint256 depositBaycValue = (
-            (Constants.WAD * rateWbaycToEth * rateEthToUsd)
-                / 10 ** (Constants.oracleEthToUsdDecimals + Constants.oracleWbaycToEthDecimals)
-        ) * assetIds.length;
-        assertEq(
-            ((depositValueEth + depositValueLink + depositBaycValue) / 10 ** (18 - Constants.daiDecimals) * 100)
-                / collThres,
-            vault.getFreeMargin()
-        );
+        assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.prank(tokenCreatorAddress);
+        token.mint(sender, amount);
+
+        vm.startPrank(sender);
+        vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
     }
 
-    function testSuccess_getFreeMargin_AfterTakingCredit(uint8 amountEth, uint128 amountCredit) public {
-        uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth
-            / 10 ** (18 - Constants.daiDecimals);
+    function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
+        vm.prank(creatorAddress);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10 ** Constants.ethDecimals),
+                assetAddress: address(eth)
+            }),
+            collateralFactors,
+            liquidationThresholds
+        );
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount * 10 ** Constants.ethDecimals;
+
+        uint256[] memory assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.startPrank(sender);
+        vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+
+        assetInfo = Assets({
+            assetAddresses: assetAddresses,
+            assetIds: assetIds,
+            assetAmounts: assetAmounts,
+            assetTypes: assetTypes
+        });
+    }
+
+    function depositLinkInVault(uint8 amount, address sender)
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        vm.prank(creatorAddress);
+        standardERC20Registry.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleLinkToUsdArr,
+                assetUnit: uint64(10 ** Constants.linkDecimals),
+                assetAddress: address(link)
+            }),
+            collateralFactors,
+            liquidationThresholds
+        );
+
+        assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount * 10 ** Constants.linkDecimals;
+
+        assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.startPrank(sender);
+        vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+    function depositBaycInVault(uint128[] memory tokenIds, address sender)
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        vm.prank(creatorAddress);
+        floorERC721PricingModule.setAssetInformation(
+            FloorERC721PricingModule.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: type(uint256).max,
+                assetAddress: address(bayc)
+            }),
+            collateralFactors,
+            liquidationThresholds
+        );
+
+        assetAddresses = new address[](tokenIds.length);
+        assetIds = new uint256[](tokenIds.length);
+        assetAmounts = new uint256[](tokenIds.length);
+        assetTypes = new uint256[](tokenIds.length);
+
+        uint256 tokenIdToWorkWith;
+        for (uint256 i; i < tokenIds.length; i++) {
+            tokenIdToWorkWith = tokenIds[i];
+            while (bayc.ownerOf(tokenIdToWorkWith) != address(0)) {
+                tokenIdToWorkWith++;
+            }
+
+            bayc.mint(sender, tokenIdToWorkWith);
+            assetAddresses[i] = address(bayc);
+            assetIds[i] = tokenIdToWorkWith;
+            assetAmounts[i] = 1;
+            assetTypes[i] = 1;
+        }
+
+        vm.startPrank(sender);
+        vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+/* ///////////////////////////////////////////////////////////////
+                    DEPRECIATED TESTS
+/////////////////////////////////////////////////////////////// */
+//ToDo: All depreciated tests should have been moved to Arcadia Lending, to double check that everything is covered there
+    struct debtInfo {
+        uint16 collThres; //factor 100
+        uint8 liqThres; //factor 100
+        uint8 baseCurrency;
+    }
+
+    function testSuccess_borrow(uint8 baseAmountDeposit, uint8 baseAmountCredit) public {
+        uint256 amountDeposit = baseAmountDeposit * 10 ** Constants.daiDecimals;
+        vm.assume(amountDeposit > 0);
+        uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.daiDecimals);
 
         uint16 collThres = 150;
 
-        vm.assume((depositValue * 100) / collThres > amountCredit);
-        depositEthInVault(amountEth, vaultOwner);
+        vm.assume((amountDeposit * 100) / collThres >= amountCredit);
+        depositEthInVault(baseAmountDeposit, vaultOwner);
 
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
         pool.borrow(amountCredit, address(vault), vaultOwner);
 
-        uint256 actualRemainingCredit = vault.getFreeMargin();
-        uint256 expectedRemainingCredit = (depositValue * 100) / collThres - amountCredit;
-
-        assertEq(expectedRemainingCredit, actualRemainingCredit);
+        assertEq(dai.balanceOf(vaultOwner), amountCredit);
+        assertEq(vault.getUsedMargin(), amountCredit); //no blocks have passed
     }
+
 
     function testRevert_borrow_AsNonOwner(uint8 amountEth, uint128 amountCredit) public {
         vm.assume(amountCredit > 0);
@@ -1169,12 +1489,6 @@ contract vaultTests is Test {
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert(stdError.arithmeticError);
         pool.borrow(amountCredit, address(vault), vaultOwner);
-    }
-
-    struct debtInfo {
-        uint16 collThres; //factor 100
-        uint8 liqThres; //factor 100
-        uint8 baseCurrency;
     }
 
     function testSuccess_MinCollValueUnchecked() public {
@@ -1318,379 +1632,5 @@ contract vaultTests is Test {
         uint256 usedMarginActual = vault.getUsedMargin();
 
         assertEq(usedMarginExpected, usedMarginActual);
-    }
-
-    function testSuccess_getFreeMargin_RemainingCreditUnchecked(uint128 amountEth, uint8 factor) public {
-        vm.assume(amountEth < 10 * 10 ** 9 * 10 ** 18);
-        vm.assume(amountEth > 0);
-
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-        vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            collateralFactors,
-            liquidationThresholds
-        );
-
-        depositERC20InVault(eth, amountEth, vaultOwner);
-        vm.prank(vaultOwner);
-        pool.borrow((((amountEth * 100) / 150) * factor) / 255, address(vault), vaultOwner);
-
-        uint256 currentValue = vault.getVaultValue(address(dai));
-        uint256 openDebt = vault.getUsedMargin();
-        uint16 collThres = 150;
-
-        uint256 maxAllowedCreditLocal;
-        uint256 remainingCreditLocal;
-        //gas: cannot overflow unless currentValue is more than
-        // 1.15**57 *10**18 decimals, which is too many billions to write out
-        maxAllowedCreditLocal = (currentValue * 100) / collThres;
-
-        //gas: explicit check is done to prevent underflow
-        remainingCreditLocal = maxAllowedCreditLocal > openDebt ? maxAllowedCreditLocal - openDebt : 0;
-
-        uint256 remainingCreditFetched = vault.getFreeMargin();
-
-        assertEq(remainingCreditLocal, remainingCreditFetched);
-    }
-
-    function testRevert_transferOwnership_OfVaultByNonOwner(address sender) public {
-        vm.assume(sender != address(factoryContr));
-        vm.startPrank(sender);
-        vm.expectRevert("VL: You are not the factory");
-        vault.transferOwnership(address(10));
-        vm.stopPrank();
-    }
-
-    function testSuccess_transferOwnership(address to) public {
-        vm.assume(to != address(0));
-
-        assertEq(vaultOwner, vault.owner());
-
-        vm.prank(address(factoryContr));
-        vault.transferOwnership(to);
-        assertEq(to, vault.owner());
-    }
-
-    function testRevert_transferOwnership_ByNonOwner(address from) public {
-        vm.assume(from != address(factoryContr));
-
-        assertEq(vaultOwner, vault.owner());
-
-        vm.startPrank(from);
-        vm.expectRevert("VL: You are not the factory");
-        vault.transferOwnership(from);
-        assertEq(vaultOwner, vault.owner());
-    }
-
-    function testSuccess_setBaseCurrency(address authorised) public {
-        uint256 slot = stdstore.target(address(vault)).sig(vault.allowed.selector).with_key(authorised).find();
-        bytes32 loc = bytes32(slot);
-        bool allowed = true;
-        bytes32 value = bytes32(abi.encode(allowed));
-        vm.store(address(vault), loc, value);
-
-        vm.startPrank(authorised);
-        vault.setBaseCurrency(address(eth));
-        vm.stopPrank();
-
-        (, address baseCurrency) = vault.vault();
-        assertEq(baseCurrency, address(eth));
-    }
-
-    function testRevert_setBaseCurrency_ByNonAuthorized(address unprivilegedAddress_) public {
-        vm.assume(unprivilegedAddress_ != vaultOwner);
-        vm.assume(unprivilegedAddress_ != address(pool));
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("VL: You are not authorized");
-        vault.setBaseCurrency(address(eth));
-        vm.stopPrank();
-
-        (, address baseCurrency) = vault.vault();
-        assertEq(baseCurrency, address(dai));
-    }
-
-    function testRevert_setBaseCurrency_WithDebt(address authorised) public {
-        uint256 slot = stdstore.target(address(vault)).sig(vault.allowed.selector).with_key(authorised).find();
-        bytes32 loc = bytes32(slot);
-        bool allowed = true;
-        bytes32 value = bytes32(abi.encode(allowed));
-        vm.store(address(vault), loc, value);
-
-        slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
-        loc = bytes32(slot);
-        bytes32 addDebt = bytes32(abi.encode(1));
-        vm.store(address(debt), loc, addDebt);
-
-        slot = stdstore.target(address(debt)).sig(debt.totalDebt.selector).find();
-        loc = bytes32(slot);
-        vm.store(address(debt), loc, addDebt);
-
-        slot = stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault)).find();
-        loc = bytes32(slot);
-        vm.store(address(debt), loc, addDebt);
-
-        vm.startPrank(authorised);
-        vm.expectRevert("VL_SBC: Can't change baseCurrency when Used Margin > 0");
-        vault.setBaseCurrency(address(eth));
-        vm.stopPrank();
-
-        (, address baseCurrency) = vault.vault();
-        assertEq(baseCurrency, address(dai));
-    }
-
-    function testSuccess_liquidate_UnhealthyVault_NewOwnerLiquidator(address liquidationKeeper) public {
-        vm.assume(
-            liquidationKeeper != address(this) && liquidationKeeper != address(0)
-                && liquidationKeeper != address(factoryContr)
-        );
-
-        uint256 slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
-        bytes32 loc = bytes32(slot);
-        bytes32 addDebt = bytes32(abi.encode(100000000));
-        vm.store(address(debt), loc, addDebt);
-
-        slot = stdstore.target(address(debt)).sig(debt.totalDebt.selector).find();
-        loc = bytes32(slot);
-        vm.store(address(debt), loc, addDebt);
-
-        slot = stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault)).find();
-        loc = bytes32(slot);
-        vm.store(address(debt), loc, addDebt);
-
-        vm.startPrank(liquidationKeeper);
-        factoryContr.liquidate(address(vault));
-        vm.stopPrank();
-
-        assertEq(vault.owner(), address(liquidator));
-    }
-
-    function testRevert_liquidateVault_AsNonFactory(address liquidationKeeper) public {
-        vm.assume(liquidationKeeper != address(factoryContr));
-
-        assertEq(vault.owner(), vaultOwner);
-
-        vm.expectRevert("VL: You are not the factory");
-        vault.liquidateVault(liquidationKeeper);
-
-        assertEq(vault.owner(), vaultOwner);
-    }
-
-    function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
-        vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            collateralFactors,
-            liquidationThresholds
-        );
-
-        emit log_named_uint("AmountInDepositandMax", amountEth);
-
-        depositERC20InVault(eth, amountEth, vaultOwner);
-        vm.startPrank(vaultOwner);
-        uint256 remainingCredit = vault.getFreeMargin();
-        pool.borrow(uint128(remainingCredit), address(vault), vaultOwner);
-        vm.stopPrank();
-
-        return remainingCredit;
-    }
-
-    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](1);
-        assetAddresses[0] = address(token);
-
-        assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount;
-
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
-        vm.prank(tokenCreatorAddress);
-        token.mint(sender, amount);
-
-        vm.startPrank(sender);
-        vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
-    }
-
-    function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
-        vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            collateralFactors,
-            liquidationThresholds
-        );
-
-        address[] memory assetAddresses = new address[](1);
-        assetAddresses[0] = address(eth);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount * 10 ** Constants.ethDecimals;
-
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
-        vm.startPrank(sender);
-        vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
-
-        assetInfo = Assets({
-            assetAddresses: assetAddresses,
-            assetIds: assetIds,
-            assetAmounts: assetAmounts,
-            assetTypes: assetTypes
-        });
-    }
-
-    function depositLinkInVault(uint8 amount, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
-        vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            collateralFactors,
-            liquidationThresholds
-        );
-
-        assetAddresses = new address[](1);
-        assetAddresses[0] = address(link);
-
-        assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount * 10 ** Constants.linkDecimals;
-
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
-        vm.startPrank(sender);
-        vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
-    }
-
-    function depositBaycInVault(uint128[] memory tokenIds, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
-
-        vm.prank(creatorAddress);
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            collateralFactors,
-            liquidationThresholds
-        );
-
-        assetAddresses = new address[](tokenIds.length);
-        assetIds = new uint256[](tokenIds.length);
-        assetAmounts = new uint256[](tokenIds.length);
-        assetTypes = new uint256[](tokenIds.length);
-
-        uint256 tokenIdToWorkWith;
-        for (uint256 i; i < tokenIds.length; i++) {
-            tokenIdToWorkWith = tokenIds[i];
-            while (bayc.ownerOf(tokenIdToWorkWith) != address(0)) {
-                tokenIdToWorkWith++;
-            }
-
-            bayc.mint(sender, tokenIdToWorkWith);
-            assetAddresses[i] = address(bayc);
-            assetIds[i] = tokenIdToWorkWith;
-            assetAmounts[i] = 1;
-            assetTypes[i] = 1;
-        }
-
-        vm.startPrank(sender);
-        vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
     }
 }
