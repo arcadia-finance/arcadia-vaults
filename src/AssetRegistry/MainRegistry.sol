@@ -112,7 +112,7 @@ contract MainRegistry is Ownable, RiskModule {
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
      * is initiated as default (safest lowest rating).
-     * Risk variable are variables with decimal by 100
+     * @dev Risk variable have 2 decimals precision
      */
     function addBaseCurrency(
         BaseCurrencyInformation calldata baseCurrencyInformation,
@@ -186,7 +186,7 @@ contract MainRegistry is Ownable, RiskModule {
      * @param subAssetRegistryAddress Address of the Sub-Registry
      */
     function addPricingModule(address subAssetRegistryAddress) external onlyOwner {
-        require(!isPricingModule[subAssetRegistryAddress], "Sub-Registry already exists");
+        require(!isPricingModule[subAssetRegistryAddress], "MR_APM: Price Module already exists");
         isPricingModule[subAssetRegistryAddress] = true;
         pricingModules.push(subAssetRegistryAddress);
     }
@@ -365,20 +365,18 @@ contract MainRegistry is Ownable, RiskModule {
     }
 
     /* ///////////////////////////////////////////////////////////////
-                        CREDIT RATING LOGIC
+                    RISK VARIABLES MANAGEMENT
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Change the Credit Rating Category for one or more assets for one or more baseCurrencies
+     * @notice Change the Risk Variables for one or more assets for one or more baseCurrencies
      * @param assets The List of addresses of the assets
      * @param _baseCurrencies The corresponding List of BaseCurrencies
      * @param newCollateralFactors The corresponding List of new Collateral Factors
      * @param newLiquidationThresholds The corresponding List of new Liquidation Thresholds
-     * @dev The function loops over all indexes, and changes for each index the Credit Rating Category of the combination of asset and baseCurrency.
-     * In case multiple Credit Rating Categories for the same assets need to be changed, the address must be repeated in the assets.
-     * Each Credit Rating Category is labeled with an integer, Category 0 (the default) is for the most risky assets.
-     * Category from 1 to 9 will be used to label groups of assets with similar risk profiles
-     * (Comparable to ratings like AAA, A-, B... for debtors in traditional finance).
+     * @dev The function loops over all indexes, and changes for each index the Risk Variable of the combination of asset and baseCurrency.
+     * In case multiple Risk Variables for the same assets need to be changed, the address must be repeated in the assets.
+     * @dev Risk variable have 2 decimals precision.
      */
     function batchSetRiskVariables(
         address[] calldata assets,
