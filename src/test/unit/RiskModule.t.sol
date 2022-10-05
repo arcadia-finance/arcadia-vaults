@@ -153,9 +153,9 @@ contract RiskModuleTest is Test {
         values[0] = firstValue;
         values[1] = secondValue;
 
-        // When Then: Calculation of the collateral factor should fail and reverted since collateral calculation overflow
-        vm.expectRevert("RM_GLT: Liquidation Threshold has to bigger than zero");
-        riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
+        // When Then: Calculation of the liquidation threshold will be equal to 0
+        uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
+        assertEq(liqThres, 0);
     }
 
     function testSuccess_calculateWeightedCollateralFactor_Success(uint256 firstValue, uint256 secondValue) public {
@@ -267,7 +267,7 @@ contract RiskModuleTest is Test {
         values[1] = secondValue;
 
         // When Then: Calculation of the collateral factor should fail and reverted since collateral calculation overflow
-        vm.expectRevert("RM_GCF: Collateral Factor has to bigger than zero");
+        vm.expectRevert(bytes(""));
         riskModule.calculateWeightedCollateralValue(addresses, values, 0);
     }
 }

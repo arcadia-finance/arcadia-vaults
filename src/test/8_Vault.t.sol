@@ -406,13 +406,13 @@ contract vaultTests is Test {
         vm.stopPrank();
     }
 
-/* ///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         VAULT MANAGEMENT
 /////////////////////////////////////////////////////////////// */
 
-//ToDo: initialize, upgradeVault, getAddressSlot
+    //ToDo: initialize, upgradeVault, getAddressSlot
 
-/* ///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                     OWNERSHIP MANAGEMENT
 /////////////////////////////////////////////////////////////// */
 
@@ -445,7 +445,7 @@ contract vaultTests is Test {
         assertEq(vaultOwner, vault.owner());
     }
 
-/* ///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                     BASE CURRENCY LOGIC
 /////////////////////////////////////////////////////////////// */
 
@@ -506,17 +506,17 @@ contract vaultTests is Test {
         assertEq(baseCurrency, address(dai));
     }
 
-/* ///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                 MARGIN ACCOUNT SETTINGS
 /////////////////////////////////////////////////////////////// */
 
-//ToDo: openTrustedMarginAccount, closeTrustedMarginAccount
+    //ToDo: openTrustedMarginAccount, closeTrustedMarginAccount
 
-/* ///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         MARGIN REQUIREMENTS
 /////////////////////////////////////////////////////////////// */
 
-//ToDo: increaseMarginPosition, decreaseMarginPosition, getCollateralValue
+    //ToDo: increaseMarginPosition, decreaseMarginPosition, getCollateralValue
 
     function testSuccess_getVaultValue(uint8 depositAmount) public {
         depositEthInVault(depositAmount, vaultOwner);
@@ -611,7 +611,6 @@ contract vaultTests is Test {
         assertEq(expectedRemainingCredit, actualRemainingCredit);
     }
 
-
     function testSuccess_getFreeMargin_NoOverflows(uint128 amountEth, uint8 factor) public {
         vm.assume(amountEth < 10 * 10 ** 9 * 10 ** 18);
         vm.assume(amountEth > 0);
@@ -646,13 +645,13 @@ contract vaultTests is Test {
 
         uint256 remainingCreditFetched = vault.getFreeMargin();
 
-        //remainingCreditFetched has a lot of unchecked operations 
+        //remainingCreditFetched has a lot of unchecked operations
         //-> we check that the checked operations never reverts and is
         //always equal to the unchecked operations
         assertEq(remainingCreditLocal, remainingCreditFetched);
     }
 
-/* ///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         LIQUIDATION LOGIC
 /////////////////////////////////////////////////////////////// */
 
@@ -693,7 +692,7 @@ contract vaultTests is Test {
         assertEq(vault.owner(), vaultOwner);
     }
 
-/* ///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                 ASSET DEPOSIT/WITHDRAWN LOGIC
 /////////////////////////////////////////////////////////////// */
 
@@ -1276,7 +1275,7 @@ contract vaultTests is Test {
         vault.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
     }
 
-/* ///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                     HELPER FUNCTIONS
 /////////////////////////////////////////////////////////////// */
 
@@ -1450,10 +1449,10 @@ contract vaultTests is Test {
         vm.stopPrank();
     }
 
-/* ///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                     DEPRECIATED TESTS
 /////////////////////////////////////////////////////////////// */
-//ToDo: All depreciated tests should have been moved to Arcadia Lending, to double check that everything is covered there
+    //ToDo: All depreciated tests should have been moved to Arcadia Lending, to double check that everything is covered there
     struct debtInfo {
         uint16 collThres; //factor 100
         uint8 liqThres; //factor 100
@@ -1476,7 +1475,6 @@ contract vaultTests is Test {
         assertEq(dai.balanceOf(vaultOwner), amountCredit);
         assertEq(vault.getUsedMargin(), amountCredit); //no blocks have passed
     }
-
 
     function testRevert_borrow_AsNonOwner(uint8 amountEth, uint128 amountCredit) public {
         vm.assume(amountCredit > 0);

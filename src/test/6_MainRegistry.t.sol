@@ -1216,7 +1216,6 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
-
     function testSuccess_batchSetRiskVariables() public {
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
@@ -1638,5 +1637,4 @@ contract PricingLogicTest is MainRegistryTest {
 
         assertTrue(CompareArrays.compareArrays(expectedListOfValuesPerAsset, actualListOfValuesPerAsset));
     }
-
 }
