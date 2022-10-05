@@ -33,14 +33,10 @@ contract RiskModule is Ownable {
     uint16 DEFAULT_LIQUIDATION_THRESHOLD = 110;
 
     function getCollateralFactor(address assetAddress, uint256 baseCurrency) public view returns (uint16) {
-        require(collateralFactors[assetAddress][baseCurrency] > 0, "RM_GCF: Collateral Factor has to bigger than zero");
         return collateralFactors[assetAddress][baseCurrency];
     }
 
     function getLiquidationThreshold(address assetAddress, uint256 baseCurrency) public view returns (uint16) {
-        require(
-            collateralFactors[assetAddress][baseCurrency] > 0, "RM_GLT: Liquidation Threshold has to bigger than zero"
-        );
         return liquidationThresholds[assetAddress][baseCurrency];
     }
 
