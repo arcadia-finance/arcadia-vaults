@@ -16,6 +16,7 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILendingPool.sol";
 import "./interfaces/ITrustedProtocol.sol";
+import "./interfaces/IActionHandler.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -805,4 +806,15 @@ contract Vault {
     function getLengths() external view returns (uint256, uint256, uint256, uint256) {
         return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
     }
+
+
+    /*///////////////////////////////////////////////////////////////
+                    ASSET MANAGEMENT LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    function vaultManagementAction(address _actionHandler, bytes memory _actionData) public onlyOwner {
+        //TODO check if _actionHandler is whitelisted handler.
+        IActionHandler(_actionHandler).executeAction(_actionData);
+    }
+
 }
