@@ -58,12 +58,12 @@ contract RiskModule is Ownable {
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
             collFact = getCollateralFactor(assetAddress, baseCurrencyInd);
-            collateralValue += valuesPerAsset[i].mulDivDown(VARIABLE_DECIMAL, uint256(collFact));
+            collateralValue += valuesPerAsset[i] * uint256(collFact);
             unchecked {
                 ++i;
             }
         }
-        return collateralValue;
+        return collateralValue / VARIABLE_DECIMAL;
     }
 
     /**
