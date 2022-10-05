@@ -153,4 +153,6 @@ contract PerformCallToAdapterTest is IntegrationManagerTest {
     }
 
     // Change some
+
+    
 }

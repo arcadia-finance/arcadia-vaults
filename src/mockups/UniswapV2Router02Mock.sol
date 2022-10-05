@@ -1,22 +1,22 @@
-pragma solidity =0.8.10;
+pragma solidity >=0.4.22 <0.9.0;
 
 import "../interfaces/IUniswapV2Factory.sol";
 
 import "../interfaces/IUniswapV2Router02.sol";
+
+import "../interfaces/IERC20.sol";
 import "../../lib/v2-periphery/contracts/libraries/UniswapV2Library.sol";
-import "./libraries/SafeMath.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/IWETH.sol";
+
 
 contract UniswapV2Router02Mock is IUniswapV2Router02 {
-    address public immutable override factory;
+    address public immutable factory;
 
     modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "UniswapV2RouterMock: EXPIRED");
         _;
     }
 
-    constructor(address _factory, address _WETH) public {
+    constructor(address _factory) public {
         factory = _factory;
     }
 
@@ -46,10 +46,10 @@ contract UniswapV2Router02Mock is IUniswapV2Router02 {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external virtual override ensure(deadline) returns (uint256[] memory amounts) {
+    ) external virtual ensure(deadline) returns (uint256[] memory amounts) {
         amounts = UniswapV2Library.getAmountsOut(factory, amountIn, path);
         require(amounts[amounts.length - 1] >= amountOutMin, "UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
-        TransferHelper.safeTransferFrom(
+        safeTransferFrom(
             path[0], msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, to);
@@ -61,10 +61,10 @@ contract UniswapV2Router02Mock is IUniswapV2Router02 {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external virtual override ensure(deadline) returns (uint256[] memory amounts) {
+    ) external virtual ensure(deadline) returns (uint256[] memory amounts) {
         amounts = UniswapV2Library.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= amountInMax, "UniswapV2Router: EXCESSIVE_INPUT_AMOUNT");
-        TransferHelper.safeTransferFrom(
+        safeTransferFrom(
             path[0], msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, to);
@@ -75,7 +75,7 @@ contract UniswapV2Router02Mock is IUniswapV2Router02 {
         public
         pure
         virtual
-        override
+    
         returns (uint256 amountB)
     {
         return UniswapV2Library.quote(amountA, reserveA, reserveB);
@@ -85,7 +85,7 @@ contract UniswapV2Router02Mock is IUniswapV2Router02 {
         public
         pure
         virtual
-        override
+    
         returns (uint256 amountOut)
     {
         return UniswapV2Library.getAmountOut(amountIn, reserveIn, reserveOut);
@@ -95,7 +95,7 @@ contract UniswapV2Router02Mock is IUniswapV2Router02 {
         public
         pure
         virtual
-        override
+    
         returns (uint256 amountIn)
     {
         return UniswapV2Library.getAmountIn(amountOut, reserveIn, reserveOut);
@@ -105,7 +105,7 @@ contract UniswapV2Router02Mock is IUniswapV2Router02 {
         public
         view
         virtual
-        override
+    
         returns (uint256[] memory amounts)
     {
         return UniswapV2Library.getAmountsOut(factory, amountIn, path);
@@ -115,9 +115,20 @@ contract UniswapV2Router02Mock is IUniswapV2Router02 {
         public
         view
         virtual
-        override
+    
         returns (uint256[] memory amounts)
     {
         return UniswapV2Library.getAmountsIn(factory, amountOut, path);
+    }
+
+    function safeTransferFrom(
+        address token,
+        address from,
+        address to,
+        uint256 value
+    ) internal {
+        (bool success, bytes memory data) =
+            token.call(abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, value));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), 'STF');
     }
 }

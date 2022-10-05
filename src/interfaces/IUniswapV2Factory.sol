@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: UNLICENSED
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity >=0.8.0;
 
 interface IUniswapV2Factory {
     function feeTo() external view returns (address);
