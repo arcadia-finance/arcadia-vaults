@@ -204,7 +204,6 @@ contract RiskModuleTest is Test {
 
     function testSuccess_calculateWeightedCollateralValue_smallAmountSmallValue() public {
         // Given: The address of assets and the values of assets. One of the values of assets are zero
-
         address[] memory addresses = new address[](2);
         addresses[0] = firstAssetAddress;
         addresses[1] = secondAssetAddress;
