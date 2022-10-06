@@ -490,14 +490,16 @@ contract gasRepay_2ERC202ERC721 is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
+        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 liqTresh = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
-        collateralFactors[2] = 150;
+        collateralFactors[0] = collFactor;
+        collateralFactors[1] = collFactor;
+        collateralFactors[2] = collFactor;
         uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
-        liquidationThresholds[2] = 110;
+        liquidationThresholds[0] = liqTresh;
+        liquidationThresholds[1] = liqTresh;
+        liquidationThresholds[2] = liqTresh;
 
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -667,7 +669,7 @@ contract gasRepay_2ERC202ERC721 is Test {
         ) * s_3[2];
         uint256 valueMayc = ((10 ** 18 * rateWmaycToUsd) / 10 ** Constants.oracleWmaycToUsdDecimals) * s_3[3];
         maxCredit =
-            uint128(((valueEth + valueLink + valueBayc + valueMayc) / 10 ** (18 - Constants.daiDecimals) * 100) / 150);
+            uint128(((valueEth + valueLink + valueBayc + valueMayc) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100);
         pool.borrow(maxCredit, address(proxy), vaultOwner);
     }
 

@@ -177,9 +177,9 @@ contract StandardERC20PricingModuleTest is Test {
     function testRevert_setAssetInformation_OwnerAddsAssetWithMoreThan18Decimals() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](1);
-        collateralFactors[0] = 150;
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         uint16[] memory liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = 110;
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         vm.expectRevert("SSR_SAI: Maximal 18 decimals");
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -197,9 +197,9 @@ contract StandardERC20PricingModuleTest is Test {
         // Turn this into invalid uint16
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](1);
-        collateralFactors[0] = 150;
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         uint16[] memory liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = 110;
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -232,11 +232,11 @@ contract StandardERC20PricingModuleTest is Test {
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,

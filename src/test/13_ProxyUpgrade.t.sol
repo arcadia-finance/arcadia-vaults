@@ -473,7 +473,7 @@ contract VaultV2Test is Test {
     }
 
     struct VaultInfo {
-        uint16 collThres;
+        uint16 collFactor;
         uint16 liqThres;
         address baseCurrency;
     }

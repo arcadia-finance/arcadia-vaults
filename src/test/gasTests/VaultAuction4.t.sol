@@ -491,6 +491,8 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
+        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -659,7 +661,7 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
         ) * s_3[2];
         uint256 valueMayc = ((10 ** 18 * rateWmaycToUsd) / 10 ** Constants.oracleWmaycToUsdDecimals) * s_3[3];
         pool.borrow(
-            uint128(((valueEth + valueLink + valueBayc + valueMayc) / 10 ** (18 - Constants.daiDecimals) * 100) / 150),
+            uint128(((valueEth + valueLink + valueBayc + valueMayc) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100),
             address(proxy),
             vaultOwner
         );

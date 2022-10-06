@@ -37,10 +37,10 @@ contract RiskModuleTest is Test {
         // Set collateral factor
         stdstore.target(address(riskModule)).sig(riskModule.collateralFactors.selector).with_key(
             address(firstAssetAddress)
-        ).with_key(uint256(0)).checked_write(150);
+        ).with_key(uint256(0)).checked_write(50);
         stdstore.target(address(riskModule)).sig(riskModule.collateralFactors.selector).with_key(
             address(secondAssetAddress)
-        ).with_key(uint256(0)).checked_write(150);
+        ).with_key(uint256(0)).checked_write(50);
 
         vm.stopPrank();
     }
@@ -143,6 +143,8 @@ contract RiskModuleTest is Test {
         vm.assume(secondValue > 0); // value of the asset can not be zero
 
         vm.assume(firstAsset != firstAssetAddress);
+        vm.assume(firstAsset != secondAssetAddress);
+        vm.assume(secondAsset != firstAssetAddress);
         vm.assume(secondAsset != secondAssetAddress);
 
         address[] memory addresses = new address[](2);
@@ -153,8 +155,10 @@ contract RiskModuleTest is Test {
         values[0] = firstValue;
         values[1] = secondValue;
 
-        // When Then: Calculation of the liquidation threshold will be equal to 0
+        // When: We calculation the liquidation threshold of assets where the liquidation treshhold is not properly initiated
         uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
+
+        // Then: The liquidation treshhold is 0
         assertEq(liqThres, 0);
     }
 
@@ -187,11 +191,13 @@ contract RiskModuleTest is Test {
         for (uint256 i; i < addresses.length;) {
             assetAddress = addresses[i];
             colFact = riskModule.getCollateralFactor(assetAddress, 0);
-            calcCollateralValue += values[i].mulDivDown(100, uint256(colFact));
+            calcCollateralValue += values[i] * uint256(colFact);
             unchecked {
                 ++i;
             }
         }
+
+        calcCollateralValue = calcCollateralValue / 100;
 
         assertEq(collateralValue, calcCollateralValue);
     }

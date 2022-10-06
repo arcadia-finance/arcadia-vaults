@@ -6,7 +6,6 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./utils/FixedPointMathLib.sol";
 
 /**
@@ -15,22 +14,22 @@ import "./utils/FixedPointMathLib.sol";
  * @notice The Risk Module manages the supported asset related risks, collateral factor, liquidity threshold
  * @dev No end-user should directly interact with the Risk Module
  */
-contract RiskModule is Ownable {
+contract RiskModule {
     using FixedPointMathLib for uint256;
 
     mapping(address => mapping(uint256 => uint16)) public collateralFactors;
     mapping(address => mapping(uint256 => uint16)) public liquidationThresholds;
 
-    uint16 VARIABLE_DECIMAL = 100;
+    uint16 public constant VARIABLE_DECIMAL = 100;
 
-    uint16 MIN_COLLATERAL_FACTOR = 1;
-    uint16 MIN_LIQUIDATION_THRESHOLD = 1;
+    uint16 public constant MIN_COLLATERAL_FACTOR = 0;
+    uint16 public constant MIN_LIQUIDATION_THRESHOLD = 100;
 
-    uint16 MAX_COLLATERAL_FACTOR = 10000;
-    uint16 MAX_LIQUIDATION_THRESHOLD = 10000;
+    uint16 public constant MAX_COLLATERAL_FACTOR = 100;
+    uint16 public constant MAX_LIQUIDATION_THRESHOLD = 10000;
 
-    uint16 DEFAULT_COLLATERAL_FACTOR = 150;
-    uint16 DEFAULT_LIQUIDATION_THRESHOLD = 110;
+    uint16 public constant DEFAULT_COLLATERAL_FACTOR = 50;
+    uint16 public constant DEFAULT_LIQUIDATION_THRESHOLD = 110;
 
     function getCollateralFactor(address assetAddress, uint256 baseCurrency) public view returns (uint16) {
         return collateralFactors[assetAddress][baseCurrency];

@@ -146,9 +146,9 @@ contract aTokenPricingModuleTest is Test {
     function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](1);
-        collateralFactors[0] = 150;
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         uint16[] memory liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = 110;
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
         aTokenPricingModule.setAssetInformation(address(aEth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
@@ -165,11 +165,11 @@ contract aTokenPricingModuleTest is Test {
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
-        collateralFactors[0] = 150;
-        collateralFactors[1] = 150;
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = 110;
-        liquidationThresholds[1] = 110;
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         aTokenPricingModule.setAssetInformation(address(aEth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
