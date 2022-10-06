@@ -8,7 +8,7 @@ pragma solidity ^0.8.13;
 
 import "../../lib/forge-std/src/Test.sol";
 
-abstract contract IntegrationManagerTest is Test {
+abstract contract UniswapV2SwapTest is Test {
     using stdStorage for StdStorage;
 
     //Before
@@ -24,7 +24,7 @@ abstract contract IntegrationManagerTest is Test {
                         DEPLOYMENT
 //////////////////////////////////////////////////////////////*/
 
-contract DeploymentTest is IntegrationManagerTest {
+contract DeploymentTest is UniswapV2SwapTest {
     using stdStorage for StdStorage;
 
     function setUp() public override {
@@ -40,7 +40,7 @@ contract DeploymentTest is IntegrationManagerTest {
                         ACTION SPECIFIC LOGIC
 //////////////////////////////////////////////////////////////*/
 
-contract PerformCallToAdapterTest is IntegrationManagerTest {
+contract executeActionTests is UniswapV2SwapTest {
     function setUp() public override {
         super.setUp();
     }
