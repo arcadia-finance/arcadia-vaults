@@ -466,7 +466,8 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (
-            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals) * collFactor
+            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
+                * collFactor
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -486,7 +487,8 @@ contract EndToEndTest is Test {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (
-            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals) * collFactor
+            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
+                * collFactor
         ) / 100;
         vm.assume(amountCredit > maxCredit);
 
@@ -515,7 +517,8 @@ contract EndToEndTest is Test {
         uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
 
         uint256 maxCredit = (
-            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.daiDecimals)) * collFactor
+            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.daiDecimals))
+                * collFactor
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -553,8 +556,10 @@ contract EndToEndTest is Test {
 
         uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         uint128 amountCredit = uint128(
-            (((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals) * collFactor)
-                / 100
+            (
+                ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
+                    * collFactor
+            ) / 100
         );
         vm.assume(amountCredit > 0);
 
@@ -583,7 +588,8 @@ contract EndToEndTest is Test {
         uint256 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals);
 
         uint256 maxCredit = (
-            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals) * collFactor
+            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
+                * collFactor
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -599,7 +605,8 @@ contract EndToEndTest is Test {
 
         uint256 newValueOfOneEth = (Constants.WAD * newRateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         uint256 expectedAvailableCredit = (
-            ((newValueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals) * collFactor
+            ((newValueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
+                * collFactor
         ) / 100 - amountCredit;
 
         uint256 actualAvailableCredit = proxy.getFreeMargin();
@@ -686,7 +693,8 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
-            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals) * collFactor
+            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
+                * collFactor
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -720,7 +728,8 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
-            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals) * collFactor
+            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
+                * collFactor
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -757,7 +766,8 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
-            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals) * collFactor
+            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
+                * collFactor
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -802,7 +812,8 @@ contract EndToEndTest is Test {
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
-            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals) * collFactor
+            ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
+                * collFactor
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 

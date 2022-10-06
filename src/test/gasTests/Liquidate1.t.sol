@@ -651,7 +651,9 @@ contract gasLiquidate_1ERC20 is Test {
         vm.prank(vaultOwner);
         uint256 valueEth = (((10 ** 18 * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * s_assetAmounts[0])
             / 10 ** Constants.ethDecimals;
-        pool.borrow(uint128((valueEth / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100), address(proxy), vaultOwner);
+        pool.borrow(
+            uint128((valueEth / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100), address(proxy), vaultOwner
+        );
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd) / 2);

@@ -667,7 +667,9 @@ contract gasLiquidate_2ERC202ERC721 is Test {
         ) * s_3[2];
         uint256 valueMayc = ((10 ** 18 * rateWmaycToUsd) / 10 ** Constants.oracleWmaycToUsdDecimals) * s_3[3];
         pool.borrow(
-            uint128(((valueEth + valueLink + valueBayc + valueMayc) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100),
+            uint128(
+                ((valueEth + valueLink + valueBayc + valueMayc) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100
+            ),
             address(proxy),
             vaultOwner
         );

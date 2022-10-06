@@ -202,9 +202,7 @@ contract RiskModuleTest is Test {
         assertEq(collateralValue, calcCollateralValue);
     }
 
-    function testSuccess_calculateWeightedCollateralValue_smallAmountSmallValue()
-        public
-    {
+    function testSuccess_calculateWeightedCollateralValue_smallAmountSmallValue() public {
         // Given: The address of assets and the values of assets. One of the values of assets are zero
 
         address[] memory addresses = new address[](2);

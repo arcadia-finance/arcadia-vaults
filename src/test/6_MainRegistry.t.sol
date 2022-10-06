@@ -1237,8 +1237,14 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
-        assertEq(mainRegistry.DEFAULT_COLLATERAL_FACTOR(), mainRegistry.collateralFactors(address(eth), Constants.UsdBaseCurrency));
-        assertEq(mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD(), mainRegistry.liquidationThresholds(address(eth), Constants.EthBaseCurrency));
+        assertEq(
+            mainRegistry.DEFAULT_COLLATERAL_FACTOR(),
+            mainRegistry.collateralFactors(address(eth), Constants.UsdBaseCurrency)
+        );
+        assertEq(
+            mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD(),
+            mainRegistry.liquidationThresholds(address(eth), Constants.EthBaseCurrency)
+        );
     }
 }
 
