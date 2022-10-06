@@ -15,9 +15,7 @@ abstract contract UniswapV2SwapTest is Test {
     constructor() {}
 
     //Before Each
-    function setUp() public virtual {
-        
-    }
+    function setUp() public virtual {}
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -31,9 +29,7 @@ contract DeploymentTest is UniswapV2SwapTest {
         super.setUp();
     }
 
-    function testSuccess_deployment() public {
-
-    }
+    function testSuccess_deployment() public {}
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -44,5 +40,4 @@ contract executeActionTests is UniswapV2SwapTest {
     function setUp() public override {
         super.setUp();
     }
-
 }

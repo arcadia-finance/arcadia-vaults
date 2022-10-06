@@ -807,7 +807,6 @@ contract Vault {
         return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
     }
 
-
     /*///////////////////////////////////////////////////////////////
                     ASSET MANAGEMENT LOGIC
     ///////////////////////////////////////////////////////////////*/
@@ -817,4 +816,7 @@ contract Vault {
         IActionHandler(_actionHandler).executeAction(_actionData);
     }
 
+    function approveAssetForActionHandler(address _target, address _asset, uint256 _amount) {
+        IERC20(_asset).approve(_target, _amount);
+    }
 }

@@ -493,7 +493,11 @@ contract EndToEndTest is Test {
         assertEq(dai.balanceOf(vaultOwner), 0);
     }
 
-    function testSuccess_borrow_IncreaseOfDebtPerBlock(uint128 amountEth, uint128 amountCredit, uint32 amountOfBlocksToRoll) public {
+    function testSuccess_borrow_IncreaseOfDebtPerBlock(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint32 amountOfBlocksToRoll
+    ) public {
         uint64 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
         uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) / uint128(pool.YEARLY_BLOCKS());
@@ -562,9 +566,11 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_borrow_AllowAdditionalCreditAfterPriceIncrease(uint128 amountEth, uint128 amountCredit, uint16 newPrice)
-        public
-    {
+    function testSuccess_borrow_AllowAdditionalCreditAfterPriceIncrease(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint16 newPrice
+    ) public {
         vm.assume(newPrice * 10 ** Constants.oracleEthToUsdDecimals > rateEthToUsd);
         (uint16 collThres,,) = proxy.vault();
         vm.assume(amountEth < type(uint128).max / collThres); //prevent overflow in takecredit with absurd values
@@ -661,9 +667,11 @@ contract EndToEndTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_syncInterests_IncreaseBalanceDebtContract(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll)
-        public
-    {
+    function testSuccess_syncInterests_IncreaseBalanceDebtContract(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint16 blocksToRoll
+    ) public {
         vm.assume(amountEth > 0);
         (uint16 collThres,,) = proxy.vault();
         vm.assume(amountEth < type(uint128).max / collThres);
@@ -731,7 +739,9 @@ contract EndToEndTest is Test {
         assertEq(proxy.getUsedMargin(), 0);
     }
 
-    function testSuccess_repay_ExessiveDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll, uint8 factor) public {
+    function testSuccess_repay_ExessiveDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll, uint8 factor)
+        public
+    {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
         (uint16 collThres,,) = proxy.vault();
@@ -771,9 +781,12 @@ contract EndToEndTest is Test {
         assertEq(proxy.getUsedMargin(), 0);
     }
 
-    function testSuccess_repay_PartialDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll, uint128 toRepay)
-        public
-    {
+    function testSuccess_repay_PartialDebt(
+        uint128 amountEth,
+        uint128 amountCredit,
+        uint16 blocksToRoll,
+        uint128 toRepay
+    ) public {
         // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
         vm.assume(amountEth > 0);
         (uint16 collThres,,) = proxy.vault();

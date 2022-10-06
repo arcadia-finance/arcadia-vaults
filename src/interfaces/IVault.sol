@@ -20,4 +20,8 @@ interface IVault {
     function vaultVersion() external view returns (uint8);
 
     function trustedProtocol() external view returns (address);
+
+    function vaultManagementAction(address _actionHandler, bytes memory _actionData) external; 
+    
+    function approveAssetForActionHandler(address _target, address _asset, uint256 _amount) external;
 }

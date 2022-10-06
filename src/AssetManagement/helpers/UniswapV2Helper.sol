@@ -21,10 +21,8 @@ abstract contract UniswapV2Helper {
         uint256 _minIncomingAssetAmount,
         address[] memory _path
     ) internal {
-
         IUniswapV2Router02(UNISWAP_V2_ROUTER2).swapExactTokensForTokens(
             _outgoingAssetAmount, _minIncomingAssetAmount, _path, _to, block.timestamp + 1
         );
     }
-
 }

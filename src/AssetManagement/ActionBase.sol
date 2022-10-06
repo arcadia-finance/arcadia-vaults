@@ -14,9 +14,6 @@ abstract contract ActionBase is IActionBase {
     constructor(address _mainreg) {
         MAIN_REGISTRY = _mainreg;
     }
-    function executeAction(bytes memory _actionData) external {}
-    function _preExecuteActionData() internal {}
-    function _execute() internal {}
-    function _postExecuteCheck() internal {}
 
+    function executeAction(bytes memory _actionData) external {}
 }

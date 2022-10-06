@@ -1237,7 +1237,9 @@ contract MainRegistryTest is Test {
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
     }
 
-    function testRevert_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsdWithRateZero(uint256 amountLink) public {
+    function testRevert_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsdWithRateZero(uint256 amountLink)
+        public
+    {
         vm.assume(amountLink > 0);
 
         vm.startPrank(creatorAddress);

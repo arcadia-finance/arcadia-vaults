@@ -717,7 +717,9 @@ contract vaultTests is Test {
         vault.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function testSuccess_deposit_ERC20ERC721ERC1155(uint8 erc20Amount1, uint8 erc20Amount2, uint8 erc1155Amount) public {
+    function testSuccess_deposit_ERC20ERC721ERC1155(uint8 erc20Amount1, uint8 erc20Amount2, uint8 erc1155Amount)
+        public
+    {
         address[] memory assetAddresses = new address[](4);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(link);
@@ -944,7 +946,9 @@ contract vaultTests is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_withdraw_ERC721AfterTakingCredit(uint128[] calldata tokenIdsDeposit, uint8 baseAmountCredit) public {
+    function testSuccess_withdraw_ERC721AfterTakingCredit(uint128[] calldata tokenIdsDeposit, uint8 baseAmountCredit)
+        public
+    {
         vm.assume(tokenIdsDeposit.length < 50); //test speed
         uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.daiDecimals);
 
@@ -1082,7 +1086,9 @@ contract vaultTests is Test {
         assertEq(expectedRemaining, vault.getFreeMargin());
     }
 
-    function testSuccess_getFreeMargin_AfterTopUp(uint8 amountEth, uint8 amountLink, uint128[] calldata tokenIds) public {
+    function testSuccess_getFreeMargin_AfterTopUp(uint8 amountEth, uint8 amountLink, uint128[] calldata tokenIds)
+        public
+    {
         vm.assume(tokenIds.length < 10 && tokenIds.length > 1);
         (uint16 collThres,,) = vault.vault();
 

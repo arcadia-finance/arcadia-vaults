@@ -7,7 +7,5 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 interface IActionBase {
-
     function executeAction(bytes memory _actionData) external;
-
 }
