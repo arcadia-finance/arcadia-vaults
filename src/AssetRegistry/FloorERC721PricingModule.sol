@@ -45,7 +45,7 @@ contract FloorERC721PricingModule is PricingModule {
      * - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
      * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
      * @param assetLiquidationThresholds The List of liquidation threshold for the asset for the different BaseCurrencies
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should or be as long as
+     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
      * is initiated as default (safest lowest rating).
