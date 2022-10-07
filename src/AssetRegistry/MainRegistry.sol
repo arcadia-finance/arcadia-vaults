@@ -223,14 +223,6 @@ contract MainRegistry is Ownable, RiskModule {
         uint16[] memory assetCollateralFactors,
         uint16[] memory assetLiquidationThresholds
     ) external onlyPricingModule {
-        if (inMainRegistry[assetAddress]) {
-            require(assetsUpdatable, "MR_AA: Asset not updatable");
-        } else {
-            inMainRegistry[assetAddress] = true;
-            assetsInMainRegistry.push(assetAddress);
-        }
-        assetToPricingModule[assetAddress] = msg.sender;
-
         // Check: Valid length of arrays
         uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
         require(
@@ -240,6 +232,15 @@ contract MainRegistry is Ownable, RiskModule {
             ) || (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
             "MR_AA: LENGTH_MISMATCH"
         );
+
+        if (inMainRegistry[assetAddress]) {
+            require(assetsUpdatable, "MR_AA: Asset not updatable");
+        } else {
+            inMainRegistry[assetAddress] = true;
+            assetsInMainRegistry.push(assetAddress);
+        }
+        assetToPricingModule[assetAddress] = msg.sender;
+
         // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
         if (assetCollateralFactorsLength == 0) {
             // Loop: Per base currency
