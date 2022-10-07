@@ -118,8 +118,6 @@ contract VaultV2 {
         owner = _owner;
         registryAddress = _registryAddress;
         vaultVersion = _vaultVersion;
-        //TODO: DELETE THIS DEFINITIONS WHEN RISKMODULE REACHES MATURITY. 20-09-22 - @zek
-        vault.liqThres = 110;
     }
 
     /**

@@ -29,11 +29,19 @@ import {LendingPool, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol"
 import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
+contract VaultTestExtension is Vault {
+    //Function necessery to set the liquidation threshold, since cheatcodes do not work 
+    // with packed structs
+    function setLiquidationThreshold(uint16 liqThres) public {
+        vault.liqThres = liqThres;
+    }
+}
+
 contract vaultTests is Test {
     using stdStorage for StdStorage;
 
     Factory public factoryContr;
-    Vault public vault;
+    VaultTestExtension public vault;
     ERC20Mock public dai;
     ERC20Mock public eth;
     ERC20Mock public snx;
@@ -307,7 +315,7 @@ contract vaultTests is Test {
     //this is a before each
     function setUp() public {
         vm.startPrank(vaultOwner);
-        vault = new Vault();
+        vault = new VaultTestExtension();
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -673,6 +681,9 @@ contract vaultTests is Test {
         slot = stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault)).find();
         loc = bytes32(slot);
         vm.store(address(debt), loc, addDebt);
+
+        //Set liquidation treshhold on the vault
+        vault.setLiquidationThreshold(mainRegistry.DEFAULT_COLLATERAL_FACTOR());
 
         vm.startPrank(liquidationKeeper);
         factoryContr.liquidate(address(vault));
