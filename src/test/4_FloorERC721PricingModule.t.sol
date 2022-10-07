@@ -153,8 +153,12 @@ contract FloorERC721PricingModuleTest is Test {
     }
 
     function testRevert_setAssetInformation_NonOwnerAddsAsset(address unprivilegedAddress) public {
+        // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress setAssetInformation
+
+        // Then: setAssetInformation should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -170,8 +174,12 @@ contract FloorERC721PricingModuleTest is Test {
 
     function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
+        // Given: assetCreditRatings index 0 is 0
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
+        // When: creatorAddress setAssetInformation with wrong number of credits
+
+        // Then: setAssetInformation should revert with "MR_AA: LENGTH_MISMATCH"
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -187,7 +195,9 @@ contract FloorERC721PricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
+        // Given:
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation with empty list credit ratings
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -199,14 +209,17 @@ contract FloorERC721PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: inPricingModule for address(bayc) should return true
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
+        // Given: assetCreditRatings index 0 is 0 and assetCreditRatings index 1 is 0
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
+        // When: creatorAddress setAssetInformation with full list credit ratings
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -218,11 +231,14 @@ contract FloorERC721PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: address(bayc) should be inPricingModule
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
     function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
+        // Given: 
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation twice
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -243,11 +259,14 @@ contract FloorERC721PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: address(bayc) should be inPricingModule
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
     function testSuccess_isWhiteListed_Positive() public {
+        // Given: 
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -259,18 +278,25 @@ contract FloorERC721PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: address(bayc) should return true on isWhiteListed for id's 0 to 9999
         assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 0));
         assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 9999));
         assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 5000));
     }
 
     function testSuccess_isWhiteListed_NegativeWrongAddress(address randomAsset) public {
+        // Given:
+        // When: input is randomAsset
+
+        // Then: isWhiteListed for randomAsset should return false
         assertTrue(!floorERC721PricingModule.isWhiteListed(randomAsset, 0));
     }
 
     function testSuccess_isWhiteListed_NegativeIdOutsideRange(uint256 id) public {
+        // Given: id is lower than 10 or bigger than 1000
         vm.assume(id < 10 || id > 1000);
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -282,11 +308,13 @@ contract FloorERC721PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: isWhiteListed for address(bayc) should return false
         assertTrue(!floorERC721PricingModule.isWhiteListed(address(bayc), id));
     }
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd() public {
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -308,14 +336,17 @@ contract FloorERC721PricingModuleTest is Test {
             assetAmount: 1,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testSuccess_getValue_ReturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress setAssetInformation, expectedValueInUsd is zero
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -337,14 +368,17 @@ contract FloorERC721PricingModuleTest is Test {
             assetAmount: 1,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWmaycToUsdArr,
@@ -365,8 +399,10 @@ contract FloorERC721PricingModuleTest is Test {
             assetAmount: 1,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }

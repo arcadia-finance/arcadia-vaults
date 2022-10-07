@@ -157,8 +157,12 @@ contract StandardERC20PricingModuleTest is Test {
     }
 
     function testRevert_setAssetInformation_NonOwnerAddsAsset(address unprivilegedAddress) public {
+        // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress setAssetInformation
+
+        // Then: setAssetInformation should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -173,8 +177,12 @@ contract StandardERC20PricingModuleTest is Test {
 
     function testRevert_setAssetInformation_OwnerAddsAssetWithMoreThan18Decimals() public {
         vm.startPrank(creatorAddress);
+        // Given: assetCreditRatings index 0 is 0
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
+        // When: creatorAddress setAssetInformation with 19 decimals
+
+        // Then: setAssetInformation should revert with "SSR_SAI: Maximal 18 decimals"
         vm.expectRevert("SSR_SAI: Maximal 18 decimals");
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -189,8 +197,12 @@ contract StandardERC20PricingModuleTest is Test {
 
     function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
+        // Given: assetCreditRatings index 0 is 0
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
+        // When: creatorAddress setAssetInformation with wrong number of credits
+
+        // Then: setAssetInformation should revert with "MR_AA: LENGTH_MISMATCH"
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -204,7 +216,9 @@ contract StandardERC20PricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
+        // Given:
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation with empty list credit ratings
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -215,14 +229,17 @@ contract StandardERC20PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: address(eth) should be inPricingModule
         assertTrue(standardERC20Registry.inPricingModule(address(eth)));
     }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
+        // Given: assetCreditRatings index 0 is 0 and assetCreditRatings index 1 is 0
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
+        // When: creatorAddress setAssetInformation with full list credit ratings
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -233,11 +250,14 @@ contract StandardERC20PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: address(eth) should be inPricingModule
         assertTrue(standardERC20Registry.inPricingModule(address(eth)));
     }
 
     function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
+        // Given: 
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation twice
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -256,11 +276,14 @@ contract StandardERC20PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: address(eth) should be inPricingModule
         assertTrue(standardERC20Registry.inPricingModule(address(eth)));
     }
 
     function testSuccess_isWhiteListed_Positive() public {
+        // Given: 
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -271,16 +294,22 @@ contract StandardERC20PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: address(eth) should return true on isWhiteListed
         assertTrue(standardERC20Registry.isWhiteListed(address(eth), 0));
     }
 
     function testSuccess_isWhiteListed_Negative(address randomAsset) public {
+        // Given:
+        // When: input is randomAsset
+
+        // Then: isWhiteListed for randomAsset should return false
         assertTrue(!standardERC20Registry.isWhiteListed(randomAsset, 0));
     }
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -301,8 +330,10 @@ contract StandardERC20PricingModuleTest is Test {
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = standardERC20Registry.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
@@ -310,6 +341,7 @@ contract StandardERC20PricingModuleTest is Test {
     function testSuccess_getValue_returnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountSnx) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress setAssetInformation, expectedValueInUsd is zero
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
@@ -330,8 +362,10 @@ contract StandardERC20PricingModuleTest is Test {
             assetAmount: amountSnx,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = standardERC20Registry.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
@@ -339,6 +373,7 @@ contract StandardERC20PricingModuleTest is Test {
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountLink) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
@@ -359,13 +394,16 @@ contract StandardERC20PricingModuleTest is Test {
             assetAmount: amountLink,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = standardERC20Registry.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testSuccess_getValue(uint256 rateEthToUsdNew, uint256 amountEth) public {
+        // Given: rateEthToUsdNew is lower than equal to max int256 value and max uint256 value divided by Constants.WAD
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew <= type(uint256).max / Constants.WAD);
 
@@ -405,13 +443,16 @@ contract StandardERC20PricingModuleTest is Test {
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = standardERC20Registry.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testRevert_getValue_ReturnValueOverflow(uint256 rateEthToUsdNew, uint256 amountEth) public {
+        // Given: rateEthToUsdNew is lower than equal to max int256 value and max uint256 value divided by Constants.WAD and bigger than zero
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew <= type(uint256).max / Constants.WAD);
         vm.assume(rateEthToUsdNew > 0);
@@ -442,7 +483,9 @@ contract StandardERC20PricingModuleTest is Test {
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
-        //Arithmetic overflow.
+        // When: getValue called
+
+        // Then: getValue should be reverted
         vm.expectRevert(bytes(""));
         standardERC20Registry.getValue(getValueInput);
     }

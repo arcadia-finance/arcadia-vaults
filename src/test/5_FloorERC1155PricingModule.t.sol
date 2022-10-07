@@ -130,8 +130,12 @@ contract FloorERC1155PricingModuleTest is Test {
     }
 
     function testRevert_setAssetInformation_NonOwnerAddsAsset(address unprivilegedAddress) public {
+        // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress setAssetInformation
+
+        // Then: setAssetInformation should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -147,8 +151,12 @@ contract FloorERC1155PricingModuleTest is Test {
 
     function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
+        // Given: assetCreditRatings index 0 is 0
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
+        // When: creatorAddress setAssetInformation with wrong number of credits
+
+        // Then: setAssetInformation should revert with "MR_AA: LENGTH_MISMATCH"
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -163,7 +171,9 @@ contract FloorERC1155PricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
+        // Given:
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation with empty list credit ratings
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
@@ -174,14 +184,17 @@ contract FloorERC1155PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: inPricingModule for address(interleave) should return true
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
+        // Given: assetCreditRatings index 0 is 0 and assetCreditRatings index 1 is 0
         vm.startPrank(creatorAddress);
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
+        // When: creatorAddress setAssetInformation with full list credit ratings
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
@@ -192,11 +205,14 @@ contract FloorERC1155PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: address(interleave) should be inPricingModule
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
     function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
+        // Given: 
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation twice
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
@@ -215,11 +231,14 @@ contract FloorERC1155PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: address(interleave) should be inPricingModule
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
     function testSuccess_isWhiteListed_Positive() public {
+        // Given: 
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
@@ -230,16 +249,23 @@ contract FloorERC1155PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: address(interleave) should return true
         assertTrue(floorERC1155PricingModule.isWhiteListed(address(interleave), 1));
     }
 
     function testSuccess_isWhiteListed_NegativeWrongAddress(address randomAsset) public {
+        // Given:
+        // When: input is randomAsset
+
+        // Then: isWhiteListed for randomAsset should return false
         assertTrue(!floorERC1155PricingModule.isWhiteListed(randomAsset, 1));
     }
 
     function testSuccess_isWhiteListed_NegativeIdOutsideRange(uint256 id) public {
+        // Given: id not equal to 1
         vm.assume(id != 1);
         vm.startPrank(creatorAddress);
+        // When: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
@@ -250,12 +276,14 @@ contract FloorERC1155PricingModuleTest is Test {
         );
         vm.stopPrank();
 
+        // Then: isWhiteListed for address(interlave) should return false
         assertTrue(!floorERC1155PricingModule.isWhiteListed(address(interleave), id));
     }
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountInterleave) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
@@ -276,9 +304,11 @@ contract FloorERC1155PricingModuleTest is Test {
             assetAmount: amountInterleave,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
             floorERC1155PricingModule.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
@@ -286,6 +316,7 @@ contract FloorERC1155PricingModuleTest is Test {
     function testSuccess_getValue_returnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountInterleave) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress setAssetInformation, expectedValueInUsd is zero
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
@@ -306,9 +337,11 @@ contract FloorERC1155PricingModuleTest is Test {
             assetAmount: amountInterleave,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
             floorERC1155PricingModule.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
@@ -316,6 +349,7 @@ contract FloorERC1155PricingModuleTest is Test {
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountInterleave) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
@@ -336,14 +370,17 @@ contract FloorERC1155PricingModuleTest is Test {
             assetAmount: amountInterleave,
             baseCurrency: uint8(Constants.SafemoonBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
             floorERC1155PricingModule.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testSuccess_getValue_ReturnValue(uint256 amountInterleave, uint256 rateInterleaveToEthNew) public {
+        // Given: rateInterleaveToEthNew is lower than equal to max int256 value and max uint256 value divided by Constants.WAD
         vm.assume(rateInterleaveToEthNew <= uint256(type(int256).max));
         vm.assume(rateInterleaveToEthNew <= type(uint256).max / Constants.WAD);
 
@@ -383,14 +420,17 @@ contract FloorERC1155PricingModuleTest is Test {
             assetAmount: amountInterleave,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
+        // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
             floorERC1155PricingModule.getValue(getValueInput);
 
+        // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testRevert_getValue_ReturnValueOverflow(uint256 amountInterleave, uint256 rateInterleaveToEthNew) public {
+        // Given: rateInterleaveToEthNew is lower than equal to max int256 value and max uint256 value divided by Constants.WAD and bigger than zero
         vm.assume(rateInterleaveToEthNew <= uint256(type(int256).max));
         vm.assume(rateInterleaveToEthNew <= type(uint256).max / Constants.WAD);
         vm.assume(rateInterleaveToEthNew > 0);
@@ -422,7 +462,9 @@ contract FloorERC1155PricingModuleTest is Test {
             assetAmount: amountInterleave,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
-        //Arithmetic overflow.
+        // When: getValue called
+
+        // Then: getValue should be reverted
         vm.expectRevert(stdError.arithmeticError);
         floorERC1155PricingModule.getValue(getValueInput);
     }
