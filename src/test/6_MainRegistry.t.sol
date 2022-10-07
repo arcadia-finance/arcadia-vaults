@@ -638,6 +638,9 @@ contract AssetManagementTest is MainRegistryTest {
     }
 
     function testRevert_addAsset_NonPricingModule(address unprivilegedAddress) public {
+        vm.assume(unprivilegedAddress != address(standardERC20PricingModule));
+        vm.assume(unprivilegedAddress != address(floorERC721PricingModule));
+        vm.assume(unprivilegedAddress != address(floorERC1155PricingModule));
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Caller is not a Price Module.");
         mainRegistry.addAsset(address(eth), emptyListUint16, emptyListUint16);
