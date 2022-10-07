@@ -72,7 +72,8 @@ contract RiskModule {
 
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
-            liquidationThreshold256 += valuesPerAsset[i] * uint256(liquidationThresholds[assetAddresses[i]][baseCurrencyInd]);
+            liquidationThreshold256 +=
+                valuesPerAsset[i] * uint256(liquidationThresholds[assetAddresses[i]][baseCurrencyInd]);
             unchecked {
                 i++;
             }

@@ -30,7 +30,7 @@ import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
 contract VaultTestExtension is Vault {
-    //Function necessery to set the liquidation threshold, since cheatcodes do not work 
+    //Function necessary to set the liquidation threshold, since cheatcodes do not work
     // with packed structs
     function setLiquidationThreshold(uint16 liqThres) public {
         vault.liqThres = liqThres;

@@ -45,9 +45,12 @@ contract RiskModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_calculateWeightedLiquidationThreshold_Success(uint128 firstValue, uint128 secondValue, uint16 firstLiqThreshold, uint16 secondLiqThreshold)
-        public
-    {
+    function testSuccess_calculateWeightedLiquidationThreshold_Success(
+        uint128 firstValue,
+        uint128 secondValue,
+        uint16 firstLiqThreshold,
+        uint16 secondLiqThreshold
+    ) public {
         // Given: 2 Assets with value bigger than zero
         // Values are uint128 to prevent overflow in multiplication
         vm.assume(firstValue > 0); // value of the asset can not be zero
@@ -62,8 +65,14 @@ contract RiskModuleTest is Test {
         values[1] = secondValue;
 
         // And: Liquidity Thresholds are within allowed ranges
-        vm.assume(firstLiqThreshold >= riskModule.MIN_LIQUIDATION_THRESHOLD() || firstLiqThreshold <= riskModule.MAX_LIQUIDATION_THRESHOLD());
-        vm.assume(secondLiqThreshold >= riskModule.MIN_LIQUIDATION_THRESHOLD() || secondLiqThreshold <= riskModule.MAX_LIQUIDATION_THRESHOLD());
+        vm.assume(
+            firstLiqThreshold >= riskModule.MIN_LIQUIDATION_THRESHOLD()
+                || firstLiqThreshold <= riskModule.MAX_LIQUIDATION_THRESHOLD()
+        );
+        vm.assume(
+            secondLiqThreshold >= riskModule.MIN_LIQUIDATION_THRESHOLD()
+                || secondLiqThreshold <= riskModule.MAX_LIQUIDATION_THRESHOLD()
+        );
 
         uint256[] memory liquidationThresholds = new uint256[](2);
         liquidationThresholds[0] = firstLiqThreshold;
@@ -142,7 +151,12 @@ contract RiskModuleTest is Test {
         riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
     }
 
-    function testSuccess_calculateWeightedCollateralFactor_Success(uint128 firstValue, uint128 secondValue, uint16 firstCollFactor, uint16 secondCollFactor) public {
+    function testSuccess_calculateWeightedCollateralFactor_Success(
+        uint128 firstValue,
+        uint128 secondValue,
+        uint16 firstCollFactor,
+        uint16 secondCollFactor
+    ) public {
         // Given: 2 Assets with value bigger than zero
         // Values are uint128 to prevent overflow in multiplication
         vm.assume(firstValue > 0); // value of the asset can not be zero
@@ -157,8 +171,14 @@ contract RiskModuleTest is Test {
         values[1] = secondValue;
 
         // And: Liquidity Thresholds are within allowed ranges
-        vm.assume(firstCollFactor >= riskModule.MIN_COLLATERAL_FACTOR() || firstCollFactor <= riskModule.MAX_COLLATERAL_FACTOR());
-        vm.assume(secondCollFactor >= riskModule.MIN_COLLATERAL_FACTOR() || secondCollFactor <= riskModule.MAX_COLLATERAL_FACTOR());
+        vm.assume(
+            firstCollFactor >= riskModule.MIN_COLLATERAL_FACTOR()
+                || firstCollFactor <= riskModule.MAX_COLLATERAL_FACTOR()
+        );
+        vm.assume(
+            secondCollFactor >= riskModule.MIN_COLLATERAL_FACTOR()
+                || secondCollFactor <= riskModule.MAX_COLLATERAL_FACTOR()
+        );
 
         uint256[] memory collateralFactors = new uint256[](2);
         collateralFactors[0] = firstCollFactor;
