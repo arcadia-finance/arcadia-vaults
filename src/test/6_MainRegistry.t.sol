@@ -424,7 +424,7 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
 
-        vm.expectRevert("MR_ABC: Collateral Factor should be in limits");
+        vm.expectRevert("MR_ABC: Coll.Fact not in limits");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
@@ -440,7 +440,7 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         liquidationThresholds[0] = 11000;
 
-        vm.expectRevert("MR_ABC: Liquidation Threshold should be in the limits");
+        vm.expectRevert("MR_ABC: Liq.Thres not in limits");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
@@ -569,7 +569,7 @@ contract PriceModuleManagementTest is MainRegistryTest {
     function testRevert_addPricingModule_AddExistingPricingModule() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        vm.expectRevert("MR_APM: Price Module already exists");
+        vm.expectRevert("MR_APM: PriceMod. not unique");
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         vm.stopPrank();
     }
@@ -668,7 +668,7 @@ contract AssetManagementTest is MainRegistryTest {
         liquidationThresholds[2] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
 
         vm.startPrank(address(standardERC20PricingModule));
-        vm.expectRevert("MR_AA: Liquidation Threshold should be in the limits");
+        vm.expectRevert("MR_AA: Liq.Thres not in limits");
         mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
     }
@@ -684,14 +684,14 @@ contract AssetManagementTest is MainRegistryTest {
         liquidationThresholds[2] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
 
         vm.startPrank(address(standardERC20PricingModule));
-        vm.expectRevert("MR_AA: Collateral Factor should be in limits");
+        vm.expectRevert("MR_AA: Coll.Fact not in limits");
         mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
         vm.startPrank(address(standardERC20PricingModule));
         collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         liquidationThresholds[0] = 11000;
-        vm.expectRevert("MR_AA: Liquidation Threshold should be in the limits");
+        vm.expectRevert("MR_AA: Liq.Thres not in limits");
         mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
     }
@@ -752,7 +752,7 @@ contract AssetManagementTest is MainRegistryTest {
         assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
 
         vm.startPrank(address(floorERC721PricingModule));
-        vm.expectRevert("MR_AA: already known");
+        vm.expectRevert("MR_AA: Asset not updatable");
         mainRegistry.addAsset(address(eth), emptyListUint16, emptyListUint16);
         vm.stopPrank();
 
@@ -1204,7 +1204,7 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
 
         vm.startPrank(creatorAddress);
-        vm.expectRevert("MR_AA: Collateral Factor should be in the limits");
+        vm.expectRevert("MR_BSRV: CollFact not in limits");
         mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
@@ -1212,7 +1212,7 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         liquidationThresholds[0] = 11000;
 
         vm.startPrank(creatorAddress);
-        vm.expectRevert("MR_AA: Liquidation Threshold should be in the limits");
+        vm.expectRevert("MR_BSRV: Liq.Thres not in limits");
         mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
         vm.stopPrank();
     }

@@ -156,12 +156,12 @@ contract MainRegistry is Ownable, RiskModule {
             require(
                 baseCurrencyCollateralFactors[i] <= MAX_COLLATERAL_FACTOR
                     && baseCurrencyCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                "MR_ABC: Collateral Factor should be in limits"
+                "MR_ABC: Coll.Fact not in limits"
             );
             require(
                 baseCurrencyLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
                     && baseCurrencyLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                "MR_ABC: Liquidation Threshold should be in the limits"
+                "MR_ABC: Liq.Thres not in limits"
             );
 
             collateralFactors[assetsInMainRegistry[i]][baseCurrencyCounter] = baseCurrencyCollateralFactors[i];
@@ -186,7 +186,7 @@ contract MainRegistry is Ownable, RiskModule {
      * @param subAssetRegistryAddress Address of the Sub-Registry
      */
     function addPricingModule(address subAssetRegistryAddress) external onlyOwner {
-        require(!isPricingModule[subAssetRegistryAddress], "MR_APM: Price Module already exists");
+        require(!isPricingModule[subAssetRegistryAddress], "MR_APM: PriceMod. not unique");
         isPricingModule[subAssetRegistryAddress] = true;
         pricingModules.push(subAssetRegistryAddress);
     }
@@ -213,7 +213,7 @@ contract MainRegistry is Ownable, RiskModule {
      */
     function addAsset(address assetAddress) external onlyPricingModule {
         if (inMainRegistry[assetAddress]) {
-            require(assetsUpdatable, "MR_AA: already known");
+            require(assetsUpdatable, "MR_AA: Asset not updatable");
         } else {
             inMainRegistry[assetAddress] = true;
             assetsInMainRegistry.push(assetAddress);
@@ -251,7 +251,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint16[] memory assetLiquidationThresholds
     ) external onlyPricingModule {
         if (inMainRegistry[assetAddress]) {
-            require(assetsUpdatable, "MR_AA: already known");
+            require(assetsUpdatable, "MR_AA: Asset not updatable");
         } else {
             inMainRegistry[assetAddress] = true;
             assetsInMainRegistry.push(assetAddress);
@@ -286,12 +286,12 @@ contract MainRegistry is Ownable, RiskModule {
             // Check: Values in the allowed limit
             require(
                 assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                "MR_AA: Collateral Factor should be in limits"
+                "MR_AA: Coll.Fact not in limits"
             );
             require(
                 assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
                     && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                "MR_AA: Liquidation Threshold should be in the limits"
+                "MR_AA: Liq.Thres not in limits"
             );
 
             collateralFactors[assetAddress][i] = assetCollateralFactors[i];
@@ -396,12 +396,12 @@ contract MainRegistry is Ownable, RiskModule {
             // Check: Values in the allowed limit
             require(
                 newCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && newCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                "MR_AA: Collateral Factor should be in the limits"
+                "MR_BSRV: CollFact not in limits"
             );
             require(
                 newLiquidationThresholds[i] < MAX_LIQUIDATION_THRESHOLD
                     && newLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                "MR_AA: Liquidation Threshold should be in the limits"
+                "MR_BSRV: Liq.Thres not in limits"
             );
             collateralFactors[assets[i]][_baseCurrencies[i]] = newCollateralFactors[i];
             liquidationThresholds[assets[i]][_baseCurrencies[i]] = newLiquidationThresholds[i];
