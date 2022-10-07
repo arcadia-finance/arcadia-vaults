@@ -155,7 +155,7 @@ contract RiskModuleTest is Test {
         values[0] = firstValue;
         values[1] = secondValue;
 
-        // When: We calculation the liquidation threshold of assets where the liquidation threshold is not properly initiated
+        // When: We calculate the liquidation threshold of assets where the liquidation threshold is not properly initiated
         uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
 
         // Then: The liquidation threshold is 0
@@ -214,8 +214,6 @@ contract RiskModuleTest is Test {
 
         // When: Calculation of the collateral factor
         uint256 collateralValue = riskModule.calculateWeightedCollateralValue(addresses, values, 0);
-
-        emit log_named_uint("collateral va", collateralValue);
 
         // Then: Collateral value is zero, since the values are zero
         assertEq(collateralValue, 0);
