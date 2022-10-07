@@ -206,33 +206,6 @@ contract MainRegistry is Ownable, RiskModule {
     /**
      * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
      * @param assetAddress The address of the asset
-     * @dev By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     * (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
-     * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
-     * assets are no longer updatable.
-     */
-    function addAsset(address assetAddress) external onlyPricingModule {
-        if (inMainRegistry[assetAddress]) {
-            require(assetsUpdatable, "MR_AA: Asset not updatable");
-        } else {
-            inMainRegistry[assetAddress] = true;
-            assetsInMainRegistry.push(assetAddress);
-        }
-        assetToPricingModule[assetAddress] = msg.sender;
-
-        // Hardcode Risk Params for test
-        for (uint256 i; i < baseCurrencyCounter;) {
-            collateralFactors[assetAddress][i] = DEFAULT_COLLATERAL_FACTOR;
-            liquidationThresholds[assetAddress][i] = DEFAULT_LIQUIDATION_THRESHOLD;
-            unchecked {
-                i++;
-            }
-        }
-    }
-
-    /**
-     * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
-     * @param assetAddress The address of the asset
      * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
      * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
