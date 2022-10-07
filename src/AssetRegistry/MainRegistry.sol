@@ -108,7 +108,7 @@ contract MainRegistry is Ownable, RiskModule {
      * Tokens pegged to the native token do not count as native tokens
      * - USDC is not a native token for USD as BaseCurrency
      * - WETH is a native token for ETH as BaseCurrency
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should or be as long as
+     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
      * is initiated as default (safest lowest rating).
