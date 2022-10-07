@@ -102,7 +102,7 @@ contract MainRegistry is Ownable, RiskModule {
      * - assetAddress: The contract address of the baseCurrency,
      * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
-     * @param baseCurrencyCollateralFactors The List of collateral factors for the asset for the different Assets
+     * @param baseCurrencyCollateralFactors The List of collateral factors for the asset for the new base currency
      * @param baseCurrencyLiquidationThresholds The List of liquidation thresholds for each asset for the new base currency
      * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
      * Tokens pegged to the native token do not count as native tokens
@@ -234,11 +234,12 @@ contract MainRegistry is Ownable, RiskModule {
      * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
      * @param assetAddress The address of the asset
      * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation threshold for the asset for the different BaseCurrencies
-     * @dev The list of assetLiquidationThresholds and assetCollateralFactors should or be as long as
-     * the number of baseCurrencies added to the Main Registry or the list must have length 0.
-     * If the list has length zero, collateral factor and liquidation threshold of the asset for all baseCurrencies
-     * is initiated as default with index 0 by default (safest lowest variables).
+     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
+     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
+     * the number of assets added to the Main Registry,or the list must have length 0.
+     * If the list has length zero, the risk variables of the baseCurrency for all assets
+     * is initiated as default (safest lowest rating).
+     * @dev Risk variable are variables with 2 decimals precision
      * @dev By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
      * (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which

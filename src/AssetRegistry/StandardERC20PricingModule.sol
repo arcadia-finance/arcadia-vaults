@@ -44,12 +44,12 @@ contract StandardERC20PricingModule is PricingModule {
      * - assetAddress: The contract address of the asset
      * - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
      * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation threshold for the asset for the different BaseCurrencies
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should or be as long as
+     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
+     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
      * is initiated as default (safest lowest rating).
-     * Risk variable are variables with decimal by 100
+     * @dev Risk variable are variables with 2 decimals precision
      * @dev The assets are added/overwritten in the Main-Registry as well.
      * By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
      * (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
