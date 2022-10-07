@@ -103,7 +103,7 @@ contract MainRegistry is Ownable, RiskModule {
      * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      * @param baseCurrencyCollateralFactors The List of collateral factors for the asset for the different Assets
-     * @param baseCurrencyLiquidationThresholds The List of liquidation threshold for the asset for the different Assets
+     * @param baseCurrencyLiquidationThresholds The List of liquidation thresholds for each asset for the new base currency
      * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
      * Tokens pegged to the native token do not count as native tokens
      * - USDC is not a native token for USD as BaseCurrency
