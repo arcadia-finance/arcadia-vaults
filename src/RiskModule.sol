@@ -31,14 +31,6 @@ contract RiskModule {
     uint16 public constant DEFAULT_COLLATERAL_FACTOR = 50;
     uint16 public constant DEFAULT_LIQUIDATION_THRESHOLD = 110;
 
-    function getCollateralFactor(address assetAddress, uint256 baseCurrency) public view returns (uint16) {
-        return collateralFactors[assetAddress][baseCurrency];
-    }
-
-    function getLiquidationThreshold(address assetAddress, uint256 baseCurrency) public view returns (uint16) {
-        return liquidationThresholds[assetAddress][baseCurrency];
-    }
-
     /**
      * @notice Calculate the weighted collateral value given the assets
      * @param assetAddresses The List of token addresses of the assets
@@ -52,17 +44,13 @@ contract RiskModule {
     ) public view returns (uint256 collateralValue) {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
-        address assetAddress;
-        uint256 collFact;
         for (uint256 i; i < assetAddressesLength;) {
-            assetAddress = assetAddresses[i];
-            collFact = getCollateralFactor(assetAddress, baseCurrencyInd);
-            collateralValue += valuesPerAsset[i] * uint256(collFact);
+            collateralValue += valuesPerAsset[i] * uint256(collateralFactors[assetAddresses[i]][baseCurrencyInd]);
             unchecked {
                 ++i;
             }
         }
-        return collateralValue / VARIABLE_DECIMAL;
+        collateralValue = collateralValue / VARIABLE_DECIMAL;
     }
 
     /**
@@ -81,14 +69,10 @@ contract RiskModule {
 
         uint256 liquidationThreshold256;
         uint256 totalValue;
-        uint16 liqThreshold;
-        address assetAddress;
 
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i];
-            assetAddress = assetAddresses[i];
-            liqThreshold = getLiquidationThreshold(assetAddress, baseCurrencyInd);
-            liquidationThreshold256 += valuesPerAsset[i] * uint256(liqThreshold);
+            liquidationThreshold256 += valuesPerAsset[i] * uint256(liquidationThresholds[assetAddresses[i]][baseCurrencyInd]);
             unchecked {
                 i++;
             }
@@ -101,6 +85,5 @@ contract RiskModule {
         unchecked {
             liquidationThreshold = uint16(liquidationThreshold256 / totalValue);
         }
-        return liquidationThreshold;
     }
 }

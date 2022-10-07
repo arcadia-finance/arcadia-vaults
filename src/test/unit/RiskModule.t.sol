@@ -45,11 +45,11 @@ contract RiskModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_calculateWeightedLiquidationThreshold_Success(uint240 firstValue, uint240 secondValue)
+    function testSuccess_calculateWeightedLiquidationThreshold_Success(uint128 firstValue, uint128 secondValue, uint16 firstLiqThreshold, uint16 secondLiqThreshold)
         public
     {
-        // Given: 2 Assets with 2 values and values has to be bigger than zero for success
-        // Values are uint240 to prevent overflow in multiplication
+        // Given: 2 Assets with value bigger than zero
+        // Values are uint128 to prevent overflow in multiplication
         vm.assume(firstValue > 0); // value of the asset can not be zero
         vm.assume(secondValue > 0); // value of the asset can not be zero
 
@@ -61,13 +61,25 @@ contract RiskModuleTest is Test {
         values[0] = firstValue;
         values[1] = secondValue;
 
+        // And: Liquidity Thresholds are within allowed ranges
+        vm.assume(firstLiqThreshold >= riskModule.MIN_LIQUIDATION_THRESHOLD() || firstLiqThreshold <= riskModule.MAX_LIQUIDATION_THRESHOLD());
+        vm.assume(secondLiqThreshold >= riskModule.MIN_LIQUIDATION_THRESHOLD() || secondLiqThreshold <= riskModule.MAX_LIQUIDATION_THRESHOLD());
+
+        uint256[] memory liquidationThresholds = new uint256[](2);
+        liquidationThresholds[0] = firstLiqThreshold;
+        liquidationThresholds[1] = secondLiqThreshold;
+
+        stdstore.target(address(riskModule)).sig(riskModule.liquidationThresholds.selector).with_key(
+            address(firstAssetAddress)
+        ).with_key(uint256(0)).checked_write(firstLiqThreshold);
+        stdstore.target(address(riskModule)).sig(riskModule.liquidationThresholds.selector).with_key(
+            address(secondAssetAddress)
+        ).with_key(uint256(0)).checked_write(secondLiqThreshold);
+
         // When: The liquidation threshold is calculated with given values
         uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
 
-        // Then: The liquidation threshold has to be bigger than zero
-        assertTrue(liqThres > 0);
-
-        // It should be equal to calculated liquidity threshold
+        // Then: The liquidation threshold should be equal to calculated liquidity threshold
         uint256 calcLiqThreshold;
         uint16 calcLiqThres;
         uint256 totalValue;
@@ -76,8 +88,8 @@ contract RiskModuleTest is Test {
         for (uint256 i; i < addresses.length;) {
             totalValue += values[i];
             assetAddress = addresses[i];
-            calcLiqThres = riskModule.getLiquidationThreshold(assetAddress, 0);
-            calcLiqThreshold += values[i] * uint256(calcLiqThres);
+            calcLiqThres = riskModule.liquidationThresholds(assetAddress, 0);
+            calcLiqThreshold += values[i] * liquidationThresholds[i];
             unchecked {
                 ++i;
             }
@@ -87,7 +99,7 @@ contract RiskModuleTest is Test {
         assertEq(liqThres, calcLiqThreshold);
     }
 
-    function testRevert_calculateWeightedLiquidationThreshold_totalAssetValue() public {
+    function testRevert_calculateWeightedLiquidationThreshold_ZeroTotalAssetValue() public {
         // Given: The address of assets and the values of assets. The values of assets are zero
         uint256 firstValue = 0;
         uint256 secondValue = 0;
@@ -130,44 +142,11 @@ contract RiskModuleTest is Test {
         riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
     }
 
-    function testRevert_calculateWeightedLiquidationThreshold_ZeroNotPossible(
-        address firstAsset,
-        address secondAsset,
-        uint240 firstValue,
-        uint240 secondValue
-    ) public {
-        // Given: 2 Assets with 2 values and values has to be bigger than zero for success.
-        // Values are uint240 to prevent overflow in multiplication
-        // Assets are not in the liquidation threshold mapping
+    function testSuccess_calculateWeightedCollateralFactor_Success(uint128 firstValue, uint128 secondValue, uint16 firstCollFactor, uint16 secondCollFactor) public {
+        // Given: 2 Assets with value bigger than zero
+        // Values are uint128 to prevent overflow in multiplication
         vm.assume(firstValue > 0); // value of the asset can not be zero
         vm.assume(secondValue > 0); // value of the asset can not be zero
-
-        vm.assume(firstAsset != firstAssetAddress);
-        vm.assume(firstAsset != secondAssetAddress);
-        vm.assume(secondAsset != firstAssetAddress);
-        vm.assume(secondAsset != secondAssetAddress);
-
-        address[] memory addresses = new address[](2);
-        addresses[0] = firstAsset;
-        addresses[1] = secondAsset;
-
-        uint256[] memory values = new uint256[](2);
-        values[0] = firstValue;
-        values[1] = secondValue;
-
-        // When: We calculate the liquidation threshold of assets where the liquidation threshold is not properly initiated
-        uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
-
-        // Then: The liquidation threshold is 0
-        assertEq(liqThres, 0);
-    }
-
-    function testSuccess_calculateWeightedCollateralFactor_Success(uint256 firstValue, uint256 secondValue) public {
-        // Given: 2 Assets with 2 values and values has to be greater than = 1 * VARIABLE_DECIMAL / ColFact
-        vm.assume(firstValue > 1); // value of asset should be greater than = 1 * VARIABLE_DECIMAL / ColFact
-        vm.assume(secondValue > 1); // value of asset should be greater than = 1 * VARIABLE_DECIMAL / ColFact
-        vm.assume(firstValue < type(uint256).max / 100); // to prevent the overflow when multiplied with VARIABLE_DECIMAL
-        vm.assume(secondValue < type(uint256).max / 100); // to prevent the overflow when multiplied with VARIABLE_DECIMAL
 
         address[] memory addresses = new address[](2);
         addresses[0] = firstAssetAddress;
@@ -177,21 +156,31 @@ contract RiskModuleTest is Test {
         values[0] = firstValue;
         values[1] = secondValue;
 
+        // And: Liquidity Thresholds are within allowed ranges
+        vm.assume(firstCollFactor >= riskModule.MIN_COLLATERAL_FACTOR() || firstCollFactor <= riskModule.MAX_COLLATERAL_FACTOR());
+        vm.assume(secondCollFactor >= riskModule.MIN_COLLATERAL_FACTOR() || secondCollFactor <= riskModule.MAX_COLLATERAL_FACTOR());
+
+        uint256[] memory collateralFactors = new uint256[](2);
+        collateralFactors[0] = firstCollFactor;
+        collateralFactors[1] = secondCollFactor;
+
+        stdstore.target(address(riskModule)).sig(riskModule.collateralFactors.selector).with_key(
+            address(firstAssetAddress)
+        ).with_key(uint256(0)).checked_write(firstCollFactor);
+        stdstore.target(address(riskModule)).sig(riskModule.collateralFactors.selector).with_key(
+            address(secondAssetAddress)
+        ).with_key(uint256(0)).checked_write(secondCollFactor);
+
         // When: The collateral factor is calculated with given values
         uint256 collateralValue = riskModule.calculateWeightedCollateralValue(addresses, values, 0);
 
-        // Then: The collateral factor has to be bigger than zero
-        assertTrue(collateralValue > 0);
-
-        // And: It should be equal to calculated collateral factor
+        // Then: It should be equal to calculated collateral factor
         uint256 calcCollateralValue;
-        uint16 colFact;
         address assetAddress;
 
         for (uint256 i; i < addresses.length;) {
             assetAddress = addresses[i];
-            colFact = riskModule.getCollateralFactor(assetAddress, 0);
-            calcCollateralValue += values[i] * uint256(colFact);
+            calcCollateralValue += values[i] * collateralFactors[i];
             unchecked {
                 ++i;
             }
