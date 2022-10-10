@@ -13,7 +13,7 @@ interface ILiquidator {
         address liquidationKeeper,
         address originalOwner,
         uint128 openDebt,
-        uint8 liqThres,
+        uint16 liqThres,
         uint8 baseCurrency
     ) external returns (bool);
 }

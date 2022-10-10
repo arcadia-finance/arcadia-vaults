@@ -90,6 +90,8 @@ contract LiquidatorTest is Test {
     address[] public oracleWmaycToUsdArr = new address[](1);
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
 
+    uint16[] emptyListUint16 = new uint16[](0);
+
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -304,7 +306,7 @@ contract LiquidatorTest is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
-        uint256[] memory emptyList = new uint256[](0);
+
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -313,7 +315,8 @@ contract LiquidatorTest is Test {
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -323,7 +326,8 @@ contract LiquidatorTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
 
         standardERC20Registry = new StandardERC20PricingModule(
@@ -343,18 +347,14 @@ contract LiquidatorTest is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = 0;
-        assetCreditRatings[1] = 0;
-        assetCreditRatings[2] = 0;
-
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -362,7 +362,8 @@ contract LiquidatorTest is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -370,7 +371,8 @@ contract LiquidatorTest is Test {
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
 
         floorERC721PricingModule.setAssetInformation(
@@ -380,7 +382,8 @@ contract LiquidatorTest is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
 
         liquidator = new Liquidator(
@@ -482,6 +485,7 @@ contract LiquidatorTest is Test {
     }
 
     function testRevert_liquidate_AuctionHealthyVault(uint128 amountEth, uint128 amountCredit) public {
+        vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         vm.assume(((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals / 150) * 100 >= amountCredit);
@@ -499,8 +503,9 @@ contract LiquidatorTest is Test {
     }
 
     function testSuccess_liquidate_StartAuction(uint128 amountEth, uint256 newPrice) public {
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
-        vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
+        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -525,8 +530,9 @@ contract LiquidatorTest is Test {
     }
 
     function testSuccess_liquidate_ShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public {
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
-        vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
+        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -544,7 +550,7 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (,, uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (,, uint16 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
 
         (uint256 vaultPrice,, bool forSale) = liquidator.getPriceOfVault(address(proxy), 0);
 
@@ -553,10 +559,13 @@ contract LiquidatorTest is Test {
         assertEq(vaultPrice, expectedPrice);
     }
 
-    function testSuccess_liquidate_AuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
+    function testSuccess_liquidate_AuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll)
+        public
+    {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
-        vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
+        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -574,7 +583,7 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt,, uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (uint128 openDebt,, uint16 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
         (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
         vm.roll(block.number + blocksToRoll);
@@ -596,8 +605,9 @@ contract LiquidatorTest is Test {
 
     function testSuccess_buyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
-        vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
+        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -626,8 +636,9 @@ contract LiquidatorTest is Test {
 
     function testSuccess_withdraw_FromPurchasedVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
-        vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
+        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -1028,10 +1039,13 @@ contract LiquidatorTest is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_Breakeven(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll, uint8 breakevenTime) public {
+    function testSuccess_Breakeven(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll, uint8 breakevenTime)
+        public
+    {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * breakevenTime);
-        (uint16 collThresProxy, uint8 liqThresProxy,) = proxy.vault();
-        vm.assume(newPrice / liqThresProxy < rateEthToUsd / collThresProxy);
+        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -1052,7 +1066,7 @@ contract LiquidatorTest is Test {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt,, uint8 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (uint128 openDebt,, uint16 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
         (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
         vm.roll(block.number + blocksToRoll);
