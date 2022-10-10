@@ -813,7 +813,7 @@ contract Vault {
 
     function vaultManagementAction(address _actionHandler, bytes memory _actionData) public onlyOwner {
         //TODO check if _actionHandler is whitelisted handler.
-        IActionHandler(_actionHandler).executeAction(_actionData);
+        IActionBase(_actionHandler).executeAction(_actionData);
     }
 
     function approveAssetForActionHandler(address _target, address _asset, uint256 _amount) public onlyOwner {

@@ -17,19 +17,22 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
     //Maybe add mainreg address also here
     constructor(address _router, address _mainreg) ActionBase(_mainreg) UniswapV2Helper(_router) {}
 
-    function executeAction(bytes calldata _actionData) public override {
+    function executeAction(bytes memory _actionData) public override {
         // decode action data
         (address _vaultAddress, address _caller, bytes memory _actionSpecificData) =
             abi.decode(_actionData, (address, address, bytes));
+
+        //TODO Checks might be redundant?
+        require(_vaultAddress == msg.sender, "UV2_SWAP: can only be called by vaultOwner");
+        require(IVault(_vaultAddress).owner() == _caller, "UV2_SWAP: Only vaultOwner can can call this from Vault");
         // preCheck data
         (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path) =
             _preCheck(_vaultAddress, _actionSpecificData);
         // execute Action
         _execute(_vaultAddress, _outgoing, _incoming, path);
         // postCheck data
+        (uint256[] memory _actualOutgoingAssetsAmounts, uint256[] memory _actualIncomingAssetsAmounts) =
         _postCheck(_vaultAddress, _outgoing, _incoming);
-        // revoke approvals
-        // IVault -> revoke approval for action
     }
 
     function _execute(
@@ -65,12 +68,16 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         ///////////////////////////////*/
 
         for (uint256 i; i < _outgoing.assets.length; i++) {
-            _outgoing.preActionBalances[i] = IERC20(path[0]).balanceOf(_vaultAddress);
+            //account balances preSwap
+            _outgoing.preActionBalances[i] = IERC20(_outgoing.assets[i]).balanceOf(_vaultAddress);
+            // Approve Action for Vault
             IVault(_vaultAddress).approveAssetForActionHandler(
-                address(this), _outgoing.assets[0], _outgoing.assetAmounts[i]
+                address(this), _outgoing.assets[i], _outgoing.assetAmounts[i]
             );
-            // Withdraw to action here?
-        }
+            // Withdraw outgoing assets to actionHandler
+            IERC20(_outgoing.assets[i]).transferFrom(_vaultAddress, address(this), _outgoing.assetAmounts[i]);
+            }
+
 
         /*///////////////////////////////
                     INCOMING

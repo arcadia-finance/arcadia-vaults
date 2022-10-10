@@ -15,5 +15,5 @@ abstract contract ActionBase is IActionBase {
         MAIN_REGISTRY = _mainreg;
     }
 
-    function executeAction(bytes memory _actionData) external {}
+    function executeAction(bytes memory _actionData) virtual external {}
 }
