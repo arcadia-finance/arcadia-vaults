@@ -16,7 +16,7 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILendingPool.sol";
 import "./interfaces/ITrustedProtocol.sol";
-import "./interfaces/IActionHandler.sol";
+import "./interfaces/IActionBase.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -816,7 +816,7 @@ contract Vault {
         IActionHandler(_actionHandler).executeAction(_actionData);
     }
 
-    function approveAssetForActionHandler(address _target, address _asset, uint256 _amount) {
+    function approveAssetForActionHandler(address _target, address _asset, uint256 _amount) public onlyOwner {
         IERC20(_asset).approve(_target, _amount);
     }
 }
