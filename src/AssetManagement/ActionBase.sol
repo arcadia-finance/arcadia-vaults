@@ -7,6 +7,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "../interfaces/IActionBase.sol";
+import "./utils/ActionAssetData.sol";
 
 abstract contract ActionBase is IActionBase {
     address public immutable MAIN_REGISTRY;
@@ -15,5 +16,5 @@ abstract contract ActionBase is IActionBase {
         MAIN_REGISTRY = _mainreg;
     }
 
-    function executeAction(bytes memory _actionData) virtual external {}
+    function executeAction(bytes memory _actionData) virtual external returns (actionAssetsData memory _resultData) {}
 }

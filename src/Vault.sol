@@ -17,6 +17,7 @@ import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILendingPool.sol";
 import "./interfaces/ITrustedProtocol.sol";
 import "./interfaces/IActionBase.sol";
+import "./AssetManagement/utils/ActionAssetData.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -811,9 +812,22 @@ contract Vault {
                     ASSET MANAGEMENT LOGIC
     ///////////////////////////////////////////////////////////////*/
 
-    function vaultManagementAction(address _actionHandler, bytes memory _actionData) public onlyOwner {
+    function vaultManagementAction(address _actionHandler, bytes calldata _actionData) public onlyOwner {
         //TODO check if _actionHandler is whitelisted handler.
-        IActionBase(_actionHandler).executeAction(_actionData);
+        (actionAssetsData outgoing_, actionAssetsData incoming_) = abi.decode(_actionData, (actionAssetData, actionAssetData, _));
+        // withdraw to actionHandler
+
+        for (uint256 i; i < outgoing_.assets.length; i++) {
+        _withdrawERC20(_actionHandler, outgoing_.assets[i], outgoing_.assetAmounts[i]);
+        }
+        (address _incomingAsset, uint256 incomingAmount) = IActionBase(_actionHandler).executeAction(_actionData);
+        //approve Vault in ActionHandler
+        // deposit
+        for (uint256 i; i < incoming_.assets.length; i++) {
+        _depositERC20(_actionHandler, incoming_.assets[i], incoming_.assetAmounts[i]);
+        }
+
+
     }
 
     function approveAssetForActionHandler(address _target, address _asset, uint256 _amount) public onlyOwner {

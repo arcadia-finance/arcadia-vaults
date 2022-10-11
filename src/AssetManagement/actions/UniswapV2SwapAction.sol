@@ -17,7 +17,7 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
     //Maybe add mainreg address also here
     constructor(address _router, address _mainreg) ActionBase(_mainreg) UniswapV2Helper(_router) {}
 
-    function executeAction(bytes memory _actionData) public override {
+    function executeAction(bytes calldata _actionData) public override returns (actionAssetsData memory){
         // decode action data
         (address _vaultAddress, address _caller, bytes memory _actionSpecificData) =
             abi.decode(_actionData, (address, address, bytes));
@@ -33,6 +33,14 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         // postCheck data
         (uint256[] memory _actualOutgoingAssetsAmounts, uint256[] memory _actualIncomingAssetsAmounts) =
         _postCheck(_vaultAddress, _outgoing, _incoming);
+
+        // approve vault to transfer actionHandlers' assets.
+        for (uint256 i; i < _outgoing.assets.length; i++) {
+            IERC20(_incoming.assets[i]).approve(_vaultAddress, type(uint256).max);
+        }
+        _incoming.assetAmounts = _actualIncomingAssetsAmounts;
+
+        return (_incoming);
     }
 
     function _execute(
@@ -55,13 +63,6 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         (_outgoing, _incoming, path) = abi.decode(_actionSpecificData, (actionAssetsData, actionAssetsData, address[]));
 
         require(path.length >= 2, "UV2A_SWAP: _path must be >= 2");
-
-        // Check if inputs are correct
-        require(_outgoing.assets.length == _outgoing.assetAmounts.length, "UV2_SWAP: Outgoing assets arrays unequal");
-        require(_outgoing.assets.length == _outgoing.assetIds.length, "UV2_SWAP: Outgoing assets arrays unequal");
-
-        require(_incoming.assets.length == _incoming.assetAmounts.length, "UV2_SWAP: Incoming assets arrays unequal");
-        require(_incoming.assets.length == _incoming.assetIds.length, "UV2_SWAP: Incoming assets arrays unequal");
 
         /*///////////////////////////////
                     OUTGOING
@@ -101,6 +102,7 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         actionAssetsData memory outgoingAssets_,
         actionAssetsData memory incomingAssets_
     ) private view returns (uint256[] memory incomingAssetAmounts_, uint256[] memory outgoingAssetAmounts_) {
+
         /*///////////////////////////////
                     INCOMING
         ///////////////////////////////*/
