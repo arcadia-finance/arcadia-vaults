@@ -48,12 +48,12 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         actionAssetsData memory _outgoing,
         actionAssetsData memory _incoming,
         address[] memory path
-    ) private {
+    ) internal {
         _uniswapV2Swap(_vaultAddress, _outgoing.assetAmounts[0], _incoming.assetAmounts[0], path);
     }
 
     function _preCheck(address _vaultAddress, bytes memory _actionSpecificData)
-        private
+        internal
         returns (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path)
     {
         /*///////////////////////////////
@@ -101,7 +101,7 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         address _vaultAddress,
         actionAssetsData memory outgoingAssets_,
         actionAssetsData memory incomingAssets_
-    ) private view returns (uint256[] memory incomingAssetAmounts_, uint256[] memory outgoingAssetAmounts_) {
+    ) internal view returns (uint256[] memory incomingAssetAmounts_, uint256[] memory outgoingAssetAmounts_) {
 
         /*///////////////////////////////
                     INCOMING

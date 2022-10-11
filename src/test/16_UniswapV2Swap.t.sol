@@ -16,6 +16,28 @@ import "../mockups/UniswapV2Router02Mock.sol";
 
 import "../Vault.sol";
 
+
+contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
+
+    constructor(address _router, address _mainreg) UniswapV2SwapAction(_router, _mainreg) {}
+
+    function testPreCheck(address _vaultAddress, bytes memory _actionSpecificData) public {
+        _preCheck(_vaultAddress, _actionSpecificData);
+    }
+    function testExecute(address _vaultAddress,
+        actionAssetsData memory _outgoing,
+        actionAssetsData memory _incoming,
+        address[] memory path) public {
+        _execute(_vaultAddress, _outgoing, _incoming,path);
+    }
+    function testPostCheck(address _vaultAddress,
+        actionAssetsData memory outgoingAssets_,
+        actionAssetsData memory incomingAssets_) public {
+        _postCheck(_vaultAddress,outgoingAssets_, incomingAssets_);
+    }
+
+}
+
 abstract contract UniswapV2SwapTest is Test {
     using stdStorage for StdStorage;
 
@@ -33,9 +55,6 @@ abstract contract UniswapV2SwapTest is Test {
 
     //Before
     constructor() {
-
-
-
         vm.startPrank(deployer);
         vault = new Vault();
         mainRegistry
