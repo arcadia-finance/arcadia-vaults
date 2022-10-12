@@ -242,17 +242,27 @@ contract MainRegistryTest is Test {
     }
 
     function testSuccess_MainRegistryInitialisedWithUsdAsBaseCurrency() public {
+        // Given: 
+        // When: 
+        // Then: baseCurrencyLabel should return "USD"
         (,,,, string memory baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
         assertTrue(StringHelpers.compareStrings("USD", baseCurrencyLabel));
     }
 
     function testMainRegistryInitialisedWithBaseCurrencyCounterOfZero() public {
+        // Given: 
+        // When: 
+        // Then: baseCurrencyCounter should return 1
         assertEq(1, mainRegistry.baseCurrencyCounter());
     }
 
     function testRevert_addBaseCurrency_NonOwner(address unprivilegedAddress) public {
+        // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress addBaseCurrency
+
+        // Then: addBaseCurrency should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -268,6 +278,7 @@ contract MainRegistryTest is Test {
     }
 
     function testRevert_addBaseCurrency_OwnerWithWrongNumberOfCreditRatings() public {
+        // Given: assetCreditRatings index 0 is 0
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
@@ -289,6 +300,9 @@ contract MainRegistryTest is Test {
 
         uint256[] memory assetCreditRatings = new uint256[](1);
         assetCreditRatings[0] = 0;
+        // When: creatorAddress calls addBaseCurrency
+
+        // Then: addBaseCurrency reverts with "MR_AN: length"
         vm.expectRevert("MR_AN: length");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -304,6 +318,7 @@ contract MainRegistryTest is Test {
     }
 
     function testRevert_addBaseCurrency_OwnerWithNonExistingCreditRatingCategory() public {
+        // Given: assetCreditRatings index 0 is CREDIT_RATING_CATOGERIES, index 1 is 0
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
@@ -326,6 +341,9 @@ contract MainRegistryTest is Test {
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = mainRegistry.CREDIT_RATING_CATOGERIES();
         assetCreditRatings[1] = 0;
+        // When: creatorAddress calls addBaseCurrency
+
+        // Then: addBaseCurrency reverts with "MR_AN: non existing credRat"
         vm.expectRevert("MR_AN: non existing credRat");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -341,6 +359,7 @@ contract MainRegistryTest is Test {
     }
 
     function testSuccess_addBaseCurrency_OwnerWithEmptyListOfCreditRatings() public {
+        // Given: creatorAddress has empty list of credit ratings
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         standardERC20Registry.setAssetInformation(
@@ -359,7 +378,8 @@ contract MainRegistryTest is Test {
             }),
             emptyList
         );
-
+        
+        // When: creatorAddress calls addBaseCurrency
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -382,10 +402,12 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // Then: baseCurrencyCounter should return 3
         assertEq(3, mainRegistry.baseCurrencyCounter());
     }
 
     function testSuccess_addBaseCurrency_OwnerWithFullListOfCreditRatings() public {
+        // Given: assetCreditRatings index 0 is 0, index  1 is 0
         uint256[] memory assetCreditRatings = new uint256[](2);
         assetCreditRatings[0] = 0;
         assetCreditRatings[1] = 0;
@@ -409,6 +431,7 @@ contract MainRegistryTest is Test {
             emptyList
         );
 
+        // When: creatorAddress calls addBaseCurrency
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
@@ -421,61 +444,88 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // Then: baseCurrencyCounter should return 2
         assertEq(2, mainRegistry.baseCurrencyCounter());
     }
 
     function testRevert_addPricingModule_NonOwner(address unprivilegedAddress) public {
+        // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress calls addPricingModule
+
+        // Then: addPricingModule should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
     }
 
     function testSuccess_addPricingModule_Owner() public {
+        // Given:
+
+        // When: creatorAddress calls addPricingModule for address(standardERC20PricingModule)
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
 
+        // Then: isPricingModule should return address(standardERC20PricingModule)
         assertTrue(mainRegistry.isPricingModule(address(standardERC20Registry)));
     }
 
     function testRevert_addPricingModule_OwnerOverwritesPricingModule() public {
+        // Given: creatorAddress calls addPricingModule for address(standardERC20PricingModule)
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20Registry));
+        // When: creatorAddress calls addPricingModule of address(standardERC20Registry)
+
+        // Then: addPricingModule should revert with "Sub-Registry already exists"
         vm.expectRevert("Sub-Registry already exists");
         mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
     }
 
     function testSuccess_assetsUpdatable_DefaultTrue() public {
+        // Given:
+        // When: 
+        // Then: assetsUpdatable should return true
         assertTrue(mainRegistry.assetsUpdatable());
     }
 
     function testRevert_setAssetsToNonUpdatable_NonOwner(address unprivilegedAddress) public {
+        // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress calls setAssetsToNonUpdatable
+
+        // Then: setAssetsToNonUpdatable should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         mainRegistry.setAssetsToNonUpdatable();
         vm.stopPrank();
     }
 
     function testSuccess_setAssetsToNonUpdatable_Owner() public {
+        // Given: 
+        // When: creatorAddress calls setAssetsToNonUpdatable
         vm.startPrank(creatorAddress);
         mainRegistry.setAssetsToNonUpdatable();
         vm.stopPrank();
 
+        // Then: assetsUpdatable should return true
         assertTrue(!mainRegistry.assetsUpdatable());
     }
 
     function testRevert_addAsset_NonPricingModule(address unprivilegedAddress) public {
+        // Given: 
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress calls addAsset with input of address(eth), emptyList
+        // Then: addAsset should revert with "Caller is not a Price Module."
         vm.expectRevert("Caller is not a Price Module.");
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
     }
 
     function testRevert_addAsset_PricingModuleAddsAssetWithWrongNumberOfCreditRatings() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList and calls addPricingModule, assetCreditRatings index 0 is 0
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -504,12 +554,16 @@ contract MainRegistryTest is Test {
         assetCreditRatings[0] = 0;
 
         vm.startPrank(address(standardERC20Registry));
+        // When: standardERC20PricingModule calls addAsset with input of address(eth), assetCreditRatings
+        // Then: addAsset should revert with "MR_AA: LENGTH_MISMATCH"
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
         mainRegistry.addAsset(address(eth), assetCreditRatings);
         vm.stopPrank();
     }
 
     function testRevert_addAsset_PricingModuleAddsAssetWithNonExistingCreditRatingCategory() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList and calls addPricingModule, 
+        // assetCreditRatings index 0 is CREDIT_RATING_CATOGERIES, index 1 is 0, index 2 is 0
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -540,12 +594,15 @@ contract MainRegistryTest is Test {
         assetCreditRatings[2] = 0;
 
         vm.startPrank(address(standardERC20Registry));
+        // When: standardERC20PricingModule calls addAsset with input of address(eth), assetCreditRatings
+        // Then: addAsset should revert with "MR_AA: non-existing"
         vm.expectRevert("MR_AA: non-existing");
         mainRegistry.addAsset(address(eth), assetCreditRatings);
         vm.stopPrank();
     }
 
     function testSuccess_addAsset_PricingModuleAddsAssetWithEmptyListCreditRatings() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList and calls addPricingModule,
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -570,14 +627,18 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
         vm.stopPrank();
 
+        // When: standardERC20PricingModule calls addAsset with input of address(eth), assetCreditRatings
         vm.startPrank(address(standardERC20Registry));
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
 
+        // Then: inMainRegistry for address(eth) should return true
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
     }
 
     function testSuccess_addAsset_PricingModuleAddsAssetWithFullListCreditRatings() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList and calls addPricingModule, 
+        // assetCreditRatings index 0 is 0, index 1 is 0, index 2 is 0
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -607,14 +668,17 @@ contract MainRegistryTest is Test {
         assetCreditRatings[1] = 0;
         assetCreditRatings[2] = 0;
 
+        // When: standardERC20Registry calls addAsset with input of address(eth), assetCreditRatings
         vm.startPrank(address(standardERC20Registry));
         mainRegistry.addAsset(address(eth), assetCreditRatings);
         vm.stopPrank();
 
+        // Then: inMainRegistry for address(eth) should return true
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
     }
 
     function testSuccess_addAsset_PricingModuleOverwritesAssetPositive() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -640,6 +704,7 @@ contract MainRegistryTest is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         vm.stopPrank();
 
+        // When: standardERC20PricingModule and floorERC721PricingModule calls addAsset with input of address(eth), assetCreditRatings
         vm.startPrank(address(standardERC20Registry));
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
@@ -650,10 +715,13 @@ contract MainRegistryTest is Test {
         mainRegistry.addAsset(address(eth), emptyList);
         vm.stopPrank();
 
+        // Then: assetToPricingModule for address(eth) should return address(floorERC721PricingModule)
         assertEq(address(floorERC721PricingModule), mainRegistry.assetToPricingModule(address(eth)));
     }
 
     function testRevert_addAsset_PricingModuleOverwrites() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetsToNonUpdatable
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -695,6 +763,8 @@ contract MainRegistryTest is Test {
     }
 
     function testSuccess_batchIsWhiteListed_Positive() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -737,6 +807,7 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(bayc) and assetIds index 0 is 0, index 1 is 0
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -745,10 +816,13 @@ contract MainRegistryTest is Test {
         assetIds[0] = 0;
         assetIds[1] = 0;
 
+        // Then: batchIsWhiteListed for assetAddresses, assetIds should return true
         assertTrue(mainRegistry.batchIsWhiteListed(assetAddresses, assetIds));
     }
 
     function testRevert_batchIsWhiteListed_NonEqualInputLists() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -791,6 +865,7 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(bayc) and assetIds index 0 is 0
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -798,11 +873,14 @@ contract MainRegistryTest is Test {
         uint256[] memory assetIds = new uint256[](1);
         assetIds[0] = 0;
 
+        // Then: batchIsWhiteListed for assetAddresses, assetIds should revert with "LENGTH_MISMATCH"
         vm.expectRevert("LENGTH_MISMATCH");
         mainRegistry.batchIsWhiteListed(assetAddresses, assetIds);
     }
 
     function testSuccess_batchIsWhiteListed_NegativeAssetNotWhitelisted() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -845,6 +923,7 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(bayc) and assetIds index 0 is 0, index 1 is 10000
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -853,10 +932,13 @@ contract MainRegistryTest is Test {
         assetIds[0] = 0;
         assetIds[1] = 10000;
 
+        // Then: batchIsWhiteListed for assetAddresses, assetIds should return false
         assertTrue(!mainRegistry.batchIsWhiteListed(assetAddresses, assetIds));
     }
 
     function testSuccess_batchIsWhiteListed_NegativeAssetNotInMainregistry() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -899,6 +981,7 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(safemoon), index 1 is address(bayc) and assetIds index 0 is 0, index 1 is 0
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(safemoon);
         assetAddresses[1] = address(bayc);
@@ -907,10 +990,13 @@ contract MainRegistryTest is Test {
         assetIds[0] = 0;
         assetIds[1] = 0;
 
+        // Then: batchIsWhiteListed for assetAddresses, assetIds should return false
         assertTrue(!mainRegistry.batchIsWhiteListed(assetAddresses, assetIds));
     }
 
     function testSuccess_getWhiteList_MultipleAssets() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -961,16 +1047,21 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: expectedWhiteList index 0 is address(eth), index 1 is address(snx), index 2 is address(bayc)
+        // and actualWhiteList is getWhiteList from mainRegistry
         address[] memory expectedWhiteList = new address[](3);
         expectedWhiteList[0] = address(eth);
         expectedWhiteList[1] = address(snx);
         expectedWhiteList[2] = address(bayc);
 
         address[] memory actualWhiteList = mainRegistry.getWhiteList();
+        // Then: expectedWhiteList should be equal to actualWhiteList
         assertTrue(CompareArrays.compareArrays(expectedWhiteList, actualWhiteList));
     }
 
     function testSuccess_getWhiteList_WithAfterRemovalOfAsset() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation for standardERC20PricingModule and floorERC721PricingModule, calls removeFromWhiteList for address(snx)
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1022,15 +1113,19 @@ contract MainRegistryTest is Test {
         standardERC20Registry.removeFromWhiteList(address(snx));
         vm.stopPrank();
 
+        // When: expectedWhiteList index 0 is address(eth), index 1 is address(bayc) and actualWhiteList is getWhiteList on mainRegistry
         address[] memory expectedWhiteList = new address[](3);
         expectedWhiteList[0] = address(eth);
         expectedWhiteList[1] = address(bayc);
 
         address[] memory actualWhiteList = mainRegistry.getWhiteList();
+        // Then: expectedWhiteList array should be equal to actualWhiteList array
         assertTrue(CompareArrays.compareArrays(expectedWhiteList, actualWhiteList));
     }
 
     function testSuccess_getWhiteList_WithAfterRemovalAndReaddingOfAsset() public {
+        // Given: creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation for standardERC20PricingModule and floorERC721PricingModule, calls removeFromWhiteList for address(snx), calls addToWhiteList for address(snx)
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1083,12 +1178,14 @@ contract MainRegistryTest is Test {
         standardERC20Registry.addToWhiteList(address(snx));
         vm.stopPrank();
 
+        // When: expectedWhiteList index 0 is address(eth), index 1 is address(snx), index 2 is address(bayc) and actualWhiteList is getWhiteList on mainRegistry
         address[] memory expectedWhiteList = new address[](3);
         expectedWhiteList[0] = address(eth);
         expectedWhiteList[1] = address(snx);
         expectedWhiteList[2] = address(bayc);
 
         address[] memory actualWhiteList = mainRegistry.getWhiteList();
+        // Then: expectedWhiteList array should be equal to actualWhiteList array
         assertTrue(CompareArrays.compareArrays(expectedWhiteList, actualWhiteList));
     }
 
@@ -1097,6 +1194,9 @@ contract MainRegistryTest is Test {
         uint256 amountLink,
         uint8 linkDecimals
     ) public {
+        // Given: linkDecimals is less than equal to 18, rateEthToUsdNew is less than equal to max uint256 value and bigger than 0,
+        // creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule,
+        // oracleOwner calls transmit with rateEthToUsdNew and rateLinkToUsd
         vm.assume(linkDecimals <= 18);
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew > 0);
@@ -1150,6 +1250,9 @@ contract MainRegistryTest is Test {
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
+        // actualTotalValue is getTotalValue for assetAddresses, assetIds, assetAmounts and Constants.EthBaseCurrency,
+        // expectedTotalValue is linkValueInEth
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
 
@@ -1169,6 +1272,7 @@ contract MainRegistryTest is Test {
 
         uint256 expectedTotalValue = linkValueInEth;
 
+        // Then: expectedTotalValue should be equal to actualTotalValue
         assertEq(expectedTotalValue, actualTotalValue);
     }
 
@@ -1177,6 +1281,9 @@ contract MainRegistryTest is Test {
         uint256 amountLink,
         uint8 linkDecimals
     ) public {
+        // Given: linkDecimals is less than oracleEthToUsdDecimals, rateEthToUsdNew is less than equal to max uint256 value and bigger than 0,
+        // creatorAddress calls addBaseCurrency, calls addPricingModule with standardERC20PricingModule,
+        // oracleOwner calls transmit with rateEthToUsdNew and rateLinkToUsd
         vm.assume(linkDecimals < Constants.oracleEthToUsdDecimals);
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew > 0);
@@ -1223,6 +1330,8 @@ contract MainRegistryTest is Test {
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
+        // getTotalValue is called
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
 
@@ -1232,12 +1341,14 @@ contract MainRegistryTest is Test {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amountLink;
 
-        //Arithmetic overflow.
+        // Then: getTotalValue should revert with arithmetic overflow
         vm.expectRevert(bytes(""));
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
     }
 
     function testRevert_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsdWithRateZero(uint256 amountLink) public {
+        // Given: amountLink is bigger than 0, creatorAddress calls addBaseCurrency, calls addPricingModule with standardERC20PricingModule,
+        // oracleOwner calls transmit with 0 and rateLinkToUsd
         vm.assume(amountLink > 0);
 
         vm.startPrank(creatorAddress);
@@ -1277,6 +1388,8 @@ contract MainRegistryTest is Test {
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
+        // getTotalValue is called
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
 
@@ -1285,14 +1398,16 @@ contract MainRegistryTest is Test {
 
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amountLink;
-
-        //Divide by 0
+        
+        // Then: getTotalValue should revert
         vm.expectRevert(bytes(""));
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
     }
 
     function testRevert_getTotalValue_NegativeNonEqualInputLists() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1335,6 +1450,8 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 is 0, assetAmounts index 0 and 1 is 10,
+        // getTotalValue is called
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -1346,6 +1463,7 @@ contract MainRegistryTest is Test {
         assetAmounts[0] = 10;
         assetAmounts[1] = 10;
 
+        // Then: getTotalValue should revert with "MR_GTV: LENGTH_MISMATCH"
         vm.expectRevert("MR_GTV: LENGTH_MISMATCH");
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
 
@@ -1361,6 +1479,8 @@ contract MainRegistryTest is Test {
     }
 
     function testRevert_getListOfValuesPerAsset_NonEqualInputLists() public {
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1403,6 +1523,8 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 is 0, assetAmounts index 0 and 1 is 10,
+        // getTotalValue is called
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -1414,6 +1536,7 @@ contract MainRegistryTest is Test {
         assetAmounts[0] = 10;
         assetAmounts[1] = 10;
 
+        // Then: getTotalValue should revert with "MR_GTV: LENGTH_MISMATCH"
         vm.expectRevert("MR_GLV: LENGTH_MISMATCH");
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
 
@@ -1430,6 +1553,8 @@ contract MainRegistryTest is Test {
 
     function testRevert_getTotalValue_UnknownBaseCurrency() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1472,6 +1597,8 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10,
+        // getTotalValue is called
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -1484,12 +1611,15 @@ contract MainRegistryTest is Test {
         assetAmounts[0] = 10;
         assetAmounts[1] = 10;
 
+        // Then: getTotalValue should revert with "MR_GTV: Unknown BaseCurrency"
         vm.expectRevert("MR_GTV: Unknown BaseCurrency");
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.SafemoonBaseCurrency);
     }
 
     function testRevert_getListOfValuesPerAsset_UnknownBaseCurrency() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1532,6 +1662,8 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10,
+        // getTotalValue is called
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(bayc);
@@ -1544,12 +1676,15 @@ contract MainRegistryTest is Test {
         assetAmounts[0] = 10;
         assetAmounts[1] = 10;
 
+        // Then: getTotalValue should revert with "MR_GTV: Unknown BaseCurrency"
         vm.expectRevert("MR_GLV: Unknown BaseCurrency");
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.SafemoonBaseCurrency);
     }
 
     function testRevert_getTotalValue_UnknownAsset() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1592,6 +1727,8 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(safemoon), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10,
+        // getTotalValue is called
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(safemoon);
         assetAddresses[1] = address(bayc);
@@ -1604,12 +1741,15 @@ contract MainRegistryTest is Test {
         assetAmounts[0] = 10;
         assetAmounts[1] = 10;
 
+        // Then: getTotalValue should revert with "MR_GTV: Unknown asset"
         vm.expectRevert("MR_GTV: Unknown asset");
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 
     function testRevert_getListOfValuesPerAsset_UnknownAsset() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on floorERC721PricingModule
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1652,6 +1792,8 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(safemoon), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10,
+        // getTotalValue is called
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(safemoon);
         assetAddresses[1] = address(bayc);
@@ -1664,12 +1806,16 @@ contract MainRegistryTest is Test {
         assetAmounts[0] = 10;
         assetAmounts[1] = 10;
 
+        // Then: getTotalValue should revert with "MR_GTV: Unknown asset"
         vm.expectRevert("MR_GLV: Unknown asset");
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 
     function testSuccess_getTotalValue() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on standardERC20PricingModule and floorERC721PricingModule,
+        // oracleOwner calls transmit on oracleEthToUsd for rateEthToUsd, on oracleLinkToUsd for rateLinkToUsd, on oracleWbaycToEth for rateWbaycToEth
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1726,6 +1872,9 @@ contract MainRegistryTest is Test {
         oracleWbaycToEth.transmit(int256(rateWbaycToEth));
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0, 
+        // assetAmounts index 0 is 10 multiplied by ethDecimals, index 1 is 10 multiplied by linkDecimals, index 2 is 1, actualTotalValue is getTotalValue,
+        // expectedTotalValue is ethValueInEth plus linkValueInEth plus baycValueInEth
         address[] memory assetAddresses = new address[](3);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(link);
@@ -1754,10 +1903,14 @@ contract MainRegistryTest is Test {
 
         uint256 expectedTotalValue = ethValueInEth + linkValueInEth + baycValueInEth;
 
+        // Then: expectedTotalValue should be equal to actualTotalValue
         assertEq(expectedTotalValue, actualTotalValue);
     }
 
     function testSuccess_getListOfValuesPerAsset() public {
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on standardERC20PricingModule and floorERC721PricingModule,
+        // oracleOwner calls transmit on oracleEthToUsd for rateEthToUsd, on oracleLinkToUsd for rateLinkToUsd, on oracleWbaycToEth for rateWbaycToEth
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1814,6 +1967,9 @@ contract MainRegistryTest is Test {
         oracleWbaycToEth.transmit(int256(rateWbaycToEth));
         vm.stopPrank();
 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0, 
+        // assetAmounts index 0 is 10 multiplied by ethDecimals, index 1 is 10 multiplied by linkDecimals, index 2 is 1, actualListOfValuesPerAsset is getListOfValuesPerAsset,
+        // expectedListOfValuesPerAsset index 0 is ethValueInEth, index 1 is linkValueInEth, index 2 is baycValueInEth
         address[] memory assetAddresses = new address[](3);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(link);
@@ -1845,10 +2001,14 @@ contract MainRegistryTest is Test {
         expectedListOfValuesPerAsset[1] = linkValueInEth;
         expectedListOfValuesPerAsset[2] = baycValueInEth;
 
+        // Then: expectedListOfValuesPerAsset array should be equal to actualListOfValuesPerAsset
         assertTrue(CompareArrays.compareArrays(expectedListOfValuesPerAsset, actualListOfValuesPerAsset));
     }
 
     function testSuccess_getListOfValuesPerCreditRating() public {
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // assetCreditRatings index 0 is ethCreditRatingUsd, index 1 is ethCreditRatingDai, index 2 is ethCreditRatingEth, 
+        // calls setAssetInformation on standardERC20PricingModule and floorERC721PricingModule,
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -1956,6 +2116,8 @@ contract MainRegistryTest is Test {
     }
 
     function testRevert_batchSetCreditRating_NonOwner(address unprivilegedAddress) public {
+        // Given: unprivilegedAddress is not creatorAddress, creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on standardERC20PricingModule and floorERC721PricingModule,
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -2007,6 +2169,9 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 and 1 is address(eth), baseCurrencies index 0 is UsdBaseCurrency, index 1 is EthBaseCurrency
+        // assetCreditRatings index 0 is ethCreditRatingUsd, index 1 is ethCreditRatingDai, index 2 is ethCreditRatingEth, 
+        // unprivilegedAddress calls batchSetCreditRating for assetAddresses, baseCurrencies, assetCreditRatings
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
@@ -2021,12 +2186,15 @@ contract MainRegistryTest is Test {
         assetCreditRatings[2] = Constants.ethCreditRatingEth;
 
         vm.startPrank(unprivilegedAddress);
+        // Then: batchSetCreditRating should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         mainRegistry.batchSetCreditRating(assetAddresses, baseCurrencies, assetCreditRatings);
         vm.stopPrank();
     }
 
     function testRevert_batchSetCreditRating_OwnerSetsCreditRatingsNonEqualInputLists() public {
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on standardERC20PricingModule and floorERC721PricingModule,
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -2077,6 +2245,9 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 and 1 is address(eth), baseCurrencies index 0 is UsdBaseCurrency,
+        // assetCreditRatings index 0 is ethCreditRatingUsd, index 1 is ethCreditRatingDai, index 2 is ethCreditRatingEth, 
+        // creatorAddress calls batchSetCreditRating for assetAddresses, baseCurrencies, assetCreditRatings
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
@@ -2090,6 +2261,7 @@ contract MainRegistryTest is Test {
         assetCreditRatings[2] = Constants.ethCreditRatingEth;
 
         vm.startPrank(creatorAddress);
+        // Then: batchSetCreditRating should revert with "MR_BSCR: LENGTH_MISMATCH"
         vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
         mainRegistry.batchSetCreditRating(assetAddresses, baseCurrencies, assetCreditRatings);
         vm.stopPrank();
@@ -2108,6 +2280,8 @@ contract MainRegistryTest is Test {
     }
 
     function testSuccess_batchSetCreditRating_Owner() public {
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on standardERC20PricingModule and floorERC721PricingModule,
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -2158,6 +2332,9 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 and 1 is address(eth), baseCurrencies index 0 is UsdBaseCurrency, index 1 is EthBaseCurrency
+        // assetCreditRatings index 0 is ethCreditRatingUsd, index 1 is ethCreditRatingEth,
+        // creatorAddress calls batchSetCreditRating for assetAddresses, baseCurrencies, assetCreditRatings
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
@@ -2174,6 +2351,8 @@ contract MainRegistryTest is Test {
         mainRegistry.batchSetCreditRating(assetAddresses, baseCurrencies, assetCreditRatings);
         vm.stopPrank();
 
+        // Then: assetToBaseCurrencyToCreditRating for address(eth), Constants.UsdBaseCurrency should be equal to Constants.ethCreditRatingUsd 
+        // assetToBaseCurrencyToCreditRating for address(eth), Constants.Constants.EthBaseCurrency should be equal to Constants.ethCreditRatingUsd 
         assertEq(
             Constants.ethCreditRatingUsd,
             mainRegistry.assetToBaseCurrencyToCreditRating(address(eth), Constants.UsdBaseCurrency)
@@ -2185,6 +2364,8 @@ contract MainRegistryTest is Test {
     }
 
     function testRevert_batchSetCreditRating_OwnerSetsCreditRatingsWithNonExistingCreditRatingCategory() public {
+        // Given: creatorAddress calls addBaseCurrency, calls addPricingModule for standardERC20PricingModule and floorERC721PricingModule,
+        // calls setAssetInformation on standardERC20PricingModule and floorERC721PricingModule,
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -2235,6 +2416,9 @@ contract MainRegistryTest is Test {
         );
         vm.stopPrank();
 
+        // When: assetAddresses index 0 and 1 is address(eth), baseCurrencies index 0 is UsdBaseCurrency, index 1 is EthBaseCurrency
+        // assetCreditRatings index 0 and 1 is CREDIT_RATING_CATOGERIES of mainRegistry,
+        // creatorAddress calls batchSetCreditRating for assetAddresses, baseCurrencies, assetCreditRatings
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(eth);
@@ -2248,6 +2432,7 @@ contract MainRegistryTest is Test {
         assetCreditRatings[1] = mainRegistry.CREDIT_RATING_CATOGERIES();
 
         vm.startPrank(creatorAddress);
+        // Then: batchSetCreditRating should revert with "MR_BSCR: non-existing creditRat"
         vm.expectRevert("MR_BSCR: non-existing creditRat");
         mainRegistry.batchSetCreditRating(assetAddresses, baseCurrencies, assetCreditRatings);
         vm.stopPrank();
@@ -2255,6 +2440,8 @@ contract MainRegistryTest is Test {
 
     //Test setFactory
     function testRevert_setFactory_NonOwner(address unprivilegedAddress) public {
+        // Given: unprivilegedAddress is not creatorAddress, creatorAddress deploys Factory contract, creatorAddress calls setNewVaultInfo on factory,
+        // calls confirmNewVaultInfo on factory
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(creatorAddress);
         factory = new Factory();
@@ -2265,12 +2452,17 @@ contract MainRegistryTest is Test {
         vm.stopPrank();
 
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress calls setFactory
+
+        // Then: setFactory should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         mainRegistry.setFactory(address(factory));
         vm.stopPrank();
     }
 
     function testSuccess_setFactory_OwnerSetsFactoryWithMultipleBaseCurrencies() public {
+        // Given: creatorAddress calls addBaseCurrency, creatorAddress deploys Factory contract, creatorAddress calls setNewVaultInfo on factory,
+        // calls confirmNewVaultInfo on factory
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -2297,9 +2489,11 @@ contract MainRegistryTest is Test {
             address(mainRegistry), 0x0000000000000000000000000000001234567890, Constants.upgradeProof1To2
         );
         factory.confirmNewVaultInfo();
+        // When: creatorAddress calls setFactory for address(factory)
         mainRegistry.setFactory(address(factory));
         vm.stopPrank();
 
+        // Then: address(factory) should be equal to factoryAddress on mainRegistry
         assertEq(address(factory), mainRegistry.factoryAddress());
     }
 }
