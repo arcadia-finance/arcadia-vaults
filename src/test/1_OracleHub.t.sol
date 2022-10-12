@@ -303,10 +303,9 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesSequence);
     }
 
-    function testSuccess_getRate_BaseCurrencyIsUsdForSingleOracle(
-        uint256 rateEthToUsd,
-        uint8 oracleEthToUsdDecimals
-    ) public {
+    function testSuccess_getRate_BaseCurrencyIsUsdForSingleOracle(uint256 rateEthToUsd, uint8 oracleEthToUsdDecimals)
+        public
+    {
         // Given: oracleEthToUsdDecimals less than equal to 18, rateEthToUsd less than equal to max uint256 value,
         // rateEthToUsd is less than max uint256 value divided by WAD
         vm.assume(oracleEthToUsdDecimals <= 18);

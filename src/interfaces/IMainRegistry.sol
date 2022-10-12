@@ -7,7 +7,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 interface IMainRegistry {
-    function addAsset(address, uint256[] memory) external;
+    function addAsset(address, uint16[] calldata, uint16[] calldata) external;
 
     function getTotalValue(
         address[] calldata _assetAddresses,

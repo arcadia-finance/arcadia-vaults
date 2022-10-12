@@ -43,21 +43,25 @@ contract StandardERC20PricingModule is PricingModule {
      * - assetUnit: The unit of the asset, equal to 10 to the power of the number of decimals of the asset
      * - assetAddress: The contract address of the asset
      * - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
-     * @param assetCreditRatings The List of Credit Ratings for the asset for the different BaseCurrencies.
-     * @dev The list of Credit Ratings should or be as long as the number of baseCurrencies added to the Main Registry,
-     * or the list must have length 0. If the list has length zero, the credit ratings of the asset for all baseCurrencies is
-     * is initiated as credit rating with index 0 by default (worst credit rating).
+     * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
+     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
+     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
+     * the number of assets added to the Main Registry,or the list must have length 0.
+     * If the list has length zero, the risk variables of the baseCurrency for all assets
+     * is initiated as default (safest lowest rating).
+     * @dev Risk variable are variables with 2 decimals precision
      * @dev The assets are added/overwritten in the Main-Registry as well.
      * By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     * (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
+     * (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      * @dev Assets can't have more than 18 decimals.
      */
-    function setAssetInformation(AssetInformation calldata assetInformation, uint256[] calldata assetCreditRatings)
-        external
-        onlyOwner
-    {
+    function setAssetInformation(
+        AssetInformation calldata assetInformation,
+        uint16[] calldata assetCollateralFactors,
+        uint16[] calldata assetLiquidationThresholds
+    ) external onlyOwner {
         IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
 
         address assetAddress = assetInformation.assetAddress;
@@ -68,7 +72,7 @@ contract StandardERC20PricingModule is PricingModule {
         }
         assetToInformation[assetAddress] = assetInformation;
         isAssetAddressWhiteListed[assetAddress] = true;
-        IMainRegistry(mainRegistry).addAsset(assetAddress, assetCreditRatings);
+        IMainRegistry(mainRegistry).addAsset(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
     }
 
     /**

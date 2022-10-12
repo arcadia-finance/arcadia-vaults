@@ -46,6 +46,7 @@ contract FloorERC721PricingModuleTest is Test {
     address[] public oracleWmaycToUsdArr = new address[](1);
 
     uint256[] emptyList = new uint256[](0);
+    uint16[] emptyListUint16 = new uint16[](0);
 
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
@@ -141,7 +142,8 @@ contract FloorERC721PricingModuleTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
 
         floorERC721PricingModule = new FloorERC721PricingModule(
@@ -167,16 +169,19 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
         vm.startPrank(creatorAddress);
         // Given: assetCreditRatings index 0 is 0
-        uint256[] memory assetCreditRatings = new uint256[](1);
-        assetCreditRatings[0] = 0;
+        uint16[] memory collateralFactors = new uint16[](1);
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16[] memory liquidationThresholds = new uint16[](1);
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         // When: creatorAddress setAssetInformation with wrong number of credits
 
         // Then: setAssetInformation should revert with "MR_AA: LENGTH_MISMATCH"
@@ -188,13 +193,14 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
         // Given:
         vm.startPrank(creatorAddress);
         // When: creatorAddress setAssetInformation with empty list credit ratings
@@ -205,7 +211,8 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -213,12 +220,15 @@ contract FloorERC721PricingModuleTest is Test {
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         // Given: assetCreditRatings index 0 is 0 and assetCreditRatings index 1 is 0
         vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatings = new uint256[](2);
-        assetCreditRatings[0] = 0;
-        assetCreditRatings[1] = 0;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         // When: creatorAddress setAssetInformation with full list credit ratings
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -227,7 +237,8 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
         vm.stopPrank();
 
@@ -246,7 +257,8 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
@@ -255,7 +267,8 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -274,7 +287,8 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: 9999,
                 assetAddress: address(bayc)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -304,7 +318,8 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: 999,
                 assetAddress: address(bayc)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -322,7 +337,8 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: 999,
                 assetAddress: address(bayc)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -354,7 +370,8 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: 999,
                 assetAddress: address(bayc)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -386,7 +403,8 @@ contract FloorERC721PricingModuleTest is Test {
                 idRangeEnd: 999,
                 assetAddress: address(mayc)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 

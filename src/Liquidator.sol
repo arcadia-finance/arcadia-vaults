@@ -45,7 +45,7 @@ contract Liquidator is Ownable {
     struct auctionInformation {
         uint128 openDebt;
         uint128 startBlock;
-        uint8 liqThres;
+        uint16 liqThres;
         uint8 baseCurrency;
         uint128 assetPaid;
         bool stopped;
@@ -131,7 +131,7 @@ contract Liquidator is Ownable {
         address liquidationKeeper,
         address originalOwner,
         uint128 openDebt,
-        uint8 liqThres,
+        uint16 liqThres,
         uint8 baseCurrency
     ) public elevated returns (bool success) {
         require(auctionInfo[vaultAddress][life].startBlock == 0, "Liquidation already ongoing");

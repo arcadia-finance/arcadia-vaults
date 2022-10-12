@@ -90,6 +90,8 @@ contract VaultV2Test is Test {
     address[] public oracleWmaycToUsdArr = new address[](1);
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
 
+    uint16[] emptyListUint16 = new uint16[](0);
+
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
@@ -302,7 +304,7 @@ contract VaultV2Test is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
-        uint256[] memory emptyList = new uint256[](0);
+
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -311,7 +313,8 @@ contract VaultV2Test is Test {
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -321,7 +324,8 @@ contract VaultV2Test is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
 
         standardERC20Registry = new StandardERC20PricingModule(
@@ -341,18 +345,14 @@ contract VaultV2Test is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        uint256[] memory assetCreditRatings = new uint256[](3);
-        assetCreditRatings[0] = 0;
-        assetCreditRatings[1] = 0;
-        assetCreditRatings[2] = 0;
-
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -360,7 +360,8 @@ contract VaultV2Test is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -368,7 +369,8 @@ contract VaultV2Test is Test {
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
 
         floorERC721PricingModule.setAssetInformation(
@@ -378,7 +380,8 @@ contract VaultV2Test is Test {
                 idRangeEnd: type(uint256).max,
                 assetAddress: address(bayc)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
 
         floorERC1155PricingModule.setAssetInformation(
@@ -387,7 +390,8 @@ contract VaultV2Test is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            assetCreditRatings
+            emptyListUint16,
+            emptyListUint16
         );
 
         liquidator = new Liquidator(
@@ -469,8 +473,8 @@ contract VaultV2Test is Test {
     }
 
     struct VaultInfo {
-        uint16 collThres;
-        uint8 liqThres;
+        uint16 collFactor;
+        uint16 liqThres;
         address baseCurrency;
     }
 
@@ -500,13 +504,14 @@ contract VaultV2Test is Test {
         checks.trustedProtocol = proxy.trustedProtocol();
         checks.life = proxy.life();
         checks.owner = proxy.owner();
-        (vaultVar.collThres, vaultVar.liqThres, vaultVar.baseCurrency) = proxy.vault();
+        (vaultVar.liqThres, vaultVar.baseCurrency) = proxy.vault();
         checks.vaultVar = vaultVar;
 
         return checks;
     }
 
     function testSuccess_upgradeVaultVersion_StorageVariablesAfterUpgradeAreIdentical(uint128 amount) public {
+        vm.assume(amount > 0);
         depositERC20InVault(eth, amount, vaultOwner);
         uint128[] memory tokenIds = new uint128[](3);
         tokenIds[0] = 1;

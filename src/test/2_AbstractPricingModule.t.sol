@@ -130,7 +130,9 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testRevert_removeFromWhiteList_NonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress) public {
+    function testRevert_removeFromWhiteList_NonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress)
+        public
+    {
         // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
 
