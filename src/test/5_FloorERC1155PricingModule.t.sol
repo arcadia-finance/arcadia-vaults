@@ -40,6 +40,7 @@ contract FloorERC1155PricingModuleTest is Test {
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
 
     uint256[] emptyList = new uint256[](0);
+    uint16[] emptyListUint16 = new uint16[](0);
 
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
@@ -118,7 +119,8 @@ contract FloorERC1155PricingModuleTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
 
         floorERC1155PricingModule = new FloorERC1155PricingModule(
@@ -139,16 +141,19 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
 
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
         vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatings = new uint256[](1);
-        assetCreditRatings[0] = 0;
+        uint16[] memory collateralFactors = new uint16[](1);
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16[] memory liquidationThresholds = new uint16[](1);
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -156,13 +161,14 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
 
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -170,25 +176,30 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatings = new uint256[](2);
-        assetCreditRatings[0] = 0;
-        assetCreditRatings[1] = 0;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
         vm.stopPrank();
 
@@ -203,7 +214,8 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
@@ -211,7 +223,8 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -226,7 +239,8 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -246,7 +260,8 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -262,7 +277,8 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -292,7 +308,8 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -322,7 +339,8 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -368,7 +386,8 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -412,7 +431,8 @@ contract FloorERC1155PricingModuleTest is Test {
                 id: 1,
                 assetAddress: address(interleave)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
