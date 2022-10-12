@@ -44,6 +44,7 @@ contract StandardERC20PricingModuleTest is Test {
     address[] public oracleSnxToEthEthToUsd = new address[](2);
 
     uint256[] emptyList = new uint256[](0);
+    uint16[] emptyListUint16 = new uint16[](0);
 
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
@@ -145,7 +146,8 @@ contract StandardERC20PricingModuleTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
 
         standardERC20Registry = new StandardERC20PricingModule(
@@ -166,13 +168,18 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
     }
 
     function testRevert_setAssetInformation_OwnerAddsAssetWithMoreThan18Decimals() public {
         vm.startPrank(creatorAddress);
+        uint16[] memory collateralFactors = new uint16[](1);
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16[] memory liquidationThresholds = new uint16[](1);
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         vm.expectRevert("SSR_SAI: Maximal 18 decimals");
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -180,15 +187,19 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** 19),
                 assetAddress: address(eth)
             }),
-            emptyList
+            collateralFactors,
+            liquidationThresholds
         );
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfCreditRatings() public {
+    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
+        // Turn this into invalid uint16
         vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatings = new uint256[](1);
-        assetCreditRatings[0] = 0;
+        uint16[] memory collateralFactors = new uint16[](1);
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16[] memory liquidationThresholds = new uint16[](1);
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -196,12 +207,13 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -209,25 +221,30 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
         assertTrue(standardERC20Registry.inPricingModule(address(eth)));
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListCreditRatings() public {
+    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        uint256[] memory assetCreditRatings = new uint256[](2);
-        assetCreditRatings[0] = 0;
-        assetCreditRatings[1] = 0;
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            assetCreditRatings
+            collateralFactors,
+            liquidationThresholds
         );
         vm.stopPrank();
 
@@ -242,7 +259,8 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -250,7 +268,8 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -265,7 +284,8 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -285,7 +305,8 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -314,7 +335,8 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -343,7 +365,8 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -388,7 +411,8 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
@@ -430,7 +454,8 @@ contract StandardERC20PricingModuleTest is Test {
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth)
             }),
-            emptyList
+            emptyListUint16,
+            emptyListUint16
         );
         vm.stopPrank();
 
