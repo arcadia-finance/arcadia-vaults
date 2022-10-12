@@ -191,17 +191,13 @@ abstract contract UniswapV2PricingModuleTest is Test {
     }
 
     //this is a before each
-    function setUp() public virtual {
-
-    }
+    function setUp() public virtual {}
 }
 
 contract OldTests is UniswapV2PricingModuleTest {
-
     function setUp() public override {
         super.setUp();
     }
-
 
     function testOwnerAddsAssetWithWrongNumberOfCreditRatings() public {
         vm.startPrank(creatorAddress);
