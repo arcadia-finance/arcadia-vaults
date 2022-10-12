@@ -814,23 +814,26 @@ contract Vault {
 
     function vaultManagementAction(address _actionHandler, bytes calldata _actionData) public onlyOwner {
         //TODO check if _actionHandler is whitelisted handler.
-        (actionAssetsData outgoing_, actionAssetsData incoming_) = abi.decode(_actionData, (actionAssetsData, actionAssetsData, _));
-        // withdraw to actionHandler
+        (actionAssetsData memory outgoing_, actionAssetsData memory incoming_,) =
+            abi.decode(_actionData, (actionAssetsData, actionAssetsData, bytes));
 
-        for (uint256 i; i < outgoing_.assets.length; i++) {
-        _withdrawERC20(_actionHandler, outgoing_.assets[i], outgoing_.assetAmounts[i]);
-        }
-        (actionAssetsData _incomingAssets) = IActionBase(_actionHandler).executeAction(_actionData);
-        //approve Vault in ActionHandler
-        // deposit
+        // Account preActionBalances
+
         for (uint256 i; i < incoming_.assets.length; i++) {
-        _depositERC20(_actionHandler, _incomingAssets.assets[i], _incomingAssets.assetAmounts[i]);
+            incoming_.preActionBalances[i] = IERC20(incoming_.assets[i]).balanceOf(address(this));        }
+
+        // withdraw to actionHandler
+        for (uint256 i; i < outgoing_.assets.length; i++) {
+            outgoing_.preActionBalances[i] = IERC20(outgoing_.assets[i]).balanceOf(address(this));
+            _withdrawERC20(_actionHandler, outgoing_.assets[i], outgoing_.assetAmounts[i]);
         }
 
+        // execute Action
+        (actionAssetsData memory _incomingAssets) = IActionBase(_actionHandler).executeAction(address(this), msg.sender, _actionData);
 
-    }
-
-    function approveAssetForActionHandler(address _target, address _asset, uint256 _amount) public onlyOwner {
-        IERC20(_asset).approve(_target, _amount);
-    }
+        // deposit back into vault (approval in Action)
+        for (uint256 i; i < incoming_.assets.length; i++) {
+            _depositERC20(_actionHandler, _incomingAssets.assets[i], _incomingAssets.assetAmounts[i]);
+        }
+   }
 }

@@ -17,22 +17,25 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
     //Maybe add mainreg address also here
     constructor(address _router, address _mainreg) ActionBase(_mainreg) UniswapV2Helper(_router) {}
 
-    function executeAction(bytes calldata _actionData) public override returns (actionAssetsData memory){
+    function executeAction(address _vaultAddress, address _caller, bytes calldata _actionData) public override returns (actionAssetsData memory) {
         // decode action data
-        (address _vaultAddress, address _caller, bytes memory _actionSpecificData) =
-            abi.decode(_actionData, (address, address, bytes));
+        // (address _vaultAddress, address _caller, bytes memory _actionSpecificData) =
+        //     abi.decode(_actionData, (address, address, bytes));
+
+        
 
         //TODO Checks might be redundant?
         require(_vaultAddress == msg.sender, "UV2_SWAP: can only be called by vaultOwner");
         require(IVault(_vaultAddress).owner() == _caller, "UV2_SWAP: Only vaultOwner can can call this from Vault");
+
         // preCheck data
         (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path) =
-            _preCheck(_vaultAddress, _actionSpecificData);
+            _preCheck(_vaultAddress, _actionData);
         // execute Action
         _execute(_vaultAddress, _outgoing, _incoming, path);
         // postCheck data
         (uint256[] memory _actualOutgoingAssetsAmounts, uint256[] memory _actualIncomingAssetsAmounts) =
-        _postCheck(_vaultAddress, _outgoing, _incoming);
+            _postCheck(_vaultAddress, _outgoing, _incoming);
 
         // approve vault to transfer actionHandlers' assets.
         for (uint256 i; i < _outgoing.assets.length; i++) {
@@ -68,31 +71,30 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
                     OUTGOING
         ///////////////////////////////*/
 
-        for (uint256 i; i < _outgoing.assets.length; i++) {
-            //account balances preSwap
-            _outgoing.preActionBalances[i] = IERC20(_outgoing.assets[i]).balanceOf(_vaultAddress);
-            // Approve Action for Vault
-            IVault(_vaultAddress).approveAssetForActionHandler(
-                address(this), _outgoing.assets[i], _outgoing.assetAmounts[i]
-            );
-            // Withdraw outgoing assets to actionHandler
-            IERC20(_outgoing.assets[i]).transferFrom(_vaultAddress, address(this), _outgoing.assetAmounts[i]);
-            }
-
+        // for (uint256 i; i < _outgoing.assets.length; i++) {
+        //     //account balances preSwap
+        //     _outgoing.preActionBalances[i] = IERC20(_outgoing.assets[i]).balanceOf(_vaultAddress);
+        // //     // Approve Action for Vault
+        // //     IVault(_vaultAddress).approveAssetForActionHandler(
+        //         address(this), _outgoing.assets[i], _outgoing.assetAmounts[i]
+        //     );
+        //     // Withdraw outgoing assets to actionHandler
+        //     IERC20(_outgoing.assets[i]).transferFrom(_vaultAddress, address(this), _outgoing.assetAmounts[i]);
+        // }
 
         /*///////////////////////////////
                     INCOMING
         ///////////////////////////////*/
 
-        // Check if incoming assets are Arcadia whitelisted assets
+        //Check if incoming assets are Arcadia whitelisted assets
         require(
             IMainRegistry(MAIN_REGISTRY).batchIsWhiteListed(_incoming.assets, _incoming.assetIds),
             "UV2A_SWAP: Non-whitelisted incoming asset"
         );
 
-        for (uint256 i; i < _incoming.assets.length; i++) {
-            _incoming.preActionBalances[i] = IERC20(path[0]).balanceOf(_vaultAddress);
-        }
+        // for (uint256 i; i < _incoming.assets.length; i++) {
+        //     _incoming.preActionBalances[i] = IERC20(path[0]).balanceOf(_vaultAddress);
+        // }
 
         return (_outgoing, _incoming, path);
     }
@@ -102,7 +104,6 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         actionAssetsData memory outgoingAssets_,
         actionAssetsData memory incomingAssets_
     ) internal view returns (uint256[] memory incomingAssetAmounts_, uint256[] memory outgoingAssetAmounts_) {
-
         /*///////////////////////////////
                     INCOMING
         ///////////////////////////////*/
