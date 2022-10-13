@@ -1352,7 +1352,6 @@ contract vaultTests is Test {
             }),
             collateralFactors,
             liquidationThresholds
-
         );
 
         address[] memory assetAddresses = new address[](1);

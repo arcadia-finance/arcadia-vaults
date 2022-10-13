@@ -13,6 +13,10 @@ import "../Vault.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../utils/Constants.sol";
 import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
+import "../AssetRegistry/StandardERC20PricingModule.sol";
+import "../OracleHub.sol";
+import "../mockups/ArcadiaOracle.sol";
+import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
     constructor(address _router, address _mainreg) UniswapV2SwapAction(_router, _mainreg) {}
@@ -47,14 +51,17 @@ abstract contract UniswapV2SwapActionTest is Test {
     // UniswapV2PairMock pairMock;
     // UniswapV2FactoryMock factoryMock;
     UniswapV2SwapAction action;
-    
-    MainRegistry mainreg;
-    // StandardERC20PricingModule private standardERC20Registry;
 
-    // OracleHub private oracleHub;
+    MainRegistry mainRegistry;
+    StandardERC20PricingModule private standardERC20Registry;
 
-    // ArcadiaOracle private oracleDaiToUsd;
-    // ArcadiaOracle private oracleEthToUsd;
+    OracleHub private oracleHub;
+
+    ArcadiaOracle private oracleDaiToUsd;
+    ArcadiaOracle private oracleWethToUsd;
+
+    // FIXTURES
+    ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(deployer);
 
     ERC20Mock dai;
     ERC20Mock weth;
@@ -62,7 +69,7 @@ abstract contract UniswapV2SwapActionTest is Test {
     address deployer = address(1);
     address vaultOwner = address(2);
 
-    
+    uint16[] emptyListUint16 = new uint16[](0);
 
     //Before
     constructor() {
@@ -75,7 +82,7 @@ abstract contract UniswapV2SwapActionTest is Test {
         weth = new ERC20Mock("WETH Mock", "mWETH", uint8(Constants.ethDecimals));
 
         // MainReg
-        mainreg = new MainRegistry(MainRegistry.BaseCurrencyInformation({
+        mainRegistry = new MainRegistry(MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
@@ -83,23 +90,80 @@ abstract contract UniswapV2SwapActionTest is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             }));
 
-        // uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
-        // uint256 rateEthToUsd = 1300 * 10 ** Constants.oracleEthToUsdDecimals;
+        uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
+        uint256 rateEthToUsd = 1300 * 10 ** Constants.oracleEthToUsdDecimals;
 
-        // oracleHub = new OracleHub();
+        oracleHub = new OracleHub();
 
-        // oracleDaiToUsd =
-        //     arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleDaiToUsdDecimals), "DAI / USD", rateDaiToUsd);
-        // oracleWEthToUsd =
-        //     arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "WETH / USD", rateEthToUsd);
+        standardERC20Registry = new StandardERC20PricingModule(
+            address(mainRegistry),
+            address(oracleHub)
+        );
 
+        mainRegistry.addPricingModule(address(standardERC20Registry));
 
         // Action
-        action = new UniswapV2SwapAction(address(routerMock), address(mainreg));
-        
+        action = new UniswapV2SwapAction(address(routerMock), address(mainRegistry));
 
         vm.stopPrank();
 
+        oracleDaiToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleDaiToUsdDecimals), "DAI / USD", rateDaiToUsd);
+        oracleWethToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "WETH / USD", rateEthToUsd);
+
+        address[] memory oracleWethToUsdArr = new address[](1);
+        address[] memory oracleDaiToUsdArr = new address[](1);
+
+        oracleWethToUsdArr[0] = address(oracleWethToUsd);
+        oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
+
+        vm.startPrank(deployer);
+
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "WETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleWethToUsd),
+                quoteAssetAddress: address(weth),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleDaiToUsdUnit),
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "DAI",
+                baseAsset: "USD",
+                oracleAddress: address(oracleDaiToUsd),
+                quoteAssetAddress: address(dai),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+
+        standardERC20Registry.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleWethToUsdArr,
+                assetUnit: uint64(10 ** Constants.ethDecimals),
+                assetAddress: address(weth)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+
+        standardERC20Registry.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleDaiToUsdArr,
+                assetUnit: uint64(10 ** Constants.daiDecimals),
+                assetAddress: address(dai)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+
+        vm.stopPrank();
 
         // Cheat vault owner
         uint256 slot = stdstore.target(address(vault)).sig(vault.owner.selector).find();
@@ -109,12 +173,11 @@ abstract contract UniswapV2SwapActionTest is Test {
 
         // Cheat whitelisted action TODO add action whitelist
 
-        // // Cheat whitelisted assets in mainreg
-        // slot = stdstore.target(address(mainreg)).sig(vault.owner.selector).find();
+        // // Cheat whitelisted assets in mainRegistry
+        // slot = stdstore.target(address(mainRegistry)).sig(vault.owner.selector).find();
         // loc = bytes32(slot);
         // bytes32 owner = bytes32(abi.encode(vaultOwner));
         // vm.store(address(vault), loc, owner);
-
     }
 
     //Before Each
@@ -134,8 +197,6 @@ contract DeploymentTest is UniswapV2SwapActionTest {
 
     function testSuccess_deployment() public {
         // Assert that all part of a swapAction are deployed and ready to be tested
-
-
     }
 }
 
@@ -146,53 +207,41 @@ contract DeploymentTest is UniswapV2SwapActionTest {
 contract executeActionTests is UniswapV2SwapActionTest {
     function setUp() public override {
         super.setUp();
-        
+
         //Give some initial DAI to vault to swap
         deal(address(dai), address(vault), 10_000, true);
     }
 
     function testSucces_SwapDAIWETH() public {
-
-       address[] memory outAssets = new address[](1);
+        address[] memory outAssets = new address[](1);
         outAssets[0] = address(dai);
 
-       uint256[] memory outAssetsIds = new uint256[](1);
+        uint256[] memory outAssetsIds = new uint256[](1);
         outAssetsIds[0] = 0;
 
-       uint256[] memory outAssetAmounts = new uint256[](1);
+        uint256[] memory outAssetAmounts = new uint256[](1);
         outAssetAmounts[0] = 1300;
 
-       uint256[] memory outPreActionBalances = new uint256[](1);
-       outPreActionBalances[0] = 0;
+        uint256[] memory outPreActionBalances = new uint256[](1);
+        outPreActionBalances[0] = 0;
 
         //  Prepare action data
-        actionAssetsData memory _out = actionAssetsData(
-            outAssets,
-            outAssetsIds,
-            outAssetAmounts,
-            outPreActionBalances
-        );
+        actionAssetsData memory _out = actionAssetsData(outAssets, outAssetsIds, outAssetAmounts, outPreActionBalances);
 
-       address[] memory _inAssets = new address[](1);
+        address[] memory _inAssets = new address[](1);
         _inAssets[0] = address(weth);
 
-       uint256[] memory _inAssetsIds = new uint256[](1);
+        uint256[] memory _inAssetsIds = new uint256[](1);
         _inAssetsIds[0] = 1;
 
-
-       uint256[] memory _inAssetAmounts = new uint256[](1);
+        uint256[] memory _inAssetAmounts = new uint256[](1);
         _inAssetAmounts[0] = 1;
 
-       uint256[] memory _inPreActionBalances = new uint256[](1);
+        uint256[] memory _inPreActionBalances = new uint256[](1);
         _inPreActionBalances[0] = 0;
 
         //  Prepare action data
-        actionAssetsData memory _in = actionAssetsData(
-            _inAssets,
-            _inAssetsIds,
-            _inAssetAmounts,
-            _inPreActionBalances
-        );
+        actionAssetsData memory _in = actionAssetsData(_inAssets, _inAssetsIds, _inAssetAmounts, _inPreActionBalances);
 
         address[] memory path = new address[](2);
 
@@ -207,8 +256,5 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
         assertEq(dai.balanceOf(address(vault)), 8700);
         assertEq(weth.balanceOf(address(vault)), 1);
-
-
-
     }
 }

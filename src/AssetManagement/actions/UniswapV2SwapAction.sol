@@ -17,12 +17,14 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
     //Maybe add mainreg address also here
     constructor(address _router, address _mainreg) ActionBase(_mainreg) UniswapV2Helper(_router) {}
 
-    function executeAction(address _vaultAddress, address _caller, bytes calldata _actionData) public override returns (actionAssetsData memory) {
+    function executeAction(address _vaultAddress, address _caller, bytes calldata _actionData)
+        public
+        override
+        returns (actionAssetsData memory)
+    {
         // decode action data
         // (address _vaultAddress, address _caller, bytes memory _actionSpecificData) =
         //     abi.decode(_actionData, (address, address, bytes));
-
-        
 
         //TODO Checks might be redundant?
         require(_vaultAddress == msg.sender, "UV2_SWAP: can only be called by vaultOwner");

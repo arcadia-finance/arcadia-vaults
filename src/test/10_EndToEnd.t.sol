@@ -505,7 +505,6 @@ contract EndToEndTest is Test {
         uint128 amountCredit,
         uint32 amountOfBlocksToRoll
     ) public {
-
         vm.assume(amountEth > 0);
 
         uint64 _yearlyInterestRate = pool.interestRate();
@@ -583,7 +582,6 @@ contract EndToEndTest is Test {
         uint128 amountCredit,
         uint16 newPrice
     ) public {
-
         vm.assume(amountEth > 0);
 
         vm.assume(newPrice * 10 ** Constants.oracleEthToUsdDecimals > rateEthToUsd);

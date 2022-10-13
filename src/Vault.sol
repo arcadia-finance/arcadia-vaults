@@ -795,7 +795,8 @@ contract Vault {
         // Account preActionBalances
 
         for (uint256 i; i < incoming_.assets.length; i++) {
-            incoming_.preActionBalances[i] = IERC20(incoming_.assets[i]).balanceOf(address(this));        }
+            incoming_.preActionBalances[i] = IERC20(incoming_.assets[i]).balanceOf(address(this));
+        }
 
         // withdraw to actionHandler
         for (uint256 i; i < outgoing_.assets.length; i++) {
@@ -804,11 +805,12 @@ contract Vault {
         }
 
         // execute Action
-        (actionAssetsData memory _incomingAssets) = IActionBase(_actionHandler).executeAction(address(this), msg.sender, _actionData);
+        (actionAssetsData memory _incomingAssets) =
+            IActionBase(_actionHandler).executeAction(address(this), msg.sender, _actionData);
 
         // deposit back into vault (approval in Action)
         for (uint256 i; i < incoming_.assets.length; i++) {
             _depositERC20(_actionHandler, _incomingAssets.assets[i], _incomingAssets.assetAmounts[i]);
         }
-   }
+    }
 }
