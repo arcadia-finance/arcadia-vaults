@@ -160,7 +160,8 @@ contract UniswapV2PricingModule is PricingModule {
             tokens, new uint256[](2), tokenAmounts, getValueInput.baseCurrency
         );
 
-        (uint256 token0Amount, uint256 token1Amount) = getLiquidityValueAfterArbitrageToPrice(
+        //
+        (uint256 token0Amount, uint256 token1Amount) = _getTrustedTokenAmounts(
             getValueInput.assetAddress, tokenRates[0], tokenRates[1], getValueInput.assetAmount
         );
         // tokenRates[0] is the value of token0 in a given BaseCurrency with 18 decimals precision for 1 WAD of tokens,
@@ -186,10 +187,10 @@ contract UniswapV2PricingModule is PricingModule {
      * @dev The trusted amount of liquidity is calculated by first bringing the liquidity pool in equilibrium,
      *      by calculating what the reserves of the pool would be if a profit-maximizing trade is done.
      *      As such flash-loan attacks are mitigated, where an attacker swaps a large amount of the higher priced token,
-     *      to bring the pool out of equilibrium, resulting in liquidity postitions with a higher share of expensive token.
+     *      to bring the pool out of equilibrium, resulting in liquidity postitions with a higher share of the most valuable token.
      * @dev Modification of https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2LiquidityMathLibrary.sol#L23
      */
-    function getLiquidityValueAfterArbitrageToPrice(
+    function _getTrustedTokenAmounts(
         address pair,
         uint256 trustedPriceToken0,
         uint256 trustedPriceToken1,
@@ -201,9 +202,9 @@ contract UniswapV2PricingModule is PricingModule {
         // this also checks that totalSupply > 0
         require(totalSupply >= liquidityAmount && liquidityAmount > 0, "UV2_GV: LIQUIDITY_AMOUNT");
 
-        (uint256 reserve0, uint256 reserve1) = getReservesAfterArbitrage(pair, trustedPriceToken0, trustedPriceToken1);
+        (uint256 reserve0, uint256 reserve1) = _getTrustedReserves(pair, trustedPriceToken0, trustedPriceToken1);
 
-        return computeLiquidityValue(reserve0, reserve1, totalSupply, liquidityAmount, kLast);
+        return _computeTokenAmounts(reserve0, reserve1, totalSupply, liquidityAmount, kLast);
     }
 
     /**
@@ -219,31 +220,32 @@ contract UniswapV2PricingModule is PricingModule {
      *      The amount of tokens should be big enough to guarantee enough precision for tokens with small unit-prices
      * @dev Modification of https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2LiquidityMathLibrary.sol#L23
      */
-    function getReservesAfterArbitrage(address pair, uint256 trustedPriceToken0, uint256 trustedPriceToken1)
+    function _getTrustedReserves(address pair, uint256 trustedPriceToken0, uint256 trustedPriceToken1)
         internal
         view
         returns (uint256 reserve0, uint256 reserve1)
     {
-        // first get reserves before the swap
+        // The untrusted reserves from the pair, these can be manipulated!!!
         (reserve0, reserve1,) = IUniswapV2Pair(pair).getReserves();
 
         require(reserve0 > 0 && reserve1 > 0, "UV2_GV: ZERO_PAIR_RESERVES");
 
-        // then compute how much to swap to arb to the true price
+        // Compute how much to swap to balance the pool with externally observed trusted prices
         (bool token0ToToken1, uint256 amountIn) =
-            computeProfitMaximizingTrade(trustedPriceToken0, trustedPriceToken1, reserve0, reserve1);
+            _computeProfitMaximizingTrade(trustedPriceToken0, trustedPriceToken1, reserve0, reserve1);
 
+        // Pool is balanced -> no need to affect the reserves
         if (amountIn == 0) {
             return (reserve0, reserve1);
         }
 
-        // now affect the trade to the reserves
+        // Pool is unbalanced -> Apply the profit maximalising trade to the reserves
         if (token0ToToken1) {
-            uint256 amountOut = getAmountOut(amountIn, reserve0, reserve1);
+            uint256 amountOut = _getAmountOut(amountIn, reserve0, reserve1);
             reserve0 += amountIn;
             reserve1 -= amountOut;
         } else {
-            uint256 amountOut = getAmountOut(amountIn, reserve1, reserve0);
+            uint256 amountOut = _getAmountOut(amountIn, reserve1, reserve0);
             reserve1 += amountIn;
             reserve0 -= amountOut;
         }
@@ -252,9 +254,9 @@ contract UniswapV2PricingModule is PricingModule {
     /**
      * @notice Computes the direction and magnitude of the profit-maximizing trade
      * @param trustedPriceToken0 Trusted price of an amount of Token0 in a given BaseCurrency
-     * @param trustedPriceToken1 Trusted price of an amount of Token1 in a given BaseCurrency
-     * @param reserve0 The current reserves of token0 in the liquidity pool
-     * @param reserve1 The current reserves of token1 in the liquidity pool
+     * @param trustedPriceToken1 Trusted price of an equalamount of Token1 in a given BaseCurrency
+     * @param reserve0 The current untrusted reserves of token0 in the liquidity pool
+     * @param reserve1 The current untrusted reserves of token1 in the liquidity pool
      * @return token0ToToken1 The direction of the profit-maximizing trade
      * @return amountIn The amount of tokens to be swapped of the profit-maximizing trade
      * @dev Both trusted prices must be for the same BaseCurrency, and for an equal amount of tokens
@@ -275,7 +277,7 @@ contract UniswapV2PricingModule is PricingModule {
      *      This can only happen if trustedPriceToken0 is bigger than 2.23 * 10^43
      *      (for an asset with 0 decimals and reserve0 Max uint112 this would require a unit price of $2.23 * 10^7
      */
-    function computeProfitMaximizingTrade(
+    function _computeProfitMaximizingTrade(
         uint256 trustedPriceToken0,
         uint256 trustedPriceToken1,
         uint256 reserve0,
@@ -304,9 +306,9 @@ contract UniswapV2PricingModule is PricingModule {
     }
 
     /**
-     * @notice Computes liquidity value of a LP-position given all the parameters of the pair
-     * @param reserve0 The reserves of token0 in the liquidity pool
-     * @param reserve1 The reserves of token1 in the liquidity pool
+     * @notice Computes the underlying token amounts of a LP-position
+     * @param reserve0 The trusted reserves of token0 in the liquidity pool
+     * @param reserve1 The trusted reserves of token1 in the liquidity pool
      * @param totalSupply The total supply of LP tokens (ERC20)
      * @param liquidityAmount The amount of LP tokens (ERC20)
      * @param kLast The product of the reserves as of the most recent liquidity event (0 if feeOn is false)
@@ -314,7 +316,7 @@ contract UniswapV2PricingModule is PricingModule {
      * @return token1Amount The amount of token1 provided as liquidity
      * @dev Modification of https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2LiquidityMathLibrary.sol#L23
      */
-    function computeLiquidityValue(
+    function _computeTokenAmounts(
         uint256 reserve0,
         uint256 reserve1,
         uint256 totalSupply,
@@ -346,7 +348,7 @@ contract UniswapV2PricingModule is PricingModule {
      * @dev Derived from Uniswap V2 AMM equation:
      *      (reserveIn + 997 * amountIn / 1000) * (reserveOut - amountOut) = reserveIn * reserveOut
      */
-    function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut)
+    function _getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut)
         internal
         pure
         returns (uint256 amountOut)

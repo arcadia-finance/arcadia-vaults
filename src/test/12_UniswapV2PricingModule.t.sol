@@ -19,6 +19,29 @@ import "../AssetRegistry/MainRegistry.sol";
 import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
+contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
+    constructor(address _mainRegistry, address _oracleHub, address _uniswapV2Factory) UniswapV2PricingModule(_mainRegistry, _oracleHub, _uniswapV2Factory) {}
+
+    function computeProfitMaximizingTrade(
+        uint256 trustedPriceToken0,
+        uint256 trustedPriceToken1,
+        uint256 reserve0,
+        uint256 reserve1
+    ) public pure returns (bool token0ToToken1, uint256 amountIn) {
+        (token0ToToken1, amountIn) = _computeProfitMaximizingTrade(trustedPriceToken0, trustedPriceToken1, reserve0, reserve1);
+    }
+
+    function computeTokenAmounts(
+        uint256 reserve0,
+        uint256 reserve1,
+        uint256 totalSupply,
+        uint256 liquidityAmount,
+        uint256 kLast
+    ) public view returns (uint256 token0Amount, uint256 token1Amount) {
+        (token0Amount, token1Amount) = _computeTokenAmounts(reserve0, reserve1, totalSupply, liquidityAmount, kLast);
+    }
+}
+
 abstract contract UniswapV2PricingModuleTest is Test {
     using stdStorage for StdStorage;
 
@@ -768,5 +791,43 @@ contract AssetManagement is UniswapV2PricingModuleTest {
 
         //Then: Asset is in Pricing Module
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
+    }
+}
+
+/*///////////////////////////////////////////////////////////////
+                    WHITE LIST MANAGEMENT
+///////////////////////////////////////////////////////////////*/
+contract WhiteListManagement is UniswapV2PricingModuleTest {
+    function setUp() public override {
+        super.setUp();
+    }
+
+    function testSuccess_isWhiteListed_Positive() public {
+        //Given: All contracts are deployed
+
+        //When: pairSnxEth is added to the pricing module
+        vm.prank(creatorAddress);
+        uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
+
+        //Then: pairSnxEth is white-listed
+        assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth), 0));
+    }
+
+    function testSuccess_isWhiteListed_Negative(address randomAsset) public {
+        //Given: All contracts are deployed
+
+        //When: randomAsset is not added to the pricing module
+
+        //Then: pairSnxEth is not white-listed
+        assertTrue(!uniswapV2PricingModule.isWhiteListed(randomAsset, 0));
+    }
+}
+
+/*///////////////////////////////////////////////////////////////
+                        PRICING LOGIC
+///////////////////////////////////////////////////////////////*/
+contract PricingLogic is UniswapV2PricingModuleTest {
+    function setUp() public override {
+        super.setUp();
     }
 }
