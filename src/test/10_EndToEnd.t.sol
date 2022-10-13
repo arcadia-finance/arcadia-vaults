@@ -24,8 +24,7 @@ import "../utils/Constants.sol";
 import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-import {LendingPool, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
+import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
 contract EndToEndTest is Test {
@@ -276,8 +275,7 @@ contract EndToEndTest is Test {
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.updateInterestRate(5 * 10 ** 16); //5% with 18 decimals precision
 
-        debt = new DebtToken(address(pool));
-        pool.setDebtToken(address(debt));
+        debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
         pool.addTranche(address(tranche), 50);
@@ -287,7 +285,7 @@ contract EndToEndTest is Test {
         dai.approve(address(pool), type(uint256).max);
 
         vm.prank(address(tranche));
-        pool.deposit(type(uint128).max, liquidityProvider);
+        pool.depositInLendingPool(type(uint128).max, liquidityProvider);
     }
 
     //this is a before each
@@ -493,7 +491,7 @@ contract EndToEndTest is Test {
         vm.assume(amountCredit > maxCredit);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("LP_TL: Reverted");
+        vm.expectRevert("LP_B: Reverted");
         pool.borrow(amountCredit, address(proxy), vaultOwner);
         vm.stopPrank();
 
@@ -572,7 +570,7 @@ contract EndToEndTest is Test {
 
         vm.roll(block.number + 10); //
         vm.startPrank(vaultOwner);
-        vm.expectRevert("LP_TL: Reverted");
+        vm.expectRevert("LP_B: Reverted");
         pool.borrow(1, address(proxy), vaultOwner);
         vm.stopPrank();
     }
