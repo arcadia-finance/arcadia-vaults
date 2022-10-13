@@ -162,7 +162,7 @@ contract StandardERC20PricingModuleTest is Test {
         // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress setAssetInformation
+        // When: unprivilegedAddress calls setAssetInformation
 
         // Then: setAssetInformation should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
@@ -180,12 +180,12 @@ contract StandardERC20PricingModuleTest is Test {
 
     function testRevert_setAssetInformation_OwnerAddsAssetWithMoreThan18Decimals() public {
         vm.startPrank(creatorAddress);
-        // Given: assetCreditRatings index 0 is 0
+        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
         uint16[] memory collateralFactors = new uint16[](1);
         collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         uint16[] memory liquidationThresholds = new uint16[](1);
         liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        // When: creatorAddress setAssetInformation with 19 decimals
+        // When: creatorAddress calls setAssetInformation with 19 decimals
 
         // Then: setAssetInformation should revert with "SSR_SAI: Maximal 18 decimals"
         vm.expectRevert("SSR_SAI: Maximal 18 decimals");
@@ -204,12 +204,12 @@ contract StandardERC20PricingModuleTest is Test {
     function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
         // Turn this into invalid uint16
         vm.startPrank(creatorAddress);
-        // Given: assetCreditRatings index 0 is 0
+        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
         uint16[] memory collateralFactors = new uint16[](1);
         collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         uint16[] memory liquidationThresholds = new uint16[](1);
         liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        // When: creatorAddress setAssetInformation with wrong number of credits
+        // When: creatorAddress calls setAssetInformation with wrong number of credits
 
         // Then: setAssetInformation should revert with "MR_AA: LENGTH_MISMATCH"
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
@@ -226,9 +226,9 @@ contract StandardERC20PricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
-        // Given:
+        // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
-        // When: creatorAddress setAssetInformation with empty list credit ratings
+        // When: creatorAddress calls setAssetInformation with empty list credit ratings
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -245,7 +245,7 @@ contract StandardERC20PricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
-        // Given: assetCreditRatings index 0 is 0 and assetCreditRatings index 1 is 0
+        // Given: collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
         collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
@@ -253,7 +253,7 @@ contract StandardERC20PricingModuleTest is Test {
         uint16[] memory liquidationThresholds = new uint16[](2);
         liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        // When: creatorAddress setAssetInformation with full list credit ratings
+        // When: creatorAddress calls setAssetInformation with full list credit ratings
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -270,9 +270,9 @@ contract StandardERC20PricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
-        // Given: 
+        // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
-        // When: creatorAddress setAssetInformation twice
+        // When: creatorAddress calls setAssetInformation twice
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -298,9 +298,9 @@ contract StandardERC20PricingModuleTest is Test {
     }
 
     function testSuccess_isWhiteListed_Positive() public {
-        // Given: 
+        // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
-        // When: creatorAddress setAssetInformation
+        // When: creatorAddress calls setAssetInformation
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -317,7 +317,7 @@ contract StandardERC20PricingModuleTest is Test {
     }
 
     function testSuccess_isWhiteListed_Negative(address randomAsset) public {
-        // Given:
+        // Given: All necessary contracts deployed on setup
         // When: input is randomAsset
 
         // Then: isWhiteListed for randomAsset should return false
@@ -327,7 +327,7 @@ contract StandardERC20PricingModuleTest is Test {
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
+        // Given: creatorAddress calls setAssetInformation, expectedValueInBaseCurrency is zero
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -360,7 +360,7 @@ contract StandardERC20PricingModuleTest is Test {
     function testSuccess_getValue_returnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountSnx) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress setAssetInformation, expectedValueInUsd is zero
+        // Given: creatorAddress calls setAssetInformation, expectedValueInUsd is zero
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
@@ -393,7 +393,7 @@ contract StandardERC20PricingModuleTest is Test {
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountLink) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
+        // Given: creatorAddress calls setAssetInformation, expectedValueInBaseCurrency is zero
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,

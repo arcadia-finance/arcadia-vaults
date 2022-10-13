@@ -158,7 +158,7 @@ contract FloorERC721PricingModuleTest is Test {
         // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress setAssetInformation
+        // When: unprivilegedAddress calls setAssetInformation
 
         // Then: setAssetInformation should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
@@ -177,12 +177,12 @@ contract FloorERC721PricingModuleTest is Test {
 
     function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
         vm.startPrank(creatorAddress);
-        // Given: assetCreditRatings index 0 is 0
+        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
         uint16[] memory collateralFactors = new uint16[](1);
         collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         uint16[] memory liquidationThresholds = new uint16[](1);
         liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        // When: creatorAddress setAssetInformation with wrong number of credits
+        // When: creatorAddress calls setAssetInformation with wrong number of credits
 
         // Then: setAssetInformation should revert with "MR_AA: LENGTH_MISMATCH"
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
@@ -201,9 +201,9 @@ contract FloorERC721PricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
-        // Given:
+        // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
-        // When: creatorAddress setAssetInformation with empty list credit ratings
+        // When: creatorAddress calls setAssetInformation with empty list credit ratings
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -221,7 +221,7 @@ contract FloorERC721PricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
-        // Given: assetCreditRatings index 0 is 0 and assetCreditRatings index 1 is 0
+        // Given: collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
         collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
@@ -229,7 +229,7 @@ contract FloorERC721PricingModuleTest is Test {
         uint16[] memory liquidationThresholds = new uint16[](2);
         liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
         liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        // When: creatorAddress setAssetInformation with full list credit ratings
+        // When: creatorAddress calls setAssetInformation with full list credit ratings
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -242,7 +242,7 @@ contract FloorERC721PricingModuleTest is Test {
         );
         vm.stopPrank();
 
-        // Then: address(bayc) should be inPricingModule
+        // Then: inPricingModule for address(bayc) should return true
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
@@ -277,9 +277,9 @@ contract FloorERC721PricingModuleTest is Test {
     }
 
     function testSuccess_isWhiteListed_Positive() public {
-        // Given: 
+        // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
-        // When: creatorAddress setAssetInformation
+        // When: creatorAddress calls setAssetInformation
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -299,7 +299,7 @@ contract FloorERC721PricingModuleTest is Test {
     }
 
     function testSuccess_isWhiteListed_NegativeWrongAddress(address randomAsset) public {
-        // Given:
+        // Given: All necessary contracts deployed on setup
         // When: input is randomAsset
 
         // Then: isWhiteListed for randomAsset should return false
@@ -310,7 +310,7 @@ contract FloorERC721PricingModuleTest is Test {
         // Given: id is lower than 10 or bigger than 1000
         vm.assume(id < 10 || id > 1000);
         vm.startPrank(creatorAddress);
-        // When: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
+        // When: creatorAddress calls setAssetInformation
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -329,7 +329,7 @@ contract FloorERC721PricingModuleTest is Test {
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd() public {
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
+        // Given: creatorAddress calls setAssetInformation, expectedValueInBaseCurrency is zero
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -362,7 +362,7 @@ contract FloorERC721PricingModuleTest is Test {
 
     function testSuccess_getValue_ReturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress setAssetInformation, expectedValueInUsd is zero
+        // Given: creatorAddress calls setAssetInformation, expectedValueInUsd is zero
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
@@ -395,7 +395,7 @@ contract FloorERC721PricingModuleTest is Test {
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress setAssetInformation, expectedValueInBaseCurrency is zero
+        // Given: creatorAddress calls setAssetInformation, expectedValueInBaseCurrency is zero
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWmaycToUsdArr,
