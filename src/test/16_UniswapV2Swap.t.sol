@@ -205,14 +205,15 @@ contract DeploymentTest is UniswapV2SwapActionTest {
 //////////////////////////////////////////////////////////////*/
 
 contract executeActionTests is UniswapV2SwapActionTest {
+    actionAssetsData _out;
+    actionAssetsData _in;
     function setUp() public override {
         super.setUp();
 
         //Give some initial DAI to vault to swap
-        deal(address(dai), address(vault), 10_000, true);
-    }
+        deal(address(dai), address(vault), 1300, true);
 
-    function testSucces_SwapDAIWETH() public {
+        // Prepare outgoingData
         address[] memory outAssets = new address[](1);
         outAssets[0] = address(dai);
 
@@ -225,8 +226,8 @@ contract executeActionTests is UniswapV2SwapActionTest {
         uint256[] memory outPreActionBalances = new uint256[](1);
         outPreActionBalances[0] = 0;
 
-        //  Prepare action data
-        actionAssetsData memory _out = actionAssetsData(outAssets, outAssetsIds, outAssetAmounts, outPreActionBalances);
+        //  Prepare incomingData
+         _out = actionAssetsData(outAssets, outAssetsIds, outAssetAmounts, outPreActionBalances);
 
         address[] memory _inAssets = new address[](1);
         _inAssets[0] = address(weth);
@@ -241,10 +242,12 @@ contract executeActionTests is UniswapV2SwapActionTest {
         _inPreActionBalances[0] = 0;
 
         //  Prepare action data
-        actionAssetsData memory _in = actionAssetsData(_inAssets, _inAssetsIds, _inAssetAmounts, _inPreActionBalances);
+        _in = actionAssetsData(_inAssets, _inAssetsIds, _inAssetAmounts, _inPreActionBalances);
 
+    }
+
+    function testSucces_SwapDAIWETH() public {
         address[] memory path = new address[](2);
-
         path[0] = address(dai);
         path[1] = address(weth);
 
@@ -254,7 +257,77 @@ contract executeActionTests is UniswapV2SwapActionTest {
         vm.prank(vaultOwner);
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
-        assertEq(dai.balanceOf(address(vault)), 8700);
+        assertEq(dai.balanceOf(address(vault)), 0);
         assertEq(weth.balanceOf(address(vault)), 1);
     }
+
+    // TODO add reverts for not enough funds
+    function testSucces_SwapDAIWETHNotEnoughFunds() public {
+        uint256[] memory _outAssetAmounts = new uint256[](1);
+        _outAssetAmounts[0] = 1301;
+        _out.assetAmounts = _outAssetAmounts;
+
+        address[] memory path = new address[](2);
+        path[0] = address(dai);
+        path[1] = address(weth);
+
+        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
+        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("Arithmetic over/underflow");
+        vault.vaultManagementAction(address(action), __actionSpecificData);
+        vm.stopPrank();
+    }
+
+    function testSucces_SwapIncomingNotWhitelisted() public {
+        ERC20Mock shiba = new ERC20Mock("Shiba Mock", "mShiba", uint8(Constants.daiDecimals));
+
+        address[] memory _inAssets = new address[](1);
+        _inAssets[0] = address(shiba);
+        _in.assets = _inAssets;
+    
+        address[] memory path = new address[](2);
+        path[0] = address(dai);
+        path[1] = address(shiba);
+
+        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
+        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("UV2A_SWAP: Non-whitelisted incoming asset");
+        vault.vaultManagementAction(address(action), __actionSpecificData);
+        vm.stopPrank();
+
+    }
+
+    //TODO add action whitelist in vault?
+    // Currently fails because that funcionalitty is not yet added to vault
+    function testFail_ExecuteNotWhitelistedAction(address _action) public {
+        ERC20Mock shiba = new ERC20Mock("Shiba Mock", "mShiba", uint8(Constants.daiDecimals));
+
+        address[] memory _inAssets = new address[](1);
+        _inAssets[0] = address(shiba);
+        _in.assets = _inAssets;
+    
+        address[] memory path = new address[](2);
+        path[0] = address(dai);
+        path[1] = address(shiba);
+
+        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
+        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("UV2A_SWAP: Non-whitelisted incoming asset");
+        vault.vaultManagementAction(address(_action), __actionSpecificData);
+        vm.stopPrank();
+
+    }
+
+
+    // Test action not whitelisted
+    // Test caller is not owner
+    // Test call action directly and check 
+    // Test with dynamic swap with right values
+    // Not enough
 }

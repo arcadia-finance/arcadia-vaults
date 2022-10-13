@@ -25,7 +25,7 @@ contract UniswapV2Router02Mock is Test {
             address(msg.sender)
         ).find();
         bytes32 loc = bytes32(slot);
-        bytes32 mockedBalanceOf = bytes32(abi.encode(123));
+        bytes32 mockedBalanceOf = bytes32(abi.encode(IERC20(path[0]).balanceOf(msg.sender) - amountIn));
         vm.store(address(path[0]), loc, mockedBalanceOf);
 
         //Cheat balance of
