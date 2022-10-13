@@ -1098,25 +1098,7 @@ contract WhiteListLogicTest is MainRegistryTest {
                 idRangeStart: 0,
                 idRangeEnd: 9999,
                 assetAddress: address(bayc)
-            }),            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleSnxToEthEthToUsd,
-                assetUnit: uint64(10 ** Constants.snxDecimals),
-                assetAddress: address(snx)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: 9999,
-                assetAddress: address(bayc)
-            }),
+            }),            
             emptyListUint16,
             emptyListUint16
         );
