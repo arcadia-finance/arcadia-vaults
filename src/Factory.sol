@@ -65,6 +65,12 @@ contract Factory is ERC721, Ownable {
         emit VaultCreated(vault, msg.sender, allVaults.length, vaultVersion);
     }
 
+    /**
+     * @notice View function to see if an address is a vault
+     * @dev Function is used to verify if certain calls are to be made to an actual vault or not.
+     * @param vaultAddr The address to be checked.
+     * @return bool whether the address is a vault or not.
+     */
     function isVault(address vaultAddr) public view returns (bool) {
         return vaultIndex[vaultAddr] > 0;
     }
