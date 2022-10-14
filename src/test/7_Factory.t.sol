@@ -117,8 +117,8 @@ contract factoryTest is Test {
 
         address actualDeployed = factoryContr.createVault(salt, 0);
         assertEq(amountBefore + 1, factoryContr.allVaultsLength());
-        assertEq(actualDeployed, factoryContr.allVaults(factoryContr.allVaultsLength() - 1));
-        assertEq(factoryContr.vaultIndex(actualDeployed), (factoryContr.allVaultsLength() - 1));
+        assertEq(actualDeployed, factoryContr.allVaults(factoryContr.allVaultsLength()));
+        assertEq(factoryContr.vaultIndex(actualDeployed), (factoryContr.allVaultsLength()));
     }
 
     function testSuccess_createVault_DeployNewProxyWithLogic(uint256 salt) public {
@@ -153,7 +153,7 @@ contract factoryTest is Test {
         address vault = factoryContr.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
 
         //Make sure vault itself is owned by sender
         assertEq(IVault(vault).owner(), sender);
@@ -181,7 +181,7 @@ contract factoryTest is Test {
         address vault = factoryContr.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
 
         //Make sure vault itself is owned by sender
         assertEq(IVault(vault).owner(), sender);
@@ -211,7 +211,7 @@ contract factoryTest is Test {
         address vault = factoryContr.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
 
         //Make sure vault itself is owned by sender
         assertEq(IVault(vault).owner(), sender);
@@ -239,7 +239,7 @@ contract factoryTest is Test {
         address vault = factoryContr.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
 
         //Make sure vault itself is owned by sender
         assertEq(IVault(vault).owner(), sender);

@@ -33,8 +33,6 @@ contract Factory is ERC721, Ownable {
 
     address[] public allVaults;
 
-    event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 id, uint256 version);
-
     constructor() ERC721("Arcadia Vault", "ARCADIA") {}
 
     /*///////////////////////////////////////////////////////////////
@@ -62,7 +60,6 @@ contract Factory is ERC721, Ownable {
         vaultIndex[vault] = allVaults.length;
 
         _mint(msg.sender, allVaults.length);
-        emit VaultCreated(vault, msg.sender, allVaults.length, vaultVersion);
     }
 
     /**
