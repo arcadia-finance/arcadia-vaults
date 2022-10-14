@@ -26,6 +26,7 @@ contract UniswapV2PricingModule is PricingModule {
 
     uint256 public constant poolUnit = 1000000000000000000;
     address public immutable uniswapV2Factory;
+    address public immutable erc20PricingModule;
 
     bool public feeOn;
 
@@ -42,10 +43,11 @@ contract UniswapV2PricingModule is PricingModule {
      * @param _oracleHub The address of the Oracle-Hub
      * @param _uniswapV2Factory The factory for Uniswap V2 pairs
      */
-    constructor(address _mainRegistry, address _oracleHub, address _uniswapV2Factory)
+    constructor(address _mainRegistry, address _oracleHub, address _uniswapV2Factory, address _erc20PricingModule)
         PricingModule(_mainRegistry, _oracleHub)
     {
         uniswapV2Factory = _uniswapV2Factory;
+        erc20PricingModule = _erc20PricingModule;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -79,7 +81,11 @@ contract UniswapV2PricingModule is PricingModule {
      *      This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      *      assets are no longer updatable.
      */
-    function setAssetInformation(address assetAddress, uint16[] calldata assetCollateralFactors, uint16[] calldata assetLiquidationThresholds) external onlyOwner {
+    function setAssetInformation(
+        address assetAddress,
+        uint16[] calldata assetCollateralFactors,
+        uint16[] calldata assetLiquidationThresholds
+    ) external onlyOwner {
         AssetInformation memory assetInformation;
 
         assetInformation.token0 = IUniswapV2Pair(assetAddress).token0();
@@ -124,21 +130,18 @@ contract UniswapV2PricingModule is PricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Returns the value of a certain asset, denominated in a given BaseCurrency
+     * @notice Returns the value of a Uniswap V2 LP-token
      * @param getValueInput A Struct with all the information neccessary to get the value of an asset
-     * - assetAddress: The contract address of the asset
+     * - assetAddress: The contract address of the LP-token
      * - assetId: Since ERC20 tokens have no Id, the Id should be set to 0
      * - assetAmount: The Amount of tokens, ERC20 tokens can have any Decimals precision smaller than 18.
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
-     * @dev If the Oracle-Hub returns the rate in a baseCurrency different from USD, the StandardERC20PricingModule will return
-     * the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the StandardERC20PricingModule
-     * will return the value of the asset in USD.
-     * Only one of the two values can be different from 0.
-     * @dev Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
+     * @dev The UniswapV2PricingModule will always return the value in valueInUsd, 
+     * valueInBaseCurrency will always be 0
      * @dev If the asset is not first added to PricingModule this function will return value 0 without throwing an error.
-     * However no check in StandardERC20PricingModule is necessary, since the check if the asset is whitelisted (and hence added to PricingModule)
+     * However no explicit check is necessary, since the check if the asset is whitelisted (and hence added to PricingModule)
      * is already done in the Main-Registry.
      */
     function getValue(GetValueInput memory getValueInput)
@@ -147,29 +150,36 @@ contract UniswapV2PricingModule is PricingModule {
         override
         returns (uint256 valueInUsd, uint256 valueInBaseCurrency)
     {
-        address[] memory tokens = new address[](2);
-        tokens[0] = assetToInformation[getValueInput.assetAddress].token0;
-        tokens[1] = assetToInformation[getValueInput.assetAddress].token1;
-        uint256[] memory tokenAmounts = new uint256[](2);
         // To calculate the liquidity value after arbitrage, what matters is the ratio of the price of token0 compared to the price of token1
-        // Hence we need to use the true price for an equal amount of tokens, we use 1 WAD (10**18) to guarantee precision
-        tokenAmounts[0] = FixedPointMathLib.WAD;
-        tokenAmounts[1] = FixedPointMathLib.WAD;
-
-        uint256[] memory tokenRates = IMainRegistry(mainRegistry).getListOfValuesPerAsset(
-            tokens, new uint256[](2), tokenAmounts, getValueInput.baseCurrency
+        // Hence we need to use a trusted external price for an equal amount of tokens,
+        // we use for both tokens the USD price of 1 WAD (10**18) to guarantee precision.
+        (uint256 trustedUsdPriceToken0,) = PricingModule(erc20PricingModule).getValue(
+            GetValueInput({
+                assetAddress: assetToInformation[getValueInput.assetAddress].token0,
+                assetId: 0,
+                assetAmount: FixedPointMathLib.WAD,
+                baseCurrency: 0
+            })
+        );
+        (uint256 trustedUsdPriceToken1,) = PricingModule(erc20PricingModule).getValue(
+            GetValueInput({
+                assetAddress: assetToInformation[getValueInput.assetAddress].token1,
+                assetId: 0,
+                assetAmount: FixedPointMathLib.WAD,
+                baseCurrency: 0
+            })
         );
 
         //
         (uint256 token0Amount, uint256 token1Amount) = _getTrustedTokenAmounts(
-            getValueInput.assetAddress, tokenRates[0], tokenRates[1], getValueInput.assetAmount
+            getValueInput.assetAddress, trustedUsdPriceToken0, trustedUsdPriceToken1, getValueInput.assetAmount
         );
-        // tokenRates[0] is the value of token0 in a given BaseCurrency with 18 decimals precision for 1 WAD of tokens,
+        // trustedUsdPriceToken0 is the value of token0 in USD with 18 decimals precision for 1 WAD of tokens,
         // we need to recalculate to find the value of the actual amount of underlying token0 in the liquidity position.
-        valueInBaseCurrency = FixedPointMathLib.mulDivDown(token0Amount, tokenRates[0], FixedPointMathLib.WAD)
-            + FixedPointMathLib.mulDivDown(token1Amount, tokenRates[1], FixedPointMathLib.WAD);
+        valueInUsd = FixedPointMathLib.mulDivDown(token0Amount, trustedUsdPriceToken0, FixedPointMathLib.WAD)
+            + FixedPointMathLib.mulDivDown(token1Amount, trustedUsdPriceToken1, FixedPointMathLib.WAD);
 
-        return (0, valueInBaseCurrency);
+        return (valueInUsd, 0);
     }
 
     /**
