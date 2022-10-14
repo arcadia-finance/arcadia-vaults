@@ -20,7 +20,9 @@ import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
-    constructor(address _mainRegistry, address _oracleHub, address _uniswapV2Factory) UniswapV2PricingModule(_mainRegistry, _oracleHub, _uniswapV2Factory) {}
+    constructor(address _mainRegistry, address _oracleHub, address _uniswapV2Factory, address _erc20PricingModule)
+        UniswapV2PricingModule(_mainRegistry, _oracleHub, _uniswapV2Factory, _erc20PricingModule)
+    {}
 
     function computeProfitMaximizingTrade(
         uint256 trustedPriceToken0,
@@ -28,7 +30,8 @@ contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
         uint256 reserve0,
         uint256 reserve1
     ) public pure returns (bool token0ToToken1, uint256 amountIn) {
-        (token0ToToken1, amountIn) = _computeProfitMaximizingTrade(trustedPriceToken0, trustedPriceToken1, reserve0, reserve1);
+        (token0ToToken1, amountIn) =
+            _computeProfitMaximizingTrade(trustedPriceToken0, trustedPriceToken1, reserve0, reserve1);
     }
 
     function computeTokenAmounts(
@@ -39,6 +42,14 @@ contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
         uint256 kLast
     ) public view returns (uint256 token0Amount, uint256 token1Amount) {
         (token0Amount, token1Amount) = _computeTokenAmounts(reserve0, reserve1, totalSupply, liquidityAmount, kLast);
+    }
+
+    function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut)
+        public
+        pure
+        returns (uint256 amountOut)
+    {
+        amountOut = _getAmountOut(amountIn, reserveIn, reserveOut);
     }
 }
 
@@ -63,7 +74,7 @@ abstract contract UniswapV2PricingModuleTest is Test {
     ArcadiaOracle public oracleSnxToEth;
 
     StandardERC20PricingModule public standardERC20PricingModule;
-    UniswapV2PricingModule public uniswapV2PricingModule;
+    UniswapV2PricingModuleExtension public uniswapV2PricingModule;
 
     address public creatorAddress = address(1);
     address public tokenCreatorAddress = address(2);
@@ -209,10 +220,11 @@ abstract contract UniswapV2PricingModuleTest is Test {
             emptyListUint16
         );
 
-        uniswapV2PricingModule = new UniswapV2PricingModule(
+        uniswapV2PricingModule = new UniswapV2PricingModuleExtension(
             address(mainRegistry),
             address(oracleHub),
-            address(uniswapV2Factory)
+            address(uniswapV2Factory),
+            address(standardERC20PricingModule)
         );
         mainRegistry.addPricingModule(address(uniswapV2PricingModule));
         vm.stopPrank();
@@ -225,19 +237,6 @@ abstract contract UniswapV2PricingModuleTest is Test {
 contract OldTests is UniswapV2PricingModuleTest {
     function setUp() public override {
         super.setUp();
-    }
-
-    //Test isWhiteListed
-    function xtestIsWhitelistedPositive() public {
-        vm.startPrank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
-        vm.stopPrank();
-
-        assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth), 0));
-    }
-
-    function testIsWhitelistedNegative(address randomAsset) public {
-        assertTrue(!uniswapV2PricingModule.isWhiteListed(randomAsset, 0));
     }
 
     //Test getValue
@@ -381,14 +380,14 @@ contract OldTests is UniswapV2PricingModuleTest {
         assertLe(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function xtestReturnValueFromBalancedPair(
+    function testReturnValueFromBalancedPair(
         uint112 amountSnx,
         uint8 _ethDecimals,
         uint8 _snxDecimals,
         uint8 _oracleEthToUsdDecimals,
         uint8 _oracleSnxToUsdDecimals,
         uint64 _rateEthToUsd,
-        uint128 _rateSnxToUsd
+        uint64 _rateSnxToUsd
     ) public {
         vm.assume(_ethDecimals <= 18);
         vm.assume(_snxDecimals <= 18);
@@ -488,7 +487,7 @@ contract OldTests is UniswapV2PricingModuleTest {
             Constants.WAD * _rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals * amountSnx / 10 ** _snxDecimals;
         uint256 valueEth =
             Constants.WAD * _rateEthToUsd / 10 ** _oracleEthToUsdDecimals * amountEth / 10 ** _ethDecimals;
-        uint256 expectedValueInBaseCurrency = valueSnx + valueEth;
+        uint256 expectedValueInUsd = valueSnx + valueEth;
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(pairSnxEth),
@@ -498,8 +497,8 @@ contract OldTests is UniswapV2PricingModuleTest {
         });
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = uniswapV2PricingModule.getValue(getValueInput);
 
-        assertEq(actualValueInUsd, 0);
-        assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
+        assertInRange(actualValueInUsd, expectedValueInUsd);
+        assertEq(actualValueInBaseCurrency, 0);
     }
 
     function xtestReturnValueFromBalancedPairOverflow(uint112 amountSnx, uint64 _rateEthToUsd, uint128 _rateSnxToUsd)
@@ -829,5 +828,70 @@ contract WhiteListManagement is UniswapV2PricingModuleTest {
 contract PricingLogic is UniswapV2PricingModuleTest {
     function setUp() public override {
         super.setUp();
+    }
+
+    function testSuccess_computeProfitMaximizingTrade(
+        uint256 priceToken0,
+        uint256 priceToken1,
+        uint112 reserve0,
+        uint112 reserve1
+    ) public {
+        vm.assume(reserve0 > 10e6); //Minimum liquidity
+        vm.assume(reserve1 > 10e6); //Minimum liquidity
+        vm.assume(priceToken0 > 10e6);
+        vm.assume(priceToken1 > 10e6);
+        vm.assume(priceToken0 <= type(uint256).max / reserve0); //Overflow
+        vm.assume(priceToken1 <= type(uint256).max / reserve1); //Overflow
+
+        vm.assume(uint256(reserve0) * reserve1 * 1000 / priceToken1 / 997 <= type(uint256).max / priceToken0);
+        vm.assume(uint256(reserve0) * reserve1 * 1000 / priceToken0 / 997 <= type(uint256).max / priceToken1);
+
+        //vm.assume(reserve0 * priceToken0 / reserve1 / priceToken1 < 5);
+        //vm.assume(reserve1 * priceToken1 / reserve0 / priceToken0 < 5);
+
+        (bool token0ToToken1, uint256 amountIn) =
+            uniswapV2PricingModule.computeProfitMaximizingTrade(priceToken0, priceToken1, reserve0, reserve1);
+
+        uint112 reserveIn;
+        uint112 reserveOut;
+        uint256 priceTokenIn;
+        uint256 priceTokenOut;
+        if (token0ToToken1) {
+            reserveIn = reserve0;
+            reserveOut = reserve1;
+            priceTokenIn = priceToken0;
+            priceTokenOut = priceToken1;
+        } else {
+            reserveIn = reserve1;
+            reserveOut = reserve0;
+            priceTokenIn = priceToken1;
+            priceTokenOut = priceToken0;
+        }
+
+        uint256 maxProfit = profitArbitrage(priceTokenIn, priceTokenOut, amountIn, reserveIn, reserveOut);
+
+        //Due to numerical rounding actual maximum might be deviating bit from calculated max, but must be in a range of 1%
+        vm.assume(maxProfit <= type(uint256).max / 1001);
+        assertGe(
+            maxProfit * 1001 / 1000,
+            profitArbitrage(priceTokenIn, priceTokenOut, amountIn * 999 / 1000, reserveIn, reserveOut)
+        );
+        assertGe(
+            maxProfit * 1001 / 1000,
+            profitArbitrage(priceTokenIn, priceTokenOut, amountIn * 1001 / 1000, reserveIn, reserveOut)
+        );
+    }
+
+    function profitArbitrage(
+        uint256 priceTokenIn,
+        uint256 priceTokenOut,
+        uint256 amountIn,
+        uint112 reserveIn,
+        uint112 reserveOut
+    ) internal returns (uint256 profit) {
+        uint256 amountOut = uniswapV2PricingModule.getAmountOut(amountIn, reserveIn, reserveOut);
+        if (amountOut > 0) vm.assume(priceTokenOut <= type(uint256).max / amountOut);
+        vm.assume(priceTokenIn <= type(uint256).max / amountIn);
+        profit = priceTokenOut * amountOut - priceTokenIn * amountIn;
     }
 }
