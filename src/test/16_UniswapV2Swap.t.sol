@@ -105,6 +105,8 @@ abstract contract UniswapV2SwapActionTest is Test {
         // Action
         action = new UniswapV2SwapAction(address(routerMock), address(mainRegistry));
 
+        
+
         vm.stopPrank();
 
         oracleDaiToUsd =
@@ -166,18 +168,23 @@ abstract contract UniswapV2SwapActionTest is Test {
         vm.stopPrank();
 
         // Cheat vault owner
-        uint256 slot = stdstore.target(address(vault)).sig(vault.owner.selector).find();
-        bytes32 loc = bytes32(slot);
-        bytes32 owner = bytes32(abi.encode(vaultOwner));
-        vm.store(address(vault), loc, owner);
+        stdstore
+            .target(address(vault))
+            .sig(vault.owner.selector)
+            .checked_write(vaultOwner);
 
-        // Cheat whitelisted action TODO add action whitelist
+        // Cheat vault registry address
+        stdstore
+            .target(address(vault))
+            .sig(vault.registryAddress.selector)
+            .checked_write(address(mainRegistry));
 
-        // // Cheat whitelisted assets in mainRegistry
-        // slot = stdstore.target(address(mainRegistry)).sig(vault.owner.selector).find();
-        // loc = bytes32(slot);
-        // bytes32 owner = bytes32(abi.encode(vaultOwner));
-        // vm.store(address(vault), loc, owner);
+        // Cheat allowlisted actions in mainRegistry
+        stdstore
+            .target(address(mainRegistry))
+            .sig(mainRegistry.isActionAllowlisted.selector)
+            .with_key(address(action))
+            .checked_write(true);
     }
 
     //Before Each
@@ -246,7 +253,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
     }
 
-    function testSucces_SwapDAIWETH() public {
+    function testSuccess_SwapDAIWETH() public {
         address[] memory path = new address[](2);
         path[0] = address(dai);
         path[1] = address(weth);
@@ -262,7 +269,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
     }
 
     // TODO add reverts for not enough funds
-    function testSucces_SwapDAIWETHNotEnoughFunds() public {
+    function testSuccess_SwapDAIWETHNotEnoughFunds() public {
         uint256[] memory _outAssetAmounts = new uint256[](1);
         _outAssetAmounts[0] = 1301;
         _out.assetAmounts = _outAssetAmounts;
@@ -275,12 +282,12 @@ contract executeActionTests is UniswapV2SwapActionTest {
         bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("Arithmetic over/underflow");
+        vm.expectRevert('NH{q != Arithmetic over/underflow');
         vault.vaultManagementAction(address(action), __actionSpecificData);
         vm.stopPrank();
     }
 
-    function testSucces_SwapIncomingNotWhitelisted() public {
+    function testSuccess_SwapIncomingNotWhitelisted() public {
         ERC20Mock shiba = new ERC20Mock("Shiba Mock", "mShiba", uint8(Constants.daiDecimals));
 
         address[] memory _inAssets = new address[](1);
@@ -300,10 +307,10 @@ contract executeActionTests is UniswapV2SwapActionTest {
         vm.stopPrank();
 
     }
+    
 
-    //TODO add action whitelist in vault?
-    // Currently fails because that funcionalitty is not yet added to vault
-    function testFail_ExecuteNotWhitelistedAction(address _action) public {
+    function testSuccess_ExecuteNotWhitelistedAction(address _action) public {
+        vm.assume(_action != address(action));
         ERC20Mock shiba = new ERC20Mock("Shiba Mock", "mShiba", uint8(Constants.daiDecimals));
 
         address[] memory _inAssets = new address[](1);
@@ -318,16 +325,15 @@ contract executeActionTests is UniswapV2SwapActionTest {
         bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("UV2A_SWAP: Non-whitelisted incoming asset");
+        vm.expectRevert("VL_VMA: Action is not allowlisted");
         vault.vaultManagementAction(address(_action), __actionSpecificData);
         vm.stopPrank();
 
     }
 
-
-    // Test action not whitelisted
     // Test caller is not owner
     // Test call action directly and check 
     // Test with dynamic swap with right values
     // Not enough
+    // Collat thresh hold liquidates vault
 }

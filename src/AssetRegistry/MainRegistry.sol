@@ -49,6 +49,8 @@ contract MainRegistry is Ownable, RiskModule {
         string baseCurrencyLabel;
     }
 
+    mapping(address => bool) public isActionAllowlisted;
+
     /**
      * @dev Only Sub-registries can call functions marked by this modifier.
      *
@@ -628,5 +630,18 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] memory valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
         liquidationThreshold = calculateWeightedLiquidationThreshold(_assetAddresses, valuesPerAsset, baseCurrencyInd);
+    }
+
+
+    /* ///////////////////////////////////////////////////////////////
+                    ACTION ALLOWLIST SETTERS
+    /////////////////////////////////////////////////////////////// */
+
+    function addAllowlist(address _action) public onlyOwner {
+        isActionAllowlisted[_action] = true;
+    }
+
+    function removeAllowlist(address _action) public onlyOwner {
+        isActionAllowlisted[_action] = false;
     }
 }

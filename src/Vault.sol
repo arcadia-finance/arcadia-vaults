@@ -788,11 +788,14 @@ contract Vault {
     ///////////////////////////////////////////////////////////////*/
 
     function vaultManagementAction(address _actionHandler, bytes calldata _actionData) public onlyOwner {
-        //TODO check if _actionHandler is whitelisted handler.
+
+        // causes weird reverts 
+        require(IMainRegistry(registryAddress).isActionAllowlisted(_actionHandler), "VL_VMA: Action is not allowlisted");
+
         (actionAssetsData memory outgoing_, actionAssetsData memory incoming_,) =
             abi.decode(_actionData, (actionAssetsData, actionAssetsData, bytes));
 
-        // Account preActionBalances
+        // account preActionBalances
 
         for (uint256 i; i < incoming_.assets.length; i++) {
             incoming_.preActionBalances[i] = IERC20(incoming_.assets[i]).balanceOf(address(this));
