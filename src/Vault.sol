@@ -795,6 +795,8 @@ contract Vault {
         (actionAssetsData memory outgoing_, actionAssetsData memory incoming_,) =
             abi.decode(_actionData, (actionAssetsData, actionAssetsData, bytes));
 
+        //TODO: account preAction CT
+
         // account preActionBalances
 
         for (uint256 i; i < incoming_.assets.length; i++) {

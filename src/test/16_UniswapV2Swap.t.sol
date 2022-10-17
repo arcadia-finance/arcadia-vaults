@@ -48,9 +48,7 @@ abstract contract UniswapV2SwapActionTest is Test {
 
     Vault vault;
     UniswapV2Router02Mock routerMock;
-    // UniswapV2PairMock pairMock;
-    // UniswapV2FactoryMock factoryMock;
-    UniswapV2SwapAction action;
+    IUniswapV2SwapActionExtension action;
 
     MainRegistry mainRegistry;
     StandardERC20PricingModule private standardERC20Registry;
@@ -72,6 +70,7 @@ abstract contract UniswapV2SwapActionTest is Test {
     uint16[] emptyListUint16 = new uint16[](0);
 
     //Before
+    // TODO: Clean this up
     constructor() {
         vm.startPrank(deployer);
         vault = new Vault();
@@ -103,9 +102,7 @@ abstract contract UniswapV2SwapActionTest is Test {
         mainRegistry.addPricingModule(address(standardERC20Registry));
 
         // Action
-        action = new UniswapV2SwapAction(address(routerMock), address(mainRegistry));
-
-        
+        action = new IUniswapV2SwapActionExtension(address(routerMock), address(mainRegistry));
 
         vm.stopPrank();
 
@@ -214,6 +211,8 @@ contract DeploymentTest is UniswapV2SwapActionTest {
 contract executeActionTests is UniswapV2SwapActionTest {
     actionAssetsData _out;
     actionAssetsData _in;
+    address[] path;
+
     function setUp() public override {
         super.setUp();
 
@@ -248,16 +247,21 @@ contract executeActionTests is UniswapV2SwapActionTest {
         uint256[] memory _inPreActionBalances = new uint256[](1);
         _inPreActionBalances[0] = 0;
 
+        path = new address[](2);
+        path[0] = address(dai);
+        path[1] = address(weth);
+
         //  Prepare action data
         _in = actionAssetsData(_inAssets, _inAssetsIds, _inAssetAmounts, _inPreActionBalances);
 
     }
 
-    function testSuccess_SwapDAIWETH() public {
-        address[] memory path = new address[](2);
-        path[0] = address(dai);
-        path[1] = address(weth);
+        /*///////////////////////////////
+                COMPLETE SWAP TESTS
+        ///////////////////////////////*/
 
+
+    function testSuccess_SwapDAIWETH() public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
         bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
 
@@ -274,7 +278,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
         _outAssetAmounts[0] = 1301;
         _out.assetAmounts = _outAssetAmounts;
 
-        address[] memory path = new address[](2);
+        path = new address[](2);
         path[0] = address(dai);
         path[1] = address(weth);
 
@@ -282,45 +286,33 @@ contract executeActionTests is UniswapV2SwapActionTest {
         bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert('NH{q != Arithmetic over/underflow');
+        vm.expectRevert(stdError.arithmeticError);
         vault.vaultManagementAction(address(action), __actionSpecificData);
         vm.stopPrank();
     }
 
-    function testSuccess_SwapIncomingNotWhitelisted() public {
-        ERC20Mock shiba = new ERC20Mock("Shiba Mock", "mShiba", uint8(Constants.daiDecimals));
 
-        address[] memory _inAssets = new address[](1);
-        _inAssets[0] = address(shiba);
-        _in.assets = _inAssets;
-    
-        address[] memory path = new address[](2);
-        path[0] = address(dai);
-        path[1] = address(shiba);
-
+    //TODO: Make a generic fuzzed test?
+    function testSuccess_SwapTwoGenericAssets(address assetOne, address assetTwo) public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
         bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
 
-        vm.startPrank(vaultOwner);
-        vm.expectRevert("UV2A_SWAP: Non-whitelisted incoming asset");
+        vm.prank(vaultOwner);
         vault.vaultManagementAction(address(action), __actionSpecificData);
-        vm.stopPrank();
 
+        assertEq(dai.balanceOf(address(vault)), 0);
+        assertEq(weth.balanceOf(address(vault)), 1);
     }
+
+
+        /*///////////////////////////////
+                    VAULT TESTS
+        ///////////////////////////////*/
     
 
-    function testSuccess_ExecuteNotWhitelistedAction(address _action) public {
+    function testSuccess_ExecuteNotAllowlistedAction(address _action) public {
         vm.assume(_action != address(action));
-        ERC20Mock shiba = new ERC20Mock("Shiba Mock", "mShiba", uint8(Constants.daiDecimals));
-
-        address[] memory _inAssets = new address[](1);
-        _inAssets[0] = address(shiba);
-        _in.assets = _inAssets;
-    
-        address[] memory path = new address[](2);
-        path[0] = address(dai);
-        path[1] = address(shiba);
-
+ 
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
         bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
 
@@ -330,6 +322,71 @@ contract executeActionTests is UniswapV2SwapActionTest {
         vm.stopPrank();
 
     }
+    
+        /*///////////////////////////////
+                    PRECHECK TESTS
+        ///////////////////////////////*/
+
+
+    function testSuccess_PathLengthMustBeTwoOrMore() public {
+        path = new address[](1);
+        path[0] = address(dai);
+
+        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
+        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("UV2A_SWAP: _path must be >= 2");
+        action.testPreCheck(address(vault),__actionSpecificData);
+        vm.stopPrank();
+
+    }
+
+    function testSuccess_SwapIncomingAssetNotAllowlisted() public {
+        ERC20Mock shiba = new ERC20Mock("Shiba Mock", "mShiba", uint8(Constants.daiDecimals));
+
+        address[] memory _inAssets = new address[](1);
+        _inAssets[0] = address(shiba);
+        _in.assets = _inAssets;
+    
+        address[] memory path = new address[](2);
+        path[0] = address(dai);
+        path[1] = address(shiba);
+
+        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
+        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("UV2A_SWAP: Non-allowlisted incoming asset");
+        action.testPreCheck(address(vault),__actionSpecificData);
+        vm.stopPrank();
+
+    }
+
+    /*///////////////////////////////
+            POSTCHECK TESTS
+    ///////////////////////////////*/
+
+//    function testSuccess_SwapIncomingAssetNotAllowlisted() public {
+//         ERC20Mock shiba = new ERC20Mock("Shiba Mock", "mShiba", uint8(Constants.daiDecimals));
+
+//         address[] memory _inAssets = new address[](1);
+//         _inAssets[0] = address(shiba);
+//         _in.assets = _inAssets;
+    
+//         address[] memory path = new address[](2);
+//         path[0] = address(dai);
+//         path[1] = address(shiba);
+
+//         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
+//         bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
+
+//         vm.startPrank(vaultOwner);
+//         vm.expectRevert("UV2A_SWAP: Non-allowlisted incoming asset");
+//         action.testPostCheck(address(vault),__actionSpecificData);
+//         vm.stopPrank();
+
+//     }
 
     // Test caller is not owner
     // Test call action directly and check 

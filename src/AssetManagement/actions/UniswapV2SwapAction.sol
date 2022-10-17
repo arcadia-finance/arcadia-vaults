@@ -14,7 +14,6 @@ import "../../interfaces/IVault.sol";
 import "../../interfaces/IERC20.sol";
 
 contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
-    //todo using SafeMath for uint256;
     //Maybe add mainreg address also here
     constructor(address _router, address _mainreg) ActionBase(_mainreg) UniswapV2Helper(_router) {}
 
@@ -74,16 +73,10 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
                     OUTGOING
         ///////////////////////////////*/
 
-        // for (uint256 i; i < _outgoing.assets.length; i++) {
-        //     //account balances preSwap
-        //     _outgoing.preActionBalances[i] = IERC20(_outgoing.assets[i]).balanceOf(_vaultAddress);
-        // //     // Approve Action for Vault
-        // //     IVault(_vaultAddress).approveAssetForActionHandler(
-        //         address(this), _outgoing.assets[i], _outgoing.assetAmounts[i]
-        //     );
-        //     // Withdraw outgoing assets to actionHandler
-        //     IERC20(_outgoing.assets[i]).transferFrom(_vaultAddress, address(this), _outgoing.assetAmounts[i]);
-        // }
+        //TODO make sure outgoing assets aren't funky?
+
+
+
 
         /*///////////////////////////////
                     INCOMING
@@ -92,12 +85,9 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         //Check if incoming assets are Arcadia whitelisted assets
         require(
             IMainRegistry(MAIN_REGISTRY).batchIsWhiteListed(_incoming.assets, _incoming.assetIds),
-            "UV2A_SWAP: Non-whitelisted incoming asset"
+            "UV2A_SWAP: Non-allowlisted incoming asset"
         );
 
-        // for (uint256 i; i < _incoming.assets.length; i++) {
-        //     _incoming.preActionBalances[i] = IERC20(path[0]).balanceOf(_vaultAddress);
-        // }
 
         return (_outgoing, _incoming, path);
     }
@@ -119,7 +109,7 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
             // Check incoming assets are as expected
             require(
                 incomingAssetAmounts_[i] >= incomingAssets_.assetAmounts[i],
-                "IM: Received incoming asset less than expected"
+                "UV2A_SWAP: Received incoming asset less than expected"
             );
         }
 
@@ -137,18 +127,18 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
 
             // Check outgoing assets are as expected
             require(
-                outgoingAssetAmounts_[i] <= outgoingAssets_.assetAmounts[i], "IM: Outgoing amount greater than expected"
+                outgoingAssetAmounts_[i] <= outgoingAssets_.assetAmounts[i], "UV2A_SWAP: Outgoing amount greater than expected"
             );
 
             //TODO Reset any unused approvals
             //TODO make sure assets are withdrawn to vault in case they got tx'd to adapter.
             //TODO check coll thresh after swap.
 
-            // uint256 collThresh = IVault(_vaultAddress).getCollateralValue();
-            //     require(
-            //         outgoingAssetAmounts_[i] <= outgoingAssets_.limitAssetAmounts[i],
-            //         "IM: Outgoing amount greater than expected"
-            //     );
+            uint256 collThresh = IVault(_vaultAddress).getCollateralValue();
+                require(
+                    outgoingAssetAmounts_[i] <= outgoingAssets_.limitAssetAmounts[i],
+                    "UV2A_SWAP: Outgoing amount greater than expected"
+                );
         }
 
         return (incomingAssetAmounts_, outgoingAssetAmounts_);
