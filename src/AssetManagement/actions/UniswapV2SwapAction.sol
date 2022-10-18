@@ -73,10 +73,7 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
                     OUTGOING
         ///////////////////////////////*/
 
-        //TODO make sure outgoing assets aren't funky?
-
-
-
+        //TODO Check outgoing assets are not in value more than vault value locked?
 
         /*///////////////////////////////
                     INCOMING
@@ -97,6 +94,7 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         actionAssetsData memory outgoingAssets_,
         actionAssetsData memory incomingAssets_
     ) internal view returns (uint256[] memory incomingAssetAmounts_, uint256[] memory outgoingAssetAmounts_) {
+
         /*///////////////////////////////
                     INCOMING
         ///////////////////////////////*/
@@ -130,15 +128,14 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
                 outgoingAssetAmounts_[i] <= outgoingAssets_.assetAmounts[i], "UV2A_SWAP: Outgoing amount greater than expected"
             );
 
-            //TODO Reset any unused approvals
-            //TODO make sure assets are withdrawn to vault in case they got tx'd to adapter.
-            //TODO check coll thresh after swap.
+            uint256 collValue = IVault(_vaultAddress).getCollateralValue();
+            uint256 usedMargin = IVault(_vaultAddress).getUsedMargin();
 
-            uint256 collThresh = IVault(_vaultAddress).getCollateralValue();
-                require(
-                    outgoingAssetAmounts_[i] <= outgoingAssets_.limitAssetAmounts[i],
-                    "UV2A_SWAP: Outgoing amount greater than expected"
-                );
+            require(collValue > usedMargin, "UV2SWAP: coll. value postAction too low"); 
+
+            // This might increase health factor but atleast blocks you from becoming unhealthy
+
+
         }
 
         return (incomingAssetAmounts_, outgoingAssetAmounts_);

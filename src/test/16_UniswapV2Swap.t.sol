@@ -16,6 +16,7 @@ import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
 import "../AssetRegistry/StandardERC20PricingModule.sol";
 import "../OracleHub.sol";
 import "../mockups/ArcadiaOracle.sol";
+import "../mockups/TrustedProtocolMock.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
@@ -49,6 +50,7 @@ abstract contract UniswapV2SwapActionTest is Test {
     Vault vault;
     UniswapV2Router02Mock routerMock;
     IUniswapV2SwapActionExtension action;
+    TrustedProtocolMock trustedProtocol;
 
     MainRegistry mainRegistry;
     StandardERC20PricingModule private standardERC20Registry;
@@ -76,9 +78,12 @@ abstract contract UniswapV2SwapActionTest is Test {
         vault = new Vault();
         routerMock = new UniswapV2Router02Mock();
 
+
         // Swappable ERC20
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         weth = new ERC20Mock("WETH Mock", "mWETH", uint8(Constants.ethDecimals));
+
+        trustedProtocol = new TrustedProtocolMock(dai, "tpDai", "trustedProtocolDai");
 
         // MainReg
         mainRegistry = new MainRegistry(MainRegistry.BaseCurrencyInformation({
@@ -182,6 +187,12 @@ abstract contract UniswapV2SwapActionTest is Test {
             .sig(mainRegistry.isActionAllowlisted.selector)
             .with_key(address(action))
             .checked_write(true);
+
+
+        stdstore
+            .target(address(vault))
+            .sig(vault.trustedProtocol.selector)
+            .checked_write(address(trustedProtocol));
     }
 
     //Before Each
@@ -217,7 +228,28 @@ contract executeActionTests is UniswapV2SwapActionTest {
         super.setUp();
 
         //Give some initial DAI to vault to swap
-        deal(address(dai), address(vault), 1300, true);
+        deal(address(dai), address(vault), 1300 * 10 ** Constants.daiDecimals, true);
+
+
+        // console.log(dai.balanceOf(vaultOwner));        
+
+        // //Deposit in vault
+        // address[] memory _assetAddresses = new address[](1);
+        // _assetAddresses[0] = address(dai);
+        // uint256[] memory _assetAmounts = new uint256[](1);
+        // _assetAmounts[0] = 1300 * 10 ** Constants.daiDecimals;
+        // uint256[] memory _assetIds = new uint256[](1);
+        // _assetIds[0] = 0;
+        // uint256[] memory _assetTypes = new uint256[](1);
+        // _assetTypes[0] = 0;
+
+        // console.log(_assetAmounts[0]);  
+
+        
+        // console.log(dai.balanceOf(vaultOwner)); 
+        // vm.prank(vaultOwner);
+        // vault.deposit(_assetAddresses,_assetIds, _assetAmounts, _assetTypes);
+
 
         // Prepare outgoingData
         address[] memory outAssets = new address[](1);
@@ -227,7 +259,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
         outAssetsIds[0] = 0;
 
         uint256[] memory outAssetAmounts = new uint256[](1);
-        outAssetAmounts[0] = 1300;
+        outAssetAmounts[0] = 1300 * 10 ** Constants.daiDecimals;
 
         uint256[] memory outPreActionBalances = new uint256[](1);
         outPreActionBalances[0] = 0;
@@ -242,7 +274,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
         _inAssetsIds[0] = 1;
 
         uint256[] memory _inAssetAmounts = new uint256[](1);
-        _inAssetAmounts[0] = 1;
+        _inAssetAmounts[0] = 1 * 10 ** Constants.ethDecimals;
 
         uint256[] memory _inPreActionBalances = new uint256[](1);
         _inPreActionBalances[0] = 0;
@@ -269,13 +301,12 @@ contract executeActionTests is UniswapV2SwapActionTest {
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
         assertEq(dai.balanceOf(address(vault)), 0);
-        assertEq(weth.balanceOf(address(vault)), 1);
+        assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
     }
 
-    // TODO add reverts for not enough funds
     function testSuccess_SwapDAIWETHNotEnoughFunds() public {
         uint256[] memory _outAssetAmounts = new uint256[](1);
-        _outAssetAmounts[0] = 1301;
+        _outAssetAmounts[0] = 1301 * 10 ** Constants.daiDecimals; //TODO: make this generic
         _out.assetAmounts = _outAssetAmounts;
 
         path = new address[](2);
@@ -292,16 +323,27 @@ contract executeActionTests is UniswapV2SwapActionTest {
     }
 
 
-    //TODO: Make a generic fuzzed test?
-    function testSuccess_SwapTwoGenericAssets(address assetOne, address assetTwo) public {
+    function testSuccess_SwapTwoGenericAssetAmounts(uint256 _outAssetAmount, uint256 _inAssetAmount) public {
+
+        vm.assume((_outAssetAmount * 10 ** Constants.daiDecimals) < dai.balanceOf(address(vault)));
+        // vm.assume((_outAssetAmount == mulDivUp(_inAssetAmountConstants.ethDecimals)));
+
+        uint256[] memory _outAssets = new uint256[](1);
+        _outAssets[0] =_outAssetAmount * 10 ** Constants.daiDecimals;
+        _out.assetAmounts = _outAssets;
+
+        uint256[] memory _inAssets = new uint256[](1);
+        _inAssets[0] = _inAssetAmount * 10 ** Constants.ethDecimals;
+        _in.assetAmounts = _inAssets;
+
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
         bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
 
         vm.prank(vaultOwner);
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
-        assertEq(dai.balanceOf(address(vault)), 0);
-        assertEq(weth.balanceOf(address(vault)), 1);
+        assertEq(dai.balanceOf(address(vault)), _outAssetAmount - (_outAssetAmount * 10 ** Constants.daiDecimals));
+        assertEq(weth.balanceOf(address(vault)), _inAssetAmount * 10 ** Constants.ethDecimals);
     }
 
 
@@ -367,26 +409,19 @@ contract executeActionTests is UniswapV2SwapActionTest {
             POSTCHECK TESTS
     ///////////////////////////////*/
 
-//    function testSuccess_SwapIncomingAssetNotAllowlisted() public {
-//         ERC20Mock shiba = new ERC20Mock("Shiba Mock", "mShiba", uint8(Constants.daiDecimals));
+   function testSuccess_CollValueBelowUsedMargin() public {
+        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
+        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
 
-//         address[] memory _inAssets = new address[](1);
-//         _inAssets[0] = address(shiba);
-//         _in.assets = _inAssets;
-    
-//         address[] memory path = new address[](2);
-//         path[0] = address(dai);
-//         path[1] = address(shiba);
+        console.log(vault.getCollateralValue());
+        
 
-//         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-//         bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("UV2SWAP: coll. value postAction too low");
+        vault.vaultManagementAction(address(action), __actionSpecificData);
+        vm.stopPrank();
 
-//         vm.startPrank(vaultOwner);
-//         vm.expectRevert("UV2A_SWAP: Non-allowlisted incoming asset");
-//         action.testPostCheck(address(vault),__actionSpecificData);
-//         vm.stopPrank();
-
-//     }
+    }
 
     // Test caller is not owner
     // Test call action directly and check 

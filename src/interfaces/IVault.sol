@@ -24,4 +24,8 @@ interface IVault {
     function vaultManagementAction(address _actionHandler, bytes memory _actionData) external;
 
     function approveAssetForActionHandler(address _target, address _asset, uint256 _amount) external;
+
+    function getCollateralValue() external view returns (uint256);
+
+    function getUsedMargin() external view returns (uint128 usedMargin);
 }
