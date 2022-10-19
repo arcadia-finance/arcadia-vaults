@@ -227,29 +227,25 @@ contract executeActionTests is UniswapV2SwapActionTest {
     function setUp() public override {
         super.setUp();
 
-        //Give some initial DAI to vault to swap
-        deal(address(dai), address(vault), 1300 * 10 ** Constants.daiDecimals, true);
+        //Give some initial DAI to vault to deposit
+        deal(address(dai), vaultOwner, 100000 * 10 ** Constants.daiDecimals, true);
 
+        //Deposit in vault
+        address[] memory _assetAddresses = new address[](1);
+        _assetAddresses[0] = address(dai);
+        uint256[] memory _assetIds = new uint256[](1);
+        _assetIds[0] = 1;
+        uint256[] memory _assetAmounts = new uint256[](1);
+        _assetAmounts[0] = 1300 * 10 ** Constants.daiDecimals;
+        uint256[] memory _assetTypes = new uint256[](1);
+        _assetTypes[0] = 0;
 
-        // console.log(dai.balanceOf(vaultOwner));        
+        console.log(dai.balanceOf(vaultOwner));
 
-        // //Deposit in vault
-        // address[] memory _assetAddresses = new address[](1);
-        // _assetAddresses[0] = address(dai);
-        // uint256[] memory _assetAmounts = new uint256[](1);
-        // _assetAmounts[0] = 1300 * 10 ** Constants.daiDecimals;
-        // uint256[] memory _assetIds = new uint256[](1);
-        // _assetIds[0] = 0;
-        // uint256[] memory _assetTypes = new uint256[](1);
-        // _assetTypes[0] = 0;
-
-        // console.log(_assetAmounts[0]);  
-
-        
-        // console.log(dai.balanceOf(vaultOwner)); 
-        // vm.prank(vaultOwner);
-        // vault.deposit(_assetAddresses,_assetIds, _assetAmounts, _assetTypes);
-
+        vm.startPrank(vaultOwner);
+        dai.approve(address(vault), type(uint256).max);
+        vault.deposit(_assetAddresses,_assetIds, _assetAmounts, _assetTypes);
+        vm.stopPrank();
 
         // Prepare outgoingData
         address[] memory outAssets = new address[](1);
@@ -299,6 +295,8 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
         vm.prank(vaultOwner);
         vault.vaultManagementAction(address(action), __actionSpecificData);
+
+        console.log(vault.getCollateralValue());
 
         assertEq(dai.balanceOf(address(vault)), 0);
         assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
@@ -415,7 +413,6 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
         console.log(vault.getCollateralValue());
         
-
         vm.startPrank(vaultOwner);
         vm.expectRevert("UV2SWAP: coll. value postAction too low");
         vault.vaultManagementAction(address(action), __actionSpecificData);
