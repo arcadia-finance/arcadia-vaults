@@ -128,13 +128,6 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
                 outgoingAssetAmounts_[i] <= outgoingAssets_.assetAmounts[i], "UV2A_SWAP: Outgoing amount greater than expected"
             );
 
-            uint256 collValue = IVault(_vaultAddress).getCollateralValue();
-            uint256 usedMargin = IVault(_vaultAddress).getUsedMargin();
-
-            require(collValue > usedMargin, "UV2SWAP: coll. value postAction too low"); 
-
-            // This might increase health factor but atleast blocks you from becoming unhealthy
-
 
         }
 

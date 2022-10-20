@@ -38,7 +38,8 @@ contract Vault {
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
      */
-    bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+    bytes32 internal constant _IMPLEMENTATION_SLOT =
+        0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     bool public isTrustedProtocolSet;
 
@@ -71,13 +72,19 @@ contract Vault {
     VaultInfo public vault;
 
     event Upgraded(address indexed implementation);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
 
     /**
      * @dev Throws if called by any account other than the factory adress.
      */
     modifier onlyFactory() {
-        require(msg.sender == IMainRegistry(registryAddress).factoryAddress(), "VL: You are not the factory");
+        require(
+            msg.sender == IMainRegistry(registryAddress).factoryAddress(),
+            "VL: You are not the factory"
+        );
         _;
     }
 
@@ -113,7 +120,11 @@ contract Vault {
      * @param _registryAddress The 'beacon' contract to which should be looked at for external logic.
      * @param _vaultVersion The version of the vault logic.
      */
-    function initialize(address _owner, address _registryAddress, uint16 _vaultVersion) external payable {
+    function initialize(
+        address _owner,
+        address _registryAddress,
+        uint16 _vaultVersion
+    ) external payable {
         require(vaultVersion == 0, "V_I: Already initialized!");
         require(_vaultVersion != 0, "V_I: Invalid vault version");
         owner = _owner;
@@ -124,7 +135,10 @@ contract Vault {
     /**
      * @dev Stores a new address in the EIP1967 implementation slot & updates the vault version.
      */
-    function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
+    function upgradeVault(address newImplementation, uint16 newVersion)
+        external
+        onlyFactory
+    {
         vaultVersion = newVersion;
         getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
 
@@ -134,7 +148,11 @@ contract Vault {
     /**
      * @dev Returns an `AddressSlot` with member `value` located at `slot`.
      */
-    function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
+    function getAddressSlot(bytes32 slot)
+        internal
+        pure
+        returns (AddressSlot storage r)
+    {
         assembly {
             r.slot := slot
         }
@@ -186,8 +204,14 @@ contract Vault {
      * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
      */
     function _setBaseCurrency(address _baseCurrency) private {
-        require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
-        require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL_SBC: baseCurrency not found");
+        require(
+            getUsedMargin() == 0,
+            "VL_SBC: Can't change baseCurrency when Used Margin > 0"
+        );
+        require(
+            IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency),
+            "VL_SBC: baseCurrency not found"
+        );
         vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
     }
 
@@ -205,7 +229,11 @@ contract Vault {
         require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
-        (bool success, address baseCurrency, address liquidator_) = ITrustedProtocol(protocol).openMarginAccount();
+        (
+            bool success,
+            address baseCurrency,
+            address liquidator_
+        ) = ITrustedProtocol(protocol).openMarginAccount();
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
         liquidator = liquidator_;
@@ -225,7 +253,11 @@ contract Vault {
      */
     function closeTrustedMarginAccount() public onlyOwner {
         require(isTrustedProtocolSet, "V_CMA: NOT SET");
-        require(ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
+        require(
+            ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) ==
+                0,
+            "V_CMA: NON-ZERO OPEN POSITION"
+        );
 
         isTrustedProtocolSet = false;
         allowed[trustedProtocol] = false;
@@ -253,10 +285,16 @@ contract Vault {
         }
         success = getFreeMargin() >= amount;
         // Update the vault values
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
+        (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts
+        ) = generateAssetData();
         vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
+            assetAddresses,
+            assetIds,
+            assetAmounts,
+            vault.baseCurrency
         );
     }
 
@@ -268,14 +306,24 @@ contract Vault {
      * @dev Since decreasing margin position is financial activity, liquidation threshold update is done here.
      * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
      */
-    function decreaseMarginPosition(address baseCurrency, uint256) public onlyAuthorized returns (bool success) {
+    function decreaseMarginPosition(address baseCurrency, uint256)
+        public
+        onlyAuthorized
+        returns (bool success)
+    {
         success = baseCurrency == vault.baseCurrency;
 
         // Update the vault values
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
+        (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts
+        ) = generateAssetData();
         vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
+            assetAddresses,
+            assetIds,
+            assetAmounts,
+            vault.baseCurrency
         );
     }
 
@@ -286,10 +334,22 @@ contract Vault {
      * @param baseCurrency The asset to return the value in.
      * @return vaultValue Total value stored on the vault, expressed in baseCurrency.
      */
-    function getVaultValue(address baseCurrency) public view returns (uint256 vaultValue) {
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
-        vaultValue = IRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+    function getVaultValue(address baseCurrency)
+        public
+        view
+        returns (uint256 vaultValue)
+    {
+        (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts
+        ) = generateAssetData();
+        vaultValue = IRegistry(registryAddress).getTotalValue(
+            assetAddresses,
+            assetIds,
+            assetAmounts,
+            baseCurrency
+        );
     }
 
     /**
@@ -303,11 +363,22 @@ contract Vault {
      * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
      * or the smaller the on-chain liquidity, the bigger the haircut will be.
      */
-    function getCollateralValue() public view returns (uint256 collateralValue) {
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
-        collateralValue =
-            IRegistry(registryAddress).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+    function getCollateralValue()
+        public
+        view
+        returns (uint256 collateralValue)
+    {
+        (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts
+        ) = generateAssetData();
+        collateralValue = IRegistry(registryAddress).getCollateralValue(
+            assetAddresses,
+            assetIds,
+            assetAmounts,
+            vault.baseCurrency
+        );
     }
 
     /**
@@ -318,7 +389,9 @@ contract Vault {
      * The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
      */
     function getUsedMargin() public returns (uint128 usedMargin) {
-        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)); // ToDo: Check if cast is safe
+        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(
+            address(this)
+        ); // ToDo: Check if cast is safe
     }
 
     /**
@@ -333,7 +406,9 @@ contract Vault {
 
         //gas: explicit check is done to prevent underflow
         unchecked {
-            freeMargin = collateralValue > usedMargin ? collateralValue - usedMargin : 0;
+            freeMargin = collateralValue > usedMargin
+                ? collateralValue - usedMargin
+                : 0;
         }
     }
 
@@ -351,7 +426,11 @@ contract Vault {
      * @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
      * @return success Boolean returning if the liquidation process is successfully started.
      */
-    function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
+    function liquidateVault(address liquidationKeeper)
+        public
+        onlyFactory
+        returns (bool success, address liquidator_)
+    {
         //gas: 35 gas cheaper to not take debt into memory
         uint256 totalValue = getVaultValue(vault.baseCurrency);
         uint128 openDebt = getUsedMargin();
@@ -368,11 +447,18 @@ contract Vault {
 
         require(leftHand < rightHand, "V_LV: This vault is healthy");
 
-        uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
+        uint8 baseCurrencyIdentifier = IRegistry(registryAddress)
+            .assetToBaseCurrency(vault.baseCurrency);
 
         require(
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, openDebt, vault.liqThres, baseCurrencyIdentifier
+                address(this),
+                life,
+                liquidationKeeper,
+                owner,
+                openDebt,
+                vault.liqThres,
+                baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );
@@ -420,22 +506,32 @@ contract Vault {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
-                && assetAddressesLength == assetTypes.length,
+            assetAddressesLength == assetIds.length &&
+                assetAddressesLength == assetAmounts.length &&
+                assetAddressesLength == assetTypes.length,
             "Length mismatch"
         );
 
         require(
-            IRegistry(registryAddress).batchIsWhiteListed(assetAddresses, assetIds), "Not all assets are whitelisted!"
+            IRegistry(registryAddress).batchIsWhiteListed(
+                assetAddresses,
+                assetIds
+            ),
+            "Not all assets are whitelisted!"
         );
 
-        for (uint256 i; i < assetAddressesLength;) {
+        for (uint256 i; i < assetAddressesLength; ) {
             if (assetTypes[i] == 0) {
                 _depositERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
             } else if (assetTypes[i] == 1) {
                 _depositERC721(msg.sender, assetAddresses[i], assetIds[i]);
             } else if (assetTypes[i] == 2) {
-                _depositERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+                _depositERC1155(
+                    msg.sender,
+                    assetAddresses[i],
+                    assetIds[i],
+                    assetAmounts[i]
+                );
             } else {
                 require(false, "Unknown asset type");
             }
@@ -479,18 +575,24 @@ contract Vault {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
-                && assetAddressesLength == assetTypes.length,
+            assetAddressesLength == assetIds.length &&
+                assetAddressesLength == assetAmounts.length &&
+                assetAddressesLength == assetTypes.length,
             "Length mismatch"
         );
 
-        for (uint256 i; i < assetAddressesLength;) {
+        for (uint256 i; i < assetAddressesLength; ) {
             if (assetTypes[i] == 0) {
                 _withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
             } else if (assetTypes[i] == 1) {
                 _withdrawERC721(msg.sender, assetAddresses[i], assetIds[i]);
             } else if (assetTypes[i] == 2) {
-                _withdrawERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+                _withdrawERC1155(
+                    msg.sender,
+                    assetAddresses[i],
+                    assetIds[i],
+                    assetAmounts[i]
+                );
             } else {
                 require(false, "Unknown asset type");
             }
@@ -501,7 +603,10 @@ contract Vault {
 
         uint256 usedMargin = getUsedMargin();
         if (usedMargin != 0) {
-            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
+            require(
+                getCollateralValue() > usedMargin,
+                "V_W: coll. value too low!"
+            );
         }
     }
 
@@ -515,11 +620,18 @@ contract Vault {
      * @param ERC20Address The asset address that should be transferred.
      * @param amount The amount of ERC20 tokens to be transferred.
      */
-    function _depositERC20(address _from, address ERC20Address, uint256 amount) private {
-        require(IERC20(ERC20Address).transferFrom(_from, address(this), amount), "Transfer from failed");
+    function _depositERC20(
+        address _from,
+        address ERC20Address,
+        uint256 amount
+    ) private {
+        require(
+            IERC20(ERC20Address).transferFrom(_from, address(this), amount),
+            "Transfer from failed"
+        );
 
         uint256 erc20StoredLength = erc20Stored.length;
-        for (uint256 i; i < erc20StoredLength;) {
+        for (uint256 i; i < erc20StoredLength; ) {
             if (erc20Stored[i] == ERC20Address) {
                 return;
             }
@@ -541,7 +653,11 @@ contract Vault {
      * @param ERC721Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
      */
-    function _depositERC721(address _from, address ERC721Address, uint256 id) private {
+    function _depositERC721(
+        address _from,
+        address ERC721Address,
+        uint256 id
+    ) private {
         IERC721(ERC721Address).transferFrom(_from, address(this), id);
 
         erc721Stored.push(ERC721Address);
@@ -560,13 +676,24 @@ contract Vault {
      * @param id The ID of the token to be transferred.
      * @param amount The amount of ERC1155 tokens to be transferred.
      */
-    function _depositERC1155(address _from, address ERC1155Address, uint256 id, uint256 amount) private {
-        IERC1155(ERC1155Address).safeTransferFrom(_from, address(this), id, amount, "");
+    function _depositERC1155(
+        address _from,
+        address ERC1155Address,
+        uint256 id,
+        uint256 amount
+    ) private {
+        IERC1155(ERC1155Address).safeTransferFrom(
+            _from,
+            address(this),
+            id,
+            amount,
+            ""
+        );
 
         bool addrSeen;
 
         uint256 erc1155StoredLength = erc1155Stored.length;
-        for (uint256 i; i < erc1155StoredLength;) {
+        for (uint256 i; i < erc1155StoredLength; ) {
             if (erc1155Stored[i] == ERC1155Address) {
                 if (erc1155TokenIds[i] == id) {
                     addrSeen = true;
@@ -596,8 +723,15 @@ contract Vault {
      * @param ERC20Address The asset address that should be transferred.
      * @param amount The amount of ERC20 tokens to be transferred.
      */
-    function _withdrawERC20(address to, address ERC20Address, uint256 amount) private {
-        require(IERC20(ERC20Address).transfer(to, amount), "Transfer from failed");
+    function _withdrawERC20(
+        address to,
+        address ERC20Address,
+        uint256 amount
+    ) private {
+        require(
+            IERC20(ERC20Address).transfer(to, amount),
+            "Transfer from failed"
+        );
 
         if (IERC20(ERC20Address).balanceOf(address(this)) == 0) {
             uint256 erc20StoredLength = erc20Stored.length;
@@ -606,7 +740,7 @@ contract Vault {
                 // there was only one ERC20 stored on the contract, safe to remove list
                 erc20Stored.pop();
             } else {
-                for (uint256 i; i < erc20StoredLength;) {
+                for (uint256 i; i < erc20StoredLength; ) {
                     if (erc20Stored[i] == ERC20Address) {
                         erc20Stored[i] = erc20Stored[erc20StoredLength - 1];
                         erc20Stored.pop();
@@ -632,7 +766,11 @@ contract Vault {
      * @param ERC721Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
      */
-    function _withdrawERC721(address to, address ERC721Address, uint256 id) private {
+    function _withdrawERC721(
+        address to,
+        address ERC721Address,
+        uint256 id
+    ) private {
         uint256 tokenIdLength = erc721TokenIds.length;
 
         if (tokenIdLength == 1) {
@@ -640,8 +778,10 @@ contract Vault {
             erc721TokenIds.pop();
             erc721Stored.pop();
         } else {
-            for (uint256 i; i < tokenIdLength;) {
-                if (erc721TokenIds[i] == id && erc721Stored[i] == ERC721Address) {
+            for (uint256 i; i < tokenIdLength; ) {
+                if (
+                    erc721TokenIds[i] == id && erc721Stored[i] == ERC721Address
+                ) {
                     erc721TokenIds[i] = erc721TokenIds[tokenIdLength - 1];
                     erc721TokenIds.pop();
                     erc721Stored[i] = erc721Stored[tokenIdLength - 1];
@@ -671,17 +811,26 @@ contract Vault {
      * @param id The ID of the token to be transferred.
      * @param amount The amount of ERC1155 tokens to be transferred.
      */
-    function _withdrawERC1155(address to, address ERC1155Address, uint256 id, uint256 amount) private {
+    function _withdrawERC1155(
+        address to,
+        address ERC1155Address,
+        uint256 id,
+        uint256 amount
+    ) private {
         uint256 tokenIdLength = erc1155TokenIds.length;
-        if (IERC1155(ERC1155Address).balanceOf(address(this), id) - amount == 0) {
+        if (
+            IERC1155(ERC1155Address).balanceOf(address(this), id) - amount == 0
+        ) {
             if (tokenIdLength == 1) {
                 erc1155TokenIds.pop();
                 erc1155Stored.pop();
             } else {
-                for (uint256 i; i < tokenIdLength;) {
+                for (uint256 i; i < tokenIdLength; ) {
                     if (erc1155TokenIds[i] == id) {
                         if (erc1155Stored[i] == ERC1155Address) {
-                            erc1155TokenIds[i] = erc1155TokenIds[tokenIdLength - 1];
+                            erc1155TokenIds[i] = erc1155TokenIds[
+                                tokenIdLength - 1
+                            ];
                             erc1155TokenIds.pop();
                             erc1155Stored[i] = erc1155Stored[tokenIdLength - 1];
                             erc1155Stored.pop();
@@ -695,7 +844,13 @@ contract Vault {
             }
         }
 
-        IERC1155(ERC1155Address).safeTransferFrom(address(this), to, id, amount, "");
+        IERC1155(ERC1155Address).safeTransferFrom(
+            address(this),
+            to,
+            id,
+            amount,
+            ""
+        );
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -716,11 +871,18 @@ contract Vault {
     function generateAssetData()
         public
         view
-        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts
+        )
     {
         uint256 totalLength;
         unchecked {
-            totalLength = erc20Stored.length + erc721Stored.length + erc1155Stored.length;
+            totalLength =
+                erc20Stored.length +
+                erc721Stored.length +
+                erc1155Stored.length;
         } //cannot practiaclly overflow. No max(uint256) contracts deployed
         assetAddresses = new address[](totalLength);
         assetIds = new uint256[](totalLength);
@@ -729,7 +891,7 @@ contract Vault {
         uint256 i;
         uint256 erc20StoredLength = erc20Stored.length;
         address cacheAddr;
-        for (; i < erc20StoredLength;) {
+        for (; i < erc20StoredLength; ) {
             cacheAddr = erc20Stored[i];
             assetAddresses[i] = cacheAddr;
             //assetIds[i] = 0; //gas: no need to store 0, index will continue anyway
@@ -741,7 +903,7 @@ contract Vault {
 
         uint256 j;
         uint256 erc721StoredLength = erc721Stored.length;
-        for (; j < erc721StoredLength;) {
+        for (; j < erc721StoredLength; ) {
             cacheAddr = erc721Stored[j];
             assetAddresses[i] = cacheAddr;
             assetIds[i] = erc721TokenIds[j];
@@ -756,11 +918,14 @@ contract Vault {
 
         uint256 k;
         uint256 erc1155StoredLength = erc1155Stored.length;
-        for (; k < erc1155StoredLength;) {
+        for (; k < erc1155StoredLength; ) {
             cacheAddr = erc1155Stored[k];
             assetAddresses[i] = cacheAddr;
             assetIds[i] = erc1155TokenIds[k];
-            assetAmounts[i] = IERC1155(cacheAddr).balanceOf(address(this), erc1155TokenIds[k]);
+            assetAmounts[i] = IERC1155(cacheAddr).balanceOf(
+                address(this),
+                erc1155TokenIds[k]
+            );
             unchecked {
                 ++i;
             }
@@ -770,52 +935,104 @@ contract Vault {
         }
     }
 
-    function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) public pure returns (bytes4) {
         return this.onERC721Received.selector;
     }
 
-    function onERC1155Received(address, address, uint256, uint256, bytes calldata) public pure returns (bytes4) {
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes calldata
+    ) public pure returns (bytes4) {
         return this.onERC1155Received.selector;
     }
 
     //Function only used for tests
-    function getLengths() external view returns (uint256, uint256, uint256, uint256) {
-        return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
+    function getLengths()
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (
+            erc20Stored.length,
+            erc721Stored.length,
+            erc721TokenIds.length,
+            erc1155Stored.length
+        );
     }
 
     /*///////////////////////////////////////////////////////////////
                     ASSET MANAGEMENT LOGIC
     ///////////////////////////////////////////////////////////////*/
 
-    function vaultManagementAction(address _actionHandler, bytes calldata _actionData) public onlyOwner {
+    function vaultManagementAction(
+        address _actionHandler,
+        bytes calldata _actionData
+    ) public onlyOwner {
+        // causes weird reverts
+        require(
+            IMainRegistry(registryAddress).isActionAllowlisted(_actionHandler),
+            "VL_VMA: Action is not allowlisted"
+        );
 
-        // causes weird reverts 
-        require(IMainRegistry(registryAddress).isActionAllowlisted(_actionHandler), "VL_VMA: Action is not allowlisted");
+        (
+            actionAssetsData memory outgoing_,
+            actionAssetsData memory incoming_,
 
-        (actionAssetsData memory outgoing_, actionAssetsData memory incoming_,) =
-            abi.decode(_actionData, (actionAssetsData, actionAssetsData, bytes));
+        ) = abi.decode(
+                _actionData,
+                (actionAssetsData, actionAssetsData, bytes)
+            );
 
         //TODO: account preAction CT
 
         // account preActionBalances
 
         for (uint256 i; i < incoming_.assets.length; i++) {
-            incoming_.preActionBalances[i] = IERC20(incoming_.assets[i]).balanceOf(address(this));
+            incoming_.preActionBalances[i] = IERC20(incoming_.assets[i])
+                .balanceOf(address(this));
         }
 
         // withdraw to actionHandler
         for (uint256 i; i < outgoing_.assets.length; i++) {
-            outgoing_.preActionBalances[i] = IERC20(outgoing_.assets[i]).balanceOf(address(this));
-            _withdrawERC20(_actionHandler, outgoing_.assets[i], outgoing_.assetAmounts[i]);
+            outgoing_.preActionBalances[i] = IERC20(outgoing_.assets[i])
+                .balanceOf(address(this));
+            _withdrawERC20(
+                _actionHandler,
+                outgoing_.assets[i],
+                outgoing_.assetAmounts[i]
+            );
         }
 
         // execute Action
-        (actionAssetsData memory _incomingAssets) =
-            IActionBase(_actionHandler).executeAction(address(this), msg.sender, _actionData);
+        actionAssetsData memory _incomingAssets = IActionBase(_actionHandler)
+            .executeAction(address(this), msg.sender, _actionData);
 
         // deposit back into vault (approval in Action)
         for (uint256 i; i < incoming_.assets.length; i++) {
-            _depositERC20(_actionHandler, _incomingAssets.assets[i], _incomingAssets.assetAmounts[i]);
+            _depositERC20(
+                _actionHandler,
+                _incomingAssets.assets[i],
+                _incomingAssets.assetAmounts[i]
+            );
         }
+
+            uint256 collValue = getCollateralValue();
+            uint256 usedMargin = getUsedMargin();
+
+            require(collValue > usedMargin, "UV2SWAP: coll. value postAction too low"); 
+
     }
 }
