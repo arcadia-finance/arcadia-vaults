@@ -6,19 +6,19 @@
  */
 pragma solidity ^0.8.13;
 
-import "../../lib/forge-std/src/Test.sol";
-import "../AssetManagement/actions/UniswapV2SwapAction.sol";
-import "../mockups/UniswapV2Router02Mock.sol";
-import "../Vault.sol";
-import "../AssetRegistry/MainRegistry.sol";
-import "../utils/Constants.sol";
-import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
-import "../AssetRegistry/StandardERC20PricingModule.sol";
-import "../OracleHub.sol";
-import "../mockups/ArcadiaOracle.sol";
-import "../mockups/TrustedProtocolMock.sol";
-import "./fixtures/ArcadiaOracleFixture.f.sol";
-import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import "../../../lib/forge-std/src/Test.sol";
+import "../../AssetManagement/actions/UniswapV2SwapAction.sol";
+import "../../mockups/UniswapV2Router02Mock.sol";
+import "../../Vault.sol";
+import "../../AssetRegistry/MainRegistry.sol";
+import "../../utils/Constants.sol";
+import {ERC20Mock} from "../../mockups/ERC20SolmateMock.sol";
+import "../../AssetRegistry/StandardERC20PricingModule.sol";
+import "../../OracleHub.sol";
+import "../../mockups/ArcadiaOracle.sol";
+import "../../mockups/TrustedProtocolMock.sol";
+import "./../fixtures/ArcadiaOracleFixture.f.sol";
+import {FixedPointMathLib} from "../../utils/FixedPointMathLib.sol";
 
 
 
@@ -327,159 +327,8 @@ contract executeActionTests is UniswapV2SwapActionTest {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
         bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
 
-        console.log(vault.getCollateralValue());
-        console.log(vault.getUsedMargin());
-
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts
-        ) = vault.generateAssetData();
-        console.log(assetAddresses[0]);
-        console.log(assetIds[0]);
-        console.log(assetAmounts[0]);
-
         vm.prank(vaultOwner);
         vault.vaultManagementAction(address(action), __actionSpecificData);
-
-
-
-        console.log(vault.getCollateralValue());
-        console.log(vault.getUsedMargin());
-
-        (
-            address[] memory assetAddresses2,
-            uint256[] memory assetIds2,
-            uint256[] memory assetAmounts2
-        ) = vault.generateAssetData();
-        console.log(assetAddresses2[0]);
-        console.log(assetIds2[0]);
-        console.log(assetAmounts2[0]);
-
-        assertEq(dai.balanceOf(address(vault)), 0);
-        assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
-    }
-
-    function testSuccess_SwapDAIWETHNotEnoughFunds() public {
-        uint256[] memory _outAssetAmounts = new uint256[](1);
-        _outAssetAmounts[0] = 1301 * 10 ** Constants.daiDecimals; //TODO: make this generic
-        _out.assetAmounts = _outAssetAmounts;
-
-        path = new address[](2);
-        path[0] = address(dai);
-        path[1] = address(weth);
-
-        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
-
-        vm.startPrank(vaultOwner);
-        vm.expectRevert(stdError.arithmeticError);
-        vault.vaultManagementAction(address(action), __actionSpecificData);
-        vm.stopPrank();
-    }
-
-
-    function testSuccess_SwapTwoGenericAssetAmounts(uint256 _outAssetAmount) public {
-
-        vm.assume(_outAssetAmount < 1000000000000000 * 10 ** 18);
-        vm.assume((_outAssetAmount * 10 ** Constants.daiDecimals) < dai.balanceOf(address(vault)));
-        uint256 _inAssetAmount = _outAssetAmount.divWadDown(1300);
-
-        uint256[] memory _outAssets = new uint256[](1);
-        _outAssets[0] =_outAssetAmount * 10 ** Constants.daiDecimals;
-        _out.assetAmounts = _outAssets;
-
-        uint256[] memory _inAssets = new uint256[](1);
-        _inAssets[0] = _inAssetAmount * 10 ** Constants.ethDecimals;
-        _in.assetAmounts = _inAssets;
-
-        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
-
-        vm.prank(vaultOwner);
-        vault.vaultManagementAction(address(action), __actionSpecificData);
-
-        //assertEq(dai.balanceOf(address(vault)), _out.preActionBalances[0] - (_outAssetAmount * 10 ** Constants.daiDecimals));
-        assertEq(weth.balanceOf(address(vault)), _inAssetAmount * 10 ** Constants.ethDecimals);
-    }
-
-
-        /*///////////////////////////////
-                    VAULT TESTS
-        ///////////////////////////////*/
-    
-
-    function testSuccess_ExecuteNotAllowlistedAction(address _action) public {
-        vm.assume(_action != address(action));
- 
-        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
-
-        vm.startPrank(vaultOwner);
-        vm.expectRevert("VL_VMA: Action is not allowlisted");
-        vault.vaultManagementAction(address(_action), __actionSpecificData);
-        vm.stopPrank();
-
-    }
-    
-        /*///////////////////////////////
-                    PRECHECK TESTS
-        ///////////////////////////////*/
-
-
-    function testSuccess_PathLengthMustBeTwoOrMore() public {
-        path = new address[](1);
-        path[0] = address(dai);
-
-        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
-
-        vm.startPrank(vaultOwner);
-        vm.expectRevert("UV2A_SWAP: _path must be >= 2");
-        action.testPreCheck(address(vault),__actionSpecificData);
-        vm.stopPrank();
-
-    }
-
-    function testSuccess_SwapIncomingAssetNotAllowlisted() public {
-        ERC20Mock shiba = new ERC20Mock("Shiba Mock", "mShiba", uint8(Constants.daiDecimals));
-
-        address[] memory _inAssets = new address[](1);
-        _inAssets[0] = address(shiba);
-        _in.assets = _inAssets;
-    
-        address[] memory path = new address[](2);
-        path[0] = address(dai);
-        path[1] = address(shiba);
-
-        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
-
-        vm.startPrank(vaultOwner);
-        vm.expectRevert("UV2A_SWAP: Non-allowlisted incoming asset");
-        action.testPreCheck(address(vault),__actionSpecificData);
-        vm.stopPrank();
-
-    }
-
-    /*///////////////////////////////
-            POSTCHECK TESTS
-    ///////////////////////////////*/
-
-   function testSuccess_CollValueBelowUsedMargin() public {
-        bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
-
-       stdstore
-            .target(address(trustedProtocol))
-            .sig(trustedProtocol.balanceOf.selector)
-            .with_key(address(vault))
-            .checked_write(10000 * 10 ** Constants.daiDecimals);
-
-        vm.startPrank(vaultOwner);
-        vm.expectRevert("UV2SWAP: coll. value postAction too low");
-        vault.vaultManagementAction(address(action), __actionSpecificData);
-        vm.stopPrank();
 
     }
 

@@ -2,6 +2,7 @@ complete-test-run:
 
   rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"'
 
   image: ghcr.io/gakonst/foundry:nightly-90617a52e4873f0137aa05fd68624437db146b3f
 
