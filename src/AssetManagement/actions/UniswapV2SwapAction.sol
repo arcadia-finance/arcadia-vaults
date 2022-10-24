@@ -21,22 +21,24 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         override
         returns (actionAssetsData memory)
     {
-
         require(_vaultAddress == msg.sender, "UV2_SWAP: can only be called by vault");
 
         // preCheck data
         (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path) =
-            _preCheck(_vaultAddress, _actionData);
+            _preCheck(_actionData);
         // execute Action
         _execute(_vaultAddress, _outgoing, _incoming, path);
         // postCheck data
-        (uint256[] memory _actualOutgoingAssetsAmounts, uint256[] memory _actualIncomingAssetsAmounts) =
-            _postCheck(_vaultAddress, _outgoing, _incoming);
+        uint256[] memory _actualIncomingAssetsAmounts = _postCheck(_vaultAddress, _incoming);
 
-        // approve vault to transfer actionHandlers' assets.
-        for (uint256 i; i < _outgoing.assets.length; i++) {
-            IERC20(_incoming.assets[i]).approve(_vaultAddress, type(uint256).max);
+        for (uint256 i; i < _incoming.assets.length;) {
+            IERC20(_incoming.assets[i]).approve(address(this), type(uint256).max);
+            IERC20(_incoming.assets[i]).transferFrom(address(this), _vaultAddress , _incoming.assetAmounts[i]);
+            unchecked {
+                i++;
+            }
         }
+
         _incoming.assetAmounts = _actualIncomingAssetsAmounts;
 
         return (_incoming);
@@ -48,10 +50,10 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         actionAssetsData memory _incoming,
         address[] memory path
     ) internal {
-        _uniswapV2Swap(_vaultAddress, _outgoing.assetAmounts[0], _incoming.assetAmounts[0], path);
+        _uniswapV2Swap(address(this), _outgoing.assetAmounts[0], _incoming.assetAmounts[0], path);
     }
 
-    function _preCheck(address _vaultAddress, bytes memory _actionSpecificData)
+    function _preCheck(bytes memory _actionSpecificData)
         internal
         view
         returns (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path)
@@ -68,8 +70,6 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
                     OUTGOING
         ///////////////////////////////*/
 
-        //TODO Check outgoing assets are not in value more than vault value locked?
-
         /*///////////////////////////////
                     INCOMING
         ///////////////////////////////*/
@@ -80,52 +80,53 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
             "UV2A_SWAP: Non-allowlisted incoming asset"
         );
 
-
         return (_outgoing, _incoming, path);
     }
 
-    function _postCheck(
-        address _vaultAddress,
-        actionAssetsData memory outgoingAssets_,
-        actionAssetsData memory incomingAssets_
-    ) internal view returns (uint256[] memory incomingAssetAmounts_, uint256[] memory outgoingAssetAmounts_) {
-
+    function _postCheck(address _vaultAddress, actionAssetsData memory incomingAssets_)
+        internal
+        view
+        returns (uint256[] memory incomingAssetAmounts_)
+    {
         /*///////////////////////////////
                     INCOMING
         ///////////////////////////////*/
 
-        incomingAssetAmounts_ = new uint256[](incomingAssets_.assets.length);
-        for (uint256 i; i < incomingAssets_.assets.length; i++) {
+        uint256 incomingLength = incomingAssets_.assets.length;
+        incomingAssetAmounts_ = new uint256[](incomingLength);
+        for (uint256 i; i < incomingLength;) {
             incomingAssetAmounts_[i] =
-                IERC20(incomingAssets_.assets[i]).balanceOf(_vaultAddress) - incomingAssets_.preActionBalances[i]; //TODO check overflow?
+                IERC20(incomingAssets_.assets[i]).balanceOf(address(this)) - incomingAssets_.preActionBalances[i];
 
             // Check incoming assets are as expected
             require(
                 incomingAssetAmounts_[i] >= incomingAssets_.assetAmounts[i],
                 "UV2A_SWAP: Received incoming asset less than expected"
             );
+            unchecked {
+                i++;
+            }
         }
 
         /*///////////////////////////////
                     OUTGOING
         ///////////////////////////////*/
 
-        outgoingAssetAmounts_ = new uint256[](outgoingAssets_.assets.length);
-        for (uint256 i; i < outgoingAssets_.assets.length; i++) {
-            // Calculate the balance change of outgoing assets. Ignore if balance increased.
-            uint256 postActionBalances = IERC20(outgoingAssets_.assets[i]).balanceOf(_vaultAddress);
-            if (postActionBalances < outgoingAssets_.preActionBalances[i]) {
-                outgoingAssetAmounts_[i] = outgoingAssets_.preActionBalances[i] - postActionBalances;
-            }
+        // outgoingAssetAmounts_ = new uint256[](outgoingAssets_.assets.length);
+        // for (uint256 i; i < outgoingAssets_.assets.length; i++) {
+        //     // Calculate the balance change of outgoing assets. Ignore if balance increased.
+        //     uint256 postActionBalances = IERC20(outgoingAssets_.assets[i]).balanceOf(_vaultAddress);
+        //     if (postActionBalances < outgoingAssets_.preActionBalances[i]) {
+        //         outgoingAssetAmounts_[i] = outgoingAssets_.preActionBalances[i] - postActionBalances;
+        //     }
 
-            // Check outgoing assets are as expected
-            require(
-                outgoingAssetAmounts_[i] <= outgoingAssets_.assetAmounts[i], "UV2A_SWAP: Outgoing amount greater than expected"
-            );
+        //     //Check outgoing assets are as expected
+        //     require(
+        //         outgoingAssetAmounts_[i] <= outgoingAssets_.assetAmounts[i],
+        //         "UV2A_SWAP: Outgoing amount greater than expected"
+        //     );
+        // }
 
-
-        }
-
-        return (incomingAssetAmounts_, outgoingAssetAmounts_);
+        return incomingAssetAmounts_;
     }
 }

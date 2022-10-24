@@ -632,7 +632,6 @@ contract MainRegistry is Ownable, RiskModule {
         liquidationThreshold = calculateWeightedLiquidationThreshold(_assetAddresses, valuesPerAsset, baseCurrencyInd);
     }
 
-
     /* ///////////////////////////////////////////////////////////////
                     ACTION ALLOWLIST SETTERS
     /////////////////////////////////////////////////////////////// */

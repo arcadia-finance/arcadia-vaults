@@ -20,13 +20,11 @@ import "../../mockups/TrustedProtocolMock.sol";
 import "./../fixtures/ArcadiaOracleFixture.f.sol";
 import {FixedPointMathLib} from "../../utils/FixedPointMathLib.sol";
 
-
-
 contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
     constructor(address _router, address _mainreg) UniswapV2SwapAction(_router, _mainreg) {}
 
     function testPreCheck(address _vaultAddress, bytes memory _actionSpecificData) public {
-        _preCheck(_vaultAddress, _actionSpecificData);
+        _preCheck(_actionSpecificData);
     }
 
     function testExecute(
@@ -38,18 +36,13 @@ contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
         _execute(_vaultAddress, _outgoing, _incoming, path);
     }
 
-    function testPostCheck(
-        address _vaultAddress,
-        actionAssetsData memory outgoingAssets_,
-        actionAssetsData memory incomingAssets_
-    ) public {
-        _postCheck(_vaultAddress, outgoingAssets_, incomingAssets_);
+    function testPostCheck(address _vaultAddress, actionAssetsData memory incomingAssets_) public {
+        _postCheck(_vaultAddress, incomingAssets_);
     }
 }
 
 abstract contract UniswapV2SwapActionTest is Test {
     using stdStorage for StdStorage;
-
 
     Vault vault;
     UniswapV2Router02Mock routerMock;
@@ -81,7 +74,6 @@ abstract contract UniswapV2SwapActionTest is Test {
         vm.startPrank(deployer);
         vault = new Vault();
         routerMock = new UniswapV2Router02Mock();
-
 
         // Swappable ERC20
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
@@ -198,32 +190,17 @@ abstract contract UniswapV2SwapActionTest is Test {
         vm.stopPrank();
 
         // Cheat vault owner
-        stdstore
-            .target(address(vault))
-            .sig(vault.owner.selector)
-            .checked_write(vaultOwner);
+        stdstore.target(address(vault)).sig(vault.owner.selector).checked_write(vaultOwner);
 
         // Cheat vault registry address
-        stdstore
-            .target(address(vault))
-            .sig(vault.registryAddress.selector)
-            .checked_write(address(mainRegistry));
+        stdstore.target(address(vault)).sig(vault.registryAddress.selector).checked_write(address(mainRegistry));
 
         // Cheat allowlisted actions in mainRegistry
-        stdstore
-            .target(address(mainRegistry))
-            .sig(mainRegistry.isActionAllowlisted.selector)
-            .with_key(address(action))
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.isActionAllowlisted.selector).with_key(address(action))
             .checked_write(true);
 
+        stdstore.target(address(vault)).sig(vault.trustedProtocol.selector).checked_write(address(trustedProtocol));
 
-        stdstore
-            .target(address(vault))
-            .sig(vault.trustedProtocol.selector)
-            .checked_write(address(trustedProtocol));
-
-
- 
         deal(address(dai), vaultOwner, 100000 * 10 ** Constants.daiDecimals, true);
     }
 
@@ -252,8 +229,9 @@ contract DeploymentTest is UniswapV2SwapActionTest {
 //////////////////////////////////////////////////////////////*/
 
 contract executeActionTests is UniswapV2SwapActionTest {
-        using FixedPointMathLib for uint256;
-        using stdStorage for StdStorage;
+    using FixedPointMathLib for uint256;
+    using stdStorage for StdStorage;
+
     actionAssetsData _out;
     actionAssetsData _in;
     address[] path;
@@ -262,7 +240,6 @@ contract executeActionTests is UniswapV2SwapActionTest {
         super.setUp();
 
         //Give some initial DAI to vault to deposit
-       
 
         //Deposit in vault
         address[] memory _assetAddresses = new address[](1);
@@ -278,7 +255,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
         vm.startPrank(vaultOwner);
         dai.approve(address(vault), type(uint256).max);
-        vault.deposit(_assetAddresses,_assetIds, _assetAmounts, _assetTypes);
+        vault.deposit(_assetAddresses, _assetIds, _assetAmounts, _assetTypes);
         vm.stopPrank();
 
         // Prepare outgoingData
@@ -295,7 +272,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
         outPreActionBalances[0] = 0;
 
         //  Prepare incomingData
-         _out = actionAssetsData(outAssets, outAssetsIds, outAssetAmounts, outPreActionBalances);
+        _out = actionAssetsData(outAssets, outAssetsIds, outAssetAmounts, outPreActionBalances);
 
         address[] memory _inAssets = new address[](1);
         _inAssets[0] = address(weth);
@@ -315,13 +292,11 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
         //  Prepare action data
         _in = actionAssetsData(_inAssets, _inAssetsIds, _inAssetAmounts, _inPreActionBalances);
-
     }
 
-        /*///////////////////////////////
+    /*///////////////////////////////
                 COMPLETE SWAP TESTS
         ///////////////////////////////*/
-
 
     function testSuccess_SwapDAIWETH() public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
@@ -329,7 +304,5 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
         vm.prank(vaultOwner);
         vault.vaultManagementAction(address(action), __actionSpecificData);
-
     }
-
 }
