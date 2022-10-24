@@ -14,7 +14,6 @@ import "../../interfaces/IVault.sol";
 import "../../interfaces/IERC20.sol";
 
 contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
-    //Maybe add mainreg address also here
     constructor(address _router, address _mainreg) ActionBase(_mainreg) UniswapV2Helper(_router) {}
 
     function executeAction(address _vaultAddress, address _caller, bytes calldata _actionData)
@@ -22,13 +21,8 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         override
         returns (actionAssetsData memory)
     {
-        // decode action data
-        // (address _vaultAddress, address _caller, bytes memory _actionSpecificData) =
-        //     abi.decode(_actionData, (address, address, bytes));
 
-        //TODO Checks might be redundant?
-        require(_vaultAddress == msg.sender, "UV2_SWAP: can only be called by vaultOwner");
-        require(IVault(_vaultAddress).owner() == _caller, "UV2_SWAP: Only vaultOwner can can call this from Vault");
+        require(_vaultAddress == msg.sender, "UV2_SWAP: can only be called by vault");
 
         // preCheck data
         (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path) =
@@ -59,6 +53,7 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
 
     function _preCheck(address _vaultAddress, bytes memory _actionSpecificData)
         internal
+        view
         returns (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path)
     {
         /*///////////////////////////////

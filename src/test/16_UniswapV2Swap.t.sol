@@ -76,7 +76,6 @@ abstract contract UniswapV2SwapActionTest is Test {
     uint16[] emptyListUint16 = new uint16[](0);
 
     //Before
-    // TODO: Clean this up
     constructor() {
         vm.startPrank(deployer);
         vault = new Vault();

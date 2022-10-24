@@ -981,7 +981,6 @@ contract Vault {
         address _actionHandler,
         bytes calldata _actionData
     ) public onlyOwner {
-        // causes weird reverts
         require(
             IMainRegistry(registryAddress).isActionAllowlisted(_actionHandler),
             "VL_VMA: Action is not allowlisted"
@@ -996,17 +995,19 @@ contract Vault {
                 (actionAssetsData, actionAssetsData, bytes)
             );
 
-        //TODO: account preAction CT
-
         // account preActionBalances
-
-        for (uint256 i; i < incoming_.assets.length; i++) {
+        uint256 incomingLength = incoming_.assets.length;
+        for (uint256 i; i < incomingLength;) {
             incoming_.preActionBalances[i] = IERC20(incoming_.assets[i])
                 .balanceOf(address(this));
+                 unchecked {
+                    ++i;
+                }
         }
 
         // withdraw to actionHandler
-        for (uint256 i; i < outgoing_.assets.length; i++) {
+
+        for (uint256 i; i < outgoing_.assets.length;) {
             outgoing_.preActionBalances[i] = IERC20(outgoing_.assets[i])
                 .balanceOf(address(this));
             _withdrawERC20(
@@ -1014,6 +1015,9 @@ contract Vault {
                 outgoing_.assets[i],
                 outgoing_.assetAmounts[i]
             );
+            unchecked {
+                    ++i;
+                }
         }
 
         // execute Action
@@ -1021,12 +1025,15 @@ contract Vault {
             .executeAction(address(this), msg.sender, _actionData);
 
         // deposit back into vault (approval in Action)
-        for (uint256 i; i < incoming_.assets.length; i++) {
+        for (uint256 i; i < incomingLength;) {
             _depositERC20(
                 _actionHandler,
                 _incomingAssets.assets[i],
                 _incomingAssets.assetAmounts[i]
             );
+             unchecked {
+                    ++i;
+                }
         }
 
             uint256 collValue = getCollateralValue();
