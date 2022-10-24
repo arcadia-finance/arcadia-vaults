@@ -814,6 +814,14 @@ contract Vault {
         // execute Action
         IActionBase(_actionHandler).executeAction(address(this), msg.sender, _actionData);
 
+    for (uint256 i; i < incomingLength;) {
+            _depositERC20(_actionHandler, incoming_.assets[i], incoming_.assetAmounts[i]);
+            unchecked {
+                ++i;
+            }
+        }
+
+
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
 

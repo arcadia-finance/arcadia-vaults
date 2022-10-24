@@ -32,8 +32,8 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         uint256[] memory _actualIncomingAssetsAmounts = _postCheck(_vaultAddress, _incoming);
 
         for (uint256 i; i < _incoming.assets.length;) {
-            IERC20(_incoming.assets[i]).approve(address(this), type(uint256).max);
-            IERC20(_incoming.assets[i]).transferFrom(address(this), _vaultAddress , _incoming.assetAmounts[i]);
+            IERC20(_incoming.assets[i]).approve(_vaultAddress, type(uint256).max);
+            
             unchecked {
                 i++;
             }
