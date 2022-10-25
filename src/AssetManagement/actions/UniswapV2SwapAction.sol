@@ -16,24 +16,22 @@ import "../../interfaces/IERC20.sol";
 contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
     constructor(address _router, address _mainreg) ActionBase(_mainreg) UniswapV2Helper(_router) {}
 
-    function executeAction(address _vaultAddress, address _caller, bytes calldata _actionData)
+    function executeAction(address _vaultAddress, bytes calldata _actionData)
         public
         override
         returns (actionAssetsData memory)
     {
         require(_vaultAddress == msg.sender, "UV2_SWAP: can only be called by vault");
-
         // preCheck data
         (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path) =
             _preCheck(_actionData);
         // execute Action
-        _execute(_vaultAddress, _outgoing, _incoming, path);
+        _execute(_outgoing, _incoming, path);
         // postCheck data
-        uint256[] memory _actualIncomingAssetsAmounts = _postCheck(_vaultAddress, _incoming);
+        uint256[] memory _actualIncomingAssetsAmounts = _postCheck(_incoming);
 
         for (uint256 i; i < _incoming.assets.length;) {
             IERC20(_incoming.assets[i]).approve(_vaultAddress, type(uint256).max);
-            
             unchecked {
                 i++;
             }
@@ -44,12 +42,9 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         return (_incoming);
     }
 
-    function _execute(
-        address _vaultAddress,
-        actionAssetsData memory _outgoing,
-        actionAssetsData memory _incoming,
-        address[] memory path
-    ) internal {
+    function _execute(actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path)
+        internal
+    {
         _uniswapV2Swap(address(this), _outgoing.assetAmounts[0], _incoming.assetAmounts[0], path);
     }
 
@@ -83,7 +78,7 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         return (_outgoing, _incoming, path);
     }
 
-    function _postCheck(address _vaultAddress, actionAssetsData memory incomingAssets_)
+    function _postCheck(actionAssetsData memory incomingAssets_)
         internal
         view
         returns (uint256[] memory incomingAssetAmounts_)
@@ -111,21 +106,6 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
         /*///////////////////////////////
                     OUTGOING
         ///////////////////////////////*/
-
-        // outgoingAssetAmounts_ = new uint256[](outgoingAssets_.assets.length);
-        // for (uint256 i; i < outgoingAssets_.assets.length; i++) {
-        //     // Calculate the balance change of outgoing assets. Ignore if balance increased.
-        //     uint256 postActionBalances = IERC20(outgoingAssets_.assets[i]).balanceOf(_vaultAddress);
-        //     if (postActionBalances < outgoingAssets_.preActionBalances[i]) {
-        //         outgoingAssetAmounts_[i] = outgoingAssets_.preActionBalances[i] - postActionBalances;
-        //     }
-
-        //     //Check outgoing assets are as expected
-        //     require(
-        //         outgoingAssetAmounts_[i] <= outgoingAssets_.assetAmounts[i],
-        //         "UV2A_SWAP: Outgoing amount greater than expected"
-        //     );
-        // }
 
         return incomingAssetAmounts_;
     }

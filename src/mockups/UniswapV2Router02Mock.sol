@@ -21,8 +21,8 @@ contract UniswapV2Router02Mock is Test {
         uint256 deadline
     ) external virtual returns (uint256[] memory amounts) {
         //Cheat balance of
-    
-       stdstore.target(address(path[0])).sig(IERC20(path[0]).balanceOf.selector).with_key(address(msg.sender))
+
+        stdstore.target(address(path[0])).sig(IERC20(path[0]).balanceOf.selector).with_key(address(msg.sender))
             .checked_write(IERC20(path[0]).balanceOf(msg.sender) - amountIn);
 
         stdstore.target(address(path[1])).sig(IERC20(path[1]).balanceOf.selector).with_key(address(to)).checked_write(
@@ -30,4 +30,3 @@ contract UniswapV2Router02Mock is Test {
         );
     }
 }
-

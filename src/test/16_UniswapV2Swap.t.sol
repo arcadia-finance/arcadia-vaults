@@ -33,11 +33,11 @@ contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
         actionAssetsData memory _incoming,
         address[] memory path
     ) public {
-        _execute(_vaultAddress, _outgoing, _incoming, path);
+        _execute(_outgoing, _incoming, path);
     }
 
     function testPostCheck(address _vaultAddress, actionAssetsData memory incomingAssets_) public {
-        _postCheck(_vaultAddress, incomingAssets_);
+        _postCheck(incomingAssets_);
     }
 }
 
@@ -297,30 +297,15 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
     function testSuccess_SwapDAIWETH() public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-        console.log(vault.getCollateralValue());
-        console.log(vault.getUsedMargin());
 
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             vault.generateAssetData();
-        console.log(assetAddresses[0]);
-        console.log(assetIds[0]);
-        console.log(assetAmounts[0]);
 
         vm.prank(vaultOwner);
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
-        console.log(vault.getCollateralValue());
-        console.log(vault.getUsedMargin());
-
-        console.log("split");
-        console.log(dai.balanceOf(0x90A5b0DD8c4b06636A4BEf7BA82D9C58f44fAaAd));
-        console.log(weth.balanceOf(0x90A5b0DD8c4b06636A4BEf7BA82D9C58f44fAaAd));
-
         (address[] memory assetAddresses2, uint256[] memory assetIds2, uint256[] memory assetAmounts2) =
             vault.generateAssetData();
-        console.log(assetAddresses2[0]);
-        console.log(assetIds2[0]);
-        console.log(assetAmounts2[0]);
         assertEq(dai.balanceOf(address(vault)), 0);
         assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
     }

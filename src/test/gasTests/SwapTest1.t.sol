@@ -33,11 +33,11 @@ contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
         actionAssetsData memory _incoming,
         address[] memory path
     ) public {
-        _execute(_vaultAddress, _outgoing, _incoming, path);
+        _execute(_outgoing, _incoming, path);
     }
 
     function testPostCheck(address _vaultAddress, actionAssetsData memory incomingAssets_) public {
-        _postCheck(_vaultAddress, incomingAssets_);
+        _postCheck(incomingAssets_);
     }
 }
 
