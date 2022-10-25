@@ -1,10 +1,8 @@
 /**
- * This is a private, unpublished repository.
- * All rights reserved to Arcadia Finance.
- * Any modification, publication, reproduction, commercialization, incorporation,
- * sharing or any other kind of use of any part of this code or derivatives thereof is not allowed.
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
  *
- * SPDX-License-Identifier: UNLICENSED
+ * SPDX-License-Identifier: MIT
  */
 pragma solidity >=0.4.22 <0.9.0;
 
