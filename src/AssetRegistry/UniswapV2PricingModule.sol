@@ -71,13 +71,13 @@ contract UniswapV2PricingModule is PricingModule {
      * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
      * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
-     * the number of assets added to the Main Registry,or the list must have length 0.
+     * the number of baseCurrencies added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
      * is initiated as default (safest lowest rating).
      * @dev Risk variable are variables with 2 decimals precision
      * @dev The assets are added/overwritten in the Main-Registry as well.
      *      By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     *      (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
+     *      (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
      *      This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      *      assets are no longer updatable.
      */
