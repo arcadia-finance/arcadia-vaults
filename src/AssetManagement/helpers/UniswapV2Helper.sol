@@ -25,4 +25,50 @@ abstract contract UniswapV2Helper {
             _outgoingAssetAmount, _minIncomingAssetAmount, _path, _to, block.timestamp + 1
         );
     }
+
+    function _uniswapV2AddLiquidity(
+        address _recipient,
+        address _tokenA,
+        address _tokenB,
+        uint256 _amountADesired,
+        uint256 _amountBDesired,
+        uint256 _amountAMin,
+        uint256 _amountBMin
+    ) internal {
+
+        //Approvals
+        IUniswapV2Router02(UNISWAP_V2_ROUTER2).addLiquidity(
+            _tokenA,
+            _tokenB,
+            _amountADesired,
+            _amountBDesired,
+            _amountAMin,
+            _amountBMin,
+            _recipient,
+            block.timestamp + 1
+        );
+    }
+
+    function _uniswapV2RemoveLiquidity(
+        address _recipient,
+        address _poolToken,
+        uint256 _poolTokenAmount,
+        address _tokenA,
+        address _tokenB,
+        uint256 _amountAMin,
+        uint256 _amountBMin
+    ) internal {
+        //Approvals?
+        IUniswapV2Router02(UNISWAP_V2_ROUTER2).removeLiquidity(
+            _tokenA,
+            _tokenB,
+            _poolTokenAmount,
+            _amountAMin,
+            _amountBMin,
+            _recipient,
+            block.timestamp + 1
+        );
+    }
+
+
 }
