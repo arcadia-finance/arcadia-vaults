@@ -13,7 +13,7 @@ import "../../interfaces/IMainRegistry.sol";
 import "../../interfaces/IVault.sol";
 import "../../interfaces/IERC20.sol";
 
-contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
+contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
     constructor(address _router, address _mainreg) ActionBase(_mainreg) UniswapV2Helper(_router) {}
 
     function executeAction(address _vaultAddress, bytes calldata _actionData)
@@ -61,7 +61,7 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
     function _preCheck(bytes memory _actionSpecificData)
         internal
         view
-        returns (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, string _selector)
+        returns (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, bytes4 _selector)
     {
         /*///////////////////////////////
                     DECODE
@@ -92,7 +92,7 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
             "UV2A_SWAP: Non-allowlisted incoming asset"
         );
 
-        return (_outgoing, _incoming);
+        return (_outgoing, _incoming, _selector);
     }
 
     function _postCheck(actionAssetsData memory incomingAssets_)
