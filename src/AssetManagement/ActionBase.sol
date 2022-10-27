@@ -6,10 +6,9 @@
  */
 pragma solidity >=0.8.0 <0.9.0;
 
-import "../interfaces/IActionBase.sol";
 import "./utils/ActionAssetData.sol";
 
-abstract contract ActionBase is IActionBase {
+abstract contract ActionBase {
     address public immutable MAIN_REGISTRY;
 
     constructor(address _mainreg) {
