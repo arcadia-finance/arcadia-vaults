@@ -294,8 +294,8 @@ contract executeActionTests is UniswapV2LPActionTest {
     }
 
     /*///////////////////////////////
-                ADD/REMOVE LP TESTS
-        ///////////////////////////////*/
+            ADD/REMOVE LP TESTS
+    ///////////////////////////////*/
 
     function testSuccess_addDAIWETHLP() public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
