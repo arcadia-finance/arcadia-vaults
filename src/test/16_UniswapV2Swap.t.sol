@@ -23,12 +23,11 @@ import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
     constructor(address _router, address _mainreg) UniswapV2SwapAction(_router, _mainreg) {}
 
-    function testPreCheck(bytes memory _actionSpecificData) public {
+    function testPreCheck(bytes memory _actionSpecificData) public view {
         _preCheck(_actionSpecificData);
     }
 
     function testExecute(
-        address _vaultAddress,
         actionAssetsData memory _outgoing,
         actionAssetsData memory _incoming,
         address[] memory path
@@ -36,7 +35,7 @@ contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
         _execute(_outgoing, _incoming, path);
     }
 
-    function testPostCheck(address _vaultAddress, actionAssetsData memory incomingAssets_) public {
+    function testPostCheck(actionAssetsData memory incomingAssets_) public view {
         _postCheck(incomingAssets_);
     }
 }
@@ -298,14 +297,8 @@ contract executeActionTests is UniswapV2SwapActionTest {
     function testSuccess_SwapDAIWETH() public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
 
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            vault.generateAssetData();
-
         vm.prank(vaultOwner);
         vault.vaultManagementAction(address(action), __actionSpecificData);
-
-        (address[] memory assetAddresses2, uint256[] memory assetIds2, uint256[] memory assetAmounts2) =
-            vault.generateAssetData();
         assertEq(dai.balanceOf(address(vault)), 0);
         assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
     }
@@ -387,7 +380,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
         _inAssets[0] = address(shiba);
         _in.assets = _inAssets;
 
-        address[] memory path = new address[](2);
+        path = new address[](2);
         path[0] = address(dai);
         path[1] = address(shiba);
 
@@ -405,8 +398,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
     function testSuccess_CollValueBelowUsedMargin() public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
-
+        
         stdstore.target(address(trustedProtocol)).sig(trustedProtocol.balanceOf.selector).with_key(address(vault))
             .checked_write(10000 * 10 ** Constants.daiDecimals);
 

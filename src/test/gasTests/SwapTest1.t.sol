@@ -23,12 +23,11 @@ import {FixedPointMathLib} from "../../utils/FixedPointMathLib.sol";
 contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
     constructor(address _router, address _mainreg) UniswapV2SwapAction(_router, _mainreg) {}
 
-    function testPreCheck(address _vaultAddress, bytes memory _actionSpecificData) public {
+    function testPreCheck(bytes memory _actionSpecificData) public view {
         _preCheck(_actionSpecificData);
     }
 
     function testExecute(
-        address _vaultAddress,
         actionAssetsData memory _outgoing,
         actionAssetsData memory _incoming,
         address[] memory path
@@ -36,7 +35,7 @@ contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
         _execute(_outgoing, _incoming, path);
     }
 
-    function testPostCheck(address _vaultAddress, actionAssetsData memory incomingAssets_) public {
+    function testPostCheck(actionAssetsData memory incomingAssets_) public view {
         _postCheck(incomingAssets_);
     }
 }
@@ -300,8 +299,6 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
     function testSuccess_SwapDAIWETH() public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-        bytes memory __actionData = abi.encode(address(vault), msg.sender, __actionSpecificData);
-
         vm.prank(vaultOwner);
         vault.vaultManagementAction(address(action), __actionSpecificData);
     }
