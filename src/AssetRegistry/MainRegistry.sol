@@ -635,12 +635,7 @@ contract MainRegistry is Ownable, RiskModule {
     /* ///////////////////////////////////////////////////////////////
                     ACTION ALLOWLIST SETTERS
     /////////////////////////////////////////////////////////////// */
-
-    function addAllowlist(address _action) public onlyOwner {
-        isActionAllowlisted[_action] = true;
-    }
-
-    function removeAllowlist(address _action) public onlyOwner {
-        isActionAllowlisted[_action] = false;
-    }
+function setAllowedAction(address _action, bool allowed) public onlyOwner {
+    isActionAllowlisted[_action] = allowed;
+}
 }
