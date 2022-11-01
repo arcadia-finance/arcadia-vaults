@@ -24,6 +24,22 @@ contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
         UniswapV2PricingModule(_mainRegistry, _oracleHub, _uniswapV2Factory, _erc20PricingModule)
     {}
 
+    function getTrustedTokenAmounts(address pair, uint256 trustedPriceToken0, uint256 trustedPriceToken1)
+        public
+        view
+        returns (uint256 reserve0, uint256 reserve1)
+    {
+        (reserve0, reserve1) = _getTrustedTokenAmounts(pair, trustedPriceToken0, trustedPriceToken1);
+    }
+
+    function getTrustedReserves(address pair, uint256 trustedPriceToken0, uint256 trustedPriceToken1)
+        public
+        view
+        returns (uint256 reserve0, uint256 reserve1)
+    {
+        (reserve0, reserve1) = _getTrustedReserves(pair, trustedPriceToken0, trustedPriceToken1);
+    }
+
     function computeProfitMaximizingTrade(
         uint256 trustedPriceToken0,
         uint256 trustedPriceToken1,
@@ -953,7 +969,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         uint112 reserve1,
         uint256 totalSupply,
         uint256 liquidityAmount
-        ) public {
+    ) public {
         vm.assume(totalSupply > 0); // division by 0
         vm.assume(reserve0 > 0); // division by 0
         vm.assume(reserve1 > 0); // division by 0
@@ -964,7 +980,8 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         uint256 token0AmountExpected = liquidityAmount * reserve0 / totalSupply;
         uint256 token1AmountExpected = liquidityAmount * reserve1 / totalSupply;
 
-        (uint256 token0AmountActual, uint256 token1AmountActual) = uniswapV2PricingModule.computeTokenAmounts(reserve0, reserve1, totalSupply, liquidityAmount, 0);
+        (uint256 token0AmountActual, uint256 token1AmountActual) =
+            uniswapV2PricingModule.computeTokenAmounts(reserve0, reserve1, totalSupply, liquidityAmount, 0);
 
         assertEq(token0AmountActual, token0AmountExpected);
         assertEq(token1AmountActual, token1AmountExpected);
@@ -976,7 +993,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         uint112 reserve0,
         uint144 totalSupply, //might overflow for totalsupply bigger than 2¨^144
         uint144 liquidityAmount
-        ) public {
+    ) public {
         vm.assume(totalSupply > 10e6); // division by 0
         vm.assume(reserve0Last > 10e6); // division by 0
         vm.assume(reserve1Last > 10e6); // division by 0
@@ -994,15 +1011,32 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         uint256 token0Fee = (reserve0 - reserve0Last) / 6; // a sixth of all fees go to the Uniswap treasury when fees are enabled
         uint256 token1Fee = (reserve1 - reserve1Last) / 6;
 
-        uint256 token0AmountExpected = uint256(liquidityAmount) * (reserve0 - token0Fee) / totalSupply;
+        uint256 token0AmountExpected = uint256(liquidityAmount) * (reserve0 - token0Fee) / totalSupply; // substract the fees to the treasury from the reserves
         uint256 token1AmountExpected = uint256(liquidityAmount) * (reserve1 - token1Fee) / totalSupply;
 
         uint256 kLast = uint256(reserve0Last) * reserve1Last;
-        (uint256 token0AmountActual, uint256 token1AmountActual) = uniswapV2PricingModule.computeTokenAmounts(reserve0, reserve1, totalSupply, liquidityAmount, kLast);
+        (uint256 token0AmountActual, uint256 token1AmountActual) =
+            uniswapV2PricingModule.computeTokenAmounts(reserve0, reserve1, totalSupply, liquidityAmount, kLast);
 
-        assertInRange(token0AmountActual, token0AmountExpected, 3);
+        assertInRange(token0AmountActual, token0AmountExpected, 3); // Due numerical errors (integer divisions, and sqrt function) result will not be exactly equal
         assertInRange(token1AmountActual, token1AmountExpected, 3);
     }
+
+    function testRevert_getTrustedReserves_Zeroreserves() public {}
+
+    function testSuccess_getTrustedReserves_Balanced() public {}
+
+    function testSuccess_getTrustedReserves_Unbalanced_TokenOToToken1() public {}
+
+    function testSuccess_getTrustedReserves_Unbalanced_Token1ToToken0() public {}
+
+    function testRevert_getTrustedTokenAmounts_UnsufficientLiquidity() public {}
+
+    function testSuccess_getTrustedTokenAmounts() public {}
+
+    function testRevert_getValue_Overflow() public {}
+
+    function testSuccess_getValue() public {}
 
     //Helper Functions
 
@@ -1010,9 +1044,9 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         if (expectedValue == 0) {
             assertEq(actualValue, expectedValue);
         } else {
-        vm.assume(expectedValue > 10**(2*precision));
-            assertGe(actualValue * (10**precision + 1) / 10**precision, expectedValue);
-            assertLe(actualValue * (10**precision - 1) / 10**precision, expectedValue);
+            vm.assume(expectedValue > 10 ** (2 * precision));
+            assertGe(actualValue * (10 ** precision + 1) / 10 ** precision, expectedValue);
+            assertLe(actualValue * (10 ** precision - 1) / 10 ** precision, expectedValue);
         }
     }
 }
