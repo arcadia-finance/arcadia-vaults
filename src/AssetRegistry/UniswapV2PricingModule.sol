@@ -343,10 +343,8 @@ contract UniswapV2PricingModule is PricingModule {
                 totalSupply = totalSupply + feeLiquidity;
             }
         }
-        return (
-            FixedPointMathLib.mulDivDown(reserve0, liquidityAmount, totalSupply),
-            FixedPointMathLib.mulDivDown(reserve1, liquidityAmount, totalSupply)
-        );
+        token0Amount = FixedPointMathLib.mulDivDown(reserve0, liquidityAmount, totalSupply);
+        token1Amount = FixedPointMathLib.mulDivDown(reserve1, liquidityAmount, totalSupply);
     }
 
     /**

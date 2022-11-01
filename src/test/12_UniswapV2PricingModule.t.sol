@@ -838,16 +838,14 @@ contract PricingLogic is UniswapV2PricingModuleTest {
     ) public {
         vm.assume(reserve0 > 10e6); //Minimum liquidity
         vm.assume(reserve1 > 10e6); //Minimum liquidity
-        vm.assume(priceToken0 > 10e6);
-        vm.assume(priceToken1 > 10e6);
-        vm.assume(priceToken0 <= type(uint256).max / reserve0); //Overflow
-        vm.assume(priceToken1 <= type(uint256).max / reserve1); //Overflow
+        vm.assume(priceToken0 > 10e6); //Realistic prices
+        vm.assume(priceToken1 > 10e6); //Realistic prices
+        vm.assume(priceToken0 <= type(uint256).max / reserve0); //Overflow, only with unrealistic big numbers
+        vm.assume(priceToken1 <= type(uint256).max / 997); //Overflow, only with unrealistic big priceToken1
 
-        vm.assume(uint256(reserve0) * reserve1 * 1000 / priceToken1 / 997 <= type(uint256).max / priceToken0);
-        vm.assume(uint256(reserve0) * reserve1 * 1000 / priceToken0 / 997 <= type(uint256).max / priceToken1);
-
-        //vm.assume(reserve0 * priceToken0 / reserve1 / priceToken1 < 5);
-        //vm.assume(reserve1 * priceToken1 / reserve0 / priceToken0 < 5);
+        uint256 invariant = uint256(reserve0) * reserve1 * 1000;
+        vm.assume(invariant / priceToken1 / 997 <= type(uint256).max / priceToken0); //leftSide overflows when arb is from token 1 to 0, only with unrealistic numbers
+        vm.assume(invariant / priceToken0 / 997 <= type(uint256).max / priceToken1); //leftSide overflows when arb is from token 0 to 1, only with unrealistic numbers
 
         (bool token0ToToken1, uint256 amountIn) =
             uniswapV2PricingModule.computeProfitMaximizingTrade(priceToken0, priceToken1, reserve0, reserve1);
@@ -871,15 +869,70 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         uint256 maxProfit = profitArbitrage(priceTokenIn, priceTokenOut, amountIn, reserveIn, reserveOut);
 
         //Due to numerical rounding actual maximum might be deviating bit from calculated max, but must be in a range of 1%
-        vm.assume(maxProfit <= type(uint256).max / 1001);
+        vm.assume(maxProfit <= type(uint256).max / 10001); //Prevent overflow on underlying overflows, maxProfit can still be a ridiculous big number
         assertGe(
-            maxProfit * 1001 / 1000,
+            maxProfit * 10001 / 10000,
             profitArbitrage(priceTokenIn, priceTokenOut, amountIn * 999 / 1000, reserveIn, reserveOut)
         );
         assertGe(
-            maxProfit * 1001 / 1000,
+            maxProfit * 10001 / 10000,
             profitArbitrage(priceTokenIn, priceTokenOut, amountIn * 1001 / 1000, reserveIn, reserveOut)
         );
+    }
+
+    function testRevert_computeProfitMaximizingTrade_token0ToToken1Overflows(
+        uint256 priceToken0,
+        uint256 priceToken1,
+        uint112 reserve0,
+        uint112 reserve1
+    ) public {
+        vm.assume(reserve0 > 10e6); //Minimum liquidity
+        vm.assume(reserve1 > 10e6); //Minimum liquidity
+        vm.assume(priceToken0 > 10e6); //Realistic prices
+        vm.assume(priceToken1 > 10e6); //Realistic prices
+
+        vm.assume(priceToken0 > type(uint256).max / reserve0);
+
+        //Arithmetic overflow.
+        vm.expectRevert(bytes(""));
+        uniswapV2PricingModule.computeProfitMaximizingTrade(priceToken0, priceToken1, reserve0, reserve1);
+    }
+
+    function testRevert_computeProfitMaximizingTrade_leftSideOverflows(
+        uint256 priceToken0,
+        uint256 priceToken1,
+        uint112 reserve0,
+        uint112 reserve1
+    ) public {
+        vm.assume(reserve0 > 10e6); //Minimum liquidity
+        vm.assume(reserve1 > 10e6); //Minimum liquidity
+        vm.assume(priceToken0 > 10e6); //Realistic prices
+        vm.assume(priceToken1 > 10e6); //Realistic prices
+        vm.assume(priceToken0 <= type(uint256).max / reserve0); //Overflow, only with unrealistic big numbers
+        vm.assume(priceToken1 <= type(uint256).max / 997); //Overflow, only with unrealistic big priceToken1
+
+        bool token0ToToken1 = reserve0 * priceToken0 / reserve1 < priceToken1;
+        uint256 invariant = uint256(reserve0) * reserve1 * 1000;
+        uint256 prod;
+        uint256 denominator;
+        if (token0ToToken1) {
+            prod = priceToken1;
+            denominator = priceToken0 * 997;
+        } else {
+            prod = priceToken0;
+            denominator = priceToken1 * 997;
+        }
+        vm.assume(invariant / denominator > type(uint256).max / prod);
+
+        uint256 prod0; // Least significant 256 bits of the product
+        uint256 prod1; // Most significant 256 bits of the product
+        assembly {
+            let mm := mulmod(invariant, prod, not(0))
+            prod0 := mul(invariant, prod)
+            prod1 := sub(sub(mm, prod0), lt(mm, prod0))
+        }
+        vm.expectRevert(abi.encodeWithSignature("PRBMath__MulDivOverflow(uint256,uint256)", prod1, denominator));
+        uniswapV2PricingModule.computeProfitMaximizingTrade(priceToken0, priceToken1, reserve0, reserve1);
     }
 
     function profitArbitrage(
@@ -893,5 +946,73 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         if (amountOut > 0) vm.assume(priceTokenOut <= type(uint256).max / amountOut);
         vm.assume(priceTokenIn <= type(uint256).max / amountIn);
         profit = priceTokenOut * amountOut - priceTokenIn * amountIn;
+    }
+
+    function testSuccess_computeTokenAmounts_FeeOff(
+        uint112 reserve0,
+        uint112 reserve1,
+        uint256 totalSupply,
+        uint256 liquidityAmount
+        ) public {
+        vm.assume(totalSupply > 0); // division by 0
+        vm.assume(reserve0 > 0); // division by 0
+        vm.assume(reserve1 > 0); // division by 0
+        vm.assume(liquidityAmount <= totalSupply); // single user can never hold more than totalSupply
+        vm.assume(liquidityAmount <= type(uint256).max / reserve0); // overflow, unrealistic big liquidityAmount
+        vm.assume(liquidityAmount <= type(uint256).max / reserve1); // overflow, unrealistic big liquidityAmount
+
+        uint256 token0AmountExpected = liquidityAmount * reserve0 / totalSupply;
+        uint256 token1AmountExpected = liquidityAmount * reserve1 / totalSupply;
+
+        (uint256 token0AmountActual, uint256 token1AmountActual) = uniswapV2PricingModule.computeTokenAmounts(reserve0, reserve1, totalSupply, liquidityAmount, 0);
+
+        assertEq(token0AmountActual, token0AmountExpected);
+        assertEq(token1AmountActual, token1AmountExpected);
+    }
+
+    function testSuccess_computeTokenAmounts_FeeOn(
+        uint112 reserve0Last,
+        uint112 reserve1Last,
+        uint112 reserve0,
+        uint144 totalSupply, //might overflow for totalsupply bigger than 2¨^144
+        uint144 liquidityAmount
+        ) public {
+        vm.assume(totalSupply > 10e6); // division by 0
+        vm.assume(reserve0Last > 10e6); // division by 0
+        vm.assume(reserve1Last > 10e6); // division by 0
+        vm.assume(liquidityAmount <= totalSupply); // single user can never hold more than totalSupply
+        vm.assume(reserve0 > reserve0Last); // Uniswap accrues fees
+
+        vm.assume(uint256(reserve0) * reserve1Last / reserve0Last <= type(uint112).max); // reserve1 is max uint112 (uniswap)
+        uint112 reserve1 = uint112(uint256(reserve0) * reserve1Last / reserve0Last); // pool is still balanced and fees accrued
+
+        // Given: Fees are enabled
+        vm.prank(haydenAdams);
+        uniswapV2Factory.setFeeTo(address(1));
+        uniswapV2PricingModule.syncFee();
+
+        uint256 token0Fee = (reserve0 - reserve0Last) / 6; // a sixth of all fees go to the Uniswap treasury when fees are enabled
+        uint256 token1Fee = (reserve1 - reserve1Last) / 6;
+
+        uint256 token0AmountExpected = uint256(liquidityAmount) * (reserve0 - token0Fee) / totalSupply;
+        uint256 token1AmountExpected = uint256(liquidityAmount) * (reserve1 - token1Fee) / totalSupply;
+
+        uint256 kLast = uint256(reserve0Last) * reserve1Last;
+        (uint256 token0AmountActual, uint256 token1AmountActual) = uniswapV2PricingModule.computeTokenAmounts(reserve0, reserve1, totalSupply, liquidityAmount, kLast);
+
+        assertInRange(token0AmountActual, token0AmountExpected, 3);
+        assertInRange(token1AmountActual, token1AmountExpected, 3);
+    }
+
+    //Helper Functions
+
+    function assertInRange(uint256 actualValue, uint256 expectedValue, uint8 precision) internal {
+        if (expectedValue == 0) {
+            assertEq(actualValue, expectedValue);
+        } else {
+        vm.assume(expectedValue > 10**(2*precision));
+            assertGe(actualValue * (10**precision + 1) / 10**precision, expectedValue);
+            assertLe(actualValue * (10**precision - 1) / 10**precision, expectedValue);
+        }
     }
 }
