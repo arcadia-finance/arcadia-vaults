@@ -27,11 +27,9 @@ contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
         _preCheck(_actionSpecificData);
     }
 
-    function testExecute(
-        actionAssetsData memory _outgoing,
-        actionAssetsData memory _incoming,
-        address[] memory path
-    ) public {
+    function testExecute(actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path)
+        public
+    {
         _execute(_outgoing, _incoming, path);
     }
 
@@ -398,7 +396,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
     function testSuccess_CollValueBelowUsedMargin() public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
-        
+
         stdstore.target(address(trustedProtocol)).sig(trustedProtocol.balanceOf.selector).with_key(address(vault))
             .checked_write(10000 * 10 ** Constants.daiDecimals);
 

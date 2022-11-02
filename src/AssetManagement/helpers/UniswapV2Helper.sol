@@ -35,7 +35,6 @@ abstract contract UniswapV2Helper {
         uint256 _amountAMin,
         uint256 _amountBMin
     ) internal {
-
         //Approvals
         IUniswapV2Router02(UNISWAP_V2_ROUTER2).addLiquidity(
             _tokenA,
@@ -60,15 +59,7 @@ abstract contract UniswapV2Helper {
     ) internal {
         //Approvals?
         IUniswapV2Router02(UNISWAP_V2_ROUTER2).removeLiquidity(
-            _tokenA,
-            _tokenB,
-            _poolTokenAmount,
-            _amountAMin,
-            _amountBMin,
-            _recipient,
-            block.timestamp + 1
+            _tokenA, _tokenB, _poolTokenAmount, _amountAMin, _amountBMin, _recipient, block.timestamp + 1
         );
     }
-
-
 }

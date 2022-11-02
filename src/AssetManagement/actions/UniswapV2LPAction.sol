@@ -45,17 +45,26 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
         internal
     {
         if (_selector == bytes4(keccak256("add"))) {
-        _uniswapV2AddLiquidity(address(this), _outgoing.assets[0], _outgoing.assets[1], _outgoing.assetAmounts[0],  _outgoing.assetAmounts[1],
-        _outgoing.assetAmounts[0],  _outgoing.assetAmounts[1]); //TODO: min amounts?
+            _uniswapV2AddLiquidity(
+                address(this),
+                _outgoing.assets[0],
+                _outgoing.assets[1],
+                _outgoing.assetAmounts[0],
+                _outgoing.assetAmounts[1],
+                _outgoing.assetAmounts[0],
+                _outgoing.assetAmounts[1]
+            ); //TODO: min amounts?
         } else if (_selector == bytes4(keccak256("remove"))) {
-        _uniswapV2RemoveLiquidity(address(this), _outgoing.assets[0],
-        _outgoing.assetAmounts[0],
-        _incoming.assets[0],
-        _incoming.assets[1],
-        _incoming.assetAmounts[0],
-        _incoming.assetAmounts[1]);
+            _uniswapV2RemoveLiquidity(
+                address(this),
+                _outgoing.assets[0],
+                _outgoing.assetAmounts[0],
+                _incoming.assets[0],
+                _incoming.assets[1],
+                _incoming.assetAmounts[0],
+                _incoming.assetAmounts[1]
+            );
         }
-
     }
 
     function _preCheck(bytes memory _actionSpecificData)
@@ -67,16 +76,16 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
                     DECODE
         ///////////////////////////////*/
 
-        (_outgoing, _incoming, _selector) = abi.decode(_actionSpecificData, (actionAssetsData, actionAssetsData, bytes4));
+        (_outgoing, _incoming, _selector) =
+            abi.decode(_actionSpecificData, (actionAssetsData, actionAssetsData, bytes4));
 
         if (_selector == bytes4(keccak256("add"))) {
             require(_outgoing.assets.length >= 2, "UV2A_LP: Need atleast two base tokens");
             require(_incoming.assets.length == 1, "UV2A_LP: Can only out one lp token");
-            } else if (_selector == bytes4(keccak256("remove"))) {
+        } else if (_selector == bytes4(keccak256("remove"))) {
             require(_outgoing.assets.length >= 1, "UV2A_LP: Can only out one lp token");
             require(_incoming.assets.length == 2, "UV2A_LP: Need atleast two base tokens");
         }
-
 
         /*///////////////////////////////
                     OUTGOING

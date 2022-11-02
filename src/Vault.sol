@@ -790,8 +790,9 @@ contract Vault {
     function vaultManagementAction(address _actionHandler, bytes calldata _actionData) public onlyOwner {
         require(IMainRegistry(registryAddress).isActionAllowlisted(_actionHandler), "VL_VMA: Action is not allowlisted");
 
-        (actionAssetsData memory outgoing_, actionAssetsData memory incoming_,) =
-            abi.decode(_actionData, (actionAssetsData, actionAssetsData, bytes));
+        (actionAssetsData memory outgoing_, actionAssetsData memory incoming_, bytes4 _selector) =
+            abi.decode(_actionData, (actionAssetsData, actionAssetsData, bytes4));
+
 
         // account preActionBalances
         uint256 incomingLength = incoming_.assets.length;
@@ -802,7 +803,7 @@ contract Vault {
             }
         }
 
-        // withdraw to actionHandlerå
+        // withdraw to actionHandler
         for (uint256 i; i < outgoing_.assets.length;) {
             outgoing_.preActionBalances[i] = IERC20(outgoing_.assets[i]).balanceOf(address(this));
             _withdrawERC20(_actionHandler, outgoing_.assets[i], outgoing_.assetAmounts[i]);
@@ -810,6 +811,7 @@ contract Vault {
                 ++i;
             }
         }
+
 
         // execute Action
         IActionBase(_actionHandler).executeAction(address(this), _actionData);
@@ -820,7 +822,6 @@ contract Vault {
                 ++i;
             }
         }
-
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
 

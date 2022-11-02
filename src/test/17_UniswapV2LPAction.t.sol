@@ -188,6 +188,16 @@ abstract contract UniswapV2LPActionTest is Test {
             emptyListUint16
         );
 
+        standardERC20Registry.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleWethToUsdArr,
+                assetUnit: uint64(10 ** Constants.ethDecimals),
+                assetAddress: address(daiwethlp)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+
         vm.stopPrank();
 
         // Cheat vault owner
@@ -200,9 +210,12 @@ abstract contract UniswapV2LPActionTest is Test {
         stdstore.target(address(mainRegistry)).sig(mainRegistry.isActionAllowlisted.selector).with_key(address(action))
             .checked_write(true);
 
+        // Cheat Trusted Protocol
         stdstore.target(address(vault)).sig(vault.trustedProtocol.selector).checked_write(address(trustedProtocol));
 
         deal(address(dai), vaultOwner, 100000 * 10 ** Constants.daiDecimals, true);
+        deal(address(weth), vaultOwner, 100000 * 10 ** Constants.ethDecimals, true);
+        deal(address(daiwethlp), vaultOwner, 100000000 * 10 ** Constants.ethDecimals, true);
     }
 
     //Before Each
@@ -242,19 +255,26 @@ contract executeActionTests is UniswapV2LPActionTest {
         //Give some initial DAI to vault to deposit
 
         //Deposit in vault
-        address[] memory _assetAddresses = new address[](1);
+        address[] memory _assetAddresses = new address[](2);
         _assetAddresses[0] = address(dai);
-        uint256[] memory _assetIds = new uint256[](1);
-        _assetIds[0] = 1;
-        uint256[] memory _assetAmounts = new uint256[](1);
+        _assetAddresses[1] = address(weth);
+        uint256[] memory _assetIds = new uint256[](2);
+        _assetIds[0] = 0;
+        _assetIds[1] = 0;
+        uint256[] memory _assetAmounts = new uint256[](2);
         _assetAmounts[0] = 1300 * 10 ** Constants.daiDecimals;
-        uint256[] memory _assetTypes = new uint256[](1);
+        _assetAmounts[1] = 1 * 10 ** Constants.ethDecimals;
+        uint256[] memory _assetTypes = new uint256[](2);
         _assetTypes[0] = 0;
+        _assetTypes[1] = 0;
 
         vm.startPrank(vaultOwner);
         dai.approve(address(vault), type(uint256).max);
+        weth.approve(address(vault), type(uint256).max);
         vault.deposit(_assetAddresses, _assetIds, _assetAmounts, _assetTypes);
         vm.stopPrank();
+
+
 
         // Prepare outgoingData
         address[] memory outAssets = new address[](2);
@@ -288,7 +308,6 @@ contract executeActionTests is UniswapV2LPActionTest {
         uint256[] memory _inPreActionBalances = new uint256[](1);
         _inPreActionBalances[0] = 0;
 
-
         //  Prepare action data
         _in = actionAssetsData(_inAssets, _inAssetsIds, _inAssetAmounts, _inPreActionBalances);
     }
@@ -308,15 +327,14 @@ contract executeActionTests is UniswapV2LPActionTest {
         assertEq(daiwethlp.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
     }
 
-    function testSuccess_removeDAIWETHLP() public {
-        bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
+    // function testSuccess_removeDAIWETHLP() public {
+    //     bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
 
-        vm.prank(vaultOwner);
-        vault.vaultManagementAction(address(action), __actionSpecificData);
+    //     vm.prank(vaultOwner);
+    //     vault.vaultManagementAction(address(action), __actionSpecificData);
 
-        assertEq(dai.balanceOf(address(vault)), 1300 * 10 ** Constants.daiDecimals);
-        assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
-        assertEq(daiwethlp.balanceOf(address(vault)), 0);
-    }
-
+    //     assertEq(dai.balanceOf(address(vault)), 1300 * 10 ** Constants.daiDecimals);
+    //     assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
+    //     assertEq(daiwethlp.balanceOf(address(vault)), 0);
+    // }
 }
