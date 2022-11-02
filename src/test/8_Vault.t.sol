@@ -25,8 +25,7 @@ import "../utils/Constants.sol";
 import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-import {LendingPool, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
+import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
 contract VaultTestExtension is Vault {
@@ -298,8 +297,7 @@ contract vaultTests is Test {
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factoryContr));
         pool.updateInterestRate(5 * 10 ** 16); //5% with 18 decimals precision
 
-        debt = new DebtToken(address(pool));
-        pool.setDebtToken(address(debt));
+        debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
         pool.addTranche(address(tranche), 50);
@@ -309,7 +307,7 @@ contract vaultTests is Test {
         dai.approve(address(pool), type(uint256).max);
 
         vm.prank(address(tranche));
-        pool.deposit(type(uint128).max, liquidityProvider);
+        pool.depositInLendingPool(type(uint128).max, liquidityProvider);
     }
 
     //this is a before each
@@ -497,7 +495,7 @@ contract vaultTests is Test {
         bytes32 addDebt = bytes32(abi.encode(1));
         vm.store(address(debt), loc, addDebt);
 
-        slot = stdstore.target(address(debt)).sig(debt.totalDebt.selector).find();
+        slot = stdstore.target(address(debt)).sig(debt.realisedDebt.selector).find();
         loc = bytes32(slot);
         vm.store(address(debt), loc, addDebt);
 
@@ -674,7 +672,7 @@ contract vaultTests is Test {
         bytes32 addDebt = bytes32(abi.encode(100000000));
         vm.store(address(debt), loc, addDebt);
 
-        slot = stdstore.target(address(debt)).sig(debt.totalDebt.selector).find();
+        slot = stdstore.target(address(debt)).sig(debt.realisedDebt.selector).find();
         loc = bytes32(slot);
         vm.store(address(debt), loc, addDebt);
 

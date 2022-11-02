@@ -13,8 +13,7 @@ import "../Vault.sol";
 import "../AssetRegistry/MainRegistry.sol";
 import "../Liquidator.sol";
 import "../utils/Constants.sol";
-import {LendingPool} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {DebtToken} from "../../lib/arcadia-lending/src/DebtToken.sol";
+import {LendingPool, DebtToken} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 import {Asset} from "../../lib/arcadia-lending/src/mocks/Asset.sol";
 
@@ -66,8 +65,7 @@ contract factoryTest is Test {
         pool = new LendingPool(asset, creatorAddress, address(factoryContr));
         pool.updateInterestRate(5 * 10 ** 16); //5% with 18 decimals precision
 
-        debt = new DebtToken(address(pool));
-        pool.setDebtToken(address(debt));
+        debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
         pool.addTranche(address(tranche), 50);
@@ -77,7 +75,7 @@ contract factoryTest is Test {
         asset.approve(address(pool), type(uint256).max);
 
         vm.prank(address(tranche));
-        pool.deposit(type(uint128).max, liquidityProvider);
+        pool.depositInLendingPool(type(uint128).max, liquidityProvider);
 
         registryContr = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
@@ -119,8 +117,8 @@ contract factoryTest is Test {
 
         address actualDeployed = factoryContr.createVault(salt, 0);
         assertEq(amountBefore + 1, factoryContr.allVaultsLength());
-        assertEq(actualDeployed, factoryContr.allVaults(factoryContr.allVaultsLength() - 1));
-        assertEq(factoryContr.vaultIndex(actualDeployed), (factoryContr.allVaultsLength() - 1));
+        assertEq(actualDeployed, factoryContr.allVaults(factoryContr.allVaultsLength()-1));
+        assertEq(factoryContr.vaultIndex(actualDeployed), (factoryContr.allVaultsLength()));
     }
 
     function testSuccess_createVault_DeployNewProxyWithLogic(uint256 salt) public {
@@ -155,7 +153,7 @@ contract factoryTest is Test {
         address vault = factoryContr.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
 
         //Make sure vault itself is owned by sender
         assertEq(IVault(vault).owner(), sender);
@@ -183,7 +181,7 @@ contract factoryTest is Test {
         address vault = factoryContr.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
 
         //Make sure vault itself is owned by sender
         assertEq(IVault(vault).owner(), sender);
@@ -213,7 +211,7 @@ contract factoryTest is Test {
         address vault = factoryContr.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
 
         //Make sure vault itself is owned by sender
         assertEq(IVault(vault).owner(), sender);
@@ -241,7 +239,7 @@ contract factoryTest is Test {
         address vault = factoryContr.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(0));
+        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
 
         //Make sure vault itself is owned by sender
         assertEq(IVault(vault).owner(), sender);
