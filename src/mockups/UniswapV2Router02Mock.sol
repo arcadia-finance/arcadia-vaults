@@ -28,5 +28,7 @@ contract UniswapV2Router02Mock is Test {
         stdstore.target(address(path[1])).sig(IERC20(path[1]).balanceOf.selector).with_key(address(to)).checked_write(
             amountOutMin
         );
+
+        return amounts;
     }
 }
