@@ -5,6 +5,7 @@ on:
       - main_paper_trading
       - main*
       - refactor/arcadia-vault
+      - dev
 
 name: Foundry Tests
 
