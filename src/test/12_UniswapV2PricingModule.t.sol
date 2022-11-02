@@ -24,12 +24,12 @@ contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
         UniswapV2PricingModule(_mainRegistry, _oracleHub, _uniswapV2Factory, _erc20PricingModule)
     {}
 
-    function getTrustedTokenAmounts(address pair, uint256 trustedPriceToken0, uint256 trustedPriceToken1)
+    function getTrustedTokenAmounts(address pair, uint256 trustedPriceToken0, uint256 trustedPriceToken1, uint256 liquidityAmount)
         public
         view
-        returns (uint256 reserve0, uint256 reserve1)
+        returns (uint256 token0Amount, uint256 token1Amount)
     {
-        (reserve0, reserve1) = _getTrustedTokenAmounts(pair, trustedPriceToken0, trustedPriceToken1);
+        (token0Amount, token1Amount) = _getTrustedTokenAmounts(pair, trustedPriceToken0, trustedPriceToken1, liquidityAmount);
     }
 
     function getTrustedReserves(address pair, uint256 trustedPriceToken0, uint256 trustedPriceToken1)
