@@ -32,10 +32,6 @@ contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
     {
         _execute(_outgoing, _incoming, path);
     }
-
-    function testPostCheck(actionAssetsData memory incomingAssets_) public view {
-        _postCheck(incomingAssets_);
-    }
 }
 
 abstract contract UniswapV2SwapActionTest is Test {
@@ -289,8 +285,8 @@ contract executeActionTests is UniswapV2SwapActionTest {
     }
 
     /*///////////////////////////////
-                COMPLETE SWAP TESTS
-        ///////////////////////////////*/
+            COMPLETE SWAP TESTS
+    ///////////////////////////////*/
 
     function testSuccess_SwapDAIWETH() public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
@@ -341,8 +337,8 @@ contract executeActionTests is UniswapV2SwapActionTest {
     }
 
     /*///////////////////////////////
-                    VAULT TESTS
-        ///////////////////////////////*/
+            VAULT TESTS
+    ///////////////////////////////*/
 
     function testSuccess_ExecuteNotAllowlistedAction(address _action) public {
         vm.assume(_action != address(action));
@@ -356,8 +352,8 @@ contract executeActionTests is UniswapV2SwapActionTest {
     }
 
     /*///////////////////////////////
-                    PRECHECK TESTS
-        ///////////////////////////////*/
+            PRECHECK TESTS
+    ///////////////////////////////*/
 
     function testSuccess_PathLengthMustBeTwoOrMore() public {
         path = new address[](1);
@@ -391,7 +387,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
     }
 
     /*///////////////////////////////
-            POSTCHECK TESTS
+            EXECUTE TESTS
     ///////////////////////////////*/
 
     function testSuccess_CollValueBelowUsedMargin() public {

@@ -9,7 +9,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "../../../lib/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 abstract contract UniswapV2Helper {
-    address private immutable UNISWAP_V2_ROUTER2;
+    address public immutable UNISWAP_V2_ROUTER2;
 
     constructor(address _router) {
         UNISWAP_V2_ROUTER2 = _router;
