@@ -794,15 +794,15 @@ contract Vault {
             abi.decode(_actionData, (actionAssetsData, actionAssetsData, bytes));
 
         // account preActionBalances
-        uint256 incomingLength = incoming_.assets.length;
-        for (uint256 i; i < incomingLength;) {
-            incoming_.preActionBalances[i] = IERC20(incoming_.assets[i]).balanceOf(address(this));
-            unchecked {
-                ++i;
-            }
-        }
+         uint256 incomingLength = incoming_.assets.length;
+        // for (uint256 i; i < incomingLength;) {
+        //     incoming_.preActionBalances[i] = IERC20(incoming_.assets[i]).balanceOf(address(this));
+        //     unchecked {
+        //         ++i;
+        //     }
+        // }
 
-        // withdraw to actionHandlerå
+        // withdraw to actionHandler
         for (uint256 i; i < outgoing_.assets.length;) {
             outgoing_.preActionBalances[i] = IERC20(outgoing_.assets[i]).balanceOf(address(this));
             _withdrawERC20(_actionHandler, outgoing_.assets[i], outgoing_.assetAmounts[i]);
@@ -812,9 +812,9 @@ contract Vault {
         }
 
         // execute Action
-        IActionBase(_actionHandler).executeAction(address(this), _actionData);
+        incoming_ = IActionBase(_actionHandler).executeAction(address(this), _actionData);
 
-        for (uint256 i; i < incomingLength;) {
+        for (uint256 i; i < incoming_.assets.length;) {
             _depositERC20(_actionHandler, incoming_.assets[i], incoming_.assetAmounts[i]);
             unchecked {
                 ++i;
