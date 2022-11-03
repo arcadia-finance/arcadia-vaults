@@ -454,6 +454,6 @@ contract gasProxyDeploy is Test {
     //This test should probably be deleted
     function testTransferOwnership() public {
         vm.prank(vaultOwner);
-        factory.safeTransferFrom(vaultOwner, unprivilegedAddress, 0);
+        factory.safeTransferFrom(vaultOwner, unprivilegedAddress, 1);
     }
 }

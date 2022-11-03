@@ -77,81 +77,109 @@ contract AbstractPricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_AssetWhitelistedWhenAddedToPricingModule(address assetAddress) public {
+        // Given: All necessary contracts deployed on setup
         vm.prank(creatorAddress);
+        // When: creatorAddress calls setAssetInformation
         abstractPricingModule.setAssetInformation(assetAddress);
 
+        // Then: isAssetAddressWhiteListed should return true
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(assetAddress));
     }
 
     function testRevert_addToWhiteList_NonOwnerAddsExistingAssetToWhitelist(address unprivilegedAddress) public {
+        // Given: unprivilegedAddress is not creatorAddress, creatorAddress calls setAssetInformation with address(eth)
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.prank(creatorAddress);
         abstractPricingModule.setAssetInformation(address(eth));
 
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress calls addToWhiteList
+
+        // Then: addToWhiteList should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
+        // And: isAssetAddressWhiteListed for address(eth) should return true
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testRevert_addToWhiteList_OwnerAddsNonExistingAssetToWhitelist() public {
+        // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
+        // When: creatorAddress calls addToWhiteList
+
+        // Then: addToWhiteList should revert with "Asset not known in Pricing Module"
         vm.expectRevert("Asset not known in Pricing Module");
         abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
+        // And: isAssetAddressWhiteListed for address(eth) should return false
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testSuccess_addToWhiteList_OwnerAddsExistingAssetToWhitelist() public {
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress calls setAssetInformation with address(eth)
         abstractPricingModule.setAssetInformation(address(eth));
+        // When: creatorAddress calls addToWhiteList with address(eth)
         abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
+        // Then: isAssetAddressWhiteListed for address(eth) should return true
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testRevert_removeFromWhiteList_NonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress)
         public
     {
+        // Given: unprivilegedAddress is not creatorAddress and address(this), creatorAddress calls setAssetInformation with address(eth)
         vm.assume(unprivilegedAddress != creatorAddress);
+        vm.assume(unprivilegedAddress != address(this));
 
         vm.prank(creatorAddress);
         abstractPricingModule.setAssetInformation(address(eth));
 
-        vm.assume(unprivilegedAddress != address(this));
-        vm.assume(unprivilegedAddress != creatorAddress);
-
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress calls removeFromWhiteList
+
+        // Then: removeFromWhiteList should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
+        // And: isAssetAddressWhiteListed for address(eth) should return true
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testRevert_removeFromWhiteList_OwnerRemovesNonExistingAssetFromWhitelist() public {
+        // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
+        // When: creatorAddress calls removeFromWhiteList
+
+        // Then: removeFromWhiteList should revert with "Asset not known in Pricing Module"
         vm.expectRevert("Asset not known in Pricing Module");
         abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
+        // And: isAssetAddressWhiteListed for address(eth) should return false 
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testSuccess_removeFromWhiteList_OwnerRemovesExistingAssetFromWhitelist() public {
         vm.startPrank(creatorAddress);
+        // Given: creatorAddress calls setAssetInformation
         abstractPricingModule.setAssetInformation(address(eth));
+        // When: creatorAddress calls removeFromWhiteList
         abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
+        // Then: isAssetAddressWhiteListed for address(eth) should return false 
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testRevert_addToWhiteList_NonOwnerAddsRemovedAssetToWhitelist(address unprivilegedAddress) public {
+        // Given: unprivilegedAddress is not creatorAddress, creatorAddress setAssetInformation and removeFromWhiteList with address(eth)
         vm.assume(unprivilegedAddress != creatorAddress);
 
         vm.startPrank(creatorAddress);
@@ -160,21 +188,28 @@ contract AbstractPricingModuleTest is Test {
         vm.stopPrank();
 
         vm.startPrank(unprivilegedAddress);
+        // When: unprivilegedAddress calls addToWhiteList
+
+        // Then: addToWhiteList should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
         abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
+        // And: isAssetAddressWhiteListed for address(eth) should return false 
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
     function testSuccess_addToWhiteList_OwnerAddsRemovedAssetToWhitelist() public {
+        // Given: creatorAddress calls setAssetInformation and removeFromWhiteList
         vm.startPrank(creatorAddress);
         abstractPricingModule.setAssetInformation(address(eth));
         abstractPricingModule.removeFromWhiteList(address(eth));
 
+        // When: creatorAddress calls addToWhiteList
         abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
+        // Then: isAssetAddressWhiteListed for address(eth) should return true
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 }
