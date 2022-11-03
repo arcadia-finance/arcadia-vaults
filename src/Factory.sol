@@ -23,7 +23,6 @@ contract Factory is ERC721, Ownable {
         bytes32 versionRoot;
     }
 
-    mapping(address => bool) public isVault;
     mapping(uint256 => bool) public vaultVersionBlocked;
     mapping(address => uint256) public vaultIndex;
     mapping(uint256 => vaultVersionInfo) public vaultDetails;
@@ -33,8 +32,6 @@ contract Factory is ERC721, Ownable {
     string public baseURI;
 
     address[] public allVaults;
-
-    event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 id, uint256 version);
 
     constructor() ERC721("Arcadia Vault", "ARCADIA") {}
 
@@ -53,7 +50,6 @@ contract Factory is ERC721, Ownable {
         vaultVersion = vaultVersion == 0 ? latestVaultVersion : vaultVersion;
 
         require(vaultVersion <= latestVaultVersion, "FTRY_CV: Unknown vault version");
-
         require(vaultVersionBlocked[vaultVersion] == false, "FTRY_CV: This vault version cannot be created");
 
         vault = address(new Proxy{salt: bytes32(salt)}(vaultDetails[vaultVersion].logic));
@@ -61,11 +57,19 @@ contract Factory is ERC721, Ownable {
         IVault(vault).initialize(msg.sender, vaultDetails[vaultVersion].registryAddress, uint16(vaultVersion));
 
         allVaults.push(vault);
-        isVault[vault] = true;
-        vaultIndex[vault] = allVaults.length - 1;
+        vaultIndex[vault] = allVaults.length;
 
-        _mint(msg.sender, allVaults.length - 1);
-        emit VaultCreated(vault, msg.sender, allVaults.length - 1, vaultVersion);
+        _mint(msg.sender, allVaults.length);
+    }
+
+    /**
+     * @notice View function to see if an address is a vault
+     * @dev Function is used to verify if certain calls are to be made to an actual vault or not.
+     * @param vaultAddr The address to be checked.
+     * @return bool whether the address is a vault or not.
+     */
+    function isVault(address vaultAddr) public view returns (bool) {
+        return vaultIndex[vaultAddr] > 0;
     }
 
     /**
@@ -146,7 +150,7 @@ contract Factory is ERC721, Ownable {
      * @param id of the vault that is about to be transfered.
      */
     function _safeTransferFrom(address from, address to, uint256 id) internal {
-        IVault(allVaults[id]).transferOwnership(to);
+        IVault(allVaults[id-1]).transferOwnership(to);
         super.transferFrom(from, to, id);
         require(
             to.code.length == 0
@@ -166,7 +170,7 @@ contract Factory is ERC721, Ownable {
      * @param data additional data, only used for onERC721Received.
      */
     function _safeTransferFrom(address from, address to, uint256 id, bytes memory data) internal {
-        IVault(allVaults[id]).transferOwnership(to);
+        IVault(allVaults[id-1]).transferOwnership(to);
         super.transferFrom(from, to, id);
         require(
             to.code.length == 0
@@ -185,7 +189,7 @@ contract Factory is ERC721, Ownable {
      * @param id of the vault that is about to be transfered.
      */
     function _transferFrom(address from, address to, uint256 id) internal {
-        IVault(allVaults[id]).transferOwnership(to);
+        IVault(allVaults[id-1]).transferOwnership(to);
         super.transferFrom(from, to, id);
     }
 
@@ -273,7 +277,7 @@ contract Factory is ERC721, Ownable {
      * @param vault Vault that needs to get liquidated.
      */
     function liquidate(address vault) external {
-        require(isVault[vault], "FTRY: Not a vault");
+        require(isVault(vault), "FTRY: Not a vault");
         _liquidate(vault, msg.sender);
     }
 
