@@ -793,15 +793,6 @@ contract Vault {
         (actionAssetsData memory outgoing_, actionAssetsData memory incoming_,) =
             abi.decode(_actionData, (actionAssetsData, actionAssetsData, bytes));
 
-        // account preActionBalances
-         uint256 incomingLength = incoming_.assets.length;
-        // for (uint256 i; i < incomingLength;) {
-        //     incoming_.preActionBalances[i] = IERC20(incoming_.assets[i]).balanceOf(address(this));
-        //     unchecked {
-        //         ++i;
-        //     }
-        // }
-
         // withdraw to actionHandler
         for (uint256 i; i < outgoing_.assets.length;) {
             outgoing_.preActionBalances[i] = IERC20(outgoing_.assets[i]).balanceOf(address(this));
@@ -814,6 +805,7 @@ contract Vault {
         // execute Action
         incoming_ = IActionBase(_actionHandler).executeAction(address(this), _actionData);
 
+        // deposit from actionHandler into vault
         for (uint256 i; i < incoming_.assets.length;) {
             _depositERC20(_actionHandler, incoming_.assets[i], incoming_.assetAmounts[i]);
             unchecked {
@@ -823,7 +815,6 @@ contract Vault {
 
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
-
         require(collValue > usedMargin, "UV2_SWAP: coll. value postAction too low");
     }
 }
