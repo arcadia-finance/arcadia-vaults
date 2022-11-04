@@ -238,7 +238,7 @@ contract UniswapV2PricingModule is PricingModule {
         // The untrusted reserves from the pair, these can be manipulated!!!
         (reserve0, reserve1,) = IUniswapV2Pair(pair).getReserves();
 
-        require(reserve0 > 0 && reserve1 > 0, "UV2_GV: ZERO_PAIR_RESERVES");
+        require(reserve0 > 0 && reserve1 > 0, "UV2_GTR: ZERO_PAIR_RESERVES");
 
         // Compute how much to swap to balance the pool with externally observed trusted prices
         (bool token0ToToken1, uint256 amountIn) =
