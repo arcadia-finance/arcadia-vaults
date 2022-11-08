@@ -44,15 +44,16 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
     function _execute(actionAssetsData memory _outgoing, actionAssetsData memory _incoming, bytes4 _selector)
         internal
     {
+        
         if (_selector == bytes4(keccak256("add"))) {
             _uniswapV2AddLiquidity(
-                address(this),
-                _outgoing.assets[0],
-                _outgoing.assets[1],
-                _outgoing.assetAmounts[0],
-                _outgoing.assetAmounts[1],
-                _outgoing.assetAmounts[0],
-                _outgoing.assetAmounts[1]
+                address(this), // recipient
+                _outgoing.assets[0], // tokenA
+                _outgoing.assets[1], /// tokenB
+                _outgoing.assetAmounts[0], // amountADesired
+                _outgoing.assetAmounts[1], // amountBDesired
+                _outgoing.assetAmounts[0], // amountAMin
+                _outgoing.assetAmounts[1]  // amountBMin
             ); //TODO: min amounts?
         } else if (_selector == bytes4(keccak256("remove"))) {
             _uniswapV2RemoveLiquidity(
@@ -65,6 +66,8 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
                 _incoming.assetAmounts[1]
             );
         }
+
+        //require(_incoming.assets.length == _incoming.assetAmounts.length, "UV2A_LP: _incoming assets and amounts length mismatch");
     }
 
     function _preCheck(bytes memory _actionSpecificData)

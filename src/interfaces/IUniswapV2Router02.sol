@@ -7,6 +7,14 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 interface IUniswapV2Router02 {
+    function swapExactTokensForTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
     function swapTokensForExactTokens(
         uint256 amountOut,
         uint256 amountInMax,
@@ -15,7 +23,7 @@ interface IUniswapV2Router02 {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function addLiquidty(
+    function addLiquidity(
         address tokenA,
         address tokenB,
         uint256 amountADesired,
@@ -26,7 +34,7 @@ interface IUniswapV2Router02 {
         uint256 deadline
     ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity);
 
-    function removeLiquidty(
+    function removeLiquidity(
         address recipient,
         address tokenB,
         uint256 liquidity,

@@ -7,17 +7,21 @@
 pragma solidity ^0.8.13;
 
 import "../../lib/forge-std/src/Test.sol";
-import "../AssetManagement/actions/UniswapV2LPAction.sol";
 import "../mockups/UniswapV2Router02Mock.sol";
+import "../mockups/UniswapV2FactoryMock.sol";
+import "../mockups/UniswapV2PairMock.sol";
 import "../Vault.sol";
-import "../AssetRegistry/MainRegistry.sol";
 import "../utils/Constants.sol";
+import "../AssetManagement/actions/UniswapV2LPAction.sol";
 import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
 import "../AssetRegistry/StandardERC20PricingModule.sol";
+import "../AssetRegistry/UniswapV2PricingModule.sol";
+import "../AssetRegistry/MainRegistry.sol";
 import "../OracleHub.sol";
 import "../mockups/ArcadiaOracle.sol";
-import "../mockups/TrustedProtocolMock.sol";
+
 import "./fixtures/ArcadiaOracleFixture.f.sol";
+import "../mockups/TrustedProtocolMock.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
 contract IUniswapV2LPActionExtension is UniswapV2LPAction {
@@ -45,12 +49,14 @@ abstract contract UniswapV2LPActionTest is Test {
     using stdStorage for StdStorage;
 
     Vault vault;
-    UniswapV2Router02Mock routerMock;
-    IUniswapV2LPActionExtension action;
+    UniswapV2Router02Mock public routerMock;
+    UniswapV2FactoryMock public uniswapV2Factory;
+    IUniswapV2LPActionExtension public action;
     TrustedProtocolMock public trustedProtocol;
 
     MainRegistry mainRegistry;
     StandardERC20PricingModule private standardERC20Registry;
+    UniswapV2PricingModule public uniswapV2PricingModule;
 
     OracleHub private oracleHub;
 
@@ -60,9 +66,9 @@ abstract contract UniswapV2LPActionTest is Test {
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(deployer);
 
-    ERC20Mock dai;
-    ERC20Mock weth;
-    ERC20Mock daiwethlp;
+    ERC20Mock public dai;
+    ERC20Mock public weth;
+    UniswapV2PairMock public daiwethlp;
 
     address deployer = address(1);
     address vaultOwner = address(2);
@@ -78,8 +84,9 @@ abstract contract UniswapV2LPActionTest is Test {
         // Swappable ERC20
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         weth = new ERC20Mock("WETH Mock", "mWETH", uint8(Constants.ethDecimals));
-        daiwethlp = new ERC20Mock("WETH Mock", "mWETH", uint8(Constants.ethDecimals));
+        daiwethlp = new UniswapV2PairMock();
 
+        //address pairDaiWethAddr = uniswapV2Factory.createPair(address(dai), address(weth));
         trustedProtocol = new TrustedProtocolMock(dai, "tpDai", "trustedProtocolDai");
 
         // MainReg
@@ -127,6 +134,14 @@ abstract contract UniswapV2LPActionTest is Test {
 
         mainRegistry.addPricingModule(address(standardERC20Registry));
 
+        uniswapV2PricingModule = new UniswapV2PricingModule(
+            address(mainRegistry),
+            address(oracleHub),
+            address(uniswapV2Factory),
+            address(standardERC20Registry)
+        );
+        mainRegistry.addPricingModule(address(uniswapV2PricingModule));
+ 
         // Action
         action = new IUniswapV2LPActionExtension(address(routerMock), address(mainRegistry));
 
@@ -327,14 +342,19 @@ contract executeActionTests is UniswapV2LPActionTest {
         assertEq(daiwethlp.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
     }
 
-    // function testSuccess_removeDAIWETHLP() public {
-    //     bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
+    function testSuccess_removeDAIWETHLP() public {
 
-    //     vm.prank(vaultOwner);
-    //     vault.vaultManagementAction(address(action), __actionSpecificData);
+        vm.assume(address(daiwethlp) == address(10), "DAI-WETH LP token not deployed");
 
-    //     assertEq(dai.balanceOf(address(vault)), 1300 * 10 ** Constants.daiDecimals);
-    //     assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
-    //     assertEq(daiwethlp.balanceOf(address(vault)), 0);
-    // }
+        bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
+
+        vm.prank(vaultOwner);
+        vault.vaultManagementAction(address(action), __actionSpecificData);
+
+        assertEq(dai.balanceOf(address(vault)), 1300 * 10 ** Constants.daiDecimals);
+        assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
+        assertEq(daiwethlp.balanceOf(address(vault)), 0);
+    }
+
+
 }
