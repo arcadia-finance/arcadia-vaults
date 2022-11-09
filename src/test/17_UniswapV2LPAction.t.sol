@@ -40,60 +40,107 @@ contract IUniswapV2LPActionExtension is UniswapV2LPAction {
     ) public {
         _execute(_outgoing, _incoming, _selector);
     }
-
-    // function testPostCheck(address _vaultAddress, actionAssetsData memory incomingAssets_) public {
-    //     _postCheck(incomingAssets_);
-    // }
 }
 
 abstract contract UniswapV2LPActionTest is Test {
     using stdStorage for StdStorage;
 
-    Vault vault;
-    UniswapV2Router02Mock public routerMock;
-    UniswapV2FactoryMock public uniswapV2Factory;
-    IUniswapV2LPActionExtension public action;
-    TrustedProtocolMock public trustedProtocol;
-
-    MainRegistry mainRegistry;
-    StandardERC20PricingModule private standardERC20Registry;
-    UniswapV2PricingModule public uniswapV2PricingModule;
-
     OracleHub private oracleHub;
+    MainRegistry private mainRegistry;
+
+    ERC20Mock public dai;
+    ERC20Mock public weth;
+
+    UniswapV2PairMock public pairDaiWeth;
+    UniswapV2Router02Mock public uniswapV2Router;
+    UniswapV2FactoryMock public uniswapV2Factory;
+    TrustedProtocolMock public trustedProtocol;
 
     ArcadiaOracle private oracleDaiToUsd;
     ArcadiaOracle private oracleWethToUsd;
 
-    // FIXTURES
-    ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(deployer);
+    Vault vault;
+    IUniswapV2LPActionExtension public action;
 
-    ERC20Mock public dai;
-    ERC20Mock public weth;
-    address public daiwethlp;
+    StandardERC20PricingModule private standardERC20Registry;
+    UniswapV2PricingModule public uniswapV2PricingModule;
 
-    address deployer = address(1);
-    address vaultOwner = address(2);
+    address public creatorAddress = address(1);
+    address public tokenCreatorAddress = address(2);
+    address public oracleOwner = address(3);
+    address public samBankman = address(4);
+    address public lpProvider = address(5);
 
+    uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
+    uint256 rateEthToUsd = 1300 * 10 ** Constants.oracleEthToUsdDecimals;
+
+    address[] public oracleWethToUsdArr = new address[](1);
+    address[] public oracleDaiToUsdArr = new address[](1);
+
+    uint256[] emptyList = new uint256[](0);
     uint16[] emptyListUint16 = new uint16[](0);
+
+    uint256 usdValue = 10 ** 6 * FixedPointMathLib.WAD;
+
+    // FIXTURES
+    ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
 
     //Before
     constructor() {
-        vm.startPrank(deployer);
-        vault = new Vault();
-      
-
-        // Swappable ERC20
+        vm.startPrank(tokenCreatorAddress);
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         weth = new ERC20Mock("WETH Mock", "mWETH", uint8(Constants.ethDecimals));
+        vm.stopPrank();
+        
+        vm.startPrank(samBankman);
+        vault = new Vault();
         uniswapV2Factory = new UniswapV2FactoryMock();
-        address daiwethlp = uniswapV2Factory.createPair(address(dai), address(weth));
-        //daiwethpair = IUniswapV2Pair(daiwethlp);
+        pairDaiWeth = new UniswapV2PairMock();
+        address pairDaiWethAddr = uniswapV2Factory.createPair(address(dai), address(weth));
+        pairDaiWeth = UniswapV2PairMock(pairDaiWethAddr);
         trustedProtocol = new TrustedProtocolMock(dai, "tpDai", "trustedProtocolDai");
+        uniswapV2Router = new UniswapV2Router02Mock(address(uniswapV2Factory));
+        vm.stopPrank();
 
-        // Uniswap V2 Router
-        routerMock = new UniswapV2Router02Mock(address(uniswapV2Factory));
+        vm.startPrank(creatorAddress);
+        oracleHub = new OracleHub();
+        vm.stopPrank();
 
-        // MainReg
+        oracleDaiToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleDaiToUsdDecimals), "DAI / USD", rateDaiToUsd);
+        oracleWethToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "WETH / USD", rateEthToUsd);
+
+        vm.startPrank(creatorAddress);
+         oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "WETH",
+                baseAsset: "USD",
+                oracleAddress: address(oracleWethToUsd),
+                quoteAssetAddress: address(weth),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleDaiToUsdUnit),
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "DAI",
+                baseAsset: "USD",
+                oracleAddress: address(oracleDaiToUsd),
+                quoteAssetAddress: address(dai),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        vm.stopPrank();
+
+        oracleWethToUsdArr[0] = address(oracleWethToUsd);
+        oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
+
+
+        vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
@@ -126,67 +173,21 @@ abstract contract UniswapV2LPActionTest is Test {
             emptyListUint16
         );
 
-        uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
-        uint256 rateEthToUsd = 1300 * 10 ** Constants.oracleEthToUsdDecimals;
-
-        oracleHub = new OracleHub();
 
         standardERC20Registry = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
-
         mainRegistry.addPricingModule(address(standardERC20Registry));
-
-        uniswapV2PricingModule = new UniswapV2PricingModule(
-            address(mainRegistry),
-            address(oracleHub),
-            address(uniswapV2Factory),
-            address(standardERC20Registry)
+        standardERC20Registry.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleDaiToUsdArr,
+                assetUnit: uint64(10 ** Constants.daiDecimals),
+                assetAddress: address(dai)
+            }),
+            emptyListUint16,
+            emptyListUint16
         );
-        mainRegistry.addPricingModule(address(uniswapV2PricingModule));
- 
-        // Action
-        action = new IUniswapV2LPActionExtension(address(routerMock), address(mainRegistry));
-
-        vm.stopPrank();
-
-        oracleDaiToUsd =
-            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleDaiToUsdDecimals), "DAI / USD", rateDaiToUsd);
-        oracleWethToUsd =
-            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "WETH / USD", rateEthToUsd);
-
-        address[] memory oracleWethToUsdArr = new address[](1);
-        address[] memory oracleDaiToUsdArr = new address[](1);
-
-        oracleWethToUsdArr[0] = address(oracleWethToUsd);
-        oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
-
-        vm.startPrank(deployer);
-
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "WETH",
-                baseAsset: "USD",
-                oracleAddress: address(oracleWethToUsd),
-                quoteAssetAddress: address(weth),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleDaiToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "DAI",
-                baseAsset: "USD",
-                oracleAddress: address(oracleDaiToUsd),
-                quoteAssetAddress: address(dai),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleWethToUsdArr,
@@ -197,32 +198,25 @@ abstract contract UniswapV2LPActionTest is Test {
             emptyListUint16
         );
 
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleDaiToUsdArr,
-                assetUnit: uint64(10 ** Constants.daiDecimals),
-                assetAddress: address(dai)
-            }),
-            emptyListUint16,
-            emptyListUint16
+        uniswapV2PricingModule = new UniswapV2PricingModule(
+            address(mainRegistry),
+            address(oracleHub),
+            address(uniswapV2Factory),
+            address(standardERC20Registry)
         );
-
-        // standardERC20Registry.setAssetInformation(
-        //     StandardERC20PricingModule.AssetInformation({
-        //         oracleAddresses: oracleWethToUsdArr,
-        //         assetUnit: uint64(10 ** Constants.ethDecimals),
-        //         assetAddress: address(daiwethlp)
-        //     }),
-        //     emptyListUint16,
-        //     emptyListUint16
-        // );
-
-        
+        mainRegistry.addPricingModule(address(uniswapV2PricingModule));
+ 
+        // Action
+        action = new IUniswapV2LPActionExtension(address(uniswapV2Router), address(mainRegistry));
 
         vm.stopPrank();
 
+
+
+
+
         // Cheat vault owner
-        stdstore.target(address(vault)).sig(vault.owner.selector).checked_write(vaultOwner);
+        stdstore.target(address(vault)).sig(vault.owner.selector).checked_write(samBankman);
 
         // Cheat vault registry address
         stdstore.target(address(vault)).sig(vault.registryAddress.selector).checked_write(address(mainRegistry));
@@ -234,9 +228,9 @@ abstract contract UniswapV2LPActionTest is Test {
         // Cheat Trusted Protocol
         stdstore.target(address(vault)).sig(vault.trustedProtocol.selector).checked_write(address(trustedProtocol));
 
-        deal(address(dai), vaultOwner, 100000 * 10 ** Constants.daiDecimals, true);
-        deal(address(weth), vaultOwner, 100000 * 10 ** Constants.ethDecimals, true);
-        deal(address(daiwethlp), vaultOwner, 100000000 * 10 ** Constants.ethDecimals, true);
+        deal(address(dai), samBankman, 100000 * 10 ** Constants.daiDecimals, true);
+        deal(address(weth), samBankman, 100000 * 10 ** Constants.ethDecimals, true);
+        deal(address(pairDaiWeth), samBankman, 10000000000 * 10 ** Constants.ethDecimals, true);
     }
 
     //Before Each
@@ -273,7 +267,9 @@ contract executeActionTests is UniswapV2LPActionTest {
     function setUp() public override {
         super.setUp();
 
-        //Give some initial DAI to vault to deposit
+        vm.startPrank(creatorAddress);
+        uniswapV2PricingModule.setAssetInformation(address(pairDaiWeth), emptyListUint16, emptyListUint16);
+        vm.stopPrank();
 
         //Deposit in vault
         address[] memory _assetAddresses = new address[](2);
@@ -289,7 +285,7 @@ contract executeActionTests is UniswapV2LPActionTest {
         _assetTypes[0] = 0;
         _assetTypes[1] = 0;
 
-        vm.startPrank(vaultOwner);
+        vm.startPrank(samBankman);
         dai.approve(address(vault), type(uint256).max);
         weth.approve(address(vault), type(uint256).max);
         vault.deposit(_assetAddresses, _assetIds, _assetAmounts, _assetTypes);
@@ -316,7 +312,7 @@ contract executeActionTests is UniswapV2LPActionTest {
         _out = actionAssetsData(outAssets, outAssetsIds, outAssetAmounts, outPreActionBalances);
 
         address[] memory _inAssets = new address[](1);
-        _inAssets[0] = address(daiwethlp);
+        _inAssets[0] = address(pairDaiWeth);
 
         uint256[] memory _inAssetsIds = new uint256[](1);
         _inAssetsIds[0] = 1;
@@ -339,28 +335,28 @@ contract executeActionTests is UniswapV2LPActionTest {
 
         bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
 
-        vm.prank(vaultOwner);
+        vm.prank(samBankman);
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
         assertEq(dai.balanceOf(address(vault)), 0);
         assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
         
-        (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(daiwethlp).getReserves();
+        (uint112 reserve0, uint112 reserve1,) = pairDaiWeth.getReserves();
         assertEq(reserve0,  1300 * 10 ** Constants.daiDecimals);
         assertEq(reserve1, 1 * 10 ** Constants.ethDecimals);
     }
 
     function testSuccess_removeDAIWETHLP() public {
 
-        bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
+        bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("remove")));
 
-        vm.prank(vaultOwner);
+        vm.prank(samBankman);
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
         assertEq(dai.balanceOf(address(vault)), 1300 * 10 ** Constants.daiDecimals);
         assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
 
-        (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(daiwethlp).getReserves();
+        (uint112 reserve0, uint112 reserve1,) = pairDaiWeth.getReserves();
         assertEq(reserve0, 0);
         assertEq(reserve1, 0);
     }
@@ -371,7 +367,7 @@ contract executeActionTests is UniswapV2LPActionTest {
 
         bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
 
-        vm.prank(vaultOwner);
+        vm.prank(samBankman);
         vm.expectRevert(stdError.arithmeticError);
         vault.vaultManagementAction(address(action), __actionSpecificData);
    
@@ -384,29 +380,39 @@ contract executeActionTests is UniswapV2LPActionTest {
 
         bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
 
-        vm.prank(vaultOwner);
+        vm.prank(samBankman);
         vm.expectRevert(stdError.arithmeticError);
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
     }
 
     function testSuccess_removeDAIWETHLP_notEnoughLP() public {
-
+       
         _in.assetAmounts[0] = 2 * 10 ** Constants.ethDecimals;
 
         bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
 
-        vm.prank(vaultOwner);
+        vm.prank(samBankman);
+        vm.expectRevert(stdError.arithmeticError);
+        vault.vaultManagementAction(address(action), __actionSpecificData);
+        
+    }
+    function testSuccess_removeDAIWETHLP_BasTokens() public {
+       
+        _in.assetAmounts[0] = 2 * 10 ** Constants.ethDecimals;
+
+        bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
+
+        vm.prank(samBankman);
         vm.expectRevert(stdError.arithmeticError);
         vault.vaultManagementAction(address(action), __actionSpecificData);
         
     }
 
     function testSuccess_UnknownActionSelector() public {
+        bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("random")));
 
-        bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("random")));
-
-        vm.prank(vaultOwner);
+        vm.prank(samBankman);
         vm.expectRevert("UV2A_LP: invalid _selector");
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
