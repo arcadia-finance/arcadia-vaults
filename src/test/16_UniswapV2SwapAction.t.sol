@@ -19,6 +19,8 @@ import "../mockups/ArcadiaOracle.sol";
 import "../mockups/TrustedProtocolMock.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import "../mockups/UniswapV2FactoryMock.sol";
+
 
 contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
     constructor(address _router, address _mainreg) UniswapV2SwapAction(_router, _mainreg) {}
@@ -39,6 +41,7 @@ abstract contract UniswapV2SwapActionTest is Test {
 
     Vault vault;
     UniswapV2Router02Mock routerMock;
+    UniswapV2FactoryMock uniswapV2Factory;
     IUniswapV2SwapActionExtension action;
     TrustedProtocolMock public trustedProtocol;
 
@@ -65,12 +68,13 @@ abstract contract UniswapV2SwapActionTest is Test {
     constructor() {
         vm.startPrank(deployer);
         vault = new Vault();
-        routerMock = new UniswapV2Router02Mock();
 
         // Swappable ERC20
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         weth = new ERC20Mock("WETH Mock", "mWETH", uint8(Constants.ethDecimals));
 
+        uniswapV2Factory = new UniswapV2FactoryMock();
+        routerMock = new UniswapV2Router02Mock(address(uniswapV2Factory));
         trustedProtocol = new TrustedProtocolMock(dai, "tpDai", "trustedProtocolDai");
 
         // MainReg

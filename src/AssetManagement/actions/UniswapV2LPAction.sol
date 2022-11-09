@@ -44,6 +44,11 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
     function _execute(actionAssetsData memory _outgoing, actionAssetsData memory _incoming, bytes4 _selector)
         internal
     {
+
+        require(_selector == bytes4(keccak256("remove")) ||
+                _selector == bytes4(keccak256("add")),
+                "UV2A_LP: invalid _selector"
+            );
         
         if (_selector == bytes4(keccak256("add"))) {
             _uniswapV2AddLiquidity(

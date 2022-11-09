@@ -23,6 +23,7 @@ import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 import "../mockups/TrustedProtocolMock.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import "../interfaces/IUniswapV2Pair.sol";
 
 contract IUniswapV2LPActionExtension is UniswapV2LPAction {
     constructor(address _router, address _mainreg) UniswapV2LPAction(_router, _mainreg) {}
@@ -40,9 +41,9 @@ contract IUniswapV2LPActionExtension is UniswapV2LPAction {
         _execute(_outgoing, _incoming, _selector);
     }
 
-    function testPostCheck(address _vaultAddress, actionAssetsData memory incomingAssets_) public {
-        _postCheck(incomingAssets_);
-    }
+    // function testPostCheck(address _vaultAddress, actionAssetsData memory incomingAssets_) public {
+    //     _postCheck(incomingAssets_);
+    // }
 }
 
 abstract contract UniswapV2LPActionTest is Test {
@@ -68,7 +69,7 @@ abstract contract UniswapV2LPActionTest is Test {
 
     ERC20Mock public dai;
     ERC20Mock public weth;
-    UniswapV2PairMock public daiwethlp;
+    address public daiwethlp;
 
     address deployer = address(1);
     address vaultOwner = address(2);
@@ -79,15 +80,18 @@ abstract contract UniswapV2LPActionTest is Test {
     constructor() {
         vm.startPrank(deployer);
         vault = new Vault();
-        routerMock = new UniswapV2Router02Mock();
+      
 
         // Swappable ERC20
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         weth = new ERC20Mock("WETH Mock", "mWETH", uint8(Constants.ethDecimals));
-        daiwethlp = new UniswapV2PairMock();
-
-        //address pairDaiWethAddr = uniswapV2Factory.createPair(address(dai), address(weth));
+        uniswapV2Factory = new UniswapV2FactoryMock();
+        address daiwethlp = uniswapV2Factory.createPair(address(dai), address(weth));
+        //daiwethpair = IUniswapV2Pair(daiwethlp);
         trustedProtocol = new TrustedProtocolMock(dai, "tpDai", "trustedProtocolDai");
+
+        // Uniswap V2 Router
+        routerMock = new UniswapV2Router02Mock(address(uniswapV2Factory));
 
         // MainReg
         mainRegistry = new MainRegistry(MainRegistry.BaseCurrencyInformation({
@@ -203,15 +207,17 @@ abstract contract UniswapV2LPActionTest is Test {
             emptyListUint16
         );
 
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleWethToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(daiwethlp)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
+        // standardERC20Registry.setAssetInformation(
+        //     StandardERC20PricingModule.AssetInformation({
+        //         oracleAddresses: oracleWethToUsdArr,
+        //         assetUnit: uint64(10 ** Constants.ethDecimals),
+        //         assetAddress: address(daiwethlp)
+        //     }),
+        //     emptyListUint16,
+        //     emptyListUint16
+        // );
+
+        
 
         vm.stopPrank();
 
@@ -289,8 +295,6 @@ contract executeActionTests is UniswapV2LPActionTest {
         vault.deposit(_assetAddresses, _assetIds, _assetAmounts, _assetTypes);
         vm.stopPrank();
 
-
-
         // Prepare outgoingData
         address[] memory outAssets = new address[](2);
         outAssets[0] = address(dai);
@@ -332,6 +336,7 @@ contract executeActionTests is UniswapV2LPActionTest {
     ///////////////////////////////*/
 
     function testSuccess_addDAIWETHLP() public {
+
         bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
 
         vm.prank(vaultOwner);
@@ -339,12 +344,13 @@ contract executeActionTests is UniswapV2LPActionTest {
 
         assertEq(dai.balanceOf(address(vault)), 0);
         assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
-        assertEq(daiwethlp.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
+        
+        (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(daiwethlp).getReserves();
+        assertEq(reserve0,  1300 * 10 ** Constants.daiDecimals);
+        assertEq(reserve1, 1 * 10 ** Constants.ethDecimals);
     }
 
     function testSuccess_removeDAIWETHLP() public {
-
-        vm.assume(address(daiwethlp) == address(10), "DAI-WETH LP token not deployed");
 
         bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
 
@@ -353,7 +359,57 @@ contract executeActionTests is UniswapV2LPActionTest {
 
         assertEq(dai.balanceOf(address(vault)), 1300 * 10 ** Constants.daiDecimals);
         assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
-        assertEq(daiwethlp.balanceOf(address(vault)), 0);
+
+        (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(daiwethlp).getReserves();
+        assertEq(reserve0, 0);
+        assertEq(reserve1, 0);
+    }
+
+    function testSuccess_addDAIWETHLP_notEnoughDAI() public {
+
+        _out.assetAmounts[0] = 1400 * 10 ** Constants.daiDecimals;
+
+        bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
+
+        vm.prank(vaultOwner);
+        vm.expectRevert(stdError.arithmeticError);
+        vault.vaultManagementAction(address(action), __actionSpecificData);
+   
+
+    }
+
+    function testSuccess_addDAIWETHLP_notEnoughWETH() public {
+
+        _out.assetAmounts[1] = 2 * 10 ** Constants.ethDecimals;
+
+        bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
+
+        vm.prank(vaultOwner);
+        vm.expectRevert(stdError.arithmeticError);
+        vault.vaultManagementAction(address(action), __actionSpecificData);
+
+    }
+
+    function testSuccess_removeDAIWETHLP_notEnoughLP() public {
+
+        _in.assetAmounts[0] = 2 * 10 ** Constants.ethDecimals;
+
+        bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
+
+        vm.prank(vaultOwner);
+        vm.expectRevert(stdError.arithmeticError);
+        vault.vaultManagementAction(address(action), __actionSpecificData);
+        
+    }
+
+    function testSuccess_UnknownActionSelector() public {
+
+        bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("random")));
+
+        vm.prank(vaultOwner);
+        vm.expectRevert("UV2A_LP: invalid _selector");
+        vault.vaultManagementAction(address(action), __actionSpecificData);
+
     }
 
 
