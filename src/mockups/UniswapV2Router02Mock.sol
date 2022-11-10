@@ -49,51 +49,60 @@ contract UniswapV2Router02Mock is Test {
         uint256 amountBMin,
         address to,
         uint256 deadline
-    ) external virtual returns (uint256[] memory amounts) {
+    ) external virtual returns (uint256[] memory amounts, uint256 liquidity) {
         // get address of the uniswap pair for the two tokens
         address pair = IUniswapV2Factory(uv2Factory).getPair(tokenA, tokenB);
-        console.log("pair address: ", pair);
 
-        //doAllAddStdStores(tokenA, tokenB, amountAMin, amountBMin, address(pair));
-        UniswapV2PairMock(pair).mint(to, amountADesired, amountBDesired);
+        ERC20(tokenA).transferFrom(msg.sender, pair, amountAMin);
+        ERC20(tokenB).transferFrom(msg.sender, pair, amountBMin);
+        // require(ERC20(tokenA).balanceOf(pair) >= amountAMin, "ERC20: transfer amount exceeds balance");
+        // require(ERC20(tokenB).balanceOf(pair) >= amountBMin, "ERC20: transfer amount exceeds balance");
+        liquidity = UniswapV2PairMock(pair).mint(to, amountAMin, amountBMin);
 
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = amountADesired;
         amounts[1] = amountBDesired;
 
-        return amounts;
+        return (amounts,liquidity);
     }
 
     function removeLiquidity(
-        address _recipient,
-        address _poolToken,
-        uint256 _poolTokenAmount,
-        address _tokenA,
-        address _tokenB,
-        uint256 _amountAMin,
-        uint256 _amountBMin
+        address tokenA,
+        address tokenB,
+        uint liquidity,
+        uint amountAMin,
+        uint amountBMin,
+        address to,
+        uint deadline
     ) external virtual returns (uint256 amountA, uint256 amountB) {
         //get pair address
         // get address of the uniswap pair for the two tokens
-        address pair = IUniswapV2Factory(uv2Factory).getPair(_tokenA, _tokenB);
+        address pair = IUniswapV2Factory(uv2Factory).getPair(tokenA, tokenB);
 
-        {
-            //Cheat balance of
-            stdstore.target(address(pair)).sig(IUniswapV2Pair(pair).token0.selector).with_key(address(msg.sender))
-                .checked_write(IERC20(_tokenB).balanceOf(msg.sender) + _amountBMin);
+        UniswapV2PairMock(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
+        (uint amount0, uint amount1) = UniswapV2PairMock(pair).burn(to);
+        (amountA, amountB) = (amount0, amount1);
+        require(amountA >= amountAMin, 'UniswapV2Router: INSUFFICIENT_A_AMOUNT');
+        require(amountB >= amountBMin, 'UniswapV2Router: INSUFFICIENT_B_AMOUNT');
 
-            stdstore.target(address(_tokenA)).sig(IERC20(_tokenA).balanceOf.selector).with_key(address(pair))
-                .checked_write(IERC20(_tokenA).balanceOf(pair) - _amountAMin);
 
-            //Cheat balance of
-            stdstore.target(address(pair)).sig(IUniswapV2Pair(pair).token1.selector).with_key(address(msg.sender))
-                .checked_write(IERC20(_tokenB).balanceOf(msg.sender) + _amountBMin);
+        // {
+        //     //Cheat balance of
+        //     stdstore.target(address(pair)).sig(IUniswapV2Pair(pair).token0.selector).with_key(address(msg.sender))
+        //         .checked_write(IERC20(_tokenB).balanceOf(msg.sender) + _amountBMin);
 
-            stdstore.target(address(_tokenB)).sig(IERC20(_tokenB).balanceOf.selector).with_key(address(pair))
-                .checked_write(IERC20(_tokenB).balanceOf(pair) - _amountBMin);
-        }
+        //     stdstore.target(address(_tokenA)).sig(IERC20(_tokenA).balanceOf.selector).with_key(address(pair))
+        //         .checked_write(IERC20(_tokenA).balanceOf(pair) - _amountAMin);
 
-        return (_amountAMin, _amountBMin);
+        //     //Cheat balance of
+        //     stdstore.target(address(pair)).sig(IUniswapV2Pair(pair).token1.selector).with_key(address(msg.sender))
+        //         .checked_write(IERC20(_tokenB).balanceOf(msg.sender) + _amountBMin);
+
+        //     stdstore.target(address(_tokenB)).sig(IERC20(_tokenB).balanceOf.selector).with_key(address(pair))
+        //         .checked_write(IERC20(_tokenB).balanceOf(pair) - _amountBMin);
+        // }
+
+        return (amountAMin, amountBMin);
     }
 
     function doAllAddStdStores(address _tokenA, address _tokenB, uint256 _amountAMin, uint256 _amountBMin, address pair)

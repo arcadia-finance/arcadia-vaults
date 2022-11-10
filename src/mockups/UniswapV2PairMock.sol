@@ -9,8 +9,9 @@ pragma solidity >=0.4.22 <0.9.0;
 import "../../lib/solmate/src/tokens/ERC20.sol";
 import "../interfaces/IUniswapV2Factory.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import "../../lib/forge-std/src/Test.sol";
 
-contract UniswapV2PairMock is ERC20 {
+contract UniswapV2PairMock is ERC20,Test {
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
     address public factory;
@@ -56,6 +57,36 @@ contract UniswapV2PairMock is ERC20 {
         reserve0 = uint112(reserve0 + amount0);
         reserve1 = uint112(reserve1 + amount1);
         blockTimestampLast = uint32(block.timestamp % 2 ** 32);
+        if (feeOn) kLast = uint256(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
+    }
+
+      function burn(address to) external returns (uint256 amount0, uint256 amount1) {
+        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        address _token0 = token0;                                // gas savings
+        address _token1 = token1;
+        console.log("test", ERC20(token0).totalSupply());                                // gas savings
+        uint balance0 = ERC20(token0).balanceOf(address(this));
+        console.log("balance0",balance0);
+        uint balance1 = ERC20(token1).balanceOf(address(this));
+        console.log("balance1",balance1);
+        uint liquidity = balanceOf[address(this)];
+        console.log("liquidity",liquidity);
+
+        bool feeOn = _mintFee();
+        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        amount0 = liquidity * balance0 / _totalSupply; // using balances ensures pro-rata distribution
+        console.log("amount0",amount0);
+        amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
+        console.log("amount1",amount1);
+        require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
+        _burn(address(this), liquidity);
+        ERC20(_token0).transfer(to, amount0);
+        ERC20(_token1).transfer(to, amount1);
+        balance0 = ERC20(_token0).balanceOf(address(this));
+        balance1 = ERC20(_token1).balanceOf(address(this));
+
+        reserve0 = uint112(balance0);
+        reserve1 = uint112(balance1);
         if (feeOn) kLast = uint256(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
     }
 
