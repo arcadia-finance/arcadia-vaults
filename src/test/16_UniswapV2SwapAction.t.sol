@@ -21,7 +21,6 @@ import "./fixtures/ArcadiaOracleFixture.f.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 import "../mockups/UniswapV2FactoryMock.sol";
 
-
 contract IUniswapV2SwapActionExtension is UniswapV2SwapAction {
     constructor(address _router, address _mainreg) UniswapV2SwapAction(_router, _mainreg) {}
 

@@ -91,12 +91,14 @@ abstract contract UniswapV2LPActionTest is Test {
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         weth = new ERC20Mock("WETH Mock", "mWETH", uint8(Constants.ethDecimals));
         vm.stopPrank();
-        
+
         vm.startPrank(samBankman);
         vault = new Vault();
         uniswapV2Factory = new UniswapV2FactoryMock();
+        uniswapV2Factory.setFeeTo(address(1));
         pairDaiWeth = new UniswapV2PairMock();
         address pairDaiWethAddr = uniswapV2Factory.createPair(address(dai), address(weth));
+
         pairDaiWeth = UniswapV2PairMock(pairDaiWethAddr);
         trustedProtocol = new TrustedProtocolMock(dai, "tpDai", "trustedProtocolDai");
         uniswapV2Router = new UniswapV2Router02Mock(address(uniswapV2Factory));
@@ -112,7 +114,7 @@ abstract contract UniswapV2LPActionTest is Test {
             arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "WETH / USD", rateEthToUsd);
 
         vm.startPrank(creatorAddress);
-         oracleHub.addOracle(
+        oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
@@ -138,7 +140,6 @@ abstract contract UniswapV2LPActionTest is Test {
 
         oracleWethToUsdArr[0] = address(oracleWethToUsd);
         oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
-
 
         vm.startPrank(creatorAddress);
         mainRegistry = new MainRegistry(MainRegistry.BaseCurrencyInformation({
@@ -173,7 +174,6 @@ abstract contract UniswapV2LPActionTest is Test {
             emptyListUint16
         );
 
-
         standardERC20Registry = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
@@ -205,15 +205,11 @@ abstract contract UniswapV2LPActionTest is Test {
             address(standardERC20Registry)
         );
         mainRegistry.addPricingModule(address(uniswapV2PricingModule));
- 
+
         // Action
         action = new IUniswapV2LPActionExtension(address(uniswapV2Router), address(mainRegistry));
 
         vm.stopPrank();
-
-
-
-
 
         // Cheat vault owner
         stdstore.target(address(vault)).sig(vault.owner.selector).checked_write(samBankman);
@@ -230,7 +226,12 @@ abstract contract UniswapV2LPActionTest is Test {
 
         deal(address(dai), samBankman, 100000 * 10 ** Constants.daiDecimals, true);
         deal(address(weth), samBankman, 100000 * 10 ** Constants.ethDecimals, true);
-        deal(address(pairDaiWeth), samBankman, 10000000000 * 10 ** Constants.ethDecimals, true);
+        //deal(address(pairDaiWeth), samBankman, 100000 * 10 ** Constants.ethDecimals, true);
+
+        //stdstore.target(address(pairDaiWeth)).sig(pairDaiWeth.token0.selector).checked_write(130000000 * 10 ** Constants.daiDecimals);
+        //stdstore.target(address(pairDaiWeth)).sig(pairDaiWeth.token1.selector).checked_write(100000 * 10 ** Constants.ethDecimals);
+
+
     }
 
     //Before Each
@@ -275,6 +276,7 @@ contract executeActionTests is UniswapV2LPActionTest {
         address[] memory _assetAddresses = new address[](2);
         _assetAddresses[0] = address(dai);
         _assetAddresses[1] = address(weth);
+
         uint256[] memory _assetIds = new uint256[](2);
         _assetIds[0] = 0;
         _assetIds[1] = 0;
@@ -288,6 +290,7 @@ contract executeActionTests is UniswapV2LPActionTest {
         vm.startPrank(samBankman);
         dai.approve(address(vault), type(uint256).max);
         weth.approve(address(vault), type(uint256).max);
+        pairDaiWeth.approve(address(vault), type(uint256).max);
         vault.deposit(_assetAddresses, _assetIds, _assetAmounts, _assetTypes);
         vm.stopPrank();
 
@@ -332,23 +335,27 @@ contract executeActionTests is UniswapV2LPActionTest {
     ///////////////////////////////*/
 
     function testSuccess_addDAIWETHLP() public {
-
         bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
+
+        emit log_named_uint("dai balance", dai.balanceOf(address(vault)));
+        emit log_named_uint("weth balance", weth.balanceOf(address(vault)));
+        emit log_named_uint("pairDaiWeth balance", pairDaiWeth.balanceOf(address(vault)));
+        emit log_named_address("pairDaiWethAddr", address(pairDaiWeth));
 
         vm.prank(samBankman);
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
         assertEq(dai.balanceOf(address(vault)), 0);
-        assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
-        
+        assertEq(weth.balanceOf(address(vault)), 0);
+        assertEq(pairDaiWeth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals); // 1 LP token
+
         (uint112 reserve0, uint112 reserve1,) = pairDaiWeth.getReserves();
-        assertEq(reserve0,  1300 * 10 ** Constants.daiDecimals);
-        assertEq(reserve1, 1 * 10 ** Constants.ethDecimals);
+        assertEq(reserve0, _out.assetAmounts[0]);
+        assertEq(reserve1, _out.assetAmounts[1]);
     }
 
     function testSuccess_removeDAIWETHLP() public {
-
-        bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("remove")));
+        bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
 
         vm.prank(samBankman);
         vault.vaultManagementAction(address(action), __actionSpecificData);
@@ -362,7 +369,6 @@ contract executeActionTests is UniswapV2LPActionTest {
     }
 
     function testSuccess_addDAIWETHLP_notEnoughDAI() public {
-
         _out.assetAmounts[0] = 1400 * 10 ** Constants.daiDecimals;
 
         bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
@@ -370,12 +376,9 @@ contract executeActionTests is UniswapV2LPActionTest {
         vm.prank(samBankman);
         vm.expectRevert(stdError.arithmeticError);
         vault.vaultManagementAction(address(action), __actionSpecificData);
-   
-
     }
 
     function testSuccess_addDAIWETHLP_notEnoughWETH() public {
-
         _out.assetAmounts[1] = 2 * 10 ** Constants.ethDecimals;
 
         bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
@@ -383,11 +386,9 @@ contract executeActionTests is UniswapV2LPActionTest {
         vm.prank(samBankman);
         vm.expectRevert(stdError.arithmeticError);
         vault.vaultManagementAction(address(action), __actionSpecificData);
-
     }
 
     function testSuccess_removeDAIWETHLP_notEnoughLP() public {
-       
         _in.assetAmounts[0] = 2 * 10 ** Constants.ethDecimals;
 
         bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
@@ -395,18 +396,28 @@ contract executeActionTests is UniswapV2LPActionTest {
         vm.prank(samBankman);
         vm.expectRevert(stdError.arithmeticError);
         vault.vaultManagementAction(address(action), __actionSpecificData);
-        
     }
-    function testSuccess_removeDAIWETHLP_BasTokens() public {
-       
-        _in.assetAmounts[0] = 2 * 10 ** Constants.ethDecimals;
 
-        bytes memory __actionSpecificData = abi.encode(_in, _out, bytes4(keccak256("remove")));
+    function testSuccess_removeDAIWETHLP_BaseTokens() public {
+        address[] memory inAssets = new address[](1);
+        inAssets[0] = address(dai);
+        _in.assets = inAssets;
+        bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("remove")));
 
         vm.prank(samBankman);
-        vm.expectRevert(stdError.arithmeticError);
+        vm.expectRevert("UV2A_LP: Need atleast two base tokens");
         vault.vaultManagementAction(address(action), __actionSpecificData);
-        
+    }
+
+    function testSuccess_addDAIWETHLP_BaseTokens() public {
+        address[] memory outAssets = new address[](1);
+        outAssets[0] = address(dai);
+        _out.assets = outAssets;
+        bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
+
+        vm.prank(samBankman);
+        vm.expectRevert("UV2A_LP: Need atleast two base tokens");
+        vault.vaultManagementAction(address(action), __actionSpecificData);
     }
 
     function testSuccess_UnknownActionSelector() public {
@@ -415,8 +426,5 @@ contract executeActionTests is UniswapV2LPActionTest {
         vm.prank(samBankman);
         vm.expectRevert("UV2A_LP: invalid _selector");
         vault.vaultManagementAction(address(action), __actionSpecificData);
-
     }
-
-
 }

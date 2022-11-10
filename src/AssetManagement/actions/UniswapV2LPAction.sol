@@ -27,8 +27,8 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
             _preCheck(_actionData);
         // execute Action
         _execute(_outgoing, _incoming, _selector);
-        // postCheck data
-        uint256[] memory _actualIncomingAssetsAmounts = _postCheck(_incoming);
+        // // postCheck data
+        // uint256[] memory _actualIncomingAssetsAmounts = _postCheck(_incoming);
 
         for (uint256 i; i < _incoming.assets.length;) {
             IERC20(_incoming.assets[i]).approve(_vaultAddress, type(uint256).max);
@@ -36,7 +36,7 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
                 i++;
             }
         }
-        _incoming.assetAmounts = _actualIncomingAssetsAmounts;
+        // _incoming.assetAmounts = _actualIncomingAssetsAmounts;
 
         return (_incoming);
     }
@@ -44,21 +44,21 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
     function _execute(actionAssetsData memory _outgoing, actionAssetsData memory _incoming, bytes4 _selector)
         internal
     {
+        require(
+            _selector == bytes4(keccak256("remove")) || _selector == bytes4(keccak256("add")),
+            "UV2A_LP: invalid _selector"
+        );
 
-        require(_selector == bytes4(keccak256("remove")) ||
-                _selector == bytes4(keccak256("add")),
-                "UV2A_LP: invalid _selector"
-            );
-        
         if (_selector == bytes4(keccak256("add"))) {
             _uniswapV2AddLiquidity(
                 address(this), // recipient
                 _outgoing.assets[0], // tokenA
-                _outgoing.assets[1], /// tokenB
+                _outgoing.assets[1],
+                /// tokenB
                 _outgoing.assetAmounts[0], // amountADesired
                 _outgoing.assetAmounts[1], // amountBDesired
                 _outgoing.assetAmounts[0], // amountAMin
-                _outgoing.assetAmounts[1]  // amountBMin
+                _outgoing.assetAmounts[1] // amountBMin
             ); //TODO: min amounts?
         } else if (_selector == bytes4(keccak256("remove"))) {
             _uniswapV2RemoveLiquidity(
@@ -121,21 +121,21 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
                     INCOMING
         ///////////////////////////////*/
 
-        uint256 incomingLength = incomingAssets_.assets.length;
-        incomingAssetAmounts_ = new uint256[](incomingLength);
-        for (uint256 i; i < incomingLength;) {
-            incomingAssetAmounts_[i] =
-                IERC20(incomingAssets_.assets[i]).balanceOf(address(this)) - incomingAssets_.preActionBalances[i];
+        // uint256 incomingLength = incomingAssets_.assets.length;
+        // incomingAssetAmounts_ = new uint256[](incomingLength);
+        // for (uint256 i; i < incomingLength;) {
+        //     incomingAssetAmounts_[i] =
+        //         IERC20(incomingAssets_.assets[i]).balanceOf(address(this)) - incomingAssets_.preActionBalances[i];
 
-            // Check incoming assets are as expected
-            require(
-                incomingAssetAmounts_[i] >= incomingAssets_.assetAmounts[i],
-                "UV2A_SWAP: Received incoming asset less than expected"
-            );
-            unchecked {
-                i++;
-            }
-        }
+        //     // Check incoming assets are as expected
+        //     require(
+        //         incomingAssetAmounts_[i] >= incomingAssets_.assetAmounts[i],
+        //         "UV2A_SWAP: Received incoming asset less than expected"
+        //     );
+        //     unchecked {
+        //         i++;
+        //     }
+        // }
 
         /*///////////////////////////////
                     OUTGOING
