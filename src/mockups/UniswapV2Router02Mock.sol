@@ -55,8 +55,8 @@ contract UniswapV2Router02Mock is Test {
 
         ERC20(tokenA).transferFrom(msg.sender, pair, amountAMin);
         ERC20(tokenB).transferFrom(msg.sender, pair, amountBMin);
-        // require(ERC20(tokenA).balanceOf(pair) >= amountAMin, "ERC20: transfer amount exceeds balance");
-        // require(ERC20(tokenB).balanceOf(pair) >= amountBMin, "ERC20: transfer amount exceeds balance");
+        require(ERC20(tokenA).balanceOf(pair) >= amountAMin, "ERC20: transfer amount exceeds balance");
+        require(ERC20(tokenB).balanceOf(pair) >= amountBMin, "ERC20: transfer amount exceeds balance");
         liquidity = UniswapV2PairMock(pair).mint(to, amountAMin, amountBMin);
 
         uint256[] memory amounts = new uint256[](2);
@@ -75,72 +75,18 @@ contract UniswapV2Router02Mock is Test {
         address to,
         uint deadline
     ) external virtual returns (uint256 amountA, uint256 amountB) {
-        //get pair address
         // get address of the uniswap pair for the two tokens
         address pair = IUniswapV2Factory(uv2Factory).getPair(tokenA, tokenB);
 
         UniswapV2PairMock(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
         (uint amount0, uint amount1) = UniswapV2PairMock(pair).burn(to);
         (amountA, amountB) = (amount0, amount1);
+        
         require(amountA >= amountAMin, 'UniswapV2Router: INSUFFICIENT_A_AMOUNT');
         require(amountB >= amountBMin, 'UniswapV2Router: INSUFFICIENT_B_AMOUNT');
 
-
-        // {
-        //     //Cheat balance of
-        //     stdstore.target(address(pair)).sig(IUniswapV2Pair(pair).token0.selector).with_key(address(msg.sender))
-        //         .checked_write(IERC20(_tokenB).balanceOf(msg.sender) + _amountBMin);
-
-        //     stdstore.target(address(_tokenA)).sig(IERC20(_tokenA).balanceOf.selector).with_key(address(pair))
-        //         .checked_write(IERC20(_tokenA).balanceOf(pair) - _amountAMin);
-
-        //     //Cheat balance of
-        //     stdstore.target(address(pair)).sig(IUniswapV2Pair(pair).token1.selector).with_key(address(msg.sender))
-        //         .checked_write(IERC20(_tokenB).balanceOf(msg.sender) + _amountBMin);
-
-        //     stdstore.target(address(_tokenB)).sig(IERC20(_tokenB).balanceOf.selector).with_key(address(pair))
-        //         .checked_write(IERC20(_tokenB).balanceOf(pair) - _amountBMin);
-        // }
-
-        return (amountAMin, amountBMin);
+        return (amountA, amountB);
     }
 
-    function doAllAddStdStores(address _tokenA, address _tokenB, uint256 _amountAMin, uint256 _amountBMin, address pair)
-        public
-    {
-        //Cheat balance of actionHandler on tokenA -> remove balance
-        stdstore.target(address(_tokenA)).sig(IERC20(_tokenA).balanceOf.selector).with_key(address(msg.sender))
-            .checked_write(IERC20(_tokenA).balanceOf(msg.sender) - _amountAMin);
-
-        //Cheat balance of actionHandler on tokenB -> remove balance
-        stdstore.target(address(_tokenB)).sig(IERC20(_tokenB).balanceOf.selector).with_key(address(msg.sender))
-            .checked_write(IERC20(_tokenB).balanceOf(msg.sender) - _amountBMin);
-
-        // //Cheat reserve of tokenA on pair
-        // stdstore.target(address(pair)).sig(IUniswapV2Pair(address(pair)).reserve0.selector)
-        //     .checked_write(_amountAMin);
-        // console.log("reserve0: ", IUniswapV2Pair(address(pair)).reserve0());
-
-
-        // //Cheat reserve of reserveB on pair
-        // stdstore.target(address(pair)).sig(IUniswapV2Pair(address(pair)).reserve1.selector)
-        //     .checked_write(_amountBMin);
-
-        // console.log("reserve1: ", IUniswapV2Pair(address(pair)).reserve1());
-
-        //Cheat balance of pair on tokenA
-        stdstore.target(address(_tokenA)).sig(IERC20(_tokenA).balanceOf.selector).with_key(address(pair)).checked_write(
-            IERC20(_tokenA).balanceOf(address(pair)) + _amountAMin
-        );
-
-        //Cheat balance of pair on tokenB
-        stdstore.target(address(_tokenB)).sig(IERC20(_tokenB).balanceOf.selector).with_key(address(pair)).checked_write(
-            IERC20(_tokenB).balanceOf(address(pair)) + _amountBMin
-        );
-
-        //Cheat balance of actionHandler on pair
-        stdstore.target(address(pair)).sig(IERC20(address(pair)).balanceOf.selector).with_key(address(msg.sender))
-            .checked_write(_amountBMin);
-    }
 
 }

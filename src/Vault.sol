@@ -812,8 +812,8 @@ contract Vault {
                 ++i;
             }
         }
-        // uint256 collValue = getCollateralValue();
-        // uint256 usedMargin = getUsedMargin();
-        // require(collValue > usedMargin, "UV2_SWAP: coll. value postAction too low");
+        uint256 collValue = getCollateralValue();
+        uint256 usedMargin = getUsedMargin();
+        require(collValue > usedMargin, "UV2_SWAP: coll. value postAction too low");
     }
 }

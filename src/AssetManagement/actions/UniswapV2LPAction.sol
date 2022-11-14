@@ -27,8 +27,8 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
             _preCheck(_actionData);
         // execute Action
         _execute(_outgoing, _incoming, _selector);
-        // // postCheck data
-        // uint256[] memory _actualIncomingAssetsAmounts = _postCheck(_incoming);
+        // postCheck data
+        _incoming.assetAmounts = _postCheck(_incoming);
 
         for (uint256 i; i < _incoming.assets.length;) {
             IERC20(_incoming.assets[i]).approve(_vaultAddress, type(uint256).max);
@@ -36,7 +36,6 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
                 i++;
             }
         }
-        // _incoming.assetAmounts = _actualIncomingAssetsAmounts;
 
         return (_incoming);
     }
@@ -62,13 +61,13 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
             ); //TODO: min amounts?
         } else if (_selector == bytes4(keccak256("remove"))) {
             _uniswapV2RemoveLiquidity(
-                address(this),
+                address(this), 
                 _outgoing.assets[0],
-                _outgoing.assetAmounts[0],
+                _outgoing.assetAmounts[0], // liquidity
                 _incoming.assets[0],
                 _incoming.assets[1],
-                _incoming.assetAmounts[0],
-                _incoming.assetAmounts[1]
+                _incoming.assetAmounts[0], // amountAMin
+                _incoming.assetAmounts[1] // amountBMin
             );
         }
 
@@ -99,9 +98,18 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
                     OUTGOING
         ///////////////////////////////*/
 
+
         /*///////////////////////////////
                     INCOMING
         ///////////////////////////////*/
+
+        for (uint256 i; i < _incoming.assets.length;) {
+            require(_incoming.assets[i] != address(0), "UV2A_LP: _incoming asset cannot be zero address");
+            _incoming.preActionBalances[i] = IERC20(_incoming.assets[i]).balanceOf(address(this));
+            unchecked {
+                i++;
+            }
+        }
 
         //Check if incoming assets are Arcadia whitelisted assets
         require(
@@ -121,21 +129,21 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
                     INCOMING
         ///////////////////////////////*/
 
-        // uint256 incomingLength = incomingAssets_.assets.length;
-        // incomingAssetAmounts_ = new uint256[](incomingLength);
-        // for (uint256 i; i < incomingLength;) {
-        //     incomingAssetAmounts_[i] =
-        //         IERC20(incomingAssets_.assets[i]).balanceOf(address(this)) - incomingAssets_.preActionBalances[i];
+        uint256 incomingLength = incomingAssets_.assets.length;
+        incomingAssetAmounts_ = new uint256[](incomingLength);
+        for (uint256 i; i < incomingLength;) {
+            incomingAssetAmounts_[i] =
+                IERC20(incomingAssets_.assets[i]).balanceOf(address(this)) - incomingAssets_.preActionBalances[i];
 
-        //     // Check incoming assets are as expected
-        //     require(
-        //         incomingAssetAmounts_[i] >= incomingAssets_.assetAmounts[i],
-        //         "UV2A_SWAP: Received incoming asset less than expected"
-        //     );
-        //     unchecked {
-        //         i++;
-        //     }
-        // }
+            // Check incoming assets are as expected
+            require(
+                incomingAssetAmounts_[i] >= incomingAssets_.assetAmounts[i],
+                "UV2A_SWAP: Received incoming asset less than expected"
+            );
+            unchecked {
+                i++;
+            }
+        }
 
         /*///////////////////////////////
                     OUTGOING
