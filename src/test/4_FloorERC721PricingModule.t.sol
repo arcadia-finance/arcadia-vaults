@@ -247,7 +247,7 @@ contract FloorERC721PricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
-        // Given: 
+        // Given:
         vm.startPrank(creatorAddress);
         // When: creatorAddress setAssetInformation twice
         floorERC721PricingModule.setAssetInformation(

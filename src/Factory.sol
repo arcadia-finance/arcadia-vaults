@@ -150,7 +150,7 @@ contract Factory is ERC721, Ownable {
      * @param id of the vault that is about to be transfered.
      */
     function _safeTransferFrom(address from, address to, uint256 id) internal {
-        IVault(allVaults[id-1]).transferOwnership(to);
+        IVault(allVaults[id - 1]).transferOwnership(to);
         super.transferFrom(from, to, id);
         require(
             to.code.length == 0
@@ -170,7 +170,7 @@ contract Factory is ERC721, Ownable {
      * @param data additional data, only used for onERC721Received.
      */
     function _safeTransferFrom(address from, address to, uint256 id, bytes memory data) internal {
-        IVault(allVaults[id-1]).transferOwnership(to);
+        IVault(allVaults[id - 1]).transferOwnership(to);
         super.transferFrom(from, to, id);
         require(
             to.code.length == 0
@@ -189,7 +189,7 @@ contract Factory is ERC721, Ownable {
      * @param id of the vault that is about to be transfered.
      */
     function _transferFrom(address from, address to, uint256 id) internal {
-        IVault(allVaults[id-1]).transferOwnership(to);
+        IVault(allVaults[id - 1]).transferOwnership(to);
         super.transferFrom(from, to, id);
     }
 

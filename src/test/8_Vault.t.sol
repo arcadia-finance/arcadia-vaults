@@ -435,7 +435,9 @@ contract vaultTests is Test {
         assertEq(expectedVersion, newVersion);
     }
 
-    function testRevert_upgradeVault_byNonOwner(address newImplementation, uint16 newVersion, address nonOwner) public {
+    function testRevert_upgradeVault_byNonOwner(address newImplementation, uint16 newVersion, address nonOwner)
+        public
+    {
         vm.assume(nonOwner != address(factoryContr));
 
         vm.startPrank(nonOwner);
