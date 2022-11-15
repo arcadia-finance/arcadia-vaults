@@ -1038,12 +1038,13 @@ contract PricingLogic is UniswapV2PricingModuleTest {
 
     function testRevert_getValue_Overflow(
         uint112 amountSnx,
+        uint112 amountEth,
         uint8 _ethDecimals,
         uint8 _snxDecimals,
         uint8 _oracleEthToUsdDecimals,
         uint8 _oracleSnxToUsdDecimals,
-        uint256 _rateEthToUsd,
-        uint256 _rateSnxToUsd
+        uint144 _rateEthToUsd,
+        uint144 _rateSnxToUsd
     ) public {
         vm.assume(_ethDecimals <= 18);
         vm.assume(_snxDecimals <= 18);
@@ -1051,7 +1052,10 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         vm.assume(_oracleSnxToUsdDecimals <= 18);
         vm.assume(_rateEthToUsd > 0);
         vm.assume(_rateSnxToUsd > 0);
+        vm.assume(_rateEthToUsd <= uint256(type(int256).max));
+        vm.assume(_rateSnxToUsd <= uint256(type(int256).max));
 
+        // Redeploi tokens with variable amount of decimals
         eth =
             deployToken(oracleEthToUsd, _ethDecimals, _oracleEthToUsdDecimals, _rateEthToUsd, "ETH", oracleEthToUsdArr);
         snx =
@@ -1060,37 +1064,18 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         vm.prank(creatorAddress);
         uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
 
-        // Initiate the pool with 10**_snxDecimals of SNX and a balanced amount of ETH
-        uint256 initialAmountSnx = 10 ** _snxDecimals;
-        vm.assume(_rateSnxToUsd <= type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals));
-        uint256 initialAmountEth = uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
-            / _rateEthToUsd / 10 ** _oracleSnxToUsdDecimals;
-        vm.assume(initialAmountEth < uint256(type(uint112).max)); //max reserve in Uniswap pool
-        vm.assume(initialAmountSnx * initialAmountEth > pairSnxEth.MINIMUM_LIQUIDITY()); //min liquidity in uniswap pool
-        pairSnxEth.mint(tokenCreatorAddress, initialAmountSnx, initialAmountEth);
+        // Mint LP
+        vm.assume(uint256(amountSnx) * amountEth > pairSnxEth.MINIMUM_LIQUIDITY()); //min liquidity in uniswap pool
+        pairSnxEth.mint(tokenCreatorAddress, amountSnx, amountEth);
 
-        vm.assume(
-            uint256(amountSnx) * uint256(_rateSnxToUsd)
-                < type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
-        ); //Avoid overflow of amountEth in next line
-        uint256 amountEth = uint256(amountSnx) * uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
-            / _rateEthToUsd / 10 ** (_snxDecimals + _oracleSnxToUsdDecimals);
-        vm.assume(amountSnx < type(uint112).max - initialAmountSnx); //max reserve in Uniswap pool
-        vm.assume(amountEth < type(uint112).max - initialAmountEth); //max reserve in Uniswap pool
-        vm.assume(amountEth > 0); // minimum liquidity
-        vm.assume(amountSnx > 0); // minimum liquidity
-        uint256 amount = pairSnxEth.mint(lpProvider, amountSnx, amountEth);
-
-        vm.assume(
-            uint256(_rateSnxToUsd)
-                > type(uint256).max / (FixedPointMathLib.WAD / 10 ** _snxDecimals)
-                    / (FixedPointMathLib.WAD / 10 ** _oracleSnxToUsdDecimals)
-        ); // trustedPriceSnxToUsd overflows
+        bool cond0 = uint256(_rateSnxToUsd) > type(uint256).max / Constants.WAD / Constants.WAD * 10 ** _oracleSnxToUsdDecimals; // trustedPriceSnxToUsd overflows
+        bool cond1 = uint256(_rateEthToUsd) > type(uint256).max / Constants.WAD / Constants.WAD * 10 ** _oracleEthToUsdDecimals; // trustedPriceEthToUsd overflows
+        vm.assume(cond0 || cond1); 
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(pairSnxEth),
             assetId: 0,
-            assetAmount: amount,
+            assetAmount: pairSnxEth.totalSupply(),
             baseCurrency: Constants.UsdBaseCurrency
         });
 
@@ -1115,6 +1100,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         vm.assume(_rateEthToUsd > 0);
         vm.assume(_rateSnxToUsd > 0);
 
+        // Redeploi tokens with variable amount of decimals
         eth =
             deployToken(oracleEthToUsd, _ethDecimals, _oracleEthToUsdDecimals, _rateEthToUsd, "ETH", oracleEthToUsdArr);
         snx =
@@ -1123,36 +1109,30 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         vm.prank(creatorAddress);
         uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
 
-        // Initiate the pool with 10**_snxDecimals of SNX and a balanced amount of ETH
-        uint256 initialAmountSnx = 10 ** _snxDecimals;
-        uint256 initialAmountEth = uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
-            / (_rateEthToUsd * 10 ** _oracleSnxToUsdDecimals);
-        vm.assume(initialAmountEth < uint256(type(uint112).max)); //max reserve in Uniswap pool
-        vm.assume(initialAmountSnx * initialAmountEth > pairSnxEth.MINIMUM_LIQUIDITY()); //min liquidity in uniswap pool
-        pairSnxEth.mint(tokenCreatorAddress, initialAmountSnx, initialAmountEth);
-
+        // Mint a variable amount of balanced LP, for a given amountSnx
         vm.assume(
             uint256(amountSnx) * uint256(_rateSnxToUsd)
                 < type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
         ); //Avoid overflow of amountEth in next line
         uint256 amountEth = uint256(amountSnx) * uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
             / (_rateEthToUsd * 10 ** (_snxDecimals + _oracleSnxToUsdDecimals));
-        vm.assume(amountSnx < type(uint112).max - initialAmountSnx); //max reserve in Uniswap pool
-        vm.assume(amountEth < type(uint112).max - initialAmountEth); //max reserve in Uniswap pool
-        vm.assume(amountEth >= 10000); //Precision is at least 4 digits -> under 10000 tokens error due to numerical roundings will be bigger
-        vm.assume(amountSnx >= 10000); //Precision is at least 4 digits -> under 10000 tokens error due to numerical roundings will be bigger
-        uint256 amount = pairSnxEth.mint(lpProvider, amountSnx, amountEth);
+        vm.assume(amountEth < type(uint112).max); //max reserve in Uniswap pool
+        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY()); //min liquidity in uniswap pool
+        pairSnxEth.mint(tokenCreatorAddress, amountSnx, amountEth);
 
-        vm.assume(Constants.WAD * _rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals < type(uint256).max / amountSnx); // valueSnx overflows, unrealistic
-        vm.assume(Constants.WAD * _rateEthToUsd / 10 ** _oracleEthToUsdDecimals < type(uint256).max / amountEth); // valueEth overflows, unrealistic
+        //No overflows
         vm.assume(
-            uint256(_rateSnxToUsd)
-                <= type(uint256).max / (FixedPointMathLib.WAD / 10 ** _snxDecimals)
-                    / (FixedPointMathLib.WAD / 10 ** _oracleSnxToUsdDecimals)
+            uint256(_rateSnxToUsd) <= type(uint256).max / Constants.WAD / Constants.WAD * 10 ** _oracleSnxToUsdDecimals
         ); // trustedPriceSnxToUsd does not overflow
-        uint256 trustedPriceSnxToUsd = uint256(_rateSnxToUsd) * (FixedPointMathLib.WAD / 10 ** _oracleSnxToUsdDecimals)
-            * (FixedPointMathLib.WAD / 10 ** _snxDecimals);
-        vm.assume(trustedPriceSnxToUsd <= type(uint256).max / (initialAmountSnx + amountSnx)); // _computeProfitMaximizingTrade does not overflow
+        uint256 trustedPriceSnxToUsd =
+            Constants.WAD * uint256(_rateSnxToUsd) / 10 ** _oracleSnxToUsdDecimals * Constants.WAD / 10 ** _snxDecimals;
+        vm.assume(
+            uint256(_rateEthToUsd) <= type(uint256).max / Constants.WAD / Constants.WAD * 10 ** _oracleEthToUsdDecimals
+        ); // trustedPriceEthToUsd does not overflow
+        uint256 trustedPriceEthToUsd =
+            Constants.WAD * uint256(_rateEthToUsd) / 10 ** _oracleEthToUsdDecimals * Constants.WAD / 10 ** _ethDecimals;
+        vm.assume(trustedPriceSnxToUsd <= type(uint256).max / amountSnx); // _computeProfitMaximizingTrade does not overflow
+        vm.assume(trustedPriceEthToUsd <= type(uint256).max / 997); // _computeProfitMaximizingTrade does not overflow
 
         uint256 valueSnx =
             Constants.WAD * _rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals * amountSnx / 10 ** _snxDecimals;
@@ -1163,7 +1143,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             assetAddress: address(pairSnxEth),
             assetId: 0,
-            assetAmount: amount,
+            assetAmount: pairSnxEth.totalSupply(),
             baseCurrency: Constants.UsdBaseCurrency
         });
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = uniswapV2PricingModule.getValue(getValueInput);
