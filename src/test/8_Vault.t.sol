@@ -416,7 +416,33 @@ contract vaultTests is Test {
                         VAULT MANAGEMENT
 /////////////////////////////////////////////////////////////// */
 
-    //ToDo: initialize, upgradeVault, getAddressSlot
+    //ToDo: getAddressSlot
+
+    function testRevert_initialize_AlreadyInitialized() public {
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_I: Already initialized!");
+        vault.initialize(vaultOwner, address(mainRegistry), 1);
+        vm.stopPrank();
+    }
+
+    function testSuccess_upgradeVault(address newImplementation, uint16 newVersion) public {
+        vm.startPrank(address(factoryContr));
+        vault.upgradeVault(newImplementation, newVersion);
+        vm.stopPrank();
+
+        uint16 expectedVersion = vault.vaultVersion();
+
+        assertEq(expectedVersion, newVersion);
+    }
+
+    function testRevert_upgradeVault_byNonOwner(address newImplementation, uint16 newVersion, address nonOwner) public {
+        vm.assume(nonOwner != address(factoryContr));
+
+        vm.startPrank(nonOwner);
+        vm.expectRevert("VL: You are not the factory");
+        vault.upgradeVault(newImplementation, newVersion);
+        vm.stopPrank();
+    }
 
     /* ///////////////////////////////////////////////////////////////
                     OWNERSHIP MANAGEMENT
@@ -516,7 +542,36 @@ contract vaultTests is Test {
                 MARGIN ACCOUNT SETTINGS
 /////////////////////////////////////////////////////////////// */
 
-    //ToDo: openTrustedMarginAccount, closeTrustedMarginAccount
+    function testRevert_openTrustedMarginAccount_AlreadySet(address trustedProtocol) public {
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_OMA: ALREADY SET");
+        vault.openTrustedMarginAccount(trustedProtocol);
+        vm.stopPrank();
+    }
+
+    function testRevert_openTrustedMarginAccount_NonOwner(address nonOwner, address trustedProtocol) public {
+        vm.assume(nonOwner != vaultOwner);
+
+        vm.startPrank(nonOwner);
+        vm.expectRevert("VL: You are not the owner");
+        vault.openTrustedMarginAccount(trustedProtocol);
+        vm.stopPrank();
+    }
+
+    function testSuccess_closeTrustedMarginAccount() public {
+        vm.startPrank(vaultOwner);
+        vault.closeTrustedMarginAccount();
+
+        assertEq(vault.isTrustedProtocolSet(), false);
+    }
+
+    function testRevert_closeTrustedMarginAccount_NonOwner(address nonOwner) public {
+        vm.assume(nonOwner != vaultOwner);
+
+        vm.startPrank(nonOwner);
+        vm.expectRevert("VL: You are not the owner");
+        vault.closeTrustedMarginAccount();
+    }
 
     /* ///////////////////////////////////////////////////////////////
                         MARGIN REQUIREMENTS
