@@ -84,7 +84,7 @@ contract OracleHub is Ownable {
             require(inOracleHub[oracleAdresses[i]], "Unknown oracle");
             if (i > 0) {
                 require(
-                    compareStrings(
+                    _compareStrings(
                         oracleToOracleInformation[oracleAdresses[i - 1]].baseAsset,
                         oracleToOracleInformation[oracleAdresses[i]].quoteAsset
                     ),
@@ -93,7 +93,7 @@ contract OracleHub is Ownable {
             }
             if (i == oracleAdressesLength - 1) {
                 require(
-                    compareStrings(oracleToOracleInformation[oracleAdresses[i]].baseAsset, "USD"),
+                    _compareStrings(oracleToOracleInformation[oracleAdresses[i]].baseAsset, "USD"),
                     "Last oracle does not have USD as bAsset"
                 );
             }
@@ -178,7 +178,7 @@ contract OracleHub is Ownable {
      * @param b The second string to be compared
      * @return result Boolean that returns true if both input strings are equal, and false if both strings are different
      */
-    function compareStrings(string memory a, string memory b) internal pure returns (bool result) {
+    function _compareStrings(string memory a, string memory b) internal pure returns (bool result) {
         if (bytes(a).length != bytes(b).length) {
             return false;
         } else {

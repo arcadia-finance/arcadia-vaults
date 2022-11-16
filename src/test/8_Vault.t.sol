@@ -416,7 +416,7 @@ contract vaultTests is Test {
                         VAULT MANAGEMENT
 /////////////////////////////////////////////////////////////// */
 
-    //ToDo: initialize, upgradeVault, getAddressSlot
+    //ToDo: initialize, upgradeVault, _getAddressSlot
 
     /* ///////////////////////////////////////////////////////////////
                     OWNERSHIP MANAGEMENT

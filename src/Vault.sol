@@ -107,16 +107,16 @@ contract Vault {
      * Therefore everything is initialised through an init function.
      * This function will only be called (once) in the same transaction as the proxy vault creation through the factory.
      * Costly function (156k gas)
-     * @param _owner The tx.origin: the sender of the 'createVault' on the factory
-     * @param _registryAddress The 'beacon' contract to which should be looked at for external logic.
-     * @param _vaultVersion The version of the vault logic.
+     * @param owner_ The tx.origin: the sender of the 'createVault' on the factory
+     * @param registryAddress_ The 'beacon' contract to which should be looked at for external logic.
+     * @param vaultVersion_ The version of the vault logic.
      */
-    function initialize(address _owner, address _registryAddress, uint16 _vaultVersion) external payable {
+    function initialize(address owner_, address registryAddress_, uint16 vaultVersion_) external payable {
         require(vaultVersion == 0, "V_I: Already initialized!");
-        require(_vaultVersion != 0, "V_I: Invalid vault version");
-        owner = _owner;
-        registryAddress = _registryAddress;
-        vaultVersion = _vaultVersion;
+        require(vaultVersion_ != 0, "V_I: Invalid vault version");
+        owner = owner_;
+        registryAddress = registryAddress_;
+        vaultVersion = vaultVersion_;
     }
 
     /**
@@ -124,7 +124,7 @@ contract Vault {
      */
     function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
         vaultVersion = newVersion;
-        getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
+        _getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
 
         emit Upgraded(newImplementation);
     }
@@ -132,7 +132,7 @@ contract Vault {
     /**
      * @dev Returns an `AddressSlot` with member `value` located at `slot`.
      */
-    function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
+    function _getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
         assembly {
             r.slot := slot
         }
@@ -180,13 +180,13 @@ contract Vault {
 
     /**
      * @notice Internal function: sets baseCurrency.
-     * @param _baseCurrency the new baseCurrency for the vault.
+     * @param baseCurrency_ the new baseCurrency for the vault.
      * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
      */
-    function _setBaseCurrency(address _baseCurrency) private {
+    function _setBaseCurrency(address baseCurrency_) private {
         require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
-        require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL_SBC: baseCurrency not found");
-        vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
+        require(IMainRegistry(registryAddress).isBaseCurrency(baseCurrency_), "VL_SBC: baseCurrency not found");
+        vault.baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -509,12 +509,12 @@ contract Vault {
      * After successful transfer, the function checks whether the same asset has been deposited.
      * This check is done using a loop: writing it in a mapping vs extra loops is in favor of extra loops in this case.
      * If the address has not yet been seen, the ERC20 token address is stored.
-     * @param _from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
+     * @param from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
      * @param ERC20Address The asset address that should be transferred.
      * @param amount The amount of ERC20 tokens to be transferred.
      */
-    function _depositERC20(address _from, address ERC20Address, uint256 amount) private {
-        require(IERC20(ERC20Address).transferFrom(_from, address(this), amount), "Transfer from failed");
+    function _depositERC20(address from, address ERC20Address, uint256 amount) private {
+        require(IERC20(ERC20Address).transferFrom(from, address(this), amount), "Transfer from failed");
 
         uint256 erc20StoredLength = erc20Stored.length;
         for (uint256 i; i < erc20StoredLength;) {
@@ -535,12 +535,12 @@ contract Vault {
      * @dev Used for all tokens types = 1. Note the transferFrom. No amounts are given since ERC721 are one-off's.
      * After successful transfer, the function pushes the ERC721 address to the stored token and stored ID array.
      * This may cause duplicates in the ERC721 stored addresses array, but this is intended.
-     * @param _from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
+     * @param from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
      * @param ERC721Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
      */
-    function _depositERC721(address _from, address ERC721Address, uint256 id) private {
-        IERC721(ERC721Address).transferFrom(_from, address(this), id);
+    function _depositERC721(address from, address ERC721Address, uint256 id) private {
+        IERC721(ERC721Address).transferFrom(from, address(this), id);
 
         erc721Stored.push(ERC721Address);
         //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
@@ -553,13 +553,13 @@ contract Vault {
      * After successful transfer, the function checks whether the combination of address & ID has already been stored.
      * If not, the function pushes the new address and ID to the stored arrays.
      * This may cause duplicates in the ERC1155 stored addresses array, but this is intended.
-     * @param _from The Address the tokens should be taken from. This address must have pre-approved the proxy vault.
+     * @param from The Address the tokens should be taken from. This address must have pre-approved the proxy vault.
      * @param ERC1155Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
      * @param amount The amount of ERC1155 tokens to be transferred.
      */
-    function _depositERC1155(address _from, address ERC1155Address, uint256 id, uint256 amount) private {
-        IERC1155(ERC1155Address).safeTransferFrom(_from, address(this), id, amount, "");
+    function _depositERC1155(address from, address ERC1155Address, uint256 id, uint256 amount) private {
+        IERC1155(ERC1155Address).safeTransferFrom(from, address(this), id, amount, "");
 
         bool addrSeen;
 

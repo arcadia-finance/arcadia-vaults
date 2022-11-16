@@ -71,28 +71,28 @@ contract Liquidator is Ownable {
     /**
      * @notice Sets the factory address on the liquidator.
      * @dev The factory is used to fetch the isVault bool in elevated().
-     * @param _factory the factory address.
+     * @param factory the factory address.
      */
-    function setFactory(address _factory) external onlyOwner {
-        factoryAddress = _factory;
+    function setFactory(address factory) external onlyOwner {
+        factoryAddress = factory;
     }
 
     /**
      * @notice Sets the protocol treasury address on the liquidator.
      * @dev The protocol treasury is used to receive liquidation rewards.
-     * @param _protocolTreasury the protocol treasury.
+     * @param protocolTreasury_ the protocol treasury.
      */
-    function setProtocolTreasury(address _protocolTreasury) external onlyOwner {
-        protocolTreasury = _protocolTreasury;
+    function setProtocolTreasury(address protocolTreasury_) external onlyOwner {
+        protocolTreasury = protocolTreasury_;
     }
 
     /**
      * @notice Sets the reserve fund address on the liquidator.
      * @dev The reserve fund is used to pay liquidation keepers should the liquidation surplus be insufficient.
-     * @param _reserveFund the reserve fund address.
+     * @param reserveFund_ the reserve fund address.
      */
-    function setReserveFund(address _reserveFund) external onlyOwner {
-        reserveFund = _reserveFund;
+    function setReserveFund(address reserveFund_) external onlyOwner {
+        reserveFund = reserveFund_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -104,10 +104,10 @@ contract Liquidator is Ownable {
      * @dev The breakeven time is the time from starting an auction duration to
      * the moment the price of the auction has decreased to the open debt.
      * The breakevenTime controls the speed of decrease of the auction price.
-     * @param _breakevenTime the new breakeven time address.
+     * @param breakevenTime_ the new breakeven time address.
      */
-    function setBreakevenTime(uint256 _breakevenTime) external onlyOwner {
-        breakevenTime = _breakevenTime;
+    function setBreakevenTime(uint256 breakevenTime_) external onlyOwner {
+        breakevenTime = breakevenTime_;
     }
 
     /*///////////////////////////////////////////////////////////////
