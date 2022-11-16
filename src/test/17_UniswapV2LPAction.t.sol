@@ -339,7 +339,6 @@ contract executeActionTests is UniswapV2LPActionTest {
     ///////////////////////////////*/
 
     function testSuccess_addDAIETHLP() public {
-        bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
 
         vm.startPrank(address(action));
         dai.approve(address(uniswapV2Router), type(uint256).max);
@@ -347,17 +346,22 @@ contract executeActionTests is UniswapV2LPActionTest {
         pairDaiEth.approve(address(uniswapV2Router), type(uint256).max);
         vm.stopPrank();
 
-        vm.prank(samBankman);
-        vault.vaultManagementAction(address(action), __actionSpecificData);
-
-        assertEq(dai.balanceOf(address(vault)), 0);
-        assertEq(eth.balanceOf(address(vault)), 0);
-
         // Calculate expected LP tokens
         (uint112 reserve0, uint112 reserve1,) = pairDaiEth.getReserves();
         uint256 _totalSupply = pairDaiEth.totalSupply();
         uint expectedLpTokens = min(_out.assetAmounts[0] * _totalSupply / reserve0, _out.assetAmounts[0] * _totalSupply / reserve1);
-        console.log("Expected LP tokens: ", expectedLpTokens);
+        _in.assetAmounts[0] = expectedLpTokens;
+
+        // Prepare action data
+        bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("add")));
+
+        // Execute action
+        vm.prank(samBankman);
+        vault.vaultManagementAction(address(action), __actionSpecificData);
+
+        // Assert balances
+        assertEq(dai.balanceOf(address(vault)), 0);
+        assertEq(eth.balanceOf(address(vault)), 0);
 
         // Assert Expected LP tokens
         assertEq(pairDaiEth.balanceOf(address(vault)), expectedLpTokens); // 1 LP token
@@ -368,26 +372,28 @@ contract executeActionTests is UniswapV2LPActionTest {
     }
 
     function testSuccess_removeDAIETHLP() public {
-        bytes memory __actionSpecificDataAdd = abi.encode(_out, _in, bytes4(keccak256("add")));
-
-        //min reserve tokens to receive
-        _out.assetAmounts[0] = 0;
-        _out.assetAmounts[1] = 0;
-
-        // Approve
+        // Approve router
         vm.startPrank(address(action));
         dai.approve(address(uniswapV2Router), type(uint256).max);
         eth.approve(address(uniswapV2Router), type(uint256).max);
         pairDaiEth.approve(address(uniswapV2Router), type(uint256).max);
         vm.stopPrank();
 
+        // Calculate expected LP tokens
+        (uint112 reserve0, uint112 reserve1,) = pairDaiEth.getReserves();
+        uint256 _totalSupply = pairDaiEth.totalSupply();
+        uint expectedLpTokens = min(_out.assetAmounts[0] * _totalSupply / reserve0, _out.assetAmounts[0] * _totalSupply / reserve1);
+        _in.assetAmounts[0] = expectedLpTokens;
+
+        bytes memory __actionSpecificDataAdd = abi.encode(_out, _in, bytes4(keccak256("add")));
+        
         // Add LP
         vm.prank(samBankman);
         vault.vaultManagementAction(address(action), __actionSpecificDataAdd);
 
-        console.log("dai balance1", dai.balanceOf(address(vault)));
-        console.log("eth balance1", eth.balanceOf(address(vault)));
-        console.log("pairDaiEth balance1", pairDaiEth.balanceOf(address(vault)));
+        //min reserve tokens to receive => calculate expected DAI and ETH
+        _out.assetAmounts[0] = 0;
+        _out.assetAmounts[1] = 0;
 
         uint256 lpBalance = pairDaiEth.balanceOf(address(vault));
         _in.assetAmounts[0] = lpBalance;
@@ -397,14 +403,10 @@ contract executeActionTests is UniswapV2LPActionTest {
         vm.prank(samBankman);
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
-        console.log("dai balance", dai.balanceOf(address(vault)));
-        console.log("eth balance", eth.balanceOf(address(vault)));
-        console.log("pairDaiEth balance", pairDaiEth.balanceOf(address(vault)));
-
         assertEq(dai.balanceOf(address(vault)), 1300 * 10 ** Constants.daiDecimals / 2);
         assertEq(eth.balanceOf(address(vault)), 1  * 10 ** Constants.ethDecimals / 2);
 
-        (uint112 reserve0, uint112 reserve1,) = pairDaiEth.getReserves();
+        (reserve0, reserve1,) = pairDaiEth.getReserves();
         assertEq(reserve0, 1300 * 10 ** Constants.daiDecimals / 2);
         assertEq(reserve1,  1  * 10 ** Constants.ethDecimals / 2);
     }

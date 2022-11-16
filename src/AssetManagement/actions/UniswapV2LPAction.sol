@@ -136,10 +136,10 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
                 IERC20(incomingAssets_.assets[i]).balanceOf(address(this)) - incomingAssets_.preActionBalances[i];
 
             // Check incoming assets are as expected
-            // require(
-            //     incomingAssetAmounts_[i] >= incomingAssets_.assetAmounts[i],
-            //     "UV2A_SWAP: Received incoming asset less than expected"
-            // );
+            require(
+                incomingAssetAmounts_[i] >= incomingAssets_.assetAmounts[i],
+                "UV2A_SWAP: Received incoming asset less than expected"
+            );
             unchecked {
                 i++;
             }
