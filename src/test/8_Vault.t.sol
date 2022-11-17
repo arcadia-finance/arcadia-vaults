@@ -34,6 +34,15 @@ contract VaultTestExtension is Vault {
     function setLiquidationThreshold(uint16 liqThres) public {
         vault.liqThres = liqThres;
     }
+
+    function getLengths() external view returns (uint256, uint256, uint256, uint256) {
+        return (
+            erc20Stored.length, 
+            erc721Stored.length, 
+            erc721TokenIds.length, 
+            erc1155Stored.length
+            );
+    }
 }
 
 contract vaultTests is Test {
