@@ -231,7 +231,6 @@ abstract contract UniswapV2LPActionTest is Test {
         vm.startPrank(samBankman);
         pairDaiEth.mint(samBankman, 1300 * 10 ** Constants.daiDecimals, 1 * 10 ** Constants.ethDecimals);
         vm.stopPrank();
-
     }
 
     //Before Each
@@ -329,9 +328,6 @@ contract executeActionTests is UniswapV2LPActionTest {
 
         //  Prepare action data
         _in = actionAssetsData(_inAssets, _inAssetsIds, _inAssetAmounts, _inPreActionBalances);
-
-    
-
     }
 
     /*///////////////////////////////
@@ -339,7 +335,6 @@ contract executeActionTests is UniswapV2LPActionTest {
     ///////////////////////////////*/
 
     function testSuccess_addDAIETHLP() public {
-
         vm.startPrank(address(action));
         dai.approve(address(uniswapV2Router), type(uint256).max);
         eth.approve(address(uniswapV2Router), type(uint256).max);
@@ -349,7 +344,8 @@ contract executeActionTests is UniswapV2LPActionTest {
         // Calculate expected LP tokens
         (uint112 reserve0, uint112 reserve1,) = pairDaiEth.getReserves();
         uint256 _totalSupply = pairDaiEth.totalSupply();
-        uint expectedLpTokens = min(_out.assetAmounts[0] * _totalSupply / reserve0, _out.assetAmounts[0] * _totalSupply / reserve1);
+        uint256 expectedLpTokens =
+            min(_out.assetAmounts[0] * _totalSupply / reserve0, _out.assetAmounts[0] * _totalSupply / reserve1);
         _in.assetAmounts[0] = expectedLpTokens;
 
         // Prepare action data
@@ -382,11 +378,12 @@ contract executeActionTests is UniswapV2LPActionTest {
         // Calculate expected LP tokens
         (uint112 reserve0, uint112 reserve1,) = pairDaiEth.getReserves();
         uint256 _totalSupply = pairDaiEth.totalSupply();
-        uint expectedLpTokens = min(_out.assetAmounts[0] * _totalSupply / reserve0, _out.assetAmounts[0] * _totalSupply / reserve1);
+        uint256 expectedLpTokens =
+            min(_out.assetAmounts[0] * _totalSupply / reserve0, _out.assetAmounts[0] * _totalSupply / reserve1);
         _in.assetAmounts[0] = expectedLpTokens;
 
         bytes memory __actionSpecificDataAdd = abi.encode(_out, _in, bytes4(keccak256("add")));
-        
+
         // Add LP
         vm.prank(samBankman);
         vault.vaultManagementAction(address(action), __actionSpecificDataAdd);
@@ -404,11 +401,11 @@ contract executeActionTests is UniswapV2LPActionTest {
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
         assertEq(dai.balanceOf(address(vault)), 1300 * 10 ** Constants.daiDecimals / 2);
-        assertEq(eth.balanceOf(address(vault)), 1  * 10 ** Constants.ethDecimals / 2);
+        assertEq(eth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals / 2);
 
         (reserve0, reserve1,) = pairDaiEth.getReserves();
         assertEq(reserve0, 1300 * 10 ** Constants.daiDecimals / 2);
-        assertEq(reserve1,  1  * 10 ** Constants.ethDecimals / 2);
+        assertEq(reserve1, 1 * 10 ** Constants.ethDecimals / 2);
     }
 
     function testSuccess_addDAIETHLP_notEnoughDAI() public {
@@ -474,5 +471,4 @@ contract executeActionTests is UniswapV2LPActionTest {
     function min(uint256 x, uint256 y) internal pure returns (uint256 z) {
         z = x < y ? x : y;
     }
-    
 }

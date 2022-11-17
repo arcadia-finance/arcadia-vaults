@@ -11,7 +11,7 @@ import "../interfaces/IUniswapV2Factory.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 import "../../lib/forge-std/src/Test.sol";
 
-contract UniswapV2PairMock is ERC20,Test {
+contract UniswapV2PairMock is ERC20, Test {
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
     address public factory;
@@ -60,26 +60,26 @@ contract UniswapV2PairMock is ERC20,Test {
         if (feeOn) kLast = uint256(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
     }
 
-      function burn(address to) external returns (uint256 amount0, uint256 amount1) {
+    function burn(address to) external returns (uint256 amount0, uint256 amount1) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        address _token0 = token0;                                // gas savings
-        address _token1 = token1;                              // gas savings
-        uint balance0 = ERC20(token0).balanceOf(address(this));
-        uint balance1 = ERC20(token1).balanceOf(address(this));
-        uint liquidity = balanceOf[address(this)];
-        console.log("liquidity",liquidity);
+        address _token0 = token0; // gas savings
+        address _token1 = token1; // gas savings
+        uint256 balance0 = ERC20(token0).balanceOf(address(this));
+        uint256 balance1 = ERC20(token1).balanceOf(address(this));
+        uint256 liquidity = balanceOf[address(this)];
+        console.log("liquidity", liquidity);
         bool feeOn = _mintFee();
-        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
-        console.log("_totalSupply",_totalSupply);
-        console.log("balance0b",balance0);
-        console.log("balance1b",balance1);
+        uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        console.log("_totalSupply", _totalSupply);
+        console.log("balance0b", balance0);
+        console.log("balance1b", balance1);
         amount0 = liquidity * balance0 / _totalSupply; // using balances ensures pro-rata distribution
-        console.log("amount0",amount0);
+        console.log("amount0", amount0);
         amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
-        console.log("amount1",amount1);
-        require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
+        console.log("amount1", amount1);
+        require(amount0 > 0 && amount1 > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED");
         _burn(address(this), liquidity);
-        console.log("to",to);
+        console.log("to", to);
         ERC20(_token0).transfer(to, amount0);
         ERC20(_token1).transfer(to, amount1);
         balance0 = ERC20(_token0).balanceOf(address(this));

@@ -63,30 +63,28 @@ contract UniswapV2Router02Mock is Test {
         amounts[0] = amountADesired;
         amounts[1] = amountBDesired;
 
-        return (amounts,liquidity);
+        return (amounts, liquidity);
     }
 
     function removeLiquidity(
         address tokenA,
         address tokenB,
-        uint liquidity,
-        uint amountAMin,
-        uint amountBMin,
+        uint256 liquidity,
+        uint256 amountAMin,
+        uint256 amountBMin,
         address to,
-        uint deadline
+        uint256 deadline
     ) external virtual returns (uint256 amountA, uint256 amountB) {
         // get address of the uniswap pair for the two tokens
         address pair = IUniswapV2Factory(uv2Factory).getPair(tokenA, tokenB);
 
         UniswapV2PairMock(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
-        (uint amount0, uint amount1) = UniswapV2PairMock(pair).burn(to);
+        (uint256 amount0, uint256 amount1) = UniswapV2PairMock(pair).burn(to);
         (amountA, amountB) = (amount0, amount1);
-        
-        require(amountA >= amountAMin, 'UniswapV2Router: INSUFFICIENT_A_AMOUNT');
-        require(amountB >= amountBMin, 'UniswapV2Router: INSUFFICIENT_B_AMOUNT');
+
+        require(amountA >= amountAMin, "UniswapV2Router: INSUFFICIENT_A_AMOUNT");
+        require(amountB >= amountBMin, "UniswapV2Router: INSUFFICIENT_B_AMOUNT");
 
         return (amountA, amountB);
     }
-
-
 }

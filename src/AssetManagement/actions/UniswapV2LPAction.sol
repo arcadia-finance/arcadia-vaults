@@ -61,7 +61,7 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
             ); //TODO: min amounts?
         } else if (bytes4(_selector) == bytes4(keccak256("remove"))) {
             _uniswapV2RemoveLiquidity(
-                address(this), 
+                address(this),
                 _outgoing.assets[0],
                 _outgoing.assetAmounts[0], // liquidity
                 _incoming.assets[0],
@@ -88,7 +88,7 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
         if (bytes4(_selector) == bytes4(keccak256("add"))) {
             require(_outgoing.assets.length >= 2, "UV2A_LP: Need atleast two base tokens");
             require(_incoming.assets.length == 1, "UV2A_LP: Can only out one lp token");
-        } else if (bytes4(_selector)== bytes4(keccak256("remove"))) {
+        } else if (bytes4(_selector) == bytes4(keccak256("remove"))) {
             require(_outgoing.assets.length >= 1, "UV2A_LP: Can only out one lp token");
             require(_incoming.assets.length == 2, "UV2A_LP: Need atleast two base tokens");
         }
@@ -96,7 +96,6 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
         /*///////////////////////////////
                     OUTGOING
         ///////////////////////////////*/
-
 
         /*///////////////////////////////
                     INCOMING
