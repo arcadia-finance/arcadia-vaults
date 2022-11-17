@@ -649,10 +649,9 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         assertInRange(token1AmountActual, token1AmountExpected, 3);
     }
 
-    function testRevert_getTrustedReserves_Zeroreserves(
-        uint256 trustedPriceToken0,
-        uint256 trustedPriceToken1
-    ) public {
+    function testRevert_getTrustedReserves_Zeroreserves(uint256 trustedPriceToken0, uint256 trustedPriceToken1)
+        public
+    {
         vm.expectRevert("UV2_GTR: ZERO_PAIR_RESERVES");
         uniswapV2PricingModule.getTrustedReserves(address(pairSnxEth), trustedPriceToken0, trustedPriceToken1);
     }
@@ -692,15 +691,13 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             expectedTrustedReserve1 = reserve1 + amountIn;
         }
 
-        (uint256 actualTrustedReserve0, uint256 actualTrustedReserve1) = uniswapV2PricingModule.getTrustedReserves(address(pairSnxEth), priceToken0, priceToken1);
+        (uint256 actualTrustedReserve0, uint256 actualTrustedReserve1) =
+            uniswapV2PricingModule.getTrustedReserves(address(pairSnxEth), priceToken0, priceToken1);
         assertEq(actualTrustedReserve0, expectedTrustedReserve0);
         assertEq(actualTrustedReserve1, expectedTrustedReserve1);
     }
 
-    function testRevert_getTrustedTokenAmounts_UnsufficientLiquidity(
-        uint256 priceToken0,
-        uint256 priceToken1
-    ) public {
+    function testRevert_getTrustedTokenAmounts_UnsufficientLiquidity(uint256 priceToken0, uint256 priceToken1) public {
         vm.expectRevert("UV2_GTTA: LIQUIDITY_AMOUNT");
         uniswapV2PricingModule.getTrustedTokenAmounts(address(pairSnxEth), priceToken0, priceToken1, 0);
     }
@@ -730,8 +727,9 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         uint256 token0AmountExpected = liquidityAmount * reserve0 / totalSupply;
         uint256 token1AmountExpected = liquidityAmount * reserve1 / totalSupply;
 
-        (uint256 token0AmountActual, uint256 token1AmountActual) =
-            uniswapV2PricingModule.getTrustedTokenAmounts(address(pairSnxEth), trustedPriceToken0, trustedPriceToken1, liquidityAmount);
+        (uint256 token0AmountActual, uint256 token1AmountActual) = uniswapV2PricingModule.getTrustedTokenAmounts(
+            address(pairSnxEth), trustedPriceToken0, trustedPriceToken1, liquidityAmount
+        );
 
         assertEq(token0AmountActual, token0AmountExpected);
         assertEq(token1AmountActual, token1AmountExpected);
