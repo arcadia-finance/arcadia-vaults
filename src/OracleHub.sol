@@ -70,30 +70,30 @@ contract OracleHub is Ownable {
 
     /**
      * @notice Checks if a series of oracles adheres to a predefined ruleset
-     * @param oracleAdresses An array of addresses of oracle contracts
+     * @param oracles An array of addresses of oracle contracts
      * @dev Function will do nothing if all checks pass, but reverts if at least one check fails.
      * The following checks are performed:
      * - The oracle-address must be previously added to the Oracle-Hub.
      * - The last oracle in the series must have USD as base-asset.
      * - The Base-asset of all oracles must be equal to the quote-asset of the next oracle (except for the last oracle in the series).
      */
-    function checkOracleSequence(address[] memory oracleAdresses) external view {
-        uint256 oracleAdressesLength = oracleAdresses.length;
+    function checkOracleSequence(address[] memory oracles) external view {
+        uint256 oracleAdressesLength = oracles.length;
         require(oracleAdressesLength <= 3, "Oracle seq. cant be longer than 3");
         for (uint256 i; i < oracleAdressesLength;) {
-            require(inOracleHub[oracleAdresses[i]], "Unknown oracle");
+            require(inOracleHub[oracles[i]], "Unknown oracle");
             if (i > 0) {
                 require(
                     _compareStrings(
-                        oracleToOracleInformation[oracleAdresses[i - 1]].baseAsset,
-                        oracleToOracleInformation[oracleAdresses[i]].quoteAsset
+                        oracleToOracleInformation[oracles[i - 1]].baseAsset,
+                        oracleToOracleInformation[oracles[i]].quoteAsset
                     ),
                     "qAsset doesnt match with bAsset of prev oracle"
                 );
             }
             if (i == oracleAdressesLength - 1) {
                 require(
-                    _compareStrings(oracleToOracleInformation[oracleAdresses[i]].baseAsset, "USD"),
+                    _compareStrings(oracleToOracleInformation[oracles[i]].baseAsset, "USD"),
                     "Last oracle does not have USD as bAsset"
                 );
             }
@@ -109,7 +109,7 @@ contract OracleHub is Ownable {
 
     /**
      * @notice Returns the exchange rate of a certain asset, denominated in USD or in another BaseCurrency
-     * @param oracleAdresses An array of addresses of oracle contracts
+     * @param oracle An array of addresses of oracle contracts
      * @param baseCurrency The BaseCurrency (base-asset) in which the exchange rate is ideally expressed
      * @return rateInUsd The exchange rate of the asset denominated in USD, integer with 18 Decimals precision
      * @return rateInBaseCurrency The exchange rate of the asset denominated in a BaseCurrency different from USD, integer with 18 Decimals precision
@@ -130,7 +130,7 @@ contract OracleHub is Ownable {
      * the given baseCurrency as base-asset.
      * Only one of the two values can be different from 0.
      */
-    function getRate(address[] memory oracleAdresses, uint256 baseCurrency)
+    function getRate(address[] memory oracle, uint256 baseCurrency)
         public
         view
         returns (uint256 rateInUsd, uint256 rateInBaseCurrency)
@@ -138,11 +138,11 @@ contract OracleHub is Ownable {
         //Scalar 1 with 18 decimals (internal precision for)
         uint256 rate = FixedPointMathLib.WAD;
         int256 tempRate;
-        uint256 oraclesLength = oracleAdresses.length;
+        uint256 oraclesLength = oracle.length;
         address oracleAddressAtIndex;
 
         for (uint256 i; i < oraclesLength;) {
-            oracleAddressAtIndex = oracleAdresses[i];
+            oracleAddressAtIndex = oracle[i];
             (, tempRate,,,) = IChainLinkData(oracleAddressAtIndex).latestRoundData();
             require(tempRate >= 0, "Negative oracle price");
 
