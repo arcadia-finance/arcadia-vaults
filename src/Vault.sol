@@ -776,8 +776,4 @@ contract Vault {
         return this.onERC1155Received.selector;
     }
 
-    //Function only used for tests
-    function getLengths() external view returns (uint256, uint256, uint256, uint256) {
-        return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
-    }
 }
