@@ -76,7 +76,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -96,7 +96,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -111,7 +111,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -132,7 +132,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -153,7 +153,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -170,7 +170,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -191,7 +191,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -202,7 +202,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -234,7 +234,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -245,7 +245,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "LINK",
                 baseAsset: "USD",
-                oracleAddress: address(oracleLinkToUsd),
+                oracle: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
                 baseAssetIsBaseCurrency: true
             })
@@ -268,7 +268,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -290,7 +290,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -324,7 +324,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -370,7 +370,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -424,7 +424,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -435,7 +435,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -489,7 +489,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -500,7 +500,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -553,7 +553,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -564,7 +564,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -608,7 +608,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -619,7 +619,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -673,7 +673,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -684,7 +684,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -736,7 +736,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -747,7 +747,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -803,7 +803,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -814,7 +814,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -868,7 +868,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -879,7 +879,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -932,7 +932,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -943,7 +943,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -987,7 +987,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -998,7 +998,7 @@ contract OracleHubTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })

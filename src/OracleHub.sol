@@ -33,7 +33,7 @@ contract OracleHub is Ownable {
         bool baseAssetIsBaseCurrency;
         string quoteAsset;
         string baseAsset;
-        address oracleAddress;
+        address oracle;
         address quoteAssetAddress;
     }
 
@@ -55,17 +55,17 @@ contract OracleHub is Ownable {
      * - baseAssetIsBaseCurrency: boolean indicating if the base asset can be used as baseCurrency of a vault
      * - quoteAsset: The symbol of the quote assets (only used for readability purpose)
      * - baseAsset: The symbol of the base assets (only used for readability purpose)
-     * - oracleAddress: The contract address of the oracle
+     * - oracle: The contract address of the oracle
      * - quoteAssetAddress: The contract address of the quote asset
      * @dev It is not possible to overwrite the information of an existing Oracle in the Oracle Hub.
      * @dev Oracles can't have more than 18 decimals.
      */
     function addOracle(OracleInformation calldata oracleInformation) external onlyOwner {
-        address oracleAddress = oracleInformation.oracleAddress;
-        require(!inOracleHub[oracleAddress], "Oracle already in oracle-hub");
+        address oracle = oracleInformation.oracle;
+        require(!inOracleHub[oracle], "Oracle already in oracle-hub");
         require(oracleInformation.oracleUnit <= 1000000000000000000, "Oracle can have maximal 18 decimals");
-        inOracleHub[oracleAddress] = true;
-        oracleToOracleInformation[oracleAddress] = oracleInformation;
+        inOracleHub[oracle] = true;
+        oracleToOracleInformation[oracle] = oracleInformation;
     }
 
     /**

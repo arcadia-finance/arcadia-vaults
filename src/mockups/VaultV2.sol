@@ -46,7 +46,7 @@ contract VaultV2 {
 
     address public owner;
     address public liquidator;
-    address public registryAddress;
+    address public registry;
     address public trustedProtocol;
 
     address[] public erc20Stored;
@@ -76,7 +76,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than the factory adress.
      */
     modifier onlyFactory() {
-        require(msg.sender == IMainRegistry(registryAddress).factoryAddress(), "VL: You are not the factory");
+        require(msg.sender == IMainRegistry(registry).factoryAddress(), "VL: You are not the factory");
         _;
     }
 
@@ -116,7 +116,7 @@ contract VaultV2 {
         require(vaultVersion == 0, "V_I: Already initialized!");
         require(_vaultVersion != 0, "V_I: Invalid vault version");
         owner = _owner;
-        registryAddress = _registryAddress;
+        registry = _registryAddress;
         vaultVersion = _vaultVersion;
     }
 
@@ -186,7 +186,7 @@ contract VaultV2 {
      */
     function _setBaseCurrency(address _baseCurrency) private {
         require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
-        require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL_SBC: baseCurrency not found");
+        require(IMainRegistry(registry).isBaseCurrency(_baseCurrency), "VL_SBC: baseCurrency not found");
         vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
     }
 
@@ -254,7 +254,7 @@ contract VaultV2 {
         // Update the vault values
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
+        vault.liqThres = IRegistry(registry).getLiquidationThreshold(
             assetAddresses, assetIds, assetAmounts, vault.baseCurrency
         );
     }
@@ -273,7 +273,7 @@ contract VaultV2 {
         // Update the vault values
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
+        vault.liqThres = IRegistry(registry).getLiquidationThreshold(
             assetAddresses, assetIds, assetAmounts, vault.baseCurrency
         );
     }
@@ -288,7 +288,7 @@ contract VaultV2 {
     function getVaultValue(address baseCurrency) public view returns (uint256 vaultValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vaultValue = IRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        vaultValue = IRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -306,7 +306,7 @@ contract VaultV2 {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         collateralValue =
-            IRegistry(registryAddress).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+            IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -367,7 +367,7 @@ contract VaultV2 {
 
         require(leftHand < rightHand, "V_LV: This vault is healthy");
 
-        uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
+        uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(vault.baseCurrency);
 
         require(
             ILiquidator(liquidator).startAuction(
@@ -425,7 +425,7 @@ contract VaultV2 {
         );
 
         require(
-            IRegistry(registryAddress).batchIsWhiteListed(assetAddresses, assetIds), "Not all assets are whitelisted!"
+            IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "Not all assets are whitelisted!"
         );
 
         for (uint256 i; i < assetAddressesLength;) {

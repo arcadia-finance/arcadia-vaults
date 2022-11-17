@@ -45,7 +45,7 @@ contract Vault {
 
     address public owner;
     address public liquidator;
-    address public registryAddress;
+    address public registry;
     address public trustedProtocol;
 
     address[] public erc20Stored;
@@ -75,7 +75,7 @@ contract Vault {
      * @dev Throws if called by any account other than the factory adress.
      */
     modifier onlyFactory() {
-        require(msg.sender == IMainRegistry(registryAddress).factoryAddress(), "VL: You are not the factory");
+        require(msg.sender == IMainRegistry(registry).factoryAddress(), "VL: You are not the factory");
         _;
     }
 
@@ -108,14 +108,14 @@ contract Vault {
      * This function will only be called (once) in the same transaction as the proxy vault creation through the factory.
      * Costly function (156k gas)
      * @param owner_ The tx.origin: the sender of the 'createVault' on the factory
-     * @param registryAddress_ The 'beacon' contract to which should be looked at for external logic.
+     * @param registry_ The 'beacon' contract to which should be looked at for external logic.
      * @param vaultVersion_ The version of the vault logic.
      */
-    function initialize(address owner_, address registryAddress_, uint16 vaultVersion_) external payable {
+    function initialize(address owner_, address registry_, uint16 vaultVersion_) external payable {
         require(vaultVersion == 0, "V_I: Already initialized!");
         require(vaultVersion_ != 0, "V_I: Invalid vault version");
         owner = owner_;
-        registryAddress = registryAddress_;
+        registry = registry_;
         vaultVersion = vaultVersion_;
     }
 
@@ -185,7 +185,7 @@ contract Vault {
      */
     function _setBaseCurrency(address baseCurrency_) private {
         require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
-        require(IMainRegistry(registryAddress).isBaseCurrency(baseCurrency_), "VL_SBC: baseCurrency not found");
+        require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "VL_SBC: baseCurrency not found");
         vault.baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
     }
 
@@ -253,7 +253,7 @@ contract Vault {
         // Update the vault values
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
+        vault.liqThres = IRegistry(registry).getLiquidationThreshold(
             assetAddresses, assetIds, assetAmounts, vault.baseCurrency
         );
     }
@@ -272,7 +272,7 @@ contract Vault {
         // Update the vault values
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
+        vault.liqThres = IRegistry(registry).getLiquidationThreshold(
             assetAddresses, assetIds, assetAmounts, vault.baseCurrency
         );
     }
@@ -287,7 +287,7 @@ contract Vault {
     function getVaultValue(address baseCurrency) public view returns (uint256 vaultValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vaultValue = IRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        vaultValue = IRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -305,7 +305,7 @@ contract Vault {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         collateralValue =
-            IRegistry(registryAddress).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+            IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -366,7 +366,7 @@ contract Vault {
 
         require(leftHand < rightHand, "V_LV: This vault is healthy");
 
-        uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
+        uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(vault.baseCurrency);
 
         require(
             ILiquidator(liquidator).startAuction(
@@ -424,7 +424,7 @@ contract Vault {
         );
 
         require(
-            IRegistry(registryAddress).batchIsWhiteListed(assetAddresses, assetIds), "Not all assets are whitelisted!"
+            IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "Not all assets are whitelisted!"
         );
 
         for (uint256 i; i < assetAddressesLength;) {

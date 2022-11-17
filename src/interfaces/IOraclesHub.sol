@@ -9,5 +9,5 @@ pragma solidity >=0.4.22 <0.9.0;
 interface IOraclesHub {
     function getRate(address[] memory, uint256) external view returns (uint256, uint256);
 
-    function checkOracleSequence(address[] memory oracleAdresses) external view;
+    function checkOracleSequence(address[] memory oracle) external view;
 }
