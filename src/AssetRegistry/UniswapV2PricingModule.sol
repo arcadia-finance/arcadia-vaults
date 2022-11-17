@@ -210,7 +210,7 @@ contract UniswapV2PricingModule is PricingModule {
         uint256 totalSupply = IUniswapV2Pair(pair).totalSupply();
 
         // this also checks that totalSupply > 0
-        require(totalSupply >= liquidityAmount && liquidityAmount > 0, "UV2_GV: LIQUIDITY_AMOUNT");
+        require(totalSupply >= liquidityAmount && liquidityAmount > 0, "UV2_GTTA: LIQUIDITY_AMOUNT");
 
         (uint256 reserve0, uint256 reserve1) = _getTrustedReserves(pair, trustedPriceToken0, trustedPriceToken1);
 
