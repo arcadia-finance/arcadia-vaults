@@ -67,19 +67,12 @@ contract UniswapV2PairMock is ERC20, Test {
         uint256 balance0 = ERC20(token0).balanceOf(address(this));
         uint256 balance1 = ERC20(token1).balanceOf(address(this));
         uint256 liquidity = balanceOf[address(this)];
-        console.log("liquidity", liquidity);
         bool feeOn = _mintFee();
         uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
-        console.log("_totalSupply", _totalSupply);
-        console.log("balance0b", balance0);
-        console.log("balance1b", balance1);
         amount0 = liquidity * balance0 / _totalSupply; // using balances ensures pro-rata distribution
-        console.log("amount0", amount0);
         amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
-        console.log("amount1", amount1);
         require(amount0 > 0 && amount1 > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED");
         _burn(address(this), liquidity);
-        console.log("to", to);
         ERC20(_token0).transfer(to, amount0);
         ERC20(_token1).transfer(to, amount1);
         balance0 = ERC20(_token0).balanceOf(address(this));
