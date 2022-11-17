@@ -44,11 +44,11 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
         internal
     {
         require(
-            _selector == bytes4(keccak256("remove")) || _selector == bytes4(keccak256("add")),
+            bytes4(_selector) == bytes4(keccak256("remove")) || bytes4(_selector) == bytes4(keccak256("add")),
             "UV2A_LP: invalid _selector"
         );
 
-        if (_selector == bytes4(keccak256("add"))) {
+        if (bytes4(_selector) == bytes4(keccak256("add"))) {
             _uniswapV2AddLiquidity(
                 address(this), // recipient
                 _outgoing.assets[0], // tokenA
@@ -59,7 +59,7 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
                 _outgoing.assetAmounts[0], // amountAMin
                 _outgoing.assetAmounts[1] // amountBMin
             ); //TODO: min amounts?
-        } else if (_selector == bytes4(keccak256("remove"))) {
+        } else if (bytes4(_selector) == bytes4(keccak256("remove"))) {
             _uniswapV2RemoveLiquidity(
                 address(this), 
                 _outgoing.assets[0],
@@ -82,14 +82,13 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
         /*///////////////////////////////
                     DECODE
         ///////////////////////////////*/
-
         (_outgoing, _incoming, _selector) =
             abi.decode(_actionSpecificData, (actionAssetsData, actionAssetsData, bytes4));
 
-        if (_selector == bytes4(keccak256("add"))) {
+        if (bytes4(_selector) == bytes4(keccak256("add"))) {
             require(_outgoing.assets.length >= 2, "UV2A_LP: Need atleast two base tokens");
             require(_incoming.assets.length == 1, "UV2A_LP: Can only out one lp token");
-        } else if (_selector == bytes4(keccak256("remove"))) {
+        } else if (bytes4(_selector)== bytes4(keccak256("remove"))) {
             require(_outgoing.assets.length >= 1, "UV2A_LP: Can only out one lp token");
             require(_incoming.assets.length == 2, "UV2A_LP: Need atleast two base tokens");
         }

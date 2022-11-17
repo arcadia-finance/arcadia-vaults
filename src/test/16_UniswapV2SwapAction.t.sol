@@ -50,13 +50,13 @@ abstract contract UniswapV2SwapActionTest is Test {
     OracleHub private oracleHub;
 
     ArcadiaOracle private oracleDaiToUsd;
-    ArcadiaOracle private oracleWethToUsd;
+    ArcadiaOracle private oracleEthToUsd;
 
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(deployer);
 
     ERC20Mock dai;
-    ERC20Mock weth;
+    ERC20Mock eth;
 
     address deployer = address(1);
     address vaultOwner = address(2);
@@ -70,7 +70,7 @@ abstract contract UniswapV2SwapActionTest is Test {
 
         // Swappable ERC20
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
-        weth = new ERC20Mock("WETH Mock", "mWETH", uint8(Constants.ethDecimals));
+        eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
 
         uniswapV2Factory = new UniswapV2FactoryMock();
         routerMock = new UniswapV2Router02Mock(address(uniswapV2Factory));
@@ -100,8 +100,8 @@ abstract contract UniswapV2SwapActionTest is Test {
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(weth),
-                baseCurrencyToUsdOracle: address(oracleWethToUsd),
+                assetAddress: address(eth),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
@@ -128,13 +128,13 @@ abstract contract UniswapV2SwapActionTest is Test {
 
         oracleDaiToUsd =
             arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleDaiToUsdDecimals), "DAI / USD", rateDaiToUsd);
-        oracleWethToUsd =
-            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "WETH / USD", rateEthToUsd);
+        oracleEthToUsd =
+            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
 
-        address[] memory oracleWethToUsdArr = new address[](1);
+        address[] memory oracleEthToUsdArr = new address[](1);
         address[] memory oracleDaiToUsdArr = new address[](1);
 
-        oracleWethToUsdArr[0] = address(oracleWethToUsd);
+        oracleEthToUsdArr[0] = address(oracleEthToUsd);
         oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
 
         vm.startPrank(deployer);
@@ -143,10 +143,10 @@ abstract contract UniswapV2SwapActionTest is Test {
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "WETH",
+                quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleWethToUsd),
-                quoteAssetAddress: address(weth),
+                oracleAddress: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
         );
@@ -164,9 +164,9 @@ abstract contract UniswapV2SwapActionTest is Test {
 
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleWethToUsdArr,
+                oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(weth)
+                assetAddress: address(eth)
             }),
             emptyListUint16,
             emptyListUint16
@@ -268,7 +268,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
         _out = actionAssetsData(outAssets, outAssetsIds, outAssetAmounts, outPreActionBalances);
 
         address[] memory _inAssets = new address[](1);
-        _inAssets[0] = address(weth);
+        _inAssets[0] = address(eth);
 
         uint256[] memory _inAssetsIds = new uint256[](1);
         _inAssetsIds[0] = 1;
@@ -281,7 +281,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
 
         path = new address[](2);
         path[0] = address(dai);
-        path[1] = address(weth);
+        path[1] = address(eth);
 
         //  Prepare action data
         _in = actionAssetsData(_inAssets, _inAssetsIds, _inAssetAmounts, _inPreActionBalances);
@@ -291,23 +291,23 @@ contract executeActionTests is UniswapV2SwapActionTest {
             COMPLETE SWAP TESTS
     ///////////////////////////////*/
 
-    function testSuccess_SwapDAIWETH() public {
+    function testSuccess_SwapDAIETH() public {
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
 
         vm.prank(vaultOwner);
         vault.vaultManagementAction(address(action), __actionSpecificData);
         assertEq(dai.balanceOf(address(vault)), 0);
-        assertEq(weth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
+        assertEq(eth.balanceOf(address(vault)), 1 * 10 ** Constants.ethDecimals);
     }
 
-    function testSuccess_SwapDAIWETHNotEnoughFunds() public {
+    function testSuccess_SwapDAIETHNotEnoughFunds() public {
         uint256[] memory _outAssetAmounts = new uint256[](1);
         _outAssetAmounts[0] = 1301 * 10 ** Constants.daiDecimals; //TODO: make this generic
         _out.assetAmounts = _outAssetAmounts;
 
         path = new address[](2);
         path[0] = address(dai);
-        path[1] = address(weth);
+        path[1] = address(eth);
 
         bytes memory __actionSpecificData = abi.encode(_out, _in, path);
 
@@ -336,7 +336,7 @@ contract executeActionTests is UniswapV2SwapActionTest {
         vault.vaultManagementAction(address(action), __actionSpecificData);
 
         //assertEq(dai.balanceOf(address(vault)), _out.preActionBalances[0] - (_outAssetAmount * 10 ** Constants.daiDecimals));
-        assertEq(weth.balanceOf(address(vault)), _inAssetAmount * 10 ** Constants.ethDecimals);
+        assertEq(eth.balanceOf(address(vault)), _inAssetAmount * 10 ** Constants.ethDecimals);
     }
 
     /*///////////////////////////////

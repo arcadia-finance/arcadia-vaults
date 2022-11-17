@@ -790,8 +790,8 @@ contract Vault {
     function vaultManagementAction(address _actionHandler, bytes calldata _actionData) public onlyOwner {
         require(IMainRegistry(registryAddress).isActionAllowlisted(_actionHandler), "VL_VMA: Action is not allowlisted");
 
-        (actionAssetsData memory outgoing_, actionAssetsData memory incoming_, bytes4 _selector) =
-            abi.decode(_actionData, (actionAssetsData, actionAssetsData, bytes4));
+        (actionAssetsData memory outgoing_, actionAssetsData memory incoming_) =
+            abi.decode(_actionData, (actionAssetsData, actionAssetsData));
 
         // withdraw to actionHandler
         for (uint256 i; i < outgoing_.assets.length;) {
