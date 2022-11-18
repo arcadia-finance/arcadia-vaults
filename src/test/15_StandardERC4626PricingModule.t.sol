@@ -76,7 +76,7 @@ contract standardERC4626PricingModuleTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })

@@ -77,7 +77,7 @@ contract FloorERC1155PricingModuleTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -88,7 +88,7 @@ contract FloorERC1155PricingModuleTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleInterleaveToEth),
+                oracle: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
                 baseAssetIsBaseCurrency: true
             })

@@ -166,7 +166,7 @@ contract VaultV2Test is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -177,7 +177,7 @@ contract VaultV2Test is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "LINK",
                 baseAsset: "USD",
-                oracleAddress: address(oracleLinkToUsd),
+                oracle: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
                 baseAssetIsBaseCurrency: true
             })
@@ -188,7 +188,7 @@ contract VaultV2Test is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -199,7 +199,7 @@ contract VaultV2Test is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleWbaycToEth),
+                oracle: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
                 baseAssetIsBaseCurrency: true
             })
@@ -210,7 +210,7 @@ contract VaultV2Test is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
-                oracleAddress: address(oracleWmaycToUsd),
+                oracle: address(oracleWmaycToUsd),
                 quoteAssetAddress: address(wmayc),
                 baseAssetIsBaseCurrency: true
             })
@@ -221,7 +221,7 @@ contract VaultV2Test is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleInterleaveToEth),
+                oracle: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
                 baseAssetIsBaseCurrency: true
             })
@@ -482,7 +482,7 @@ contract VaultV2Test is Test {
         address erc1155Stored;
         uint256 erc721TokenIds;
         uint256 erc1155TokenIds;
-        address registryAddress;
+        address registry;
         address trustedProtocol;
         uint256 life;
         address owner;
@@ -498,7 +498,7 @@ contract VaultV2Test is Test {
         checks.erc1155Stored = proxy.erc1155Stored(0);
         checks.erc721TokenIds = proxy.erc721TokenIds(0);
         checks.erc1155TokenIds = proxy.erc1155TokenIds(0);
-        checks.registryAddress = proxy.registryAddress();
+        checks.registry = proxy.registry();
         checks.trustedProtocol = proxy.trustedProtocol();
         checks.life = proxy.life();
         checks.owner = proxy.owner();

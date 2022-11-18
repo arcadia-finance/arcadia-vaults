@@ -117,7 +117,7 @@ contract factoryTest is Test {
 
         address actualDeployed = factoryContr.createVault(salt, 0);
         assertEq(amountBefore + 1, factoryContr.allVaultsLength());
-        assertEq(actualDeployed, factoryContr.allVaults(factoryContr.allVaultsLength()-1));
+        assertEq(actualDeployed, factoryContr.allVaults(factoryContr.allVaultsLength() - 1));
         assertEq(factoryContr.vaultIndex(actualDeployed), (factoryContr.allVaultsLength()));
     }
 

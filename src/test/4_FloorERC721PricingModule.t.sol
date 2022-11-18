@@ -87,7 +87,7 @@ contract FloorERC721PricingModuleTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -98,7 +98,7 @@ contract FloorERC721PricingModuleTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleWbaycToEth),
+                oracle: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
                 baseAssetIsBaseCurrency: true
             })
@@ -109,7 +109,7 @@ contract FloorERC721PricingModuleTest is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
-                oracleAddress: address(oracleWmaycToUsd),
+                oracle: address(oracleWmaycToUsd),
                 quoteAssetAddress: address(wmayc),
                 baseAssetIsBaseCurrency: true
             })
@@ -247,7 +247,7 @@ contract FloorERC721PricingModuleTest is Test {
     }
 
     function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
-        // Given: 
+        // Given:
         vm.startPrank(creatorAddress);
         // When: creatorAddress setAssetInformation twice
         floorERC721PricingModule.setAssetInformation(
