@@ -11,7 +11,7 @@ interface IVault {
 
     function transferOwnership(address newOwner) external;
 
-    function initialize(address _owner, address registryAddress, uint16 latestVaultVersion) external;
+    function initialize(address owner, address registry, uint16 latestVaultVersion) external;
 
     function liquidateVault(address liquidationKeeper) external returns (bool, address);
 

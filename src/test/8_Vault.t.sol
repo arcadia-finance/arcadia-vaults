@@ -36,12 +36,7 @@ contract VaultTestExtension is Vault {
     }
 
     function getLengths() external view returns (uint256, uint256, uint256, uint256) {
-        return (
-            erc20Stored.length, 
-            erc721Stored.length, 
-            erc721TokenIds.length, 
-            erc1155Stored.length
-            );
+        return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
     }
 }
 
@@ -198,7 +193,7 @@ contract vaultTests is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -209,7 +204,7 @@ contract vaultTests is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "LINK",
                 baseAsset: "USD",
-                oracleAddress: address(oracleLinkToUsd),
+                oracle: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
                 baseAssetIsBaseCurrency: true
             })
@@ -220,7 +215,7 @@ contract vaultTests is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -231,7 +226,7 @@ contract vaultTests is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleWbaycToEth),
+                oracle: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
                 baseAssetIsBaseCurrency: true
             })
@@ -242,7 +237,7 @@ contract vaultTests is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
-                oracleAddress: address(oracleWmaycToUsd),
+                oracle: address(oracleWmaycToUsd),
                 quoteAssetAddress: address(wmayc),
                 baseAssetIsBaseCurrency: true
             })
@@ -253,7 +248,7 @@ contract vaultTests is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleInterleaveToEth),
+                oracle: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
                 baseAssetIsBaseCurrency: true
             })
@@ -423,13 +418,13 @@ contract vaultTests is Test {
 
     /* ///////////////////////////////////////////////////////////////
                         VAULT MANAGEMENT
-/////////////////////////////////////////////////////////////// */
+    /////////////////////////////////////////////////////////////// */
 
-    //ToDo: initialize, upgradeVault, getAddressSlot
+    //ToDo: initialize, upgradeVault, _getAddressSlot
 
     /* ///////////////////////////////////////////////////////////////
                     OWNERSHIP MANAGEMENT
-/////////////////////////////////////////////////////////////// */
+    /////////////////////////////////////////////////////////////// */
 
     function testRevert_transferOwnership_OfVaultByNonOwner(address sender) public {
         vm.assume(sender != address(factoryContr));
@@ -462,7 +457,7 @@ contract vaultTests is Test {
 
     /* ///////////////////////////////////////////////////////////////
                     BASE CURRENCY LOGIC
-/////////////////////////////////////////////////////////////// */
+    /////////////////////////////////////////////////////////////// */
 
     function testSuccess_setBaseCurrency(address authorised) public {
         uint256 slot = stdstore.target(address(vault)).sig(vault.allowed.selector).with_key(authorised).find();
@@ -523,13 +518,13 @@ contract vaultTests is Test {
 
     /* ///////////////////////////////////////////////////////////////
                 MARGIN ACCOUNT SETTINGS
-/////////////////////////////////////////////////////////////// */
+    /////////////////////////////////////////////////////////////// */
 
     //ToDo: openTrustedMarginAccount, closeTrustedMarginAccount
 
     /* ///////////////////////////////////////////////////////////////
                         MARGIN REQUIREMENTS
-/////////////////////////////////////////////////////////////// */
+    /////////////////////////////////////////////////////////////// */
 
     //ToDo: increaseMarginPosition, decreaseMarginPosition, getCollateralValue
 
@@ -668,7 +663,7 @@ contract vaultTests is Test {
 
     /* ///////////////////////////////////////////////////////////////
                         LIQUIDATION LOGIC
-/////////////////////////////////////////////////////////////// */
+    /////////////////////////////////////////////////////////////// */
 
     function testSuccess_liquidate_NewOwnerIsLiquidator(address liquidationKeeper) public {
         vm.assume(
@@ -712,7 +707,7 @@ contract vaultTests is Test {
 
     /* ///////////////////////////////////////////////////////////////
                 ASSET DEPOSIT/WITHDRAWN LOGIC
-/////////////////////////////////////////////////////////////// */
+    /////////////////////////////////////////////////////////////// */
 
     //input as uint8 to prevent too long lists as fuzz input
     function testRevert_deposit_LengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen, uint8 typesLen)
@@ -1295,7 +1290,7 @@ contract vaultTests is Test {
 
     /* ///////////////////////////////////////////////////////////////
                     HELPER FUNCTIONS
-/////////////////////////////////////////////////////////////// */
+    /////////////////////////////////////////////////////////////// */
 
     function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
         vm.prank(creatorAddress);
@@ -1469,7 +1464,7 @@ contract vaultTests is Test {
 
     /* ///////////////////////////////////////////////////////////////
                     DEPRECIATED TESTS
-/////////////////////////////////////////////////////////////// */
+    /////////////////////////////////////////////////////////////// */
     //ToDo: All depreciated tests should have been moved to Arcadia Lending, to double check that everything is covered there
     struct debtInfo {
         uint16 collFactor; //factor 100
@@ -1565,7 +1560,7 @@ contract vaultTests is Test {
     The assumptions are:
       * 1000% interest rate
       * never synced any debt during 5 years
-  **/
+    **/
     function testSuccess_syncInterests_SyncDebtUnchecked(
         uint64 base,
         uint24 deltaBlocks,

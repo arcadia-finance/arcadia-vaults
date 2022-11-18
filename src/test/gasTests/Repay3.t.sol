@@ -217,7 +217,7 @@ contract gasRepay_1ERC201ERC721 is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -228,7 +228,7 @@ contract gasRepay_1ERC201ERC721 is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "LINK",
                 baseAsset: "USD",
-                oracleAddress: address(oracleLinkToUsd),
+                oracle: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
                 baseAssetIsBaseCurrency: true
             })
@@ -239,7 +239,7 @@ contract gasRepay_1ERC201ERC721 is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -250,7 +250,7 @@ contract gasRepay_1ERC201ERC721 is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "WBAYC",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleWbaycToEth),
+                oracle: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
                 baseAssetIsBaseCurrency: true
             })
@@ -261,7 +261,7 @@ contract gasRepay_1ERC201ERC721 is Test {
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "WMAYC",
                 baseAsset: "USD",
-                oracleAddress: address(oracleWmaycToUsd),
+                oracle: address(oracleWmaycToUsd),
                 quoteAssetAddress: address(wmayc),
                 baseAssetIsBaseCurrency: true
             })
@@ -272,7 +272,7 @@ contract gasRepay_1ERC201ERC721 is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleInterleaveToEth),
+                oracle: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
                 baseAssetIsBaseCurrency: true
             })
@@ -283,7 +283,7 @@ contract gasRepay_1ERC201ERC721 is Test {
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
                 quoteAsset: "GenericStoreFront",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleGenericStoreFrontToEth),
+                oracle: address(oracleGenericStoreFrontToEth),
                 quoteAssetAddress: address(genericStoreFront),
                 baseAssetIsBaseCurrency: true
             })

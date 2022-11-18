@@ -162,7 +162,7 @@ contract AbstractPricingModuleTest is Test {
         abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
-        // And: isAssetAddressWhiteListed for address(eth) should return false 
+        // And: isAssetAddressWhiteListed for address(eth) should return false
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
@@ -174,7 +174,7 @@ contract AbstractPricingModuleTest is Test {
         abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
-        // Then: isAssetAddressWhiteListed for address(eth) should return false 
+        // Then: isAssetAddressWhiteListed for address(eth) should return false
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
@@ -195,7 +195,7 @@ contract AbstractPricingModuleTest is Test {
         abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
 
-        // And: isAssetAddressWhiteListed for address(eth) should return false 
+        // And: isAssetAddressWhiteListed for address(eth) should return false
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
