@@ -27,3 +27,6 @@ jobs:
 
       - name: Run snapshot
         run: forge snapshot --match-contract gas
+
+      - name: Run format
+        run: forge fmt
