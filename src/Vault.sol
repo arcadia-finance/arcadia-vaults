@@ -253,9 +253,8 @@ contract Vault {
         // Update the vault values
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres = IRegistry(registry).getLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
-        );
+        vault.liqThres =
+            IRegistry(registry).getLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -272,9 +271,8 @@ contract Vault {
         // Update the vault values
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres = IRegistry(registry).getLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
-        );
+        vault.liqThres =
+            IRegistry(registry).getLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -423,9 +421,7 @@ contract Vault {
             "Length mismatch"
         );
 
-        require(
-            IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "Not all assets are whitelisted!"
-        );
+        require(IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "Not all assets are whitelisted!");
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
@@ -775,5 +771,4 @@ contract Vault {
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) public pure returns (bytes4) {
         return this.onERC1155Received.selector;
     }
-
 }

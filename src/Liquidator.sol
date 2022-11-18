@@ -223,9 +223,7 @@ contract Liquidator is Ownable {
         auctionInfo[vaultAddress][life].assetPaid = uint128(priceOfVault);
         auctionInfo[vaultAddress][life].stopped = true;
 
-        IFactory(factory).safeTransferFrom(
-            address(this), msg.sender, IFactory(factory).vaultIndex(vaultAddress)
-        );
+        IFactory(factory).safeTransferFrom(address(this), msg.sender, IFactory(factory).vaultIndex(vaultAddress));
     }
 
     /**
@@ -257,8 +255,7 @@ contract Liquidator is Ownable {
         uint256[] memory assetAmounts,
         uint8 baseCurrencyOfDebt
     ) public view returns (uint256 totalValue) {
-        totalValue =
-            IMainRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrencyOfDebt);
+        totalValue = IMainRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrencyOfDebt);
     }
 
     /*///////////////////////////////////////////////////////////////
