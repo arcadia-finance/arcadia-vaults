@@ -58,9 +58,9 @@ contract Liquidator is Ownable {
         _;
     }
 
-    constructor(address newFactory, address newRegAddr) {
-        factory = newFactory;
-        registry = newRegAddr;
+    constructor(address factory_, address registry_) {
+        factory = factory_;
+        registry = registry_;
         claimRatio = claimRatios({protocol: 15, liquidationKeeper: 2});
     }
 
