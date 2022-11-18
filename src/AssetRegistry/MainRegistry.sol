@@ -502,10 +502,12 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    ) public view returns (uint256[] memory valuesPerAsset) {
+    ) public view returns (RiskModule.AssetValueRisk[] memory valuesPerAsset) {
         valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
+
+
 
     /**
      * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
@@ -522,8 +524,8 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    ) public view returns (uint256[] memory valuesPerAsset) {
-        valuesPerAsset = new uint256[](_assetAddresses.length);
+    ) public view returns (RiskModule.AssetValueRisk[] memory valuesPerAsset) {
+        valuesPerAsset = new AssetValueRisk[](_assetAddresses.length);
 
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
 
@@ -549,17 +551,17 @@ contract MainRegistry is Ownable, RiskModule {
 
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
-                valuesPerAsset[i] = _assetAmounts[i];
+                valuesPerAsset[i].valueInBaseCurrency = _assetAmounts[i];
             } else {
-                (getValueOutput.tempValueInUsd, getValueOutput.tempValueInBaseCurrency, getValueOutput.collFactor, getValueOutput.liqThreshold) =
+                (getValueOutput.tempValueInUsd, getValueOutput.tempValueInBaseCurrency, valuesPerAsset[i].collFactor, valuesPerAsset[i].liqThreshold) =
                     IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 //Check if baseCurrency is USD
                 if (baseCurrency == 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
-                    valuesPerAsset[i] = getValueOutput.tempValueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                    valuesPerAsset[i].valueInBaseCurrency = getValueOutput.tempValueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else if (getValueOutput.tempValueInBaseCurrency > 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
-                    valuesPerAsset[i] =
+                    valuesPerAsset[i].valueInBaseCurrency =
                         getValueOutput.tempValueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else {
                     //Check if the BaseCurrency-USD rate is already fetched
@@ -569,7 +571,7 @@ contract MainRegistry is Ownable, RiskModule {
                             baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
                         ).latestRoundData();
                     }
-                    valuesPerAsset[i] = getValueOutput.tempValueInUsd.mulDivDown(
+                    valuesPerAsset[i].valueInBaseCurrency = getValueOutput.tempValueInUsd.mulDivDown(
                         baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
                         uint256(rateBaseCurrencyToUsd)
                     ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //Bring from internal 18 decimals to the number of decimals of baseCurrency
@@ -606,7 +608,7 @@ contract MainRegistry is Ownable, RiskModule {
             "MR_GCV: LENGTH_MISMATCH"
         );
         uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
-        uint256[] memory valuesPerAsset =
+        AssetValueRisk[] memory valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
         collateralValue = calculateWeightedCollateralValue(_assetAddresses, valuesPerAsset, baseCurrencyInd);
     }
@@ -632,7 +634,7 @@ contract MainRegistry is Ownable, RiskModule {
             "MR_GCF: LENGTH_MISMATCH"
         );
         uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
-        uint256[] memory valuesPerAsset =
+        RiskModule.AssetValueRisk[] memory valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
         liquidationThreshold = calculateWeightedLiquidationThreshold(_assetAddresses, valuesPerAsset, baseCurrencyInd);
     }
