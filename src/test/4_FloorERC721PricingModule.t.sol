@@ -353,7 +353,7 @@ contract FloorERC721PricingModuleTest is Test {
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = floorERC721PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
@@ -386,7 +386,7 @@ contract FloorERC721PricingModuleTest is Test {
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = floorERC721PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
@@ -418,7 +418,7 @@ contract FloorERC721PricingModuleTest is Test {
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = floorERC721PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = floorERC721PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);

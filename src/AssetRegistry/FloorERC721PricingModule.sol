@@ -153,7 +153,7 @@ contract FloorERC721PricingModule is PricingModule {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInBaseCurrency)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
     {
         (valueInUsd, valueInBaseCurrency) = IOraclesHub(oracleHub).getRate(
             assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.baseCurrency

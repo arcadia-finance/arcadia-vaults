@@ -321,7 +321,7 @@ contract FloorERC1155PricingModuleTest is Test {
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
             floorERC1155PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
@@ -355,7 +355,7 @@ contract FloorERC1155PricingModuleTest is Test {
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
             floorERC1155PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
@@ -389,7 +389,7 @@ contract FloorERC1155PricingModuleTest is Test {
             baseCurrency: uint8(Constants.SafemoonBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
             floorERC1155PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
@@ -440,7 +440,7 @@ contract FloorERC1155PricingModuleTest is Test {
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
             floorERC1155PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency

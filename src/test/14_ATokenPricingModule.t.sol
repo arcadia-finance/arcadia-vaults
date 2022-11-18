@@ -215,7 +215,7 @@ contract aTokenPricingModuleTest is Test {
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
 
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = aTokenPricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = aTokenPricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
@@ -253,7 +253,7 @@ contract aTokenPricingModuleTest is Test {
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = aTokenPricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = aTokenPricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);

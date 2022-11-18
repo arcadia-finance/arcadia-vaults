@@ -409,6 +409,13 @@ contract MainRegistry is Ownable, RiskModule {
             getTotalValue(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
 
+    struct GetValueOutput {
+        uint256 tempValueInUsd;
+        uint256 tempValueInBaseCurrency;
+        uint256 collFactor;
+        uint256 liqThreshold;
+    }
+
     /**
      * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
      * @param _assetAddresses The List of token addresses of the assets
@@ -438,9 +445,9 @@ contract MainRegistry is Ownable, RiskModule {
         IPricingModule.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
 
+        GetValueOutput memory getValueOutput;
+
         address assetAddress;
-        uint256 tempValueInUsd;
-        uint256 tempValueInBaseCurrency;
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GTV: Unknown asset");
@@ -455,10 +462,10 @@ contract MainRegistry is Ownable, RiskModule {
                     + _assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //_assetAmounts can have a variable decimal precision -> bring to 18 decimals
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
-                (tempValueInUsd, tempValueInBaseCurrency) =
+                (getValueOutput.tempValueInUsd, getValueOutput.tempValueInBaseCurrency, getValueOutput.collFactor, getValueOutput.liqThreshold) =
                     IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
-                valueInUsd = valueInUsd + tempValueInUsd;
-                valueInBaseCurrency = valueInBaseCurrency + tempValueInBaseCurrency;
+                valueInUsd = valueInUsd + getValueOutput.tempValueInUsd;
+                valueInBaseCurrency = valueInBaseCurrency + getValueOutput.tempValueInBaseCurrency;
             }
             unchecked {
                 ++i;
@@ -528,10 +535,10 @@ contract MainRegistry is Ownable, RiskModule {
         IPricingModule.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
 
+        GetValueOutput memory getValueOutput;
+
         int256 rateBaseCurrencyToUsd;
         address assetAddress;
-        uint256 valueInUsd;
-        uint256 valueInBaseCurrency;
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
@@ -544,16 +551,16 @@ contract MainRegistry is Ownable, RiskModule {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
                 valuesPerAsset[i] = _assetAmounts[i];
             } else {
-                (valueInUsd, valueInBaseCurrency) =
+                (getValueOutput.tempValueInUsd, getValueOutput.tempValueInBaseCurrency, getValueOutput.collFactor, getValueOutput.liqThreshold) =
                     IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 //Check if baseCurrency is USD
                 if (baseCurrency == 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
-                    valuesPerAsset[i] = valueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-                } else if (valueInBaseCurrency > 0) {
+                    valuesPerAsset[i] = getValueOutput.tempValueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                } else if (getValueOutput.tempValueInBaseCurrency > 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
                     valuesPerAsset[i] =
-                        valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                        getValueOutput.tempValueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else {
                     //Check if the BaseCurrency-USD rate is already fetched
                     if (rateBaseCurrencyToUsd == 0) {
@@ -562,7 +569,7 @@ contract MainRegistry is Ownable, RiskModule {
                             baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
                         ).latestRoundData();
                     }
-                    valuesPerAsset[i] = valueInUsd.mulDivDown(
+                    valuesPerAsset[i] = getValueOutput.tempValueInUsd.mulDivDown(
                         baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
                         uint256(rateBaseCurrencyToUsd)
                     ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //Bring from internal 18 decimals to the number of decimals of baseCurrency

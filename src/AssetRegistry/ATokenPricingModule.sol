@@ -146,7 +146,7 @@ contract ATokenPricingModule is PricingModule {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInBaseCurrency)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
     {
         uint256 rateInUsd;
         uint256 rateInBaseCurrency;

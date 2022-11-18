@@ -233,7 +233,7 @@ contract standardERC4626PricingModuleTest is Test {
             assetAmount: 0,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
             standardERC4626PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
@@ -289,7 +289,7 @@ contract standardERC4626PricingModuleTest is Test {
             assetAmount: shares,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) =
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
             standardERC4626PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
