@@ -1748,7 +1748,7 @@ contract PricingLogicTest is MainRegistryTest {
         assetAmounts[1] = 10 ** Constants.linkDecimals;
         assetAmounts[2] = 1;
 
-        uint256[] memory actualListOfValuesPerAsset =
+        RiskModule.AssetValueRisk[] memory actualValuesPerAsset =
             mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
 
         uint256 ethValueInEth = assetAmounts[0];
@@ -1764,6 +1764,10 @@ contract PricingLogicTest is MainRegistryTest {
         expectedListOfValuesPerAsset[1] = linkValueInEth;
         expectedListOfValuesPerAsset[2] = baycValueInEth;
 
+        uint256[] memory actualListOfValuesPerAsset = new uint256[](3);
+        for (uint256 i; i < actualValuesPerAsset.length; i++) {
+            actualListOfValuesPerAsset[i] = actualValuesPerAsset[i].valueInBaseCurrency;
+        }
         // Then: expectedListOfValuesPerAsset array should be equal to actualListOfValuesPerAsset
         assertTrue(CompareArrays.compareArrays(expectedListOfValuesPerAsset, actualListOfValuesPerAsset));
     }
