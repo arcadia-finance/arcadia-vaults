@@ -504,19 +504,19 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(link),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
-                assetAddress: address(snx)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(snx),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
 
         floorERC721PricingModule.setAssetInformation(
@@ -524,38 +524,38 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(bayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWmaycToUsdArr,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
-                assetAddress: address(mayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(mayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleGenericStoreFrontToEthEthToUsd,
                 id: 1,
-                assetAddress: address(genericStoreFront)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(genericStoreFront),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
 
         liquidator = new Liquidator(

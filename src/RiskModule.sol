@@ -17,9 +17,6 @@ import "./utils/FixedPointMathLib.sol";
 contract RiskModule {
     using FixedPointMathLib for uint256;
 
-    mapping(address => mapping(uint256 => uint16)) public collateralFactors;
-    mapping(address => mapping(uint256 => uint16)) public liquidationThresholds;
-
     uint16 public constant VARIABLE_DECIMAL = 100;
 
     uint16 public constant MIN_COLLATERAL_FACTOR = 0;
@@ -37,6 +34,13 @@ contract RiskModule {
         uint256 liqThreshold;
     }
 
+    struct AssetRisk {
+        address asset;
+        uint16[] assetCollateralFactors;
+        uint16[] assetLiquidationThresholds;
+    }
+
+
     /**
      * @notice Calculate the weighted collateral value given the assets
      * @param assetAddresses The List of token addresses of the assets
@@ -49,6 +53,7 @@ contract RiskModule {
     ) public pure returns (uint256 collateralValue) {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
+
         for (uint256 i; i < assetAddressesLength;) {
             collateralValue += valuesPerAsset[i].valueInBaseCurrency * valuesPerAsset[i].collFactor;
             unchecked {

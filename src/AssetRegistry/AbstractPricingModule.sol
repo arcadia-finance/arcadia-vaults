@@ -48,6 +48,11 @@ abstract contract PricingModule is Ownable {
         uint256 baseCurrency;
     }
 
+    modifier onlyMainRegistry() {
+        require(msg.sender == mainRegistry, "APM: ONLY_MAIN_REGISTRY");
+        _;
+    }
+
     /**
      * @notice A Pricing Module must always be initialised with the address of the Main-Registry and the Oracle-Hub
      * @param _mainRegistry The address of the Main-registry
@@ -105,5 +110,6 @@ abstract contract PricingModule is Ownable {
      */
     function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256);
 
-    function _storeRiskVariables(address assetAddress, uint16[] memory assetCollateralFactors, uint16[] memory assetLiquidationThresholds) internal virtual;
+    function setRiskVariables(address, uint16[] memory, uint16[] memory) external virtual;
+    function _setRiskVariables(address assetAddress, uint16[] memory assetCollateralFactors, uint16[] memory assetLiquidationThresholds) internal virtual;
 }

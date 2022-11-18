@@ -502,28 +502,28 @@ contract gasLiquidate_2ERC202ERC721 is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(eth),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(link),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
-                assetAddress: address(snx)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(snx),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
 
         floorERC721PricingModule.setAssetInformation(
@@ -531,38 +531,38 @@ contract gasLiquidate_2ERC202ERC721 is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(bayc),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
         floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWmaycToUsdArr,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
-                assetAddress: address(mayc)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(mayc),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(interleave),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleGenericStoreFrontToEthEthToUsd,
                 id: 1,
-                assetAddress: address(genericStoreFront)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(genericStoreFront),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
 
         liquidator = new Liquidator(

@@ -299,40 +299,36 @@ contract MainRegistry is Ownable, RiskModule {
 
     /**
      * @notice Change the Risk Variables for one or more assets for one or more baseCurrencies
-     * @param assets The List of addresses of the assets
-     * @param _baseCurrencies The corresponding List of BaseCurrencies
-     * @param newCollateralFactors The corresponding List of new Collateral Factors
-     * @param newLiquidationThresholds The corresponding List of new Liquidation Thresholds
+     * @param assetsRisks The List of addresses of the assets for which the risk variables should be changed
      * @dev The function loops over all indexes, and changes for each index the Risk Variable of the combination of asset and baseCurrency.
      * In case multiple Risk Variables for the same assets need to be changed, the address must be repeated in the assets.
      * @dev Risk variable have 2 decimals precision.
      */
     function batchSetRiskVariables(
-        address[] calldata assets,
-        uint256[] calldata _baseCurrencies,
-        uint16[] calldata newCollateralFactors,
-        uint16[] calldata newLiquidationThresholds
+        AssetRisk[] memory assetsRisks
     ) external onlyOwner {
-        uint256 assetsLength = assets.length;
-        require(
-            assetsLength == _baseCurrencies.length && assetsLength == newCollateralFactors.length
-                && assetsLength == newLiquidationThresholds.length,
-            "MR_BSCR: LENGTH_MISMATCH"
-        );
+        uint256 assetsLength = assetsRisks.length;
 
+        uint256 collFactLenght;
+        uint256 liqThresLength;
         for (uint256 i; i < assetsLength;) {
             // Check: Values in the allowed limit
+            collFactLenght = assetsRisks[i].assetCollateralFactors.length;
+            liqThresLength = assetsRisks[i].assetLiquidationThresholds.length;
+
+            //check required to avoid the ""assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0"" part
+            //in the pricing module: this prevents an inadverted update of all factors to the default values.
             require(
-                newCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && newCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                "MR_BSRV: CollFact not in limits"
+                collFactLenght == baseCurrencyCounter && collFactLenght == liqThresLength,
+                "MR_BSCR: LENGTH_MISMATCH"
+                );
+
+            IPricingModule(assetToPricingModule[assetsRisks[i].asset]).setRiskVariables(
+                assetsRisks[i].asset,
+                assetsRisks[i].assetCollateralFactors,
+                assetsRisks[i].assetLiquidationThresholds
             );
-            require(
-                newLiquidationThresholds[i] < MAX_LIQUIDATION_THRESHOLD
-                    && newLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                "MR_BSRV: Liq.Thres not in limits"
-            );
-            collateralFactors[assets[i]][_baseCurrencies[i]] = newCollateralFactors[i];
-            liquidationThresholds[assets[i]][_baseCurrencies[i]] = newLiquidationThresholds[i];
+
             unchecked {
                 ++i;
             }
@@ -470,7 +466,6 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
     ) public view returns (AssetValueRisk[] memory valuesPerAsset) {
-        valuesPerAsset = new AssetValueRisk[](_assetAddresses.length);
 
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
 

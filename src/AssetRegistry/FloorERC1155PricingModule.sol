@@ -74,14 +74,22 @@ contract FloorERC1155PricingModule is PricingModule {
         assetToInformation[assetAddress].id = assetInformation.id;
         assetToInformation[assetAddress].assetAddress = assetAddress;
         assetToInformation[assetAddress].oracleAddresses = assetInformation.oracleAddresses;
-        _storeRiskVariables(assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds);
+        _setRiskVariables(assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds);
 
         isAssetAddressWhiteListed[assetAddress] = true;
 
         require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PM1155_SAI: Unable to add in MR");
     }
 
-    function _storeRiskVariables(address assetAddress, uint16[] memory assetCollateralFactors, uint16[] memory assetLiquidationThresholds) internal override {
+    function setRiskVariables (
+        address assetAddress,
+        uint16[] memory assetCollateralFactors,
+        uint16[] memory assetLiquidationThresholds
+    ) external override onlyMainRegistry {
+        _setRiskVariables(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
+    }
+
+    function _setRiskVariables(address assetAddress, uint16[] memory assetCollateralFactors, uint16[] memory assetLiquidationThresholds) internal override {
 
         // Check: Valid length of arrays
         uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
