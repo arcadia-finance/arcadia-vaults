@@ -21,15 +21,17 @@ contract FloorERC1155PricingModule is PricingModule {
     struct AssetInformation {
         uint256 id;
         address assetAddress;
+        uint16[] assetCollateralFactors;
+        uint16[] assetLiquidationThresholds;
         address[] oracleAddresses;
     }
 
     /**
      * @notice A Pricing Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
-     * @param mainRegistry The address of the Main-registry
-     * @param oracleHub The address of the Oracle-Hub
+     * @param mainRegistry_ The address of the Main-registry
+     * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -40,9 +42,9 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param assetInformation A Struct with information about the asset
      * - id: The Id of the asset
      * - assetAddress: The contract address of the asset
+     * - assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
+     * - assetLiquidationThresholds: The List of liquidation thresholds for the asset for the different BaseCurrencies
      * - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
-     * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -55,20 +57,83 @@ contract FloorERC1155PricingModule is PricingModule {
      * assets are no longer updatable.
      */
     function setAssetInformation(
-        AssetInformation calldata assetInformation,
-        uint16[] calldata assetCollateralFactors,
-        uint16[] calldata assetLiquidationThresholds
+        AssetInformation memory assetInformation
     ) external onlyOwner {
-        IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+
+        //no asset units
 
         address assetAddress = assetInformation.assetAddress;
+
+        IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+
         if (!inPricingModule[assetAddress]) {
             inPricingModule[assetAddress] = true;
             assetsInPricingModule.push(assetAddress);
         }
-        assetToInformation[assetAddress] = assetInformation;
+
+        assetToInformation[assetAddress].id = assetInformation.id;
+        assetToInformation[assetAddress].assetAddress = assetAddress;
+        assetToInformation[assetAddress].oracleAddresses = assetInformation.oracleAddresses;
+        _storeRiskVariables(assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds);
+
         isAssetAddressWhiteListed[assetAddress] = true;
-        IMainRegistry(mainRegistry).addAsset(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
+
+        require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PM1155_SAI: Unable to add in MR");
+    }
+
+    function _storeRiskVariables(address assetAddress, uint16[] memory assetCollateralFactors, uint16[] memory assetLiquidationThresholds) internal override {
+
+        // Check: Valid length of arrays
+        uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
+        uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
+        require(
+            (assetCollateralFactorsLength == baseCurrencyCounter
+                && assetCollateralFactorsLength == assetLiquidationThresholds.length) 
+            || 
+            (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
+            "PM20_SRV: LENGTH_MISMATCH"
+        );
+
+        // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
+        if (assetCollateralFactorsLength == 0) {
+            // Loop: Per base currency
+            for (uint256 i; i < baseCurrencyCounter;) {
+                // Write: Default variables for collateralFactor and liquidationThreshold
+                // make in memory, store once
+                assetCollateralFactors[i] = DEFAULT_COLLATERAL_FACTOR;
+                assetLiquidationThresholds[i] = DEFAULT_LIQUIDATION_THRESHOLD;
+
+                unchecked {
+                    i++;
+                }
+            }
+
+            assetToInformation[assetAddress].assetCollateralFactors = assetCollateralFactors;
+            assetToInformation[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
+
+        } else {
+                // Loop: Per value of collateral factor and liquidation threshold
+                for (uint256 i; i < assetCollateralFactorsLength;) {
+                    // Check: Values in the allowed limit
+                    require(
+                        assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
+                        "PM20_SRV: Coll.Fact not in limits"
+                    );
+                    require(
+                        assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
+                            && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
+                        "PM20_SRV: Liq.Thres not in limits"
+                    );
+
+                    unchecked {
+                        i++;
+                    }
+                }
+
+                assetToInformation[assetAddress].assetCollateralFactors = assetCollateralFactors;
+                assetToInformation[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
+
+        }
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -131,5 +196,8 @@ contract FloorERC1155PricingModule is PricingModule {
         } else {
             valueInUsd = getValueInput.assetAmount * rateInUsd;
         }
+
+        collFactor = assetToInformation[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
+        liqThreshold = assetToInformation[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
     }
 }

@@ -12,4 +12,6 @@ import {IScaledBalanceToken} from "./IScaledBalanceToken.sol";
 
 interface IAToken is IScaledBalanceToken {
     function UNDERLYING_ASSET_ADDRESS() external view returns (address);
+
+    function decimals() external view returns (uint256);
 }

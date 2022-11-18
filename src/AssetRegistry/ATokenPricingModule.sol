@@ -26,16 +26,19 @@ contract ATokenPricingModule is PricingModule {
     struct AssetInformation {
         uint64 assetUnit;
         address assetAddress;
+        uint16[] assetCollateralFactors;
+        uint16[] assetLiquidationThresholds;
+        uint64 underlyingAssetUnit;
         address underlyingAssetAddress;
         address[] underlyingAssetOracleAddresses;
     }
 
     /**
      * @notice A Pricing Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
-     * @param mainRegistry The address of the Main-registry
-     * @param oracleHub The address of the Oracle-Hub
+     * @param mainRegistry_ The address of the Main-registry
+     * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -43,9 +46,14 @@ contract ATokenPricingModule is PricingModule {
 
     /**
      * @notice Adds a new asset to the ATokenPricingModule, or overwrites an existing asset.
-     * @param assetAddress The contract address of the asset
-     * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation threshold for the asset for the different BaseCurrencies
+     * @param assetInformation A (partially empty!!) Struct with information about the asset
+     * - assetUnit: The unit of the asset, equal to 10 to the power of the number of decimals of the asset
+     * - assetAddress: The contract address of the asset
+     * - assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
+     * - assetLiquidationThresholds: The List of liquidation thresholds for the asset for the different BaseCurrencies
+     * - underlyingAssetUnit: The unit of the underlying asset, equal to 10 to the power of the number of decimals of the underlying asset
+     * - underlyingAsset: The address of the underlying asset
+     * - underlyingAssetOracleAddresses: An array of addresses of oracle contracts, to price the underlying asset in USD
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should or be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -59,29 +67,99 @@ contract ATokenPricingModule is PricingModule {
      * @dev Assets can't have more than 18 decimals.
      */
     function setAssetInformation(
-        address assetAddress,
-        uint16[] calldata assetCollateralFactors,
-        uint16[] calldata assetLiquidationThresholds
+        AssetInformation memory assetInformation
     ) external onlyOwner {
-        address underlyingAddress = IAToken(assetAddress).UNDERLYING_ASSET_ADDRESS();
-        (uint64 assetUnit, address underlyingAssetAddress, address[] memory underlyingAssetOracleAddresses) =
-        IPricingModule(IMainRegistry(mainRegistry).assetToPricingModule(underlyingAddress)).getAssetInformation(
-            underlyingAddress
+
+        require(assetInformation.assetUnit <= 1000000000000000000, "PMAT_SAI: Maximal 18 decimals");
+
+        address assetAddress = assetInformation.assetAddress;
+
+        /* ///////////////////////////////////////////////////////////////
+                            ATOKEN SPECIFIC
+        /////////////////////////////////////////////////////////////// */
+        address underlyingAsset = IAToken(assetAddress).UNDERLYING_ASSET_ADDRESS();
+        (uint64 underlyingAssetUnit, , address[] memory underlyingAssetOracleAddresses) =
+        IPricingModule(IMainRegistry(mainRegistry).assetToPricingModule(underlyingAsset)).getAssetInformation(
+            underlyingAsset
         );
 
-        address[] memory tokens = new address[](1);
-        tokens[0] = underlyingAssetAddress;
+        require(
+            10 ** IAToken(assetAddress).decimals() == underlyingAssetUnit, "PMAT_SAI: Decimals don't match"
+        );
+        //
+
+        //we can skip the oracle addresses check, already checked on underlying asset
 
         if (!inPricingModule[assetAddress]) {
             inPricingModule[assetAddress] = true;
             assetsInPricingModule.push(assetAddress);
         }
+
         assetToInformation[assetAddress].assetAddress = assetAddress;
-        assetToInformation[assetAddress].assetUnit = assetUnit;
-        assetToInformation[assetAddress].underlyingAssetAddress = underlyingAssetAddress;
+        assetToInformation[assetAddress].assetUnit = assetInformation.assetUnit;
+        assetToInformation[assetAddress].underlyingAssetAddress = underlyingAsset;
+        assetToInformation[assetAddress].underlyingAssetUnit = underlyingAssetUnit;
         assetToInformation[assetAddress].underlyingAssetOracleAddresses = underlyingAssetOracleAddresses;
+        _storeRiskVariables(assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds);
+
         isAssetAddressWhiteListed[assetAddress] = true;
-        IMainRegistry(mainRegistry).addAsset(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
+
+        require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PMAT_SAI: Unable to add in MR");
+    }
+
+    function _storeRiskVariables(address assetAddress, uint16[] memory assetCollateralFactors, uint16[] memory assetLiquidationThresholds) internal override {
+
+        // Check: Valid length of arrays
+        uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
+        uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
+        require(
+            (assetCollateralFactorsLength == baseCurrencyCounter
+                && assetCollateralFactorsLength == assetLiquidationThresholds.length) 
+            || 
+            (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
+            "PM4626_SRV: LENGTH_MISMATCH"
+        );
+
+        // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
+        if (assetCollateralFactorsLength == 0) {
+            // Loop: Per base currency
+            for (uint256 i; i < baseCurrencyCounter;) {
+                // Write: Default variables for collateralFactor and liquidationThreshold
+                // make in memory, store once
+                assetCollateralFactors[i] = DEFAULT_COLLATERAL_FACTOR;
+                assetLiquidationThresholds[i] = DEFAULT_LIQUIDATION_THRESHOLD;
+
+                unchecked {
+                    i++;
+                }
+            }
+
+            assetToInformation[assetAddress].assetCollateralFactors = assetCollateralFactors;
+            assetToInformation[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
+
+        } else {
+                // Loop: Per value of collateral factor and liquidation threshold
+                for (uint256 i; i < assetCollateralFactorsLength;) {
+                    // Check: Values in the allowed limit
+                    require(
+                        assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
+                        "PM4626_SRV: Coll.Fact not in limits"
+                    );
+                    require(
+                        assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
+                            && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
+                        "PM4626_SRV: Liq.Thres not in limits"
+                    );
+
+                    unchecked {
+                        i++;
+                    }
+                }
+
+                assetToInformation[assetAddress].assetCollateralFactors = assetCollateralFactors;
+                assetToInformation[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
+
+        }
     }
 
     /**
@@ -163,5 +241,8 @@ contract ATokenPricingModule is PricingModule {
                 rateInUsd, assetToInformation[getValueInput.assetAddress].assetUnit
             );
         }
+
+        collFactor = assetToInformation[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
+        liqThreshold = assetToInformation[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
     }
 }
