@@ -144,6 +144,16 @@ contract factoryTest is Test {
         emit log_address(address(1));
     }
 
+    function testSuccess_isVault() public {
+        address vault = factoryContr.createVault(0, 0);
+
+        bool expectedReturn = factoryContr.isVault(address(vault));
+        bool actualReturn =  true;
+
+        assertEq(expectedReturn, actualReturn);
+    }
+
+
     function testSuccess_safeTransferFrom(address sender) public {
         address receiver = unprivilegedAddress1;
         vm.assume(sender != address(0));
@@ -293,7 +303,6 @@ contract factoryTest is Test {
         return this.onERC1155Received.selector;
     }
 
-    //Test setNewVaultInfo
     function testRevert_setNewVaultInfo_NonOwner(address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != address(this));
         vm.assume(unprivilegedAddress != address(factoryContr));
