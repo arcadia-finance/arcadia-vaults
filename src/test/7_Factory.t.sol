@@ -112,6 +112,13 @@ contract factoryTest is Test {
         assertEq(factoryContr.allVaultsLength(), 0);
     }
 
+    function testSuccess_getCurrentRegistry() public {
+        address expectedRegistry = factoryContr.getCurrentRegistry();
+        address actualRegistry = address(registryContr);
+
+        assertEq(expectedRegistry, actualRegistry);
+    }
+
     function testSuccess_createVault_DeployVaultContractMappings(uint256 salt) public {
         uint256 amountBefore = factoryContr.allVaultsLength();
 
@@ -152,7 +159,6 @@ contract factoryTest is Test {
 
         assertEq(expectedReturn, actualReturn);
     }
-
 
     function testSuccess_safeTransferFrom(address sender) public {
         address receiver = unprivilegedAddress1;
