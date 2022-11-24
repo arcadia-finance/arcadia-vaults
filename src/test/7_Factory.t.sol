@@ -108,6 +108,25 @@ contract factoryTest is Test {
         return address(uint160(uint256(hash)));
     }
 
+    function testSuccess_setBaseURI(string calldata uri) public {
+        vm.startPrank(address(factoryContr.owner()));
+        factoryContr.setBaseURI(uri);
+        vm.stopPrank();
+
+        string memory expectedUri = factoryContr.baseURI();
+
+        assertEq(expectedUri, uri);
+    }
+
+    function testRevert_setBaseURI_NonOwner(string calldata uri, address unprivilegedAddress ) public {
+        vm.assume(address(unprivilegedAddress) != address(factoryContr.owner()));
+
+        vm.startPrank(unprivilegedAddress);
+        vm.expectRevert("Ownable: caller is not the owner");
+        factoryContr.setBaseURI(uri);
+        vm.stopPrank();
+    }
+
     function testSuccess_allVaultsLength_VaultIdStartFromZero() public {
         assertEq(factoryContr.allVaultsLength(), 0);
     }
