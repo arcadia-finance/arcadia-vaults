@@ -11,13 +11,13 @@ import "./utils/ActionAssetData.sol";
 abstract contract ActionBase {
     address public immutable MAIN_REGISTRY;
 
-    constructor(address _mainreg) {
-        MAIN_REGISTRY = _mainreg;
+    constructor(address mainreg) {
+        MAIN_REGISTRY = mainreg;
     }
 
-    function executeAction(address _vaultAddress, bytes calldata _actionData)
+    function executeAction(address vaultAddress, bytes calldata actionData)
         external
         virtual
-        returns (actionAssetsData memory _resultData)
+        returns (actionAssetsData memory resultData)
     {}
 }

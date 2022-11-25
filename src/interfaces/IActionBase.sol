@@ -9,7 +9,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "../AssetManagement/utils/ActionAssetData.sol";
 
 interface IActionBase {
-    function executeAction(address _vaultAddress, bytes calldata _actionData)
+    function executeAction(address vaultAddress, bytes calldata actionData)
         external
-        returns (actionAssetsData memory _result);
+        returns (actionAssetsData memory result);
 }

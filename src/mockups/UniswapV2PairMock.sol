@@ -28,26 +28,26 @@ contract UniswapV2PairMock is ERC20, Test {
         factory = msg.sender;
     }
 
-    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
-        _reserve0 = reserve0;
-        _reserve1 = reserve1;
-        _blockTimestampLast = blockTimestampLast;
+    function getReserves() public view returns (uint112 reserve0_, uint112 reserve1_, uint32 blockTimestampLast_) {
+        reserve0_ = reserve0;
+        reserve1_ = reserve1;
+        blockTimestampLast_ = blockTimestampLast;
     }
 
-    function initialize(address _token0, address _token1) external {
+    function initialize(address token0_, address token1_) external {
         require(msg.sender == factory, "UniswapV2: FORBIDDEN"); // sufficient check
-        token0 = _token0;
-        token1 = _token1;
+        token0 = token0_;
+        token1 = token1_;
     }
 
     function mint(address to, uint256 amount0, uint256 amount1) external returns (uint256 liquidity) {
         bool feeOn = _mintFee();
-        uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
-        if (_totalSupply == 0) {
+        uint256 totalSupply_ = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        if (totalSupply_ == 0) {
             liquidity = FixedPointMathLib.sqrt(amount0 * amount1 - MINIMUM_LIQUIDITY);
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
-            liquidity = min(amount0 * _totalSupply / reserve0, amount1 * _totalSupply / reserve1);
+            liquidity = min(amount0 * totalSupply_ / reserve0, amount1 * totalSupply_ / reserve1);
         }
         require(liquidity > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
         _mint(to, liquidity);
@@ -61,22 +61,22 @@ contract UniswapV2PairMock is ERC20, Test {
     }
 
     function burn(address to) external returns (uint256 amount0, uint256 amount1) {
-        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        address _token0 = token0; // gas savings
-        address _token1 = token1; // gas savings
+        (uint112 reserve0_, uint112 reserve1_,) = getReserves(); // gas savings
+        address token0_ = token0; // gas savings
+        address token1_ = token1; // gas savings
         uint256 balance0 = ERC20(token0).balanceOf(address(this));
         uint256 balance1 = ERC20(token1).balanceOf(address(this));
         uint256 liquidity = balanceOf[address(this)];
         bool feeOn = _mintFee();
-        uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
-        amount0 = liquidity * balance0 / _totalSupply; // using balances ensures pro-rata distribution
-        amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
+        uint256 totalSupply_ = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        amount0 = liquidity * balance0 / totalSupply_; // using balances ensures pro-rata distribution
+        amount1 = liquidity * balance1 / totalSupply_; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED");
         _burn(address(this), liquidity);
-        ERC20(_token0).transfer(to, amount0);
-        ERC20(_token1).transfer(to, amount1);
-        balance0 = ERC20(_token0).balanceOf(address(this));
-        balance1 = ERC20(_token1).balanceOf(address(this));
+        ERC20(token0_).transfer(to, amount0);
+        ERC20(token1_).transfer(to, amount1);
+        balance0 = ERC20(token0_).balanceOf(address(this));
+        balance1 = ERC20(token1_).balanceOf(address(this));
         reserve0 = uint112(balance0);
         reserve1 = uint112(balance1);
         blockTimestampLast = uint32(block.timestamp % 2 ** 32);
@@ -96,12 +96,12 @@ contract UniswapV2PairMock is ERC20, Test {
         }
     }
 
-    function setReserves(uint256 _reserve0, uint256 _reserve1) external {
+    function setReserves(uint256 reserve0_, uint256 reserve1_) external {
         bool feeOn = _mintFee();
 
-        require(_reserve0 * _reserve1 > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY");
-        reserve0 = uint112(_reserve0);
-        reserve1 = uint112(_reserve1);
+        require(reserve0_ * reserve1_ > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY");
+        reserve0 = uint112(reserve0_);
+        reserve1 = uint112(reserve1_);
         blockTimestampLast = uint32(block.timestamp % 2 ** 32);
         if (feeOn) kLast = uint256(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
     }

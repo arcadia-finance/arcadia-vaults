@@ -787,27 +787,27 @@ contract Vault {
                     ASSET MANAGEMENT LOGIC
     ///////////////////////////////////////////////////////////////*/
 
-    function vaultManagementAction(address _actionHandler, bytes calldata _actionData) public onlyOwner {
-        require(IMainRegistry(registryAddress).isActionAllowlisted(_actionHandler), "VL_VMA: Action is not allowlisted");
+    function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyOwner {
+        require(IMainRegistry(registryAddress).isActionAllowlisted(actionHandler), "VL_VMA: Action is not allowlisted");
 
-        (actionAssetsData memory outgoing_, actionAssetsData memory incoming_) =
-            abi.decode(_actionData, (actionAssetsData, actionAssetsData));
+        (actionAssetsData memory outgoing, actionAssetsData memory incoming) =
+            abi.decode(actionData, (actionAssetsData, actionAssetsData));
 
         // withdraw to actionHandler
-        for (uint256 i; i < outgoing_.assets.length;) {
-            outgoing_.preActionBalances[i] = IERC20(outgoing_.assets[i]).balanceOf(address(this));
-            _withdrawERC20(_actionHandler, outgoing_.assets[i], outgoing_.assetAmounts[i]);
+        for (uint256 i; i < outgoing.assets.length;) {
+            outgoing.preActionBalances[i] = IERC20(outgoing.assets[i]).balanceOf(address(this));
+            _withdrawERC20(actionHandler, outgoing.assets[i], outgoing.assetAmounts[i]);
             unchecked {
                 ++i;
             }
         }
 
         // execute Action
-        incoming_ = IActionBase(_actionHandler).executeAction(address(this), _actionData);
+        incoming = IActionBase(actionHandler).executeAction(address(this), actionData);
 
         // deposit from actionHandler into vault
-        for (uint256 i; i < incoming_.assets.length;) {
-            _depositERC20(_actionHandler, incoming_.assets[i], incoming_.assetAmounts[i]);
+        for (uint256 i; i < incoming.assets.length;) {
+            _depositERC20(actionHandler, incoming.assets[i], incoming.assetAmounts[i]);
             unchecked {
                 ++i;
             }

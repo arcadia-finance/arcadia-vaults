@@ -14,48 +14,48 @@ import "../../interfaces/IVault.sol";
 import "../../interfaces/IERC20.sol";
 
 contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
-    constructor(address _router, address _mainreg) ActionBase(_mainreg) UniswapV2Helper(_router) {}
+    constructor(address router, address mainreg) ActionBase(mainreg) UniswapV2Helper(router) {}
 
-    function executeAction(address _vaultAddress, bytes calldata _actionData)
+    function executeAction(address vaultAddress, bytes calldata actionData)
         public
         override
         returns (actionAssetsData memory)
     {
-        require(_vaultAddress == msg.sender, "UV2_SWAP: can only be called by vault");
+        require(vaultAddress == msg.sender, "UV2_SWAP: can only be called by vault");
         // preCheck data
-        (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path) =
-            _preCheck(_actionData);
+        (actionAssetsData memory outgoing, actionAssetsData memory incoming, address[] memory path) =
+            _preCheck(actionData);
         // execute Action
-        _execute(_outgoing, _incoming, path);
+        _execute(outgoing, incoming, path);
         // postCheck data
-        _incoming.assetAmounts = _postCheck(_incoming);
+        incoming.assetAmounts = _postCheck(incoming);
 
-        for (uint256 i; i < _incoming.assets.length;) {
-            IERC20(_incoming.assets[i]).approve(_vaultAddress, type(uint256).max);
+        for (uint256 i; i < incoming.assets.length;) {
+            IERC20(incoming.assets[i]).approve(vaultAddress, type(uint256).max);
             unchecked {
                 i++;
             }
         }
 
-        return (_incoming);
+        return (incoming);
     }
 
-    function _execute(actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path)
+    function _execute(actionAssetsData memory outgoing, actionAssetsData memory incoming, address[] memory path)
         internal
     {
-        _uniswapV2Swap(address(this), _outgoing.assetAmounts[0], _incoming.assetAmounts[0], path);
+        _uniswapV2Swap(address(this), outgoing.assetAmounts[0], incoming.assetAmounts[0], path);
     }
 
-    function _preCheck(bytes memory _actionSpecificData)
+    function _preCheck(bytes memory actionSpecificData)
         internal
         view
-        returns (actionAssetsData memory _outgoing, actionAssetsData memory _incoming, address[] memory path)
+        returns (actionAssetsData memory outgoing, actionAssetsData memory incoming, address[] memory path)
     {
         /*///////////////////////////////
                     DECODE
         ///////////////////////////////*/
 
-        (_outgoing, _incoming, path) = abi.decode(_actionSpecificData, (actionAssetsData, actionAssetsData, address[]));
+        (outgoing, incoming, path) = abi.decode(actionSpecificData, (actionAssetsData, actionAssetsData, address[]));
 
         require(path.length >= 2, "UV2A_SWAP: _path must be >= 2");
 
@@ -69,17 +69,17 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
 
         //Check if incoming assets are Arcadia whitelisted assets
         require(
-            IMainRegistry(MAIN_REGISTRY).batchIsWhiteListed(_incoming.assets, _incoming.assetIds),
+            IMainRegistry(MAIN_REGISTRY).batchIsWhiteListed(incoming.assets, incoming.assetIds),
             "UV2A_SWAP: Non-allowlisted incoming asset"
         );
 
-        return (_outgoing, _incoming, path);
+        return (outgoing, incoming, path);
     }
 
-    function _postCheck(actionAssetsData memory incomingAssets_)
+    function _postCheck(actionAssetsData memory incomingAssets)
         internal
         pure
-        returns (uint256[] memory incomingAssetAmounts_)
+        returns (uint256[] memory incomingAssetAmounts)
     {
         /*///////////////////////////////
                     INCOMING
@@ -89,6 +89,6 @@ contract UniswapV2SwapAction is ActionBase, UniswapV2Helper {
                     OUTGOING
         ///////////////////////////////*/
 
-        return incomingAssets_.assetAmounts;
+        return incomingAssets.assetAmounts;
     }
 }

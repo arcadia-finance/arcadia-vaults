@@ -11,54 +11,54 @@ import "../../interfaces/IUniswapV2Router02.sol";
 abstract contract UniswapV2Helper {
     address public immutable UNISWAP_V2_ROUTER2;
 
-    constructor(address _router) {
-        UNISWAP_V2_ROUTER2 = _router;
+    constructor(address router) {
+        UNISWAP_V2_ROUTER2 = router;
     }
 
     function _uniswapV2Swap(
-        address _to,
-        uint256 _outgoingAssetAmount,
-        uint256 _minIncomingAssetAmount,
-        address[] memory _path
+        address to,
+        uint256 outgoingAssetAmount,
+        uint256 minIncomingAssetAmount,
+        address[] memory path
     ) internal {
         IUniswapV2Router02(UNISWAP_V2_ROUTER2).swapExactTokensForTokens(
-            _outgoingAssetAmount, _minIncomingAssetAmount, _path, _to, block.timestamp + 1
+            outgoingAssetAmount, minIncomingAssetAmount, path, to, block.timestamp + 1
         );
     }
 
     function _uniswapV2AddLiquidity(
-        address _recipient,
-        address _tokenA,
-        address _tokenB,
-        uint256 _amountADesired,
-        uint256 _amountBDesired,
-        uint256 _amountAMin,
-        uint256 _amountBMin
+        address recipient,
+        address tokenA,
+        address tokenB,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin
     ) internal {
         //Approvals
         IUniswapV2Router02(UNISWAP_V2_ROUTER2).addLiquidity(
-            _tokenA,
-            _tokenB,
-            _amountADesired,
-            _amountBDesired,
-            _amountAMin,
-            _amountBMin,
-            _recipient,
+            tokenA,
+            tokenB,
+            amountADesired,
+            amountBDesired,
+            amountAMin,
+            amountBMin,
+            recipient,
             block.timestamp + 1
         );
     }
 
     function _uniswapV2RemoveLiquidity(
-        address _recipient,
+        address recipient,
         address _poolToken,
-        uint256 _poolTokenAmount,
-        address _tokenA,
-        address _tokenB,
-        uint256 _amountAMin,
-        uint256 _amountBMin
+        uint256 poolTokenAmount,
+        address tokenA,
+        address tokenB,
+        uint256 amountAMin,
+        uint256 amountBMin
     ) internal {
         IUniswapV2Router02(UNISWAP_V2_ROUTER2).removeLiquidity(
-            _tokenA, _tokenB, _poolTokenAmount, _amountAMin, _amountBMin, _recipient, block.timestamp + 1
+            tokenA, tokenB, poolTokenAmount, amountAMin, amountBMin, recipient, block.timestamp + 1
         );
     }
 }

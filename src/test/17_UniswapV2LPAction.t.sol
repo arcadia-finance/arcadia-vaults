@@ -464,7 +464,7 @@ contract executeActionTests is UniswapV2LPActionTest {
         bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("random")));
 
         vm.prank(samBankman);
-        vm.expectRevert("UV2A_LP: invalid _selector");
+        vm.expectRevert("UV2A_LP: invalid selector");
         vault.vaultManagementAction(address(action), __actionSpecificData);
     }
 
