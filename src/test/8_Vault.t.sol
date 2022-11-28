@@ -420,8 +420,6 @@ contract vaultTests is Test {
                         VAULT MANAGEMENT
     /////////////////////////////////////////////////////////////// */
 
-    //ToDo: getAddressSlot
-
     function testRevert_initialize_AlreadyInitialized() public {
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_I: Already initialized!");
@@ -454,12 +452,17 @@ contract vaultTests is Test {
                     OWNERSHIP MANAGEMENT
     /////////////////////////////////////////////////////////////// */
 
-    function testRevert_transferOwnership_OfVaultByNonOwner(address sender) public {
+    function testRevert_transferOwnership_NonOwner(address sender, address to) public {
         vm.assume(sender != address(factoryContr));
+
+        assertEq(vaultOwner, vault.owner());
+
         vm.startPrank(sender);
         vm.expectRevert("VL: You are not the factory");
-        vault.transferOwnership(address(10));
+        vault.transferOwnership(to);
         vm.stopPrank();
+
+        assertEq(vaultOwner, vault.owner());
     }
 
     function testSuccess_transferOwnership(address to) public {
@@ -469,18 +472,8 @@ contract vaultTests is Test {
 
         vm.prank(address(factoryContr));
         vault.transferOwnership(to);
+
         assertEq(to, vault.owner());
-    }
-
-    function testRevert_transferOwnership_ByNonOwner(address from) public {
-        vm.assume(from != address(factoryContr));
-
-        assertEq(vaultOwner, vault.owner());
-
-        vm.startPrank(from);
-        vm.expectRevert("VL: You are not the factory");
-        vault.transferOwnership(from);
-        assertEq(vaultOwner, vault.owner());
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -502,7 +495,7 @@ contract vaultTests is Test {
         assertEq(baseCurrency, address(eth));
     }
 
-    function testRevert_setBaseCurrency_ByNonAuthorized(address unprivilegedAddress_) public {
+    function testRevert_setBaseCurrency_NonAuthorized(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != vaultOwner);
         vm.assume(unprivilegedAddress_ != address(pool));
 
@@ -564,7 +557,7 @@ contract vaultTests is Test {
         vm.stopPrank();
     }
 
-    function testSuccess_closeTrustedMarginAccount() public {
+    function testSuccess_closeTrustedMarginAccount_CloseNonSetTrustedMarginAccount() public {
         vm.startPrank(vaultOwner);
         vault.closeTrustedMarginAccount();
 
@@ -1522,7 +1515,7 @@ contract vaultTests is Test {
     /* ///////////////////////////////////////////////////////////////
                     DEPRECIATED TESTS
     /////////////////////////////////////////////////////////////// */
-    //ToDo: All depreciated tests should have been moved to Arcadia Lending, to double check that everything is covered there
+    //ToDo: All depreciated tests should be moved to Arcadia Lending, to double check that everything is covered there
     struct debtInfo {
         uint16 collFactor; //factor 100
         uint8 liqThres; //factor 100
