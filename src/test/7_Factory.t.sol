@@ -166,7 +166,7 @@ contract factoryTest is Test {
         address vault = factoryContr.createVault(0, 0);
 
         bool expectedReturn = factoryContr.isVault(address(vault));
-        bool actualReturn =  true;
+        bool actualReturn = true;
 
         assertEq(expectedReturn, actualReturn);
     }
@@ -198,7 +198,9 @@ contract factoryTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_safeTransferFrom_NonOwner(address owner, address receiver, address unprivilegedAddress) public {
+    function testRevert_safeTransferFrom_NonOwner(address owner, address receiver, address unprivilegedAddress)
+        public
+    {
         vm.assume(owner != unprivilegedAddress);
         vm.assume(owner != address(0));
         vm.assume(receiver != address(0));
@@ -604,7 +606,7 @@ contract factoryTest is Test {
         assertEq(expectedUri, uri);
     }
 
-    function testRevert_setBaseURI_NonOwner(string calldata uri, address unprivilegedAddress ) public {
+    function testRevert_setBaseURI_NonOwner(string calldata uri, address unprivilegedAddress) public {
         vm.assume(address(unprivilegedAddress) != creatorAddress);
 
         vm.startPrank(unprivilegedAddress);
