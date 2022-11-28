@@ -171,6 +171,8 @@ contract factoryTest is Test {
         assertEq(expectedReturn, actualReturn);
     }
 
+    //For tests upgradeVaultVersion, see 13_ProxyUpgrade.t.sol
+
     function testSuccess_safeTransferFrom(address owner) public {
         vm.assume(owner != address(0));
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
