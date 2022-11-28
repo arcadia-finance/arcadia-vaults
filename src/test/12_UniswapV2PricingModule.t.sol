@@ -754,7 +754,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         vm.assume(_rateEthToUsd <= uint256(type(int256).max));
         vm.assume(_rateSnxToUsd <= uint256(type(int256).max));
 
-        // Redeploi tokens with variable amount of decimals
+        // Redeploy tokens with variable amount of decimals
         eth =
             deployToken(oracleEthToUsd, _ethDecimals, _oracleEthToUsdDecimals, _rateEthToUsd, "ETH", oracleEthToUsdArr);
         snx =
@@ -801,7 +801,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         vm.assume(_rateEthToUsd > 0);
         vm.assume(_rateSnxToUsd > 0);
 
-        // Redeploi tokens with variable amount of decimals
+        // Redeploy tokens with variable amount of decimals
         eth =
             deployToken(oracleEthToUsd, _ethDecimals, _oracleEthToUsdDecimals, _rateEthToUsd, "ETH", oracleEthToUsdArr);
         snx =
