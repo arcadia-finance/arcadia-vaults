@@ -138,6 +138,8 @@ contract UniswapV2PricingModule is PricingModule {
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
+     * @dev trustedUsdPriceToken cannot realisticly overflow, requires unit price of a token with 0 decimals (worst case),
+     * to be bigger than $1,16 * 10^41
      * @dev The UniswapV2PricingModule will always return the value in valueInUsd,
      * valueInBaseCurrency will always be 0
      * @dev If the asset is not first added to PricingModule this function will return value 0 without throwing an error.
@@ -210,7 +212,7 @@ contract UniswapV2PricingModule is PricingModule {
         uint256 totalSupply = IUniswapV2Pair(pair).totalSupply();
 
         // this also checks that totalSupply > 0
-        require(totalSupply >= liquidityAmount && liquidityAmount > 0, "UV2_GV: LIQUIDITY_AMOUNT");
+        require(totalSupply >= liquidityAmount && liquidityAmount > 0, "UV2_GTTA: LIQUIDITY_AMOUNT");
 
         (uint256 reserve0, uint256 reserve1) = _getTrustedReserves(pair, trustedPriceToken0, trustedPriceToken1);
 
@@ -238,7 +240,7 @@ contract UniswapV2PricingModule is PricingModule {
         // The untrusted reserves from the pair, these can be manipulated!!!
         (reserve0, reserve1,) = IUniswapV2Pair(pair).getReserves();
 
-        require(reserve0 > 0 && reserve1 > 0, "UV2_GV: ZERO_PAIR_RESERVES");
+        require(reserve0 > 0 && reserve1 > 0, "UV2_GTR: ZERO_PAIR_RESERVES");
 
         // Compute how much to swap to balance the pool with externally observed trusted prices
         (bool token0ToToken1, uint256 amountIn) =

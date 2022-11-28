@@ -24,12 +24,14 @@ contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
         UniswapV2PricingModule(_mainRegistry, _oracleHub, _uniswapV2Factory, _erc20PricingModule)
     {}
 
-    function getTrustedTokenAmounts(address pair, uint256 trustedPriceToken0, uint256 trustedPriceToken1, uint256 liquidityAmount)
-        public
-        view
-        returns (uint256 token0Amount, uint256 token1Amount)
-    {
-        (token0Amount, token1Amount) = _getTrustedTokenAmounts(pair, trustedPriceToken0, trustedPriceToken1, liquidityAmount);
+    function getTrustedTokenAmounts(
+        address pair,
+        uint256 trustedPriceToken0,
+        uint256 trustedPriceToken1,
+        uint256 liquidityAmount
+    ) public view returns (uint256 token0Amount, uint256 token1Amount) {
+        (token0Amount, token1Amount) =
+            _getTrustedTokenAmounts(pair, trustedPriceToken0, trustedPriceToken1, liquidityAmount);
     }
 
     function getTrustedReserves(address pair, uint256 trustedPriceToken0, uint256 trustedPriceToken1)
@@ -88,6 +90,7 @@ abstract contract UniswapV2PricingModuleTest is Test {
     ArcadiaOracle public oracleDaiToUsd;
     ArcadiaOracle public oracleEthToUsd;
     ArcadiaOracle public oracleSnxToEth;
+    ArcadiaOracle public oracleSnxToUsd;
 
     StandardERC20PricingModule public standardERC20PricingModule;
     UniswapV2PricingModuleExtension public uniswapV2PricingModule;
@@ -105,6 +108,7 @@ abstract contract UniswapV2PricingModuleTest is Test {
     address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
     address[] public oracleSnxToEthEthToUsd = new address[](2);
+    address[] public oracleSnxToUsdArr = new address[](1);
 
     uint256[] emptyList = new uint256[](0);
     uint16[] emptyListUint16 = new uint16[](0);
@@ -248,385 +252,6 @@ abstract contract UniswapV2PricingModuleTest is Test {
 
     //this is a before each
     function setUp() public virtual {}
-}
-
-contract OldTests is UniswapV2PricingModuleTest {
-    function setUp() public override {
-        super.setUp();
-    }
-
-    //Test getValue
-    function xtestReturnValueInUsdFromBalancedPair(uint112 amountSnx) public {
-        vm.startPrank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
-
-        (uint112 reserve0, uint112 reserve1,) = pairSnxEth.getReserves();
-        vm.assume(amountSnx < type(uint112).max - reserve0);
-        uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals
-            / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
-        vm.assume(amountEth < type(uint112).max - reserve1);
-        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
-        vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
-
-        pairSnxEth.mint(lpProvider, amountSnx, amountEth);
-
-        uint256 valueSnx = Constants.WAD * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals * rateEthToUsd
-            / 10 ** Constants.oracleEthToUsdDecimals * amountSnx / 10 ** Constants.snxDecimals;
-        uint256 valueEth = Constants.WAD * rateEthToUsd / 10 ** Constants.oracleEthToUsdDecimals * amountEth
-            / 10 ** Constants.ethDecimals;
-        uint256 expectedValueInBaseCurrency = valueSnx + valueEth;
-
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(pairSnxEth),
-            assetId: 0,
-            assetAmount: pairSnxEth.balanceOf(lpProvider),
-            baseCurrency: Constants.UsdBaseCurrency
-        });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = uniswapV2PricingModule.getValue(getValueInput);
-
-        assertEq(actualValueInUsd, 0);
-        assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
-    }
-
-    function xtestReturnValueInEthFromBalancedPair(uint112 amountSnx) public {
-        vm.startPrank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
-
-        (uint112 reserve0, uint112 reserve1,) = pairSnxEth.getReserves();
-        vm.assume(amountSnx < type(uint112).max - reserve0);
-        uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals
-            / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
-        vm.assume(amountEth < type(uint112).max - reserve1);
-        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
-        vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
-
-        pairSnxEth.mint(lpProvider, amountSnx, amountEth);
-
-        uint256 valueSnx = Constants.WAD * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals * amountSnx
-            / 10 ** Constants.snxDecimals;
-        uint256 valueEth = Constants.WAD * amountEth / 10 ** Constants.ethDecimals;
-        uint256 expectedValueInBaseCurrency = valueSnx + valueEth;
-
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(pairSnxEth),
-            assetId: 0,
-            assetAmount: pairSnxEth.balanceOf(lpProvider),
-            baseCurrency: Constants.EthBaseCurrency
-        });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = uniswapV2PricingModule.getValue(getValueInput);
-
-        assertEq(actualValueInUsd, 0);
-        assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
-    }
-
-    function xtestReturnValueInEthFromUnbalancedPair(uint112 amountSnx, uint112 amountEthSwapped) public {
-        vm.startPrank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
-
-        (uint112 reserve0, uint112 reserve1,) = pairSnxEth.getReserves();
-        vm.assume(amountSnx < uint256(type(uint112).max) - reserve0);
-        uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals
-            / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
-        vm.assume(amountEth < uint256(type(uint112).max) - reserve1);
-        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
-        vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
-
-        uint256 lpAmount = pairSnxEth.mint(lpProvider, amountSnx, amountEth);
-
-        (reserve0, reserve1,) = pairSnxEth.getReserves();
-        vm.assume(reserve0 > pairSnxEth.getAmountOut(amountEthSwapped, reserve1, reserve0));
-        vm.assume(amountEthSwapped < uint256(type(uint112).max) - reserve1);
-        uint256 lpGrowth = pairSnxEth.swapToken1ToToken0(amountEthSwapped);
-
-        uint256 valueSnx = Constants.WAD * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals * amountSnx
-            / 10 ** Constants.snxDecimals;
-        uint256 valueEth = Constants.WAD * amountEth / 10 ** Constants.ethDecimals;
-        //For approximation hereunder to hold the imbalance can't be to big, for bigger imbalances, the LP-value will always be underestimated -> no risk for protocol (see next test)
-        vm.assume(amountEthSwapped < uint256(reserve1) * 10000000000);
-        uint256 expectedValueInBaseCurrency = (valueSnx + valueEth) * lpGrowth ** 2 / FixedPointMathLib.WAD ** 2; //Approximation, we do two swaps of almost equal size -> lp-position acrues fees
-
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(pairSnxEth),
-            assetId: 0,
-            assetAmount: lpAmount,
-            baseCurrency: Constants.EthBaseCurrency
-        });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = uniswapV2PricingModule.getValue(getValueInput);
-
-        assertEq(actualValueInUsd, 0);
-        assertInRange(actualValueInBaseCurrency, expectedValueInBaseCurrency);
-    }
-
-    function xtestReturnValueInEthFromVeryUnbalancedPair(uint112 amountSnx, uint112 amountEthSwapped) public {
-        vm.startPrank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
-
-        (uint112 reserve0, uint112 reserve1,) = pairSnxEth.getReserves();
-        vm.assume(amountSnx < uint256(type(uint112).max) - reserve0);
-        uint256 amountEth = amountSnx * rateSnxToEth * 10 ** Constants.ethDecimals
-            / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
-        vm.assume(amountEth < uint256(type(uint112).max) - reserve1);
-        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
-        vm.assume(amountEth >= 10000); //For smaller amounts precision is to low (since uniswap will calculate share of tokens as relative share with totalsupply -> loose least significant digits)
-
-        uint256 lpAmount = pairSnxEth.mint(lpProvider, amountSnx, amountEth);
-
-        (reserve0, reserve1,) = pairSnxEth.getReserves();
-        vm.assume(reserve0 > pairSnxEth.getAmountOut(amountEthSwapped, reserve1, reserve0));
-        vm.assume(amountEthSwapped < uint256(type(uint112).max) - reserve1);
-        uint256 lpGrowth = pairSnxEth.swapToken1ToToken0(amountEthSwapped);
-
-        uint256 valueSnx = Constants.WAD * rateSnxToEth / 10 ** Constants.oracleSnxToEthDecimals * amountSnx
-            / 10 ** Constants.snxDecimals;
-        uint256 valueEth = Constants.WAD * amountEth / 10 ** Constants.ethDecimals;
-        //for very big imbalances, the LP-value will always be underestimated -> no risk for protocol (see next test)
-        vm.assume(amountEthSwapped > uint256(reserve1) * 10000000000);
-        uint256 expectedValueInBaseCurrency = (valueSnx + valueEth) * lpGrowth ** 2 / FixedPointMathLib.WAD ** 2; //Approximation, we do two swaps of almost equal size -> lp-position acrues fees
-
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(pairSnxEth),
-            assetId: 0,
-            assetAmount: lpAmount,
-            baseCurrency: Constants.EthBaseCurrency
-        });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = uniswapV2PricingModule.getValue(getValueInput);
-
-        assertEq(actualValueInUsd, 0);
-        //for very big imbalances, the LP-value will always be underestimated -> no risk for protocol (see next test)
-        assertLe(actualValueInBaseCurrency, expectedValueInBaseCurrency);
-    }
-
-    function testReturnValueFromBalancedPair(
-        uint112 amountSnx,
-        uint8 _ethDecimals,
-        uint8 _snxDecimals,
-        uint8 _oracleEthToUsdDecimals,
-        uint8 _oracleSnxToUsdDecimals,
-        uint64 _rateEthToUsd,
-        uint64 _rateSnxToUsd
-    ) public {
-        vm.assume(_ethDecimals <= 18);
-        vm.assume(_snxDecimals <= 18);
-        vm.assume(_oracleEthToUsdDecimals <= 18);
-        vm.assume(_oracleSnxToUsdDecimals <= 18);
-        vm.assume(_rateEthToUsd > 0);
-        vm.assume(_rateSnxToUsd > 0);
-
-        //Redeploy tokens with different number of decimals
-        eth = new ERC20Mock("ETH Mock", "mETH", _ethDecimals);
-        snx = new ERC20Mock("SNX Mock", "mSNX", _snxDecimals);
-        pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
-
-        {
-            // Avoid Stack too deep
-            uint256 amount0 = 10 ** _snxDecimals;
-            uint256 amount1 = uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
-                / (_rateEthToUsd * 10 ** _oracleSnxToUsdDecimals);
-            vm.assume(amount1 / _rateEthToUsd > 0);
-            vm.assume(amount1 < uint256(type(uint112).max));
-            vm.assume(amount0 * amount1 > pairSnxEth.MINIMUM_LIQUIDITY() + 1);
-            pairSnxEth.mint(tokenCreatorAddress, amount0, amount1);
-        }
-
-        (uint112 reserve0, uint112 reserve1,) = pairSnxEth.getReserves();
-        vm.assume(
-            uint256(amountSnx) * uint256(_rateSnxToUsd)
-                < type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
-        );
-        uint256 amountEth = uint256(amountSnx) * uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
-            / (_rateEthToUsd * 10 ** (_snxDecimals + _oracleSnxToUsdDecimals));
-        vm.assume(amountSnx < type(uint112).max - reserve0);
-        vm.assume(amountEth < type(uint112).max - reserve1);
-        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
-        vm.assume(amountEth >= 10000);
-        vm.assume(amountSnx >= 10000);
-        vm.assume(
-            FixedPointMathLib.WAD * (_rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals)
-                * (FixedPointMathLib.WAD / 10 ** _snxDecimals) < type(uint256).max / (reserve0 + amountSnx)
-        );
-
-        //Redeploy oracles with new decimals
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(0, "ETH / USD", _rateEthToUsd);
-        ArcadiaOracle oracleSnxToUsd = arcadiaOracleFixture.initMockedOracle(0, "SNX / USD", _rateSnxToUsd);
-        vm.startPrank(creatorAddress);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(10 ** _oracleEthToUsdDecimals),
-                baseAssetBaseCurrency: 0,
-                quoteAsset: "ETH",
-                baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(10 ** _oracleSnxToUsdDecimals),
-                baseAssetBaseCurrency: 0,
-                quoteAsset: "SNX",
-                baseAsset: "USD",
-                oracleAddress: address(oracleSnxToUsd),
-                quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        oracleEthToUsdArr[0] = address(oracleEthToUsd);
-        address[] memory oracleSnxToUsdArr = new address[](1);
-        oracleSnxToUsdArr[0] = address(oracleSnxToUsd);
-
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** _ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleSnxToUsdArr,
-                assetUnit: uint64(10 ** _snxDecimals),
-                assetAddress: address(snx)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
-
-        uint256 amount = pairSnxEth.mint(lpProvider, amountSnx, amountEth);
-
-        vm.assume(Constants.WAD * _rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals < type(uint256).max / amountSnx);
-        vm.assume(Constants.WAD * _rateEthToUsd / 10 ** _oracleEthToUsdDecimals < type(uint256).max / amountEth);
-        uint256 valueSnx =
-            Constants.WAD * _rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals * amountSnx / 10 ** _snxDecimals;
-        uint256 valueEth =
-            Constants.WAD * _rateEthToUsd / 10 ** _oracleEthToUsdDecimals * amountEth / 10 ** _ethDecimals;
-        uint256 expectedValueInUsd = valueSnx + valueEth;
-
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(pairSnxEth),
-            assetId: 0,
-            assetAmount: amount,
-            baseCurrency: Constants.UsdBaseCurrency
-        });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = uniswapV2PricingModule.getValue(getValueInput);
-
-        assertInRange(actualValueInUsd, expectedValueInUsd);
-        assertEq(actualValueInBaseCurrency, 0);
-    }
-
-    function xtestReturnValueFromBalancedPairOverflow(uint112 amountSnx, uint64 _rateEthToUsd, uint128 _rateSnxToUsd)
-        public
-    {
-        vm.assume(_rateEthToUsd > 0);
-        vm.assume(_rateSnxToUsd > 0);
-        uint8 _ethDecimals = 0;
-        uint8 _snxDecimals = 0;
-        uint8 _oracleEthToUsdDecimals = 0;
-        uint8 _oracleSnxToUsdDecimals = 0;
-
-        eth = new ERC20Mock("ETH Mock", "mETH", _ethDecimals);
-        snx = new ERC20Mock("SNX Mock", "mSNX", _snxDecimals);
-        pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
-
-        {
-            // Avoid Stack too deep
-            uint256 amount0 = 10 ** _snxDecimals;
-            uint256 amount1 = 10 ** (_ethDecimals + _oracleEthToUsdDecimals) * _rateSnxToUsd
-                / (_rateEthToUsd * 10 ** _oracleSnxToUsdDecimals);
-            vm.assume(amount1 / _rateEthToUsd > 0);
-            vm.assume(amount1 <= uint256(type(uint112).max));
-            vm.assume(amount0 * amount1 > pairSnxEth.MINIMUM_LIQUIDITY() + 1);
-            pairSnxEth.mint(tokenCreatorAddress, amount0, amount1);
-        }
-
-        (uint112 reserve0, uint112 reserve1,) = pairSnxEth.getReserves();
-        vm.assume(
-            uint256(amountSnx) * uint256(_rateSnxToUsd)
-                < type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
-        );
-        uint256 amountEth = uint256(amountSnx) * uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
-            / (_rateEthToUsd * 10 ** (_snxDecimals + _oracleSnxToUsdDecimals));
-        vm.assume(amountSnx < uint256(type(uint112).max) - reserve0);
-        vm.assume(amountEth < uint256(type(uint112).max) - reserve1);
-        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY());
-        vm.assume(amountSnx >= 10);
-        vm.assume(
-            FixedPointMathLib.WAD * (_rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals)
-                * (FixedPointMathLib.WAD / 10 ** _snxDecimals) >= type(uint256).max / (reserve0 + amountSnx)
-        );
-
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(0, "ETH / USD", _rateEthToUsd);
-        ArcadiaOracle oracleSnxToUsd = arcadiaOracleFixture.initMockedOracle(0, "SNX / USD", _rateSnxToUsd);
-        vm.startPrank(creatorAddress);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(10 ** _oracleEthToUsdDecimals),
-                baseAssetBaseCurrency: 0,
-                quoteAsset: "ETH",
-                baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(10 ** _oracleSnxToUsdDecimals),
-                baseAssetBaseCurrency: 0,
-                quoteAsset: "SNX",
-                baseAsset: "USD",
-                oracleAddress: address(oracleSnxToUsd),
-                quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        oracleEthToUsdArr[0] = address(oracleEthToUsd);
-        address[] memory oracleSnxToUsdArr = new address[](1);
-        oracleSnxToUsdArr[0] = address(oracleSnxToUsd);
-
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** _ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleSnxToUsdArr,
-                assetUnit: uint64(10 ** _snxDecimals),
-                assetAddress: address(snx)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
-
-        uint256 amount = pairSnxEth.mint(lpProvider, amountSnx, amountEth);
-
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(pairSnxEth),
-            assetId: 0,
-            assetAmount: amount,
-            baseCurrency: Constants.UsdBaseCurrency
-        });
-
-        //Arithmetic overflow.
-        vm.expectRevert(bytes(""));
-        uniswapV2PricingModule.getValue(getValueInput);
-    }
-
-    //Helper Functions
-
-    function assertInRange(uint256 actualValue, uint256 expectedValue) internal {
-        assertGe(actualValue * 10003 / 10000, expectedValue);
-        assertLe(actualValue * 9997 / 10000, expectedValue);
-    }
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -842,6 +467,8 @@ contract WhiteListManagement is UniswapV2PricingModuleTest {
                         PRICING LOGIC
 ///////////////////////////////////////////////////////////////*/
 contract PricingLogic is UniswapV2PricingModuleTest {
+    using stdStorage for StdStorage;
+
     function setUp() public override {
         super.setUp();
     }
@@ -1022,21 +649,209 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         assertInRange(token1AmountActual, token1AmountExpected, 3);
     }
 
-    function testRevert_getTrustedReserves_Zeroreserves() public {}
+    function testRevert_getTrustedReserves_Zeroreserves(uint256 trustedPriceToken0, uint256 trustedPriceToken1)
+        public
+    {
+        vm.expectRevert("UV2_GTR: ZERO_PAIR_RESERVES");
+        uniswapV2PricingModule.getTrustedReserves(address(pairSnxEth), trustedPriceToken0, trustedPriceToken1);
+    }
 
-    function testSuccess_getTrustedReserves_Balanced() public {}
+    function testSuccess_getTrustedReserves(
+        uint256 priceToken0,
+        uint256 priceToken1,
+        uint112 reserve0,
+        uint112 reserve1
+    ) public {
+        vm.assume(reserve0 > 10e6); //Minimum liquidity
+        vm.assume(reserve1 > 10e6); //Minimum liquidity
+        vm.assume(priceToken0 > 10e6); //Realistic prices
+        vm.assume(priceToken1 > 10e6); //Realistic prices
+        vm.assume(priceToken0 <= type(uint256).max / reserve0); //Overflow, only with unrealistic big numbers
+        vm.assume(priceToken1 <= type(uint256).max / 997); //Overflow, only with unrealistic big priceToken1
 
-    function testSuccess_getTrustedReserves_Unbalanced_TokenOToToken1() public {}
+        uint256 invariant = uint256(reserve0) * reserve1 * 1000;
+        vm.assume(invariant / priceToken1 / 997 <= type(uint256).max / priceToken0); //leftSide overflows when arb is from token 1 to 0, only with unrealistic numbers
+        vm.assume(invariant / priceToken0 / 997 <= type(uint256).max / priceToken1); //leftSide overflows when arb is from token 0 to 1, only with unrealistic numbers
 
-    function testSuccess_getTrustedReserves_Unbalanced_Token1ToToken0() public {}
+        pairSnxEth.setReserves(reserve0, reserve1);
 
-    function testRevert_getTrustedTokenAmounts_UnsufficientLiquidity() public {}
+        (bool token0ToToken1, uint256 amountIn) =
+            uniswapV2PricingModule.computeProfitMaximizingTrade(priceToken0, priceToken1, reserve0, reserve1);
 
-    function testSuccess_getTrustedTokenAmounts() public {}
+        uint256 amountOut;
+        uint256 expectedTrustedReserve0;
+        uint256 expectedTrustedReserve1;
+        if (token0ToToken1) {
+            amountOut = uniswapV2PricingModule.getAmountOut(amountIn, reserve0, reserve1);
+            expectedTrustedReserve0 = reserve0 + amountIn;
+            expectedTrustedReserve1 = reserve1 - amountOut;
+        } else {
+            amountOut = uniswapV2PricingModule.getAmountOut(amountIn, reserve1, reserve0);
+            expectedTrustedReserve0 = reserve0 - amountOut;
+            expectedTrustedReserve1 = reserve1 + amountIn;
+        }
 
-    function testRevert_getValue_Overflow() public {}
+        (uint256 actualTrustedReserve0, uint256 actualTrustedReserve1) =
+            uniswapV2PricingModule.getTrustedReserves(address(pairSnxEth), priceToken0, priceToken1);
+        assertEq(actualTrustedReserve0, expectedTrustedReserve0);
+        assertEq(actualTrustedReserve1, expectedTrustedReserve1);
+    }
 
-    function testSuccess_getValue() public {}
+    function testRevert_getTrustedTokenAmounts_UnsufficientLiquidity(uint256 priceToken0, uint256 priceToken1) public {
+        vm.expectRevert("UV2_GTTA: LIQUIDITY_AMOUNT");
+        uniswapV2PricingModule.getTrustedTokenAmounts(address(pairSnxEth), priceToken0, priceToken1, 0);
+    }
+
+    function testSuccess_getTrustedTokenAmounts(
+        uint112 reserve0,
+        uint112 reserve1,
+        uint256 totalSupply,
+        uint256 liquidityAmount
+    ) public {
+        // Only test for balanced pool, other tests guarantee that _getTrustedReserves brings unbalanced pool into balance
+        vm.assume(liquidityAmount > 0); // division by 0
+        vm.assume(reserve0 > 0); // division by 0
+        vm.assume(reserve1 > 0); // division by 0
+        vm.assume(liquidityAmount <= totalSupply); // single user can never hold more than totalSupply
+        vm.assume(liquidityAmount <= type(uint256).max / reserve0); // overflow, unrealistic big liquidityAmount
+        vm.assume(liquidityAmount <= type(uint256).max / reserve1); // overflow, unrealistic big liquidityAmount
+
+        // Given: The reserves in the pool are reserve0 and reserve1
+        pairSnxEth.setReserves(reserve0, reserve1);
+        // And: The liquidity in the pool is totalSupply
+        stdstore.target(address(pairSnxEth)).sig(pairSnxEth.totalSupply.selector).checked_write(totalSupply);
+        // And: The pool is balanced
+        uint256 trustedPriceToken0 = reserve1;
+        uint256 trustedPriceToken1 = reserve0;
+
+        uint256 token0AmountExpected = liquidityAmount * reserve0 / totalSupply;
+        uint256 token1AmountExpected = liquidityAmount * reserve1 / totalSupply;
+
+        (uint256 token0AmountActual, uint256 token1AmountActual) = uniswapV2PricingModule.getTrustedTokenAmounts(
+            address(pairSnxEth), trustedPriceToken0, trustedPriceToken1, liquidityAmount
+        );
+
+        assertEq(token0AmountActual, token0AmountExpected);
+        assertEq(token1AmountActual, token1AmountExpected);
+    }
+
+    function testRevert_getValue_Overflow(
+        uint112 amountSnx,
+        uint112 amountEth,
+        uint8 _ethDecimals,
+        uint8 _snxDecimals,
+        uint8 _oracleEthToUsdDecimals,
+        uint8 _oracleSnxToUsdDecimals,
+        uint144 _rateEthToUsd,
+        uint144 _rateSnxToUsd
+    ) public {
+        vm.assume(_ethDecimals <= 18);
+        vm.assume(_snxDecimals <= 18);
+        vm.assume(_oracleEthToUsdDecimals <= 18);
+        vm.assume(_oracleSnxToUsdDecimals <= 18);
+        vm.assume(_rateEthToUsd > 0);
+        vm.assume(_rateSnxToUsd > 0);
+        vm.assume(_rateEthToUsd <= uint256(type(int256).max));
+        vm.assume(_rateSnxToUsd <= uint256(type(int256).max));
+
+        // Redeploy tokens with variable amount of decimals
+        eth =
+            deployToken(oracleEthToUsd, _ethDecimals, _oracleEthToUsdDecimals, _rateEthToUsd, "ETH", oracleEthToUsdArr);
+        snx =
+            deployToken(oracleSnxToUsd, _snxDecimals, _oracleSnxToUsdDecimals, _rateSnxToUsd, "SNX", oracleSnxToUsdArr);
+        pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
+        vm.prank(creatorAddress);
+        uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
+
+        // Mint LP
+        vm.assume(uint256(amountSnx) * amountEth > pairSnxEth.MINIMUM_LIQUIDITY()); //min liquidity in uniswap pool
+        pairSnxEth.mint(tokenCreatorAddress, amountSnx, amountEth);
+
+        bool cond0 =
+            uint256(_rateSnxToUsd) > type(uint256).max / Constants.WAD / Constants.WAD * 10 ** _oracleSnxToUsdDecimals; // trustedPriceSnxToUsd overflows
+        bool cond1 =
+            uint256(_rateEthToUsd) > type(uint256).max / Constants.WAD / Constants.WAD * 10 ** _oracleEthToUsdDecimals; // trustedPriceEthToUsd overflows
+        vm.assume(cond0 || cond1);
+
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+            assetAddress: address(pairSnxEth),
+            assetId: 0,
+            assetAmount: pairSnxEth.totalSupply(),
+            baseCurrency: Constants.UsdBaseCurrency
+        });
+
+        //Arithmetic overflow.
+        vm.expectRevert(bytes(""));
+        uniswapV2PricingModule.getValue(getValueInput);
+    }
+
+    function testSuccess_getValue(
+        uint112 amountSnx,
+        uint8 _ethDecimals,
+        uint8 _snxDecimals,
+        uint8 _oracleEthToUsdDecimals,
+        uint8 _oracleSnxToUsdDecimals,
+        uint144 _rateEthToUsd,
+        uint144 _rateSnxToUsd
+    ) public {
+        vm.assume(_ethDecimals <= 18);
+        vm.assume(_snxDecimals <= 18);
+        vm.assume(_oracleEthToUsdDecimals <= 18);
+        vm.assume(_oracleSnxToUsdDecimals <= 18);
+        vm.assume(_rateEthToUsd > 0);
+        vm.assume(_rateSnxToUsd > 0);
+
+        // Redeploy tokens with variable amount of decimals
+        eth =
+            deployToken(oracleEthToUsd, _ethDecimals, _oracleEthToUsdDecimals, _rateEthToUsd, "ETH", oracleEthToUsdArr);
+        snx =
+            deployToken(oracleSnxToUsd, _snxDecimals, _oracleSnxToUsdDecimals, _rateSnxToUsd, "SNX", oracleSnxToUsdArr);
+        pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
+        vm.prank(creatorAddress);
+        uniswapV2PricingModule.setAssetInformation(address(pairSnxEth), emptyListUint16, emptyListUint16);
+
+        // Mint a variable amount of balanced LP, for a given amountSnx
+        vm.assume(
+            uint256(amountSnx) * uint256(_rateSnxToUsd)
+                < type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
+        ); //Avoid overflow of amountEth in next line
+        uint256 amountEth = uint256(amountSnx) * uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
+            / _rateEthToUsd / 10 ** (_snxDecimals + _oracleSnxToUsdDecimals);
+        vm.assume(amountEth < type(uint112).max); //max reserve in Uniswap pool
+        vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY()); //min liquidity in uniswap pool
+        pairSnxEth.mint(tokenCreatorAddress, amountSnx, amountEth);
+
+        //No overflows
+        vm.assume(
+            uint256(_rateSnxToUsd) <= type(uint256).max / Constants.WAD / Constants.WAD * 10 ** _oracleSnxToUsdDecimals
+        ); // trustedPriceSnxToUsd does not overflow
+        uint256 trustedPriceSnxToUsd =
+            Constants.WAD * uint256(_rateSnxToUsd) / 10 ** _oracleSnxToUsdDecimals * Constants.WAD / 10 ** _snxDecimals;
+        vm.assume(
+            uint256(_rateEthToUsd) <= type(uint256).max / Constants.WAD / Constants.WAD * 10 ** _oracleEthToUsdDecimals
+        ); // trustedPriceEthToUsd does not overflow
+        uint256 trustedPriceEthToUsd =
+            Constants.WAD * uint256(_rateEthToUsd) / 10 ** _oracleEthToUsdDecimals * Constants.WAD / 10 ** _ethDecimals;
+        vm.assume(trustedPriceSnxToUsd <= type(uint256).max / amountSnx); // _computeProfitMaximizingTrade does not overflow
+        vm.assume(trustedPriceEthToUsd <= type(uint256).max / 997); // _computeProfitMaximizingTrade does not overflow
+
+        uint256 valueSnx =
+            Constants.WAD * _rateSnxToUsd / 10 ** _oracleSnxToUsdDecimals * amountSnx / 10 ** _snxDecimals;
+        uint256 valueEth =
+            Constants.WAD * _rateEthToUsd / 10 ** _oracleEthToUsdDecimals * amountEth / 10 ** _ethDecimals;
+        uint256 expectedValueInUsd = valueSnx + valueEth;
+
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+            assetAddress: address(pairSnxEth),
+            assetId: 0,
+            assetAmount: pairSnxEth.totalSupply(),
+            baseCurrency: Constants.UsdBaseCurrency
+        });
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency) = uniswapV2PricingModule.getValue(getValueInput);
+
+        assertInRange(actualValueInUsd, expectedValueInUsd, 4);
+        assertEq(actualValueInBaseCurrency, 0);
+    }
 
     //Helper Functions
 
@@ -1048,5 +863,44 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             assertGe(actualValue * (10 ** precision + 1) / 10 ** precision, expectedValue);
             assertLe(actualValue * (10 ** precision - 1) / 10 ** precision, expectedValue);
         }
+    }
+
+    function deployToken(
+        ArcadiaOracle oracleTokenToUsd,
+        uint8 tokenDecimals,
+        uint8 oracleTokenToUsdDecimals,
+        uint256 rate,
+        string memory label,
+        address[] memory oracleTokenToUsdArr
+    ) internal returns (ERC20Mock token) {
+        token =
+            new ERC20Mock(string(abi.encodePacked(label, " Mock")), string(abi.encodePacked("m", label)), tokenDecimals);
+        oracleTokenToUsd = arcadiaOracleFixture.initMockedOracle(
+            oracleTokenToUsdDecimals, string(abi.encodePacked(label, " / USD")), rate
+        );
+        oracleTokenToUsdArr[0] = address(oracleTokenToUsd);
+
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(10 ** oracleTokenToUsdDecimals),
+                baseAssetBaseCurrency: 0,
+                quoteAsset: label,
+                baseAsset: "USD",
+                oracleAddress: address(oracleTokenToUsd),
+                quoteAssetAddress: address(token),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        standardERC20PricingModule.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleTokenToUsdArr,
+                assetUnit: uint64(10 ** tokenDecimals),
+                assetAddress: address(token)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+        vm.stopPrank();
     }
 }

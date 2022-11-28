@@ -253,7 +253,7 @@ contract DeploymentTest is MainRegistryTest {
 
     function testSuccess_deployment_UsdAsBaseCurrency() public {
         // Given: All necessary contracts deployed on setup
-        // When: 
+        // When:
         // Then: baseCurrencyLabel should return "USD"
         (,,,, string memory baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
         assertTrue(StringHelpers.compareStrings("USD", baseCurrencyLabel));
@@ -261,7 +261,7 @@ contract DeploymentTest is MainRegistryTest {
 
     function testSuccess_deployment_BaseCurrencyCounterIsZero() public {
         // Given: All necessary contracts deployed on setup
-        // When: 
+        // When:
         // Then: baseCurrencyCounter should return 1
         assertEq(1, mainRegistry.baseCurrencyCounter());
     }
@@ -502,7 +502,7 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
             emptyListUint16,
             emptyListUint16
         );
-        
+
         // When: creatorAddress calls addBaseCurrency
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -662,13 +662,13 @@ contract AssetManagementTest is MainRegistryTest {
 
     function testSuccess_assetsUpdatable_DefaultTrue() public {
         // Given: All necessary contracts deployed on setup
-        // When: 
+        // When:
         // Then: assetsUpdatable should return true
         assertTrue(mainRegistry.assetsUpdatable());
     }
 
     function testRevert_setAssetsToNonUpdatable_NonOwner(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not creatorAddress 
+        // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
         // When: unprivilegedAddress calls setAssetsToNonUpdatable
@@ -792,7 +792,7 @@ contract AssetManagementTest is MainRegistryTest {
         mainRegistry.addAsset(address(eth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
-        // Then: 
+        // Then:
     }
 
     function testSuccess_addAsset_OverwriteAssetPositive() public {
@@ -819,7 +819,7 @@ contract AssetManagementTest is MainRegistryTest {
     }
 
     function testRevert_addAsset_OverwriteAssetNegative() public {
-        // Given: creatorAddress calls addPricingModule and setAssetsToNonUpdatable, 
+        // Given: creatorAddress calls addPricingModule and setAssetsToNonUpdatable,
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.setAssetsToNonUpdatable();
@@ -1098,7 +1098,7 @@ contract WhiteListLogicTest is MainRegistryTest {
                 idRangeStart: 0,
                 idRangeEnd: 9999,
                 assetAddress: address(bayc)
-            }),            
+            }),
             emptyListUint16,
             emptyListUint16
         );
@@ -1317,7 +1317,7 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         mainRegistry.batchSetRiskVariables(assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
-        // Then: collateralFactors for address(eth) and Constants.UsdBaseCurrency should return DEFAULT_COLLATERAL_FACTOR, 
+        // Then: collateralFactors for address(eth) and Constants.UsdBaseCurrency should return DEFAULT_COLLATERAL_FACTOR,
         // liquidationThresholds for address(eth) and Constants.EthBaseCurrency should return DEFAULT_LIQUIDATION_THRESHOLD
         assertEq(
             mainRegistry.DEFAULT_COLLATERAL_FACTOR(),
@@ -1531,7 +1531,7 @@ contract PricingLogicTest is MainRegistryTest {
 
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amountLink;
-        
+
         // Then: getTotalValue should revert
         vm.expectRevert(bytes(""));
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
@@ -1687,7 +1687,7 @@ contract PricingLogicTest is MainRegistryTest {
         oracleWbaycToEth.transmit(int256(rateWbaycToEth));
         vm.stopPrank();
 
-        // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0, 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0,
         // assetAmounts index 0 is 10 multiplied by ethDecimals, index 1 is 10 multiplied by linkDecimals, index 2 is 1, actualTotalValue is getTotalValue,
         // expectedTotalValue is ethValueInEth plus linkValueInEth plus baycValueInEth
         address[] memory assetAddresses = new address[](3);
@@ -1730,7 +1730,7 @@ contract PricingLogicTest is MainRegistryTest {
         oracleWbaycToEth.transmit(int256(rateWbaycToEth));
         vm.stopPrank();
 
-        // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0, 
+        // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0,
         // assetAmounts index 0 is 10 multiplied by ethDecimals, index 1 is 10 multiplied by linkDecimals, index 2 is 1, actualListOfValuesPerAsset is getListOfValuesPerAsset,
         // expectedListOfValuesPerAsset index 0 is ethValueInEth, index 1 is linkValueInEth, index 2 is baycValueInEth
         address[] memory assetAddresses = new address[](3);
