@@ -816,7 +816,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
                 < type(uint256).max / 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
         ); //Avoid overflow of amountEth in next line
         uint256 amountEth = uint256(amountSnx) * uint256(_rateSnxToUsd) * 10 ** (_ethDecimals + _oracleEthToUsdDecimals)
-            / (_rateEthToUsd * 10 ** (_snxDecimals + _oracleSnxToUsdDecimals));
+            / _rateEthToUsd / 10 ** (_snxDecimals + _oracleSnxToUsdDecimals);
         vm.assume(amountEth < type(uint112).max); //max reserve in Uniswap pool
         vm.assume(amountSnx * amountEth > pairSnxEth.MINIMUM_LIQUIDITY()); //min liquidity in uniswap pool
         pairSnxEth.mint(tokenCreatorAddress, amountSnx, amountEth);
