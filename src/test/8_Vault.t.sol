@@ -420,18 +420,49 @@ contract vaultTests is Test {
                         VAULT MANAGEMENT
     /////////////////////////////////////////////////////////////// */
 
-    //ToDo: initialize, upgradeVault, _getAddressSlot
+    function testRevert_initialize_AlreadyInitialized() public {
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_I: Already initialized!");
+        vault.initialize(vaultOwner, address(mainRegistry), 1);
+        vm.stopPrank();
+    }
+
+    function testSuccess_upgradeVault(address newImplementation, uint16 newVersion) public {
+        vm.startPrank(address(factoryContr));
+        vault.upgradeVault(newImplementation, newVersion);
+        vm.stopPrank();
+
+        uint16 expectedVersion = vault.vaultVersion();
+
+        assertEq(expectedVersion, newVersion);
+    }
+
+    function testRevert_upgradeVault_byNonOwner(address newImplementation, uint16 newVersion, address nonOwner)
+        public
+    {
+        vm.assume(nonOwner != address(factoryContr));
+
+        vm.startPrank(nonOwner);
+        vm.expectRevert("VL: You are not the factory");
+        vault.upgradeVault(newImplementation, newVersion);
+        vm.stopPrank();
+    }
 
     /* ///////////////////////////////////////////////////////////////
                     OWNERSHIP MANAGEMENT
     /////////////////////////////////////////////////////////////// */
 
-    function testRevert_transferOwnership_OfVaultByNonOwner(address sender) public {
+    function testRevert_transferOwnership_NonOwner(address sender, address to) public {
         vm.assume(sender != address(factoryContr));
+
+        assertEq(vaultOwner, vault.owner());
+
         vm.startPrank(sender);
         vm.expectRevert("VL: You are not the factory");
-        vault.transferOwnership(address(10));
+        vault.transferOwnership(to);
         vm.stopPrank();
+
+        assertEq(vaultOwner, vault.owner());
     }
 
     function testSuccess_transferOwnership(address to) public {
@@ -441,18 +472,8 @@ contract vaultTests is Test {
 
         vm.prank(address(factoryContr));
         vault.transferOwnership(to);
+
         assertEq(to, vault.owner());
-    }
-
-    function testRevert_transferOwnership_ByNonOwner(address from) public {
-        vm.assume(from != address(factoryContr));
-
-        assertEq(vaultOwner, vault.owner());
-
-        vm.startPrank(from);
-        vm.expectRevert("VL: You are not the factory");
-        vault.transferOwnership(from);
-        assertEq(vaultOwner, vault.owner());
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -474,7 +495,7 @@ contract vaultTests is Test {
         assertEq(baseCurrency, address(eth));
     }
 
-    function testRevert_setBaseCurrency_ByNonAuthorized(address unprivilegedAddress_) public {
+    function testRevert_setBaseCurrency_NonAuthorized(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != vaultOwner);
         vm.assume(unprivilegedAddress_ != address(pool));
 
@@ -520,7 +541,36 @@ contract vaultTests is Test {
                 MARGIN ACCOUNT SETTINGS
     /////////////////////////////////////////////////////////////// */
 
-    //ToDo: openTrustedMarginAccount, closeTrustedMarginAccount
+    function testRevert_openTrustedMarginAccount_AlreadySet(address trustedProtocol) public {
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_OMA: ALREADY SET");
+        vault.openTrustedMarginAccount(trustedProtocol);
+        vm.stopPrank();
+    }
+
+    function testRevert_openTrustedMarginAccount_NonOwner(address nonOwner, address trustedProtocol) public {
+        vm.assume(nonOwner != vaultOwner);
+
+        vm.startPrank(nonOwner);
+        vm.expectRevert("VL: You are not the owner");
+        vault.openTrustedMarginAccount(trustedProtocol);
+        vm.stopPrank();
+    }
+
+    function testSuccess_closeTrustedMarginAccount_CloseNonSetTrustedMarginAccount() public {
+        vm.startPrank(vaultOwner);
+        vault.closeTrustedMarginAccount();
+
+        assertEq(vault.isTrustedProtocolSet(), false);
+    }
+
+    function testRevert_closeTrustedMarginAccount_NonOwner(address nonOwner) public {
+        vm.assume(nonOwner != vaultOwner);
+
+        vm.startPrank(nonOwner);
+        vm.expectRevert("VL: You are not the owner");
+        vault.closeTrustedMarginAccount();
+    }
 
     /* ///////////////////////////////////////////////////////////////
                         MARGIN REQUIREMENTS
@@ -1465,7 +1515,7 @@ contract vaultTests is Test {
     /* ///////////////////////////////////////////////////////////////
                     DEPRECIATED TESTS
     /////////////////////////////////////////////////////////////// */
-    //ToDo: All depreciated tests should have been moved to Arcadia Lending, to double check that everything is covered there
+    //ToDo: All depreciated tests should be moved to Arcadia Lending, to double check that everything is covered there
     struct debtInfo {
         uint16 collFactor; //factor 100
         uint8 liqThres; //factor 100
