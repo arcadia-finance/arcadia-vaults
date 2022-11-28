@@ -158,7 +158,7 @@ abstract contract UniswapV2PricingModuleTest is Test {
                 baseAssetBaseCurrency: 0,
                 quoteAsset: "ETH",
                 baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
+                oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
@@ -169,7 +169,7 @@ abstract contract UniswapV2PricingModuleTest is Test {
                 baseAssetBaseCurrency: 1,
                 quoteAsset: "SNX",
                 baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
+                oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
                 baseAssetIsBaseCurrency: true
             })
@@ -887,7 +887,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
                 baseAssetBaseCurrency: 0,
                 quoteAsset: label,
                 baseAsset: "USD",
-                oracleAddress: address(oracleTokenToUsd),
+                oracle: address(oracleTokenToUsd),
                 quoteAssetAddress: address(token),
                 baseAssetIsBaseCurrency: true
             })
