@@ -445,7 +445,7 @@ contract executeActionTests is UniswapV2LPActionTest {
         bytes memory __actionSpecificData = abi.encode(_out, _in, bytes4(keccak256("remove")));
 
         vm.prank(samBankman);
-        vm.expectRevert("UV2A_LP: Need atleast two base tokens");
+        vm.expectRevert("UV2A_LP: Need two base tokens");
         vault.vaultManagementAction(address(action), __actionSpecificData);
     }
 

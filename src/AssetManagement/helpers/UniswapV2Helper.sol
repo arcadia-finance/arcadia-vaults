@@ -37,14 +37,7 @@ abstract contract UniswapV2Helper {
     ) internal {
         //Approvals
         IUniswapV2Router02(UNISWAP_V2_ROUTER2).addLiquidity(
-            tokenA,
-            tokenB,
-            amountADesired,
-            amountBDesired,
-            amountAMin,
-            amountBMin,
-            recipient,
-            block.timestamp + 1
+            tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin, recipient, block.timestamp + 1
         );
     }
 

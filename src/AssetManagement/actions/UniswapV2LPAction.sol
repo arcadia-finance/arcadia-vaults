@@ -23,8 +23,7 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
     {
         require(vaultAddress == msg.sender, "UV2_LP: can only be called by vault");
         // preCheck data
-        (actionAssetsData memory outgoing, actionAssetsData memory incoming, bytes4 selector) =
-            _preCheck(actionData);
+        (actionAssetsData memory outgoing, actionAssetsData memory incoming, bytes4 selector) = _preCheck(actionData);
         // execute Action
         _execute(outgoing, incoming, selector);
         // postCheck data
@@ -40,14 +39,7 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
         return (incoming);
     }
 
-    function _execute(actionAssetsData memory outgoing, actionAssetsData memory incoming, bytes4 selector)
-        internal
-    {
-        require(
-            bytes4(selector) == bytes4(keccak256("remove")) || bytes4(selector) == bytes4(keccak256("add")),
-            "UV2A_LP: invalid selector"
-        );
-
+    function _execute(actionAssetsData memory outgoing, actionAssetsData memory incoming, bytes4 selector) internal {
         if (bytes4(selector) == bytes4(keccak256("add"))) {
             _uniswapV2AddLiquidity(
                 address(this), // recipient
@@ -59,7 +51,7 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
                 outgoing.assetAmounts[0], // amountAMin
                 outgoing.assetAmounts[1] // amountBMin
             ); //TODO: min amounts?
-        } else if (bytes4(selector) == bytes4(keccak256("remove"))) {
+        } else {
             _uniswapV2RemoveLiquidity(
                 address(this),
                 outgoing.assets[0],
@@ -82,15 +74,16 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
         /*///////////////////////////////
                     DECODE
         ///////////////////////////////*/
-        (outgoing, incoming, selector) =
-            abi.decode(actionSpecificData, (actionAssetsData, actionAssetsData, bytes4));
+        (outgoing, incoming, selector) = abi.decode(actionSpecificData, (actionAssetsData, actionAssetsData, bytes4));
 
         if (bytes4(selector) == bytes4(keccak256("add"))) {
             require(outgoing.assets.length >= 2, "UV2A_LP: Need atleast two base tokens");
             require(incoming.assets.length == 1, "UV2A_LP: Can only out one lp token");
         } else if (bytes4(selector) == bytes4(keccak256("remove"))) {
-            require(outgoing.assets.length >= 1, "UV2A_LP: Can only out one lp token");
-            require(incoming.assets.length == 2, "UV2A_LP: Need atleast two base tokens");
+            require(outgoing.assets.length >= 1, "UV2A_LP: Can out atleast one lp token");
+            require(incoming.assets.length == 2, "UV2A_LP: Need two base tokens");
+        } else {
+            revert("UV2A_LP: invalid selector");
         }
 
         /*///////////////////////////////
@@ -132,12 +125,6 @@ contract UniswapV2LPAction is ActionBase, UniswapV2Helper {
         for (uint256 i; i < incomingLength;) {
             incomingAssetAmounts[i] =
                 IERC20(incomingAssets.assets[i]).balanceOf(address(this)) - incomingAssets.preActionBalances[i];
-
-            // Check incoming assets are as expected
-            require(
-                incomingAssetAmounts[i] >= incomingAssets.assetAmounts[i],
-                "UV2A_SWAP: Received incoming asset less than expected"
-            );
             unchecked {
                 i++;
             }
