@@ -138,6 +138,8 @@ contract UniswapV2PricingModule is PricingModule {
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
+     * @dev trustedUsdPriceToken cannot realisticly overflow, requires unit price of a token with 0 decimals (worst case),
+     * to be bigger than $1,16 * 10^41
      * @dev The UniswapV2PricingModule will always return the value in valueInUsd,
      * valueInBaseCurrency will always be 0
      * @dev If the asset is not first added to PricingModule this function will return value 0 without throwing an error.
