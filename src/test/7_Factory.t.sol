@@ -296,9 +296,7 @@ contract factoryTest is Test {
     ///////////////////////////////////////////////////////////////*/
 
     function testRevert_setNewVaultInfo_NonOwner(address unprivilegedAddress) public {
-        vm.assume(unprivilegedAddress != address(this));
-        vm.assume(unprivilegedAddress != address(factoryContr));
-        vm.assume(unprivilegedAddress != address(0));
+        vm.assume(unprivilegedAddress != creatorAddress);
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
