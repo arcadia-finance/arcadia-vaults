@@ -102,8 +102,7 @@ contract MainRegistry is Ownable, RiskModule {
      * - assetAddress: The contract address of the baseCurrency,
      * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
-     * @param baseCurrencyCollateralFactors The List of collateral factors for the asset for the new base currency
-     * @param baseCurrencyLiquidationThresholds The List of liquidation thresholds for each asset for the new base currency
+     * @param assetRisks List of assets and their complete risk arrays
      * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
      * Tokens pegged to the native token do not count as native tokens
      * - USDC is not a native token for USD as BaseCurrency
@@ -116,65 +115,34 @@ contract MainRegistry is Ownable, RiskModule {
      */
     function addBaseCurrency(
         BaseCurrencyInformation calldata baseCurrencyInformation,
-        uint16[] calldata baseCurrencyCollateralFactors,
-        uint16[] calldata baseCurrencyLiquidationThresholds
+        AssetRisk[] calldata assetRisks
     ) external onlyOwner {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
         baseCurrencies.push(baseCurrencyInformation.assetAddress);
 
-        // Check: Valid length of arrays
-        uint256 baseCurrencyCollateralFactorsLength = baseCurrencyCollateralFactors.length;
-        require(
-            (
-                baseCurrencyCollateralFactorsLength == assetsInMainRegistry.length
-                    && baseCurrencyCollateralFactorsLength == baseCurrencyLiquidationThresholds.length
-            ) || (baseCurrencyCollateralFactorsLength == 0 && baseCurrencyLiquidationThresholds.length == 0),
-            "MR_ABC: LENGTH_MISMATCH"
-        );
-        // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
-        if (baseCurrencyCollateralFactorsLength == 0) {
-            // Loop: Per base currency
-            for (uint256 i; i < assetsInMainRegistry.length;) {
-                // Write: Default variables for collateralFactor and liquidationThreshold
-                collateralFactors[assetsInMainRegistry[i]][baseCurrencyCounter] = DEFAULT_COLLATERAL_FACTOR;
-                liquidationThresholds[assetsInMainRegistry[i]][baseCurrencyCounter] = DEFAULT_LIQUIDATION_THRESHOLD;
-                unchecked {
-                    i++;
-                }
-            }
-            unchecked {
-                ++baseCurrencyCounter;
-            }
-            // Early termination
-            return;
+        unchecked {
+            ++baseCurrencyCounter;
         }
-        // Loop: Per value of collateral factor and liquidation threshold
-        for (uint256 i; i < baseCurrencyCollateralFactorsLength;) {
-            // Check: Values in the allowed limit
-            require(
-                baseCurrencyCollateralFactors[i] <= MAX_COLLATERAL_FACTOR
-                    && baseCurrencyCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                "MR_ABC: Coll.Fact not in limits"
-            );
-            require(
-                baseCurrencyLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
-                    && baseCurrencyLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                "MR_ABC: Liq.Thres not in limits"
-            );
 
-            collateralFactors[assetsInMainRegistry[i]][baseCurrencyCounter] = baseCurrencyCollateralFactors[i];
-            liquidationThresholds[assetsInMainRegistry[i]][baseCurrencyCounter] = baseCurrencyLiquidationThresholds[i];
+        uint256 assetLength = assetRisks.length;
+        require(assetLength == assetsInMainRegistry.length, "MR_ABC: assetRisks array wrong length");
+
+        // Loop: Per value of collateral factor and liquidation threshold
+        for (uint256 i; i < assetLength;) {
+
+            IPricingModule(assetToPricingModule[assetRisks[i].asset]).setRiskVariables(
+                assetRisks[i].asset,
+                assetRisks[i].assetCollateralFactors,
+                assetRisks[i].assetLiquidationThresholds
+            );
 
             unchecked {
                 i++;
             }
         }
 
-        unchecked {
-            ++baseCurrencyCounter;
-        }
     }
 
     /* ///////////////////////////////////////////////////////////////
