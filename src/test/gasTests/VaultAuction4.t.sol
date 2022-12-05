@@ -455,8 +455,7 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new MainRegistry.AssetRisk[](0)
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -466,8 +465,7 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new MainRegistry.AssetRisk[](0)
         );
         uint256 baseCurrencycountr = mainRegistry.baseCurrencyCounter();
         emit log_named_uint("countr", baseCurrencycountr);
@@ -495,10 +493,10 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({

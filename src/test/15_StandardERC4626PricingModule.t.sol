@@ -106,8 +106,7 @@ contract standardERC4626PricingModuleTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new MainRegistry.AssetRisk[](0)
         );
 
         standardERC20PricingModule = new StandardERC20PricingModule(
@@ -127,10 +126,10 @@ contract standardERC4626PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
     }

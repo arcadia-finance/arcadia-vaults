@@ -142,8 +142,7 @@ contract FloorERC721PricingModuleTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new MainRegistry.AssetRisk[](0)
         );
 
         floorERC721PricingModule = new FloorERC721PricingModule(
@@ -167,10 +166,10 @@ contract FloorERC721PricingModuleTest is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(bayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
     }
@@ -209,10 +208,10 @@ contract FloorERC721PricingModuleTest is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(bayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -255,20 +254,19 @@ contract FloorERC721PricingModuleTest is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        floorERC721PricingModule.setAssetInformation(
+                assetAddress: address(bayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );floorERC721PricingModule.setAssetInformation(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(bayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -285,10 +283,10 @@ contract FloorERC721PricingModuleTest is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 9999,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(bayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -316,10 +314,10 @@ contract FloorERC721PricingModuleTest is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 10,
                 idRangeEnd: 999,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(bayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -335,10 +333,10 @@ contract FloorERC721PricingModuleTest is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 999,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(bayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -368,10 +366,10 @@ contract FloorERC721PricingModuleTest is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: 999,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(bayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -401,10 +399,10 @@ contract FloorERC721PricingModuleTest is Test {
                 oracleAddresses: oracleWmaycToUsdArr,
                 idRangeStart: 0,
                 idRangeEnd: 999,
-                assetAddress: address(mayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(mayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 

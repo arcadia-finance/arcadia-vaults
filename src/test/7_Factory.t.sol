@@ -375,8 +375,7 @@ contract factoryTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new RiskModule.AssetRisk[](2)
         );
 
         registryContr2 = new MainRegistry(
@@ -407,8 +406,7 @@ contract factoryTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new RiskModule.AssetRisk[](2)
         );
 
         registryContr2 = new MainRegistry(
@@ -428,8 +426,7 @@ contract factoryTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new RiskModule.AssetRisk[](2)
         );
         factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
         factoryContr.confirmNewVaultInfo();
@@ -461,8 +458,7 @@ contract factoryTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new RiskModule.AssetRisk[](2)
         );
         factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
         factoryContr.confirmNewVaultInfo();

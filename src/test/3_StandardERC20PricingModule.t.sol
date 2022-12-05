@@ -146,8 +146,7 @@ contract StandardERC20PricingModuleTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new MainRegistry.AssetRisk[](0)
         );
 
         standardERC20PricingModule = new StandardERC20PricingModule(
@@ -170,10 +169,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
     }
@@ -233,10 +232,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -277,19 +276,19 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -305,10 +304,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -332,10 +331,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -365,10 +364,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
-                assetAddress: address(snx)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(snx),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -398,10 +397,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(link),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -447,10 +446,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -493,10 +492,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 

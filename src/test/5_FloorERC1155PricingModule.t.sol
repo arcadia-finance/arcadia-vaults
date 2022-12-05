@@ -119,8 +119,7 @@ contract FloorERC1155PricingModuleTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new MainRegistry.AssetRisk[](0)
         );
 
         floorERC1155PricingModule = new FloorERC1155PricingModule(
@@ -143,10 +142,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
 
         vm.stopPrank();
@@ -167,10 +166,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(interleave),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
 
         vm.stopPrank();
@@ -184,10 +183,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -209,10 +208,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(interleave),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
         vm.stopPrank();
 
@@ -228,19 +227,19 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -256,10 +255,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -284,10 +283,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -303,10 +302,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -337,10 +336,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -371,10 +370,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -421,10 +420,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
@@ -469,10 +468,10 @@ contract FloorERC1155PricingModuleTest is Test {
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         vm.stopPrank();
 
