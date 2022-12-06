@@ -234,10 +234,10 @@ contract FloorERC721PricingModuleTest is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(bayc),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
         vm.stopPrank();
 

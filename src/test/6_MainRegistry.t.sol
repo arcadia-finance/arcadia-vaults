@@ -397,6 +397,18 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
 
         // When: creatorAddress calls addBaseCurrency
 
+        RiskModule.AssetRisk[] memory assetRisk = new RiskModule.AssetRisk[](2);
+        assetRisk[0] = RiskModule.AssetRisk({
+            asset: address(eth),
+            assetCollateralFactors: collateralFactors,
+            assetLiquidationThresholds: liquidationThresholds
+        });
+        assetRisk[1] = RiskModule.AssetRisk({
+            asset: address(link),
+            assetCollateralFactors: collateralFactors,
+            assetLiquidationThresholds: liquidationThresholds
+        });
+
         // Then: addBaseCurrency reverts with "MR_ABC: LENGTH_MISMATCH"
         vm.expectRevert("MR_ABC: LENGTH_MISMATCH");
         mainRegistry.addBaseCurrency(
@@ -407,8 +419,7 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            collateralFactors,
-            liquidationThresholds
+            assetRisk
         );
         vm.stopPrank();
     }
