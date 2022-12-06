@@ -108,8 +108,12 @@ abstract contract PricingModule is Ownable {
      * one denominated in USD and the other one in the different BaseCurrency).
      * @dev All price feeds should be fetched in the Oracle-Hub
      */
-    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256);
+    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) {}
 
-    function setRiskVariables(address, uint16[] memory, uint16[] memory) external virtual;
-    function _setRiskVariables(address assetAddress, uint16[] memory assetCollateralFactors, uint16[] memory assetLiquidationThresholds) internal virtual;
+    function setRiskVariables(address, uint16[] memory, uint16[] memory) external virtual {}
+    function _setRiskVariables(
+        address assetAddress,
+        uint16[] memory assetCollateralFactors,
+        uint16[] memory assetLiquidationThresholds
+    ) internal virtual {}
 }

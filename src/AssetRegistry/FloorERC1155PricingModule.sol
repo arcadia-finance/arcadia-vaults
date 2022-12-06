@@ -56,10 +56,7 @@ contract FloorERC1155PricingModule is PricingModule {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function setAssetInformation(
-        AssetInformation memory assetInformation
-    ) external onlyOwner {
-
+    function setAssetInformation(AssetInformation memory assetInformation) external onlyOwner {
         //no asset units
 
         address assetAddress = assetInformation.assetAddress;
@@ -74,14 +71,16 @@ contract FloorERC1155PricingModule is PricingModule {
         assetToInformation[assetAddress].id = assetInformation.id;
         assetToInformation[assetAddress].assetAddress = assetAddress;
         assetToInformation[assetAddress].oracleAddresses = assetInformation.oracleAddresses;
-        _setRiskVariables(assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds);
+        _setRiskVariables(
+            assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds
+        );
 
         isAssetAddressWhiteListed[assetAddress] = true;
 
         require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PM1155_SAI: Unable to add in MR");
     }
 
-    function setRiskVariables (
+    function setRiskVariables(
         address assetAddress,
         uint16[] memory assetCollateralFactors,
         uint16[] memory assetLiquidationThresholds
@@ -89,16 +88,19 @@ contract FloorERC1155PricingModule is PricingModule {
         _setRiskVariables(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
     }
 
-    function _setRiskVariables(address assetAddress, uint16[] memory assetCollateralFactors, uint16[] memory assetLiquidationThresholds) internal override {
-
+    function _setRiskVariables(
+        address assetAddress,
+        uint16[] memory assetCollateralFactors,
+        uint16[] memory assetLiquidationThresholds
+    ) internal override {
         // Check: Valid length of arrays
         uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
         uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
         require(
-            (assetCollateralFactorsLength == baseCurrencyCounter
-                && assetCollateralFactorsLength == assetLiquidationThresholds.length) 
-            || 
-            (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
+            (
+                assetCollateralFactorsLength == baseCurrencyCounter
+                    && assetCollateralFactorsLength == assetLiquidationThresholds.length
+            ) || (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
             "PM20_SRV: LENGTH_MISMATCH"
         );
 
@@ -118,29 +120,28 @@ contract FloorERC1155PricingModule is PricingModule {
 
             assetToInformation[assetAddress].assetCollateralFactors = assetCollateralFactors;
             assetToInformation[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
-
         } else {
-                // Loop: Per value of collateral factor and liquidation threshold
-                for (uint256 i; i < assetCollateralFactorsLength;) {
-                    // Check: Values in the allowed limit
-                    require(
-                        assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                        "PM20_SRV: Coll.Fact not in limits"
-                    );
-                    require(
-                        assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
-                            && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                        "PM20_SRV: Liq.Thres not in limits"
-                    );
+            // Loop: Per value of collateral factor and liquidation threshold
+            for (uint256 i; i < assetCollateralFactorsLength;) {
+                // Check: Values in the allowed limit
+                require(
+                    assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR
+                        && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
+                    "PM20_SRV: Coll.Fact not in limits"
+                );
+                require(
+                    assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
+                        && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
+                    "PM20_SRV: Liq.Thres not in limits"
+                );
 
-                    unchecked {
-                        i++;
-                    }
+                unchecked {
+                    i++;
                 }
+            }
 
-                assetToInformation[assetAddress].assetCollateralFactors = assetCollateralFactors;
-                assetToInformation[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
-
+            assetToInformation[assetAddress].assetCollateralFactors = assetCollateralFactors;
+            assetToInformation[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
         }
     }
 
@@ -206,6 +207,7 @@ contract FloorERC1155PricingModule is PricingModule {
         }
 
         collFactor = assetToInformation[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
-        liqThreshold = assetToInformation[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
+        liqThreshold =
+            assetToInformation[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
     }
 }

@@ -113,10 +113,10 @@ contract MainRegistry is Ownable, RiskModule {
      * is initiated as default (safest lowest rating).
      * @dev Risk variable have 2 decimals precision
      */
-    function addBaseCurrency(
-        BaseCurrencyInformation calldata baseCurrencyInformation,
-        AssetRisk[] calldata assetRisks
-    ) external onlyOwner {
+    function addBaseCurrency(BaseCurrencyInformation calldata baseCurrencyInformation, AssetRisk[] calldata assetRisks)
+        external
+        onlyOwner
+    {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
@@ -131,18 +131,14 @@ contract MainRegistry is Ownable, RiskModule {
 
         // Loop: Per value of collateral factor and liquidation threshold
         for (uint256 i; i < assetLength;) {
-
             IPricingModule(assetToPricingModule[assetRisks[i].asset]).setRiskVariables(
-                assetRisks[i].asset,
-                assetRisks[i].assetCollateralFactors,
-                assetRisks[i].assetLiquidationThresholds
+                assetRisks[i].asset, assetRisks[i].assetCollateralFactors, assetRisks[i].assetLiquidationThresholds
             );
 
             unchecked {
                 i++;
             }
         }
-
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -184,10 +180,7 @@ contract MainRegistry is Ownable, RiskModule {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function addAsset(
-        address assetAddress
-    ) external onlyPricingModule returns (bool) {
-
+    function addAsset(address assetAddress) external onlyPricingModule returns (bool) {
         if (inMainRegistry[assetAddress]) {
             require(assetsUpdatable, "MR_AA: Asset not updatable");
         } else {
@@ -272,9 +265,7 @@ contract MainRegistry is Ownable, RiskModule {
      * In case multiple Risk Variables for the same assets need to be changed, the address must be repeated in the assets.
      * @dev Risk variable have 2 decimals precision.
      */
-    function batchSetRiskVariables(
-        AssetRisk[] memory assetsRisks
-    ) external onlyOwner {
+    function batchSetRiskVariables(AssetRisk[] memory assetsRisks) external onlyOwner {
         uint256 assetsLength = assetsRisks.length;
 
         uint256 collFactLenght;
@@ -287,14 +278,11 @@ contract MainRegistry is Ownable, RiskModule {
             //check required to avoid the ""assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0"" part
             //in the pricing module: this prevents an inadverted update of all factors to the default values.
             require(
-                collFactLenght == baseCurrencyCounter && collFactLenght == liqThresLength,
-                "MR_BSCR: LENGTH_MISMATCH"
-                );
+                collFactLenght == baseCurrencyCounter && collFactLenght == liqThresLength, "MR_BSCR: LENGTH_MISMATCH"
+            );
 
             IPricingModule(assetToPricingModule[assetsRisks[i].asset]).setRiskVariables(
-                assetsRisks[i].asset,
-                assetsRisks[i].assetCollateralFactors,
-                assetsRisks[i].assetLiquidationThresholds
+                assetsRisks[i].asset, assetsRisks[i].assetCollateralFactors, assetsRisks[i].assetLiquidationThresholds
             );
 
             unchecked {
@@ -373,7 +361,7 @@ contract MainRegistry is Ownable, RiskModule {
                     + _assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //_assetAmounts can have a variable decimal precision -> bring to 18 decimals
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
-                (tempValueInUsd, tempValueInBaseCurrency, ,) =
+                (tempValueInUsd, tempValueInBaseCurrency,,) =
                     IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 valueInUsd = valueInUsd + tempValueInUsd;
                 valueInBaseCurrency = valueInBaseCurrency + tempValueInBaseCurrency;
@@ -434,7 +422,6 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
     ) public view returns (AssetValueRisk[] memory valuesPerAsset) {
-
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
 
         uint256 assetAddressesLength = _assetAddresses.length;
@@ -461,12 +448,13 @@ contract MainRegistry is Ownable, RiskModule {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
                 valuesPerAsset[i].valueInBaseCurrency = _assetAmounts[i];
             } else {
-                (tempValueInUsd, tempValueInBaseCurrency, valuesPerAsset[i].collFactor, valuesPerAsset[i].liqThreshold) =
-                    IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
+                (tempValueInUsd, tempValueInBaseCurrency, valuesPerAsset[i].collFactor, valuesPerAsset[i].liqThreshold)
+                = IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 //Check if baseCurrency is USD
                 if (baseCurrency == 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
-                    valuesPerAsset[i].valueInBaseCurrency = tempValueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                    valuesPerAsset[i].valueInBaseCurrency =
+                        tempValueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else if (tempValueInBaseCurrency > 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
                     valuesPerAsset[i].valueInBaseCurrency =

@@ -192,10 +192,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** 19),
-                assetAddress: address(eth)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(eth),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
         vm.stopPrank();
     }
@@ -216,10 +216,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(eth),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
         vm.stopPrank();
     }
@@ -257,10 +257,10 @@ contract StandardERC20PricingModuleTest is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            collateralFactors,
-            liquidationThresholds
+                assetAddress: address(eth),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
         );
         vm.stopPrank();
 
@@ -349,7 +349,8 @@ contract StandardERC20PricingModuleTest is Test {
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = standardERC20PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
+            standardERC20PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
@@ -382,7 +383,8 @@ contract StandardERC20PricingModuleTest is Test {
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = standardERC20PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
+            standardERC20PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
@@ -415,7 +417,8 @@ contract StandardERC20PricingModuleTest is Test {
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = standardERC20PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
+            standardERC20PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);
@@ -465,7 +468,8 @@ contract StandardERC20PricingModuleTest is Test {
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
         // When: getValue called
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = standardERC20PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
+            standardERC20PricingModule.getValue(getValueInput);
 
         // Then: actualValueInUsd should be equal to expectedValueInUsd, actualValueInBaseCurrency should be equal to expectedValueInBaseCurrency
         assertEq(actualValueInUsd, expectedValueInUsd);

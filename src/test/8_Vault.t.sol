@@ -850,15 +850,15 @@ contract vaultTests is Test {
     function testSuccess_deposit_SingleERC721() public {
         vm.prank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
-                    FloorERC721PricingModule.AssetInformation({
-                        oracleAddresses: oracleWbaycToEthEthToUsd,
-                        idRangeStart: 0,
-                        idRangeEnd: 9999,
-                        assetAddress: address(bayc),
-                        assetCollateralFactors: collateralFactors,
-                        assetLiquidationThresholds: liquidationThresholds
-                    })
-                );
+            FloorERC721PricingModule.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 9999,
+                assetAddress: address(bayc),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
+        );
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
@@ -881,15 +881,15 @@ contract vaultTests is Test {
     function testSuccess_deposit_MultipleERC721() public {
         vm.prank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
-                    FloorERC721PricingModule.AssetInformation({
-                        oracleAddresses: oracleWbaycToEthEthToUsd,
-                        idRangeStart: 0,
-                        idRangeEnd: 9999,
-                        assetAddress: address(bayc),
-                        assetCollateralFactors: collateralFactors,
-                        assetLiquidationThresholds: liquidationThresholds
-                    })
-                );
+            FloorERC721PricingModule.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 9999,
+                assetAddress: address(bayc),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
+        );
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
@@ -976,26 +976,25 @@ contract vaultTests is Test {
 
         vm.startPrank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
-                    FloorERC721PricingModule.AssetInformation({
-                        oracleAddresses: oracleWbaycToEthEthToUsd,
-                        idRangeStart: 0,
-                        idRangeEnd: 9999,
-                        assetAddress: address(bayc),
-                        assetCollateralFactors: collateralFactors,
-                        assetLiquidationThresholds: liquidationThresholds
-                    })
-                );
+            FloorERC721PricingModule.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 9999,
+                assetAddress: address(bayc),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
+        );
         floorERC721PricingModule.setAssetInformation(
-                    FloorERC721PricingModule.AssetInformation({
-                        oracleAddresses: oracleWbaycToEthEthToUsd,
-                        idRangeStart: 0,
-                        idRangeEnd: 9999,
-                        assetAddress: address(bayc),
-                        assetCollateralFactors: collateralFactors,
-                        assetLiquidationThresholds: liquidationThresholds
-                    })
-                );
-
+            FloorERC721PricingModule.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 9999,
+                assetAddress: address(bayc),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
+        );
 
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -1050,15 +1049,15 @@ contract vaultTests is Test {
 
         vm.startPrank(creatorAddress);
         floorERC721PricingModule.setAssetInformation(
-                    FloorERC721PricingModule.AssetInformation({
-                        oracleAddresses: oracleWbaycToEthEthToUsd,
-                        idRangeStart: 0,
-                        idRangeEnd: 9999,
-                        assetAddress: address(bayc),
-                        assetCollateralFactors: collateralFactors,
-                        assetLiquidationThresholds: liquidationThresholds
-                    })
-                );
+            FloorERC721PricingModule.AssetInformation({
+                oracleAddresses: oracleWbaycToEthEthToUsd,
+                idRangeStart: 0,
+                idRangeEnd: 9999,
+                assetAddress: address(bayc),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
+        );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,

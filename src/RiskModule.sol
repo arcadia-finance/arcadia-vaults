@@ -40,17 +40,17 @@ contract RiskModule {
         uint16[] assetLiquidationThresholds;
     }
 
-
     /**
      * @notice Calculate the weighted collateral value given the assets
      * @param assetAddresses The List of token addresses of the assets
      * @param valuesPerAsset The list of corresponding monetary values of each asset address.
      * @return collateralValue is the weighted collateral value of the given assets
      */
-    function calculateWeightedCollateralValue(
-        address[] calldata assetAddresses,
-        AssetValueRisk[] memory valuesPerAsset
-    ) public pure returns (uint256 collateralValue) {
+    function calculateWeightedCollateralValue(address[] calldata assetAddresses, AssetValueRisk[] memory valuesPerAsset)
+        public
+        pure
+        returns (uint256 collateralValue)
+    {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
 
@@ -81,8 +81,7 @@ contract RiskModule {
 
         for (uint256 i; i < assetAddressesLength;) {
             totalValue += valuesPerAsset[i].valueInBaseCurrency;
-            liquidationThreshold256 +=
-                valuesPerAsset[i].valueInBaseCurrency * valuesPerAsset[i].liqThreshold;
+            liquidationThreshold256 += valuesPerAsset[i].valueInBaseCurrency * valuesPerAsset[i].liqThreshold;
             unchecked {
                 i++;
             }
