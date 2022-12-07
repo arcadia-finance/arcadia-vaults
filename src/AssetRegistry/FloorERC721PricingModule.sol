@@ -110,6 +110,8 @@ contract FloorERC721PricingModule is PricingModule {
         // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
         if (assetCollateralFactorsLength == 0) {
             // Loop: Per base currency
+            assetCollateralFactors = new uint16[](baseCurrencyCounter);
+            assetLiquidationThresholds = new uint16[](baseCurrencyCounter);
             for (uint256 i; i < baseCurrencyCounter;) {
                 // Write: Default variables for collateralFactor and liquidationThreshold
                 // make in memory, store once

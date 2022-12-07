@@ -401,11 +401,11 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    ) public view returns (AssetValueRisk[] memory valuesPerAsset) {
+    ) public returns (AssetValueRisk[] memory valuesPerAsset) {
         valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
-
+    event log(uint256);
     /**
      * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
      * @param _assetAddresses The List of token addresses of the assets
@@ -421,7 +421,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    ) public view returns (AssetValueRisk[] memory valuesPerAsset) {
+    ) public returns (AssetValueRisk[] memory valuesPerAsset) {
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
 
         uint256 assetAddressesLength = _assetAddresses.length;
@@ -444,24 +444,29 @@ contract MainRegistry is Ownable, RiskModule {
             getValueInput.assetId = _assetIds[i];
             getValueInput.assetAmount = _assetAmounts[i];
 
+            emit log(2);
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
                 valuesPerAsset[i].valueInBaseCurrency = _assetAmounts[i];
+                emit log(3);
             } else {
                 (tempValueInUsd, tempValueInBaseCurrency, valuesPerAsset[i].collFactor, valuesPerAsset[i].liqThreshold)
                 = IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 //Check if baseCurrency is USD
                 if (baseCurrency == 0) {
+                    emit log(4);
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
                     valuesPerAsset[i].valueInBaseCurrency =
                         tempValueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else if (tempValueInBaseCurrency > 0) {
+                    emit log(5);
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
                     valuesPerAsset[i].valueInBaseCurrency =
                         tempValueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else {
                     //Check if the BaseCurrency-USD rate is already fetched
                     if (rateBaseCurrencyToUsd == 0) {
+                        emit log(6);
                         //Get the BaseCurrency-USD rate ToDo: Ask via the OracleHub?
                         (, rateBaseCurrencyToUsd,,,) = IChainLinkData(
                             baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
@@ -491,12 +496,13 @@ contract MainRegistry is Ownable, RiskModule {
      * @return collateralValue Collateral value of the given assets denominated in BaseCurrency.
      */
 
+
     function getCollateralValue(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 collateralValue) {
+    ) public returns (uint256 collateralValue) {
         uint256 assetAddressesLength = _assetAddresses.length;
 
         require(
@@ -506,6 +512,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
         AssetValueRisk[] memory valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
+        emit log(1);
         collateralValue = calculateWeightedCollateralValue(_assetAddresses, valuesPerAsset);
     }
 
@@ -524,7 +531,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 liquidationThreshold) {
+    ) public returns (uint256 liquidationThreshold) {
         require(
             _assetAddresses.length == _assetIds.length && _assetAddresses.length == _assetAmounts.length,
             "MR_GCF: LENGTH_MISMATCH"

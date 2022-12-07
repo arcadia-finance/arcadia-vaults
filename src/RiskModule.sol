@@ -53,7 +53,6 @@ contract RiskModule {
     {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
-
         for (uint256 i; i < assetAddressesLength;) {
             collateralValue += valuesPerAsset[i].valueInBaseCurrency * valuesPerAsset[i].collFactor;
             unchecked {

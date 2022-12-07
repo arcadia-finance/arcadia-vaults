@@ -483,7 +483,7 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        standardERC20Registry.setAssetInformation(
+        standardERC20Registry.setAssetInformation( 
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
