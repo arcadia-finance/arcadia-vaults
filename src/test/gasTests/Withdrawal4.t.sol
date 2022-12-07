@@ -646,6 +646,8 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
     }
 
     function testGetRemainingValue() public {
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) = proxy.generateAssetData();
+        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, 0);
         proxy.getFreeMargin();
     }
 
@@ -761,4 +763,5 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
         vm.startPrank(vaultOwner);
         proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
+    
 }
