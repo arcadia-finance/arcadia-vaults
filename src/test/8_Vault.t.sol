@@ -299,7 +299,6 @@ contract vaultTests is Test {
 
         vm.startPrank(creatorAddress);
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factoryContr));
-        pool.updateInterestRate(5 * 10 ** 16); //5% with 18 decimals precision
 
         debt = DebtToken(address(pool));
 
@@ -1354,8 +1353,6 @@ contract vaultTests is Test {
             liquidationThresholds
         );
 
-        emit log_named_uint("AmountInDepositandMax", amountEth);
-
         depositERC20InVault(eth, amountEth, vaultOwner);
         vm.startPrank(vaultOwner);
         uint256 remainingCredit = vault.getFreeMargin();
@@ -1593,10 +1590,6 @@ contract vaultTests is Test {
         uint128 exponent = uint128(((uint256(deltaBlocks)) * 1e18) / yearlyBlocks);
         vm.assume(LogExpMath.pow(base, exponent) > 0);
 
-        emit log_named_uint("logexp", LogExpMath.pow(base, exponent));
-
-        //uint256 openDebt = type(uint256).max / (2^255 - 1) / 10^20;
-
         uint256 unRealisedDebt256 = (uint256(openDebt) * (LogExpMath.pow(base, exponent) - 1e18)) / 1e18;
         uint128 unRealisedDebt128 = uint128((openDebt * (LogExpMath.pow(base, exponent) - 1e18)) / 1e18);
 
@@ -1636,11 +1629,10 @@ contract vaultTests is Test {
         uint256 yearlyBlocks = 2628000;
         uint128 exponent = uint128(((uint256(deltaBlocks)) * 1e18) / yearlyBlocks);
 
-        vm.prank(creatorAddress);
-        pool.updateInterestRate(base - 1e18);
+        uint256 remainingCredit = depositEthAndTakeMaxCredit(amountEthToDeposit);
 
-        //uint256 remainingCredit = depositEthAndTakeMaxCredit(10*10**6 * 10**18); //10m ETH
-        uint256 remainingCredit = depositEthAndTakeMaxCredit(amountEthToDeposit); //10m ETH
+        //Set interest rate
+        stdstore.target(address(pool)).sig(pool.interestRate.selector).checked_write(base - 1e18);
 
         vm.roll(block.number + deltaBlocks);
 
@@ -1648,11 +1640,9 @@ contract vaultTests is Test {
 
         uint256 usedMarginExpected = remainingCredit + unRealisedDebt;
 
-        pool.syncInterests();
-
         uint256 usedMarginActual = vault.getUsedMargin();
 
-        assertEq(usedMarginExpected, usedMarginActual);
+        assertEq(usedMarginActual, usedMarginExpected);
     }
 
     function testSuccess_syncInterests_GetOpenDebtUnchecked(uint32 blocksToRoll, uint128 baseAmountEthToDeposit)
@@ -1672,7 +1662,7 @@ contract vaultTests is Test {
         uint256 remainingCredit = depositEthAndTakeMaxCredit(amountEthToDeposit); //10bn USD debt
         uint256 _lastBlock = block.number;
 
-        uint64 _yearlyInterestRate = pool.interestRate();
+        uint64 _yearlyInterestRate = uint64(pool.interestRate());
 
         vm.roll(block.number + blocksToRoll);
 
@@ -1687,8 +1677,6 @@ contract vaultTests is Test {
         exponent = ((block.number - uint32(_lastBlock)) * 1e18) / pool.YEARLY_BLOCKS();
 
         uint256 usedMarginExpected = (remainingCredit * LogExpMath.pow(base, exponent)) / 1e18;
-
-        pool.syncInterests();
 
         uint256 usedMarginActual = vault.getUsedMargin();
 

@@ -24,8 +24,9 @@ import "../utils/Constants.sol";
 import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
+import {LendingPool, DebtToken, ERC20, DataTypes} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+//import {DataTypes} from "../../lib/arcadia-lending/src/Libraries/DataTypes.sol";
 
 contract EndToEndTest is Test {
     using stdStorage for StdStorage;
@@ -273,7 +274,13 @@ contract EndToEndTest is Test {
 
         vm.startPrank(creatorAddress);
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.updateInterestRate(5 * 10 ** 16); //5% with 18 decimals precision
+        DataTypes.InterestRateConfiguration memory config = DataTypes.InterestRateConfiguration({
+            baseRate: Constants.interestRate,
+            highSlope: Constants.interestRate,
+            lowSlope: Constants.interestRate,
+            utilisationThreshold: Constants.utilisationThreshold
+        });
+        pool.setInterestConfig(config);
 
         debt = DebtToken(address(pool));
 
@@ -504,7 +511,7 @@ contract EndToEndTest is Test {
         uint32 amountOfBlocksToRoll
     ) public {
         vm.assume(amountEth > 0);
-        uint64 _yearlyInterestRate = pool.interestRate();
+        uint256 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
         uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) / uint128(pool.YEARLY_BLOCKS());
         vm.assume(amountCredit < type(uint128).max / LogExpMath.pow(base, exponent));
@@ -525,7 +532,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
         _yearlyInterestRate = pool.interestRate();
-        base = 1e18 + _yearlyInterestRate;
+        base = 1e18 + uint128(_yearlyInterestRate);
 
         uint256 debtAtStart = proxy.getUsedMargin();
 
@@ -701,15 +708,14 @@ contract EndToEndTest is Test {
         vm.prank(vaultOwner);
         pool.borrow(amountCredit, address(proxy), vaultOwner);
 
-        uint64 _yearlyInterestRate = pool.interestRate();
+        uint256 _yearlyInterestRate = pool.interestRate();
 
         uint256 balanceBefore = debt.totalAssets();
 
         vm.roll(block.number + blocksToRoll);
-        pool.syncInterests();
         uint256 balanceAfter = debt.totalAssets();
 
-        uint128 base = _yearlyInterestRate + 10 ** 18;
+        uint128 base = uint128(_yearlyInterestRate) + 10 ** 18;
         uint128 exponent = uint128((uint128(blocksToRoll) * 10 ** 18) / pool.YEARLY_BLOCKS());
         uint128 expectedDebt = uint128((amountCredit * (LogExpMath.pow(base, exponent))) / 10 ** 18);
         uint128 unrealisedDebt = expectedDebt - amountCredit;
@@ -827,8 +833,8 @@ contract EndToEndTest is Test {
 
         vm.prank(vaultOwner);
         pool.repay(toRepay, address(proxy));
-        uint64 _yearlyInterestRate = pool.interestRate();
-        uint128 base = _yearlyInterestRate + 10 ** 18;
+        uint256 _yearlyInterestRate = pool.interestRate();
+        uint128 base = uint128(_yearlyInterestRate) + 10 ** 18;
         uint128 exponent = uint128((uint128(blocksToRoll) * 10 ** 18) / pool.YEARLY_BLOCKS());
         uint128 expectedDebt = uint128((amountCredit * (LogExpMath.pow(base, exponent))) / 10 ** 18) - toRepay;
 
@@ -836,7 +842,7 @@ contract EndToEndTest is Test {
 
         vm.roll(block.number + uint256(blocksToRoll));
         _yearlyInterestRate = pool.interestRate();
-        base = _yearlyInterestRate + 10 ** 18;
+        base = uint128(_yearlyInterestRate) + 10 ** 18;
         exponent = uint128((uint128(blocksToRoll) * 10 ** 18) / pool.YEARLY_BLOCKS());
         expectedDebt = uint128((expectedDebt * (LogExpMath.pow(base, exponent))) / 10 ** 18);
 
