@@ -1328,8 +1328,8 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls batchSetRiskVariables for assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds
 
-        // Then: batchSetRiskVariables should revert with "MR_BSRV: CollFact not in limits"
-        vm.expectRevert("MR_BSRV: CollFact not in limits");
+        // Then: batchSetRiskVariables should revert with "MR_BSCR: LENGTH_MISMATCH"
+        vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
         mainRegistry.batchSetRiskVariables(assetRisks);
         vm.stopPrank();
 
@@ -1341,7 +1341,7 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         assetRisks[1].assetLiquidationThresholds = assetLiquidationThresholds;
 
         vm.startPrank(creatorAddress);
-        vm.expectRevert("MR_BSRV: Liq.Thres not in limits");
+        vm.expectRevert("MR_BSCR: LENGTH_MISMATCH");
         mainRegistry.batchSetRiskVariables(assetRisks);
         vm.stopPrank();
     }
