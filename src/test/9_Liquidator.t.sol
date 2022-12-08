@@ -277,7 +277,6 @@ contract LiquidatorTest is Test {
 
         vm.startPrank(creatorAddress);
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.updateInterestRate(5 * 10 ** 16); //5% with 18 decimals precision
 
         debt = DebtToken(address(pool));
 
