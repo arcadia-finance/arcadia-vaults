@@ -29,15 +29,15 @@ contract StandardERC20PricingModuleExtended is StandardERC20PricingModule {
     function assetToInformation_(address asset)
         public
         view
-        returns (uint64, uint16[] memory, uint16[] memory, address, address[] memory)
+        returns (uint64, address, uint16[] memory, uint16[] memory, address[] memory)
     {
         AssetInformation memory assetInfo = assetToInformation[asset];
 
         return (
             assetInfo.assetUnit,
+            assetInfo.assetAddress,
             assetInfo.assetCollateralFactors,
             assetInfo.assetLiquidationThresholds,
-            assetInfo.assetAddress,
             assetInfo.oracleAddresses
         );
     }
@@ -1349,6 +1349,28 @@ contract RiskVariablesManagementTest is MainRegistryTest {
     function testSuccess_batchSetRiskVariables() public {
         // Given : assetAddresses index 0 and 1 is address(eth), baseCurrencies index 0 is UsdBaseCurrency, collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR
         // liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
+/* 
+        uint16[] memory assetCollateralFactors = new uint16[](2);
+        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        assetCollateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+
+        uint16[] memory assetLiquidationThresholds = new uint16[](2);
+        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        assetLiquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+
+        RiskModule.AssetRisk[] memory assetRisk = new RiskModule.AssetRisk[](2);
+        assetRisk[0] = RiskModule.AssetRisk({
+            asset: address(eth),
+            assetCollateralFactors: assetCollateralFactors[0],
+            assetLiquidationThresholds: assetLiquidationThresholds[0]
+        });
+        assetRisk[1] = RiskModule.AssetRisk({
+            asset: address(eth),
+            assetCollateralFactors: assetCollateralFactors[1],
+            assetLiquidationThresholds: assetLiquidationThresholds[1]
+        });
+ */
+
         uint16[] memory assetCollateralFactors = new uint16[](2);
         assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
         assetCollateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
@@ -1374,7 +1396,7 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         // Then: collateralFactors for address(eth) and Constants.UsdBaseCurrency should return DEFAULT_COLLATERAL_FACTOR,
         // liquidationThresholds for address(eth) and Constants.EthBaseCurrency should return DEFAULT_LIQUIDATION_THRESHOLD
         StandardERC20PricingModule.AssetInformation memory assetInfo;
-        (, assetInfo.assetCollateralFactors, assetInfo.assetLiquidationThresholds,,) =
+        (,, assetInfo.assetCollateralFactors, assetInfo.assetLiquidationThresholds,) =
             standardERC20PricingModule.assetToInformation_(address(eth));
 
         assertEq(mainRegistry.DEFAULT_COLLATERAL_FACTOR(), assetInfo.assetCollateralFactors[0]);
