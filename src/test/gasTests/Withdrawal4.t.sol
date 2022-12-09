@@ -485,29 +485,29 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
 
         standardERC20Registry.setAssetInformation( 
             StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth),
                 assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
+                assetLiquidationThresholds: emptyListUint16,
+                oracleAddresses: oracleEthToUsdArr
             })
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
                 assetAddress: address(link),
                 assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
+                assetLiquidationThresholds: emptyListUint16,
+                oracleAddresses: oracleLinkToUsdArr
             })
         );
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
                 assetAddress: address(snx),
                 assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
+                assetLiquidationThresholds: emptyListUint16,
+                oracleAddresses: oracleSnxToEthEthToUsd
             })
         );
 

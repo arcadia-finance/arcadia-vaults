@@ -101,10 +101,10 @@ contract FloorERC721PricingModule is PricingModule {
         uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
         require(
             (
-                assetCollateralFactorsLength == baseCurrencyCounter
+                assetCollateralFactorsLength + 1 == baseCurrencyCounter
                     && assetCollateralFactorsLength == assetLiquidationThresholds.length
             ) || (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
-            "PM20_SRV: LENGTH_MISMATCH"
+            "PM721_SRV: LENGTH_MISMATCH"
         );
 
         // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold

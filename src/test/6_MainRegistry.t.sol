@@ -1349,27 +1349,6 @@ contract RiskVariablesManagementTest is MainRegistryTest {
     function testSuccess_batchSetRiskVariables() public {
         // Given : assetAddresses index 0 and 1 is address(eth), baseCurrencies index 0 is UsdBaseCurrency, collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR
         // liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
-/* 
-        uint16[] memory assetCollateralFactors = new uint16[](2);
-        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        assetCollateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-
-        uint16[] memory assetLiquidationThresholds = new uint16[](2);
-        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        assetLiquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-
-        RiskModule.AssetRisk[] memory assetRisk = new RiskModule.AssetRisk[](2);
-        assetRisk[0] = RiskModule.AssetRisk({
-            asset: address(eth),
-            assetCollateralFactors: assetCollateralFactors[0],
-            assetLiquidationThresholds: assetLiquidationThresholds[0]
-        });
-        assetRisk[1] = RiskModule.AssetRisk({
-            asset: address(eth),
-            assetCollateralFactors: assetCollateralFactors[1],
-            assetLiquidationThresholds: assetLiquidationThresholds[1]
-        });
- */
 
         uint16[] memory assetCollateralFactors = new uint16[](2);
         assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
