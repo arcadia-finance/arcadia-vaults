@@ -335,6 +335,16 @@ contract DeployArcadiaVaults is Test {
             emptyListUint16
         );
 
+        floorERC1155PricingModule.setAssetInformation(
+            FloorERC1155PricingModule.AssetInformation({
+                oracleAddresses: oracleInterleaveToEthEthToUsd,
+                id: 1,
+                assetAddress: address(interleave)
+            }),
+            emptyListUint16,
+            emptyListUint16
+        );
+
         vault = new Vault();
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
