@@ -11,7 +11,7 @@ import "./fixtures/ArcadiaVaultsFixture.f.sol";
 import {LendingPool, DebtToken, ERC20, DataTypes} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
-contract EndToEndTest is MinimalArcadiaVaultsDeployment {
+contract EndToEndTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     LendingPool pool;
@@ -22,7 +22,7 @@ contract EndToEndTest is MinimalArcadiaVaultsDeployment {
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
     //this is a before
-    constructor() MinimalArcadiaVaultsDeployment() {
+    constructor() DeployArcadiaVaults() {
         vm.startPrank(creatorAddress);
         liquidator = new Liquidator(
             address(factory),

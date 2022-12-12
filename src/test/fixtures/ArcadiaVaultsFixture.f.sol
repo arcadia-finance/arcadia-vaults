@@ -24,7 +24,7 @@ import "../../utils/Constants.sol";
 import "../../mockups/ArcadiaOracle.sol";
 import ".././fixtures/ArcadiaOracleFixture.f.sol";
 
-contract MinimalArcadiaVaultsDeployment is Test {
+contract DeployArcadiaVaults is Test {
     Factory public factory;
     Vault public vault;
     Vault public proxy;
