@@ -98,7 +98,7 @@ contract FloorERC1155PricingModule is PricingModule {
         uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
         require(
             (
-                assetCollateralFactorsLength + 1 == baseCurrencyCounter
+                assetCollateralFactorsLength == baseCurrencyCounter
                     && assetCollateralFactorsLength == assetLiquidationThresholds.length
             ) || (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
             "PM1155_SRV: LENGTH_MISMATCH"

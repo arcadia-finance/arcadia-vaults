@@ -101,14 +101,14 @@ contract StandardERC20PricingModule is PricingModule {
         uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
         require(
             (
-                assetCollateralFactorsLength + 1 == baseCurrencyCounter
+                assetCollateralFactorsLength == baseCurrencyCounter
                     && assetCollateralFactorsLength == assetLiquidationThresholds.length
-            ) || (assetCollateralFactorsLength == 1 && assetLiquidationThresholds.length == 1),
+            ) || (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
             "PM20_SRV: LENGTH_MISMATCH"
         );
 
         // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
-        if (assetCollateralFactorsLength == 1) {
+        if (assetCollateralFactorsLength == 0) {
             // Loop: Per base currency
             assetCollateralFactors = new uint16[](baseCurrencyCounter);
             assetLiquidationThresholds = new uint16[](baseCurrencyCounter);

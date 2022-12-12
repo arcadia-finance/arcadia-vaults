@@ -446,6 +446,55 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
+/* 
+        uint16[] memory assetCollateralFactors = new uint16[](1);
+        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+
+        uint16[] memory assetLiquidationThresholds = new uint16[](1);
+        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+
+        MainRegistry.AssetRisk[] memory assetRisks1 = new MainRegistry.AssetRisk[](1);
+        assetRisks1[0].asset = address(dai);
+        assetRisks1[0].assetCollateralFactors = assetCollateralFactors;
+        assetRisks1[0].assetLiquidationThresholds = assetLiquidationThresholds;
+ 
+        MainRegistry.AssetRisk[] memory assetRisks2 = new MainRegistry.AssetRisk[](1);
+        assetRisks2[0].asset = address(eth);
+        assetRisks2[0].assetCollateralFactors = assetCollateralFactors;
+        assetRisks2[0].assetLiquidationThresholds = assetLiquidationThresholds; */
+/* 
+        uint16[] memory assetCollateralFactors = new uint16[](2);
+        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        assetCollateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+
+        uint16[] memory assetLiquidationThresholds = new uint16[](2);
+        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        assetLiquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+
+        MainRegistry.AssetRisk[] memory assetRisks = new MainRegistry.AssetRisk[](2);
+        assetRisks[0].asset = address(dai);
+        assetRisks[0].assetCollateralFactors = assetCollateralFactors;
+        assetRisks[0].assetLiquidationThresholds = assetLiquidationThresholds;
+
+        assetRisks[1].asset = address(eth);
+        assetRisks[1].assetCollateralFactors = assetCollateralFactors;
+        assetRisks[1].assetLiquidationThresholds = assetLiquidationThresholds; */
+
+
+        uint16[] memory assetCollateralFactors = new uint16[](1);
+        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+
+        uint16[] memory assetLiquidationThresholds = new uint16[](1);
+        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+
+        MainRegistry.AssetRisk[] memory assetRisks = new MainRegistry.AssetRisk[](0);
+
+        MainRegistry.AssetRisk[] memory assetRisks1 = new MainRegistry.AssetRisk[](1);
+        assetRisks1[0].asset = address(dai);
+        assetRisks1[0].assetCollateralFactors = assetCollateralFactors;
+        assetRisks1[0].assetLiquidationThresholds = assetLiquidationThresholds;
+
+        MainRegistry.AssetRisk[] memory assetRisks2 = new MainRegistry.AssetRisk[](0);
 
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -455,7 +504,7 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
             }),
-            new MainRegistry.AssetRisk[](0)
+            assetRisks
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -465,7 +514,7 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            new MainRegistry.AssetRisk[](0)
+            assetRisks2
         );
         uint256 baseCurrencycountr = mainRegistry.baseCurrencyCounter();
         emit log_named_uint("countr", baseCurrencycountr);

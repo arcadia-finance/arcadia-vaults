@@ -272,8 +272,8 @@ contract MainRegistry is Ownable, RiskModule {
         uint256 liqThresLength;
         for (uint256 i; i < assetsLength;) {
             // Check: Values in the allowed limit
-            collFactLenght = assetsRisks[i].assetCollateralFactors.length + 1;
-            liqThresLength = assetsRisks[i].assetLiquidationThresholds.length + 1;
+            collFactLenght = assetsRisks[i].assetCollateralFactors.length;
+            liqThresLength = assetsRisks[i].assetLiquidationThresholds.length;
 
             //check required to avoid the ""assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0"" part
             //in the pricing module: this prevents an inadverted update of all factors to the default values.
