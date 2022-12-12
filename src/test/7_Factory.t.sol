@@ -206,6 +206,7 @@ contract factoryTest is Test {
         vm.assume(owner != unprivilegedAddress);
         vm.assume(owner != address(0));
         vm.assume(receiver != address(0));
+        vm.assume(unprivilegedAddress != address(0));
 
         vm.prank(owner);
         address vault = factoryContr.createVault(0, 0);
