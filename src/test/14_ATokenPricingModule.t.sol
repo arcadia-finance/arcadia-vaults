@@ -140,11 +140,11 @@ contract aTokenPricingModuleTest is Test {
         vm.expectRevert("Ownable: caller is not the owner");
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(aEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -162,11 +162,11 @@ contract aTokenPricingModuleTest is Test {
         vm.expectRevert("PM4626_SRV: LENGTH_MISMATCH");
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: collateralFactors,
                 assetLiquidationThresholds: liquidationThresholds,
                 assetAddress: address(aEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -178,11 +178,11 @@ contract aTokenPricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(aEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -202,11 +202,11 @@ contract aTokenPricingModuleTest is Test {
         liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: collateralFactors,
                 assetLiquidationThresholds: liquidationThresholds,
                 assetAddress: address(aEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -220,22 +220,22 @@ contract aTokenPricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(aEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
         );
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(aEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -250,11 +250,11 @@ contract aTokenPricingModuleTest is Test {
 
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(aEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -273,11 +273,11 @@ contract aTokenPricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(aEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -321,11 +321,11 @@ contract aTokenPricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(aEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })

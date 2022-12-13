@@ -140,11 +140,11 @@ contract standardERC4626PricingModuleTest is Test {
         vm.expectRevert("Ownable: caller is not the owner");
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -162,11 +162,11 @@ contract standardERC4626PricingModuleTest is Test {
         vm.expectRevert("PM4626_SRV: LENGTH_MISMATCH");
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: collateralFactors,
                 assetLiquidationThresholds: liquidationThresholds,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -181,11 +181,11 @@ contract standardERC4626PricingModuleTest is Test {
         vm.expectRevert("PM4626_SAI: Decimals don't match");
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -197,11 +197,11 @@ contract standardERC4626PricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -221,11 +221,11 @@ contract standardERC4626PricingModuleTest is Test {
         liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: collateralFactors,
                 assetLiquidationThresholds: liquidationThresholds,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -239,22 +239,22 @@ contract standardERC4626PricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
         );
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -269,11 +269,11 @@ contract standardERC4626PricingModuleTest is Test {
 
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -300,11 +300,11 @@ contract standardERC4626PricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -360,11 +360,11 @@ contract standardERC4626PricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
@@ -422,11 +422,11 @@ contract standardERC4626PricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(ybEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
