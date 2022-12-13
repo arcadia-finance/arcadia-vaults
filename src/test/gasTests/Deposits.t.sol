@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >0.8.10;
+
 import "../fixtures/GastTestFixture.f.sol";
 
 contract gasDeposits is GasTestFixture {
@@ -35,7 +36,7 @@ contract gasDeposits is GasTestFixture {
 
         assetTypes = new uint256[](1);
         assetTypes[0] = 0;
-        
+
         vm.prank(vaultOwner);
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
@@ -91,7 +92,7 @@ contract gasDeposits is GasTestFixture {
         assetTypes[0] = 0;
         assetTypes[1] = 0;
         assetTypes[2] = 0;
-        
+
         vm.prank(vaultOwner);
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
@@ -140,7 +141,6 @@ contract gasDeposits is GasTestFixture {
         assetTypes[0] = 1;
         assetTypes[1] = 1;
 
-        
         vm.prank(vaultOwner);
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }

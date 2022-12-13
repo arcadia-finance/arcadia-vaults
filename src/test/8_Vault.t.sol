@@ -79,8 +79,7 @@ contract vaultTests is DeployArcadiaVaults {
         factory.confirmNewVaultInfo();
         vm.stopPrank();
 
-        uint256 slot =
-            stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault_)).find();
+        uint256 slot = stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault_)).find();
         bytes32 loc = bytes32(slot);
         bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
         vm.store(address(factory), loc, mockedCurrentTokenId);

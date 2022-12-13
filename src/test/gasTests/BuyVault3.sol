@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >0.8.10;
+
 import "../fixtures/GastTestFixture.f.sol";
 
 contract gasBuyVault_1ERC201ERC721 is GasTestFixture {
@@ -17,7 +18,7 @@ contract gasBuyVault_1ERC201ERC721 is GasTestFixture {
     function setUp() public override {
         super.setUp();
 
-        vm.startPrank(vaultOwner);        
+        vm.startPrank(vaultOwner);
         s_assetAddresses = new address[](2);
         s_assetAddresses[0] = address(eth);
         s_assetAddresses[1] = address(bayc);

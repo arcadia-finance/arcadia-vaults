@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >0.8.10;
+
 import "../fixtures/GastTestFixture.f.sol";
 
 contract gasVaultAuction_2ERC20 is GasTestFixture {
