@@ -195,7 +195,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
         liquidationThresholds[1] = liqTresh;
         liquidationThresholds[2] = liqTresh;
 
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -204,7 +204,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
             collateralFactors,
             liquidationThresholds
         );
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
@@ -213,7 +213,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
             collateralFactors,
             liquidationThresholds
         );
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),

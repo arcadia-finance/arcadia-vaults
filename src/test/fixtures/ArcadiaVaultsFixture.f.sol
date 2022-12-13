@@ -49,7 +49,7 @@ contract DeployArcadiaVaults is Test {
     ArcadiaOracle public oracleWmaycToUsd;
     ArcadiaOracle public oracleInterleaveToEth;
     MainRegistry public mainRegistry;
-    StandardERC20PricingModule public standardERC20Registry;
+    StandardERC20PricingModule public standardERC20PricingModule;
     FloorERC721PricingModule public floorERC721PricingModule;
     FloorERC1155PricingModule public floorERC1155PricingModule;
     Liquidator public liquidator;
@@ -279,7 +279,7 @@ contract DeployArcadiaVaults is Test {
             emptyListUint16
         );
 
-        standardERC20Registry = new StandardERC20PricingModule(
+        standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -292,11 +292,11 @@ contract DeployArcadiaVaults is Test {
             address(oracleHub)
         );
 
-        mainRegistry.addPricingModule(address(standardERC20Registry));
+        mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -305,7 +305,7 @@ contract DeployArcadiaVaults is Test {
             emptyListUint16,
             emptyListUint16
         );
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
@@ -314,7 +314,7 @@ contract DeployArcadiaVaults is Test {
             emptyListUint16,
             emptyListUint16
         );
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),

@@ -369,7 +369,7 @@ contract vaultTests is DeployArcadiaVaults {
         vm.assume(amountEth > 0);
 
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -540,7 +540,7 @@ contract vaultTests is DeployArcadiaVaults {
 
     function testSuccess_deposit_SingleERC20(uint16 amount) public {
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -572,7 +572,7 @@ contract vaultTests is DeployArcadiaVaults {
         vm.assume(amount <= 50000);
 
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
@@ -742,7 +742,7 @@ contract vaultTests is DeployArcadiaVaults {
             collateralFactors,
             liquidationThresholds
         );
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
@@ -751,7 +751,7 @@ contract vaultTests is DeployArcadiaVaults {
             collateralFactors,
             liquidationThresholds
         );
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -804,7 +804,7 @@ contract vaultTests is DeployArcadiaVaults {
             collateralFactors,
             liquidationThresholds
         );
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
@@ -813,7 +813,7 @@ contract vaultTests is DeployArcadiaVaults {
             collateralFactors,
             liquidationThresholds
         );
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -841,7 +841,7 @@ contract vaultTests is DeployArcadiaVaults {
         vm.assume(sender != vaultOwner);
 
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -1049,7 +1049,7 @@ contract vaultTests is DeployArcadiaVaults {
 
     function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -1099,7 +1099,7 @@ contract vaultTests is DeployArcadiaVaults {
 
     function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -1143,7 +1143,7 @@ contract vaultTests is DeployArcadiaVaults {
         )
     {
         vm.prank(creatorAddress);
-        standardERC20Registry.setAssetInformation(
+        standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
