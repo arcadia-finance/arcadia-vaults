@@ -155,10 +155,11 @@ contract standardERC4626PricingModuleTest is Test {
     function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](1);
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        
+        vm.expectRevert("PM4626_SRV: LENGTH_MISMATCH");
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint8(Constants.ethDecimals),
@@ -177,7 +178,7 @@ contract standardERC4626PricingModuleTest is Test {
         ybEth = new ERC4626Mock(eth, "ybETH Mock", "mybETH", uint8(Constants.ethDecimals) - 1);
 
         vm.startPrank(creatorAddress);
-        vm.expectRevert("SR: Decimals of asset and underlying don't match");
+        vm.expectRevert("PM4626_SAI: Decimals don't match");
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint8(Constants.ethDecimals),
@@ -213,11 +214,11 @@ contract standardERC4626PricingModuleTest is Test {
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint8(Constants.ethDecimals),

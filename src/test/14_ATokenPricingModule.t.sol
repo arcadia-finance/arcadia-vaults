@@ -50,7 +50,7 @@ contract aTokenPricingModuleTest is Test {
     constructor() {
         vm.startPrank(tokenCreatorAddress);
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        aEth = new ATokenMock   (address(eth), "aETH Mock", "maETH");
+        aEth = new ATokenMock(address(eth), "aETH Mock", "maETH");
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
@@ -155,10 +155,11 @@ contract aTokenPricingModuleTest is Test {
     function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](1);
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+
+        vm.expectRevert("PM4626_SRV: LENGTH_MISMATCH");
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
                 assetUnit: uint8(Constants.ethDecimals),
@@ -194,11 +195,11 @@ contract aTokenPricingModuleTest is Test {
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
                 assetUnit: uint8(Constants.ethDecimals),
@@ -334,6 +335,10 @@ contract aTokenPricingModuleTest is Test {
         uint256 expectedValueInUsd = (
             ((Constants.WAD * rateEthToUsdNew) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth
         ) / 10 ** Constants.ethDecimals;
+
+        emit log_named_uint("(Constants.WAD * rateEthToUsdNew)", (Constants.WAD * rateEthToUsdNew));
+        emit log_named_uint("Constants.oracleEthToUsdDecimals", Constants.oracleEthToUsdDecimals);
+
         uint256 expectedValueInBaseCurrency = 0;
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
@@ -365,11 +370,11 @@ contract aTokenPricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
-                assetUnit: uint8(Constants.ethDecimals),
+                assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
                 assetLiquidationThresholds: emptyListUint16,
                 assetAddress: address(aEth),
-                underlyingAssetUnit: uint8(Constants.ethDecimals),
+                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
                 underlyingAsset: address(eth),
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })

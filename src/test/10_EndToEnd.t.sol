@@ -21,11 +21,32 @@ import "../AssetRegistry/FloorERC1155PricingModule.sol";
 import "../Liquidator.sol";
 import "../OracleHub.sol";
 import "../utils/Constants.sol";
+import {RiskConstants} from "../utils/RiskConstants.sol";
 import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
 import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+
+contract StandardERC20PricingModuleExtended is StandardERC20PricingModule {
+    constructor(address mainRegistry_, address oracleHub_) StandardERC20PricingModule(mainRegistry_, oracleHub_) {}
+
+    function assetToInformation_(address asset)
+        public
+        view
+        returns (uint64, address, uint16[] memory, uint16[] memory, address[] memory)
+    {
+        AssetInformation memory assetInfo = assetToInformation[asset];
+
+        return (
+            assetInfo.assetUnit,
+            assetInfo.assetAddress,
+            assetInfo.assetCollateralFactors,
+            assetInfo.assetLiquidationThresholds,
+            assetInfo.oracleAddresses
+        );
+    }
+}
 
 contract EndToEndTest is Test {
     using stdStorage for StdStorage;
@@ -54,7 +75,7 @@ contract EndToEndTest is Test {
     ArcadiaOracle private oracleWmaycToUsd;
     ArcadiaOracle private oracleInterleaveToEth;
     MainRegistry private mainRegistry;
-    StandardERC20PricingModule private standardERC20Registry;
+    StandardERC20PricingModuleExtended private standardERC20Registry;
     FloorERC721PricingModule private floorERC721PricingModule;
     FloorERC1155PricingModule private floorERC1155PricingModule;
     Liquidator private liquidator;
@@ -324,7 +345,7 @@ contract EndToEndTest is Test {
             new MainRegistry.AssetRisk[](0)
         );
 
-        standardERC20Registry = new StandardERC20PricingModule(
+        standardERC20Registry = new StandardERC20PricingModuleExtended(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -444,7 +465,7 @@ contract EndToEndTest is Test {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint256 expectedValue = (((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) * collFactor) / 100
             / 10 ** (18 - Constants.daiDecimals);
@@ -454,7 +475,7 @@ contract EndToEndTest is Test {
     }
 
     function testSuccess_borrow_AllowCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth > 0);
         vm.assume(uint256(amountCredit) * collFactor < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -476,7 +497,7 @@ contract EndToEndTest is Test {
 
     function testRevert_borrow_NotAllowTooMuchCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(uint256(amountCredit) * collFactor < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
@@ -510,7 +531,7 @@ contract EndToEndTest is Test {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.daiDecimals))
@@ -550,7 +571,7 @@ contract EndToEndTest is Test {
         uint128 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint128 amountCredit = uint128(
             (
                 ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
@@ -579,7 +600,7 @@ contract EndToEndTest is Test {
     ) public {
         vm.assume(amountEth > 0);
         vm.assume(newPrice * 10 ** Constants.oracleEthToUsdDecimals > rateEthToUsd);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals);
 
@@ -612,7 +633,7 @@ contract EndToEndTest is Test {
 
     function testRevert_withdraw_OpenDebtIsTooLarge(uint128 amountEth, uint128 amountEthWithdrawal) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor);
         vm.assume(amountEth >= amountEthWithdrawal);
 
@@ -645,7 +666,7 @@ contract EndToEndTest is Test {
         uint128 amountCredit
     ) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor);
         vm.assume(amountEth >= amountEthWithdrawal);
 
@@ -682,7 +703,7 @@ contract EndToEndTest is Test {
         uint16 blocksToRoll
     ) public {
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -717,7 +738,7 @@ contract EndToEndTest is Test {
 
     function testSuccess_repay_ExactDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll) public {
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -755,7 +776,7 @@ contract EndToEndTest is Test {
     {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -801,7 +822,7 @@ contract EndToEndTest is Test {
     ) public {
         // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;

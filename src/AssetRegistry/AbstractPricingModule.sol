@@ -10,6 +10,7 @@ import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../interfaces/IOraclesHub.sol";
 import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import {RiskConstants} from "../utils/RiskConstants.sol";
 
 /**
  * @title Abstract Pricing Module
@@ -20,17 +21,6 @@ import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
  */
 abstract contract PricingModule is Ownable {
     using FixedPointMathLib for uint256;
-
-    uint16 public constant VARIABLE_DECIMAL = 100;
-
-    uint16 public constant MIN_COLLATERAL_FACTOR = 0;
-    uint16 public constant MIN_LIQUIDATION_THRESHOLD = 100;
-
-    uint16 public constant MAX_COLLATERAL_FACTOR = 100;
-    uint16 public constant MAX_LIQUIDATION_THRESHOLD = 10000;
-
-    uint16 public constant DEFAULT_COLLATERAL_FACTOR = 20;
-    uint16 public constant DEFAULT_LIQUIDATION_THRESHOLD = 110;
 
     address public mainRegistry;
     address public oracleHub;

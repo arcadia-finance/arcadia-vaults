@@ -7,6 +7,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "./utils/FixedPointMathLib.sol";
+import {RiskConstants} from "./utils/RiskConstants.sol";
 
 /**
  * @title Risk Module
@@ -16,17 +17,6 @@ import "./utils/FixedPointMathLib.sol";
  */
 contract RiskModule {
     using FixedPointMathLib for uint256;
-
-    uint16 public constant VARIABLE_DECIMAL = 100;
-
-    uint16 public constant MIN_COLLATERAL_FACTOR = 0;
-    uint16 public constant MIN_LIQUIDATION_THRESHOLD = 100;
-
-    uint16 public constant MAX_COLLATERAL_FACTOR = 100;
-    uint16 public constant MAX_LIQUIDATION_THRESHOLD = 10000;
-
-    uint16 public constant DEFAULT_COLLATERAL_FACTOR = 50;
-    uint16 public constant DEFAULT_LIQUIDATION_THRESHOLD = 110;
 
     struct AssetValueRisk {
         uint256 valueInBaseCurrency;
@@ -59,7 +49,7 @@ contract RiskModule {
                 ++i;
             }
         }
-        collateralValue = collateralValue / VARIABLE_DECIMAL;
+        collateralValue = collateralValue / RiskConstants.VARIABLE_DECIMAL;
     }
 
     /**

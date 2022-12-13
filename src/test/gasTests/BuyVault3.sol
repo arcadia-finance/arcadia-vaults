@@ -486,8 +486,8 @@ contract gasBuyVault_1ERC201ERC721 is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        uint16 liqTresh = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = collFactor;
         collateralFactors[1] = collFactor;

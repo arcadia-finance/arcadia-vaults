@@ -405,13 +405,13 @@ contract vaultTests is Test {
         safemoon.approve(address(vault), type(uint256).max);
         vm.stopPrank();
 
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        collateralFactors[2] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        collateralFactors[2] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        liquidationThresholds[2] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -565,7 +565,7 @@ contract vaultTests is Test {
 
         uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amount
             / 10 ** (18 - Constants.daiDecimals);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint256 expectedRemaining = (depositValue * collFactor) / 100;
         assertEq(expectedRemaining, vault.getFreeMargin());
@@ -575,7 +575,7 @@ contract vaultTests is Test {
         public
     {
         vm.assume(tokenIds.length < 10 && tokenIds.length > 1);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         depositEthInVault(amountEth, vaultOwner);
         uint256 depositValueEth = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth;
@@ -605,7 +605,7 @@ contract vaultTests is Test {
         uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth
             / 10 ** (18 - Constants.daiDecimals);
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         vm.assume((depositValue * collFactor) / 100 > amountCredit);
         depositEthInVault(amountEth, vaultOwner);
@@ -635,7 +635,7 @@ contract vaultTests is Test {
         );
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.prank(vaultOwner);
         pool.borrow((((amountEth * collFactor) / 100) * factor) / 255, address(vault), vaultOwner);
 
@@ -683,7 +683,7 @@ contract vaultTests is Test {
         vm.store(address(debt), loc, addDebt);
 
         //Set liquidation treshhold on the vault
-        vault.setLiquidationThreshold(mainRegistry.DEFAULT_COLLATERAL_FACTOR());
+        vault.setLiquidationThreshold(RiskConstants.DEFAULT_COLLATERAL_FACTOR);
 
         vm.startPrank(liquidationKeeper);
         factoryContr.liquidate(address(vault));
@@ -1155,7 +1155,7 @@ contract vaultTests is Test {
             * baseAmountWithdraw / 10 ** (18 - Constants.daiDecimals);
         vm.assume(baseAmountWithdraw < baseAmountDeposit);
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         vm.assume(amountCredit < ((valueDeposit - valueWithdraw) * collFactor) / 100);
 
@@ -1188,7 +1188,7 @@ contract vaultTests is Test {
         uint256 ValueWithdraw = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * baseAmountWithdraw / 10 ** (18 - Constants.daiDecimals);
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         vm.assume(amountCredit <= (valueDeposit * collFactor) / 100);
         vm.assume(amountCredit > ((valueDeposit - ValueWithdraw) * collFactor) / 100);
@@ -1220,7 +1220,7 @@ contract vaultTests is Test {
             ) % assetIds.length
             : 0;
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint256 rateInUsd = (
             ((Constants.WAD * rateWbaycToEth) / 10 ** Constants.oracleWbaycToEthDecimals) * rateEthToUsd
@@ -1261,7 +1261,7 @@ contract vaultTests is Test {
         (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
         vm.assume(assetIds.length >= amountsWithdrawn && assetIds.length > 1 && amountsWithdrawn > 1);
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint256 rateInUsd = (
             ((Constants.WAD * rateWbaycToEth) / 10 ** Constants.oracleWbaycToEthDecimals) * rateEthToUsd
         ) / 10 ** Constants.oracleEthToUsdDecimals / 10 ** (18 - Constants.daiDecimals);
@@ -1486,7 +1486,7 @@ contract vaultTests is Test {
         vm.assume(amountDeposit > 0);
         uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.daiDecimals);
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         vm.assume((amountDeposit * collFactor) / 100 >= amountCredit);
         depositEthInVault(baseAmountDeposit, vaultOwner);
@@ -1502,7 +1502,7 @@ contract vaultTests is Test {
         vm.assume(amountCredit > 0);
         vm.assume(unprivilegedAddress != vaultOwner);
         uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth;
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume((depositValue * collFactor) / 100 > amountCredit);
         depositEthInVault(amountEth, vaultOwner);
 
@@ -1583,7 +1583,7 @@ contract vaultTests is Test {
         //        vm.assume(additionalDeposit < 10);
         vm.assume(openDebt <= type(uint128).max / (10 ** 5)); //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint128 amountEthToDeposit = uint128(
             (
                 (openDebt / rateEthToUsd / 10 ** 18) * 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals)
@@ -1620,7 +1620,7 @@ contract vaultTests is Test {
         vm.assume(blocksToRoll <= 255555555); //up to the year 2122
         vm.assume(baseAmountEthToDeposit > 0);
         vm.assume(baseAmountEthToDeposit < 10);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint128 amountEthToDeposit = uint128(
             (
                 ((10 * 10 ** 9 * 10 ** 18) / rateEthToUsd / 10 ** 18)

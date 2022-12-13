@@ -29,10 +29,10 @@ contract FloorERC721PricingModule is PricingModule {
 
     /**
      * @notice A Pricing Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
-     * @param mainRegistry The address of the Main-registry
-     * @param oracleHub The address of the Oracle-Hub
+     * @param mainRegistry_ The address of the Main-registry
+     * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -115,8 +115,8 @@ contract FloorERC721PricingModule is PricingModule {
             for (uint256 i; i < baseCurrencyCounter;) {
                 // Write: Default variables for collateralFactor and liquidationThreshold
                 // make in memory, store once
-                assetCollateralFactors[i] = DEFAULT_COLLATERAL_FACTOR;
-                assetLiquidationThresholds[i] = DEFAULT_LIQUIDATION_THRESHOLD;
+                assetCollateralFactors[i] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+                assetLiquidationThresholds[i] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
                 unchecked {
                     i++;
@@ -130,13 +130,13 @@ contract FloorERC721PricingModule is PricingModule {
             for (uint256 i; i < assetCollateralFactorsLength;) {
                 // Check: Values in the allowed limit
                 require(
-                    assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR
-                        && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
+                    assetCollateralFactors[i] <= RiskConstants.MAX_COLLATERAL_FACTOR
+                        && assetCollateralFactors[i] >= RiskConstants.MIN_COLLATERAL_FACTOR,
                     "PM20_SRV: Coll.Fact not in limits"
                 );
                 require(
-                    assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
-                        && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
+                    assetLiquidationThresholds[i] <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
+                        && assetLiquidationThresholds[i] >= RiskConstants.MIN_LIQUIDATION_THRESHOLD,
                     "PM20_SRV: Liq.Thres not in limits"
                 );
 

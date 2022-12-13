@@ -448,10 +448,10 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
         );
 /* 
         uint16[] memory assetCollateralFactors = new uint16[](1);
-        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint16[] memory assetLiquidationThresholds = new uint16[](1);
-        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        assetLiquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
         MainRegistry.AssetRisk[] memory assetRisks1 = new MainRegistry.AssetRisk[](1);
         assetRisks1[0].asset = address(dai);
@@ -464,12 +464,12 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
         assetRisks2[0].assetLiquidationThresholds = assetLiquidationThresholds; */
 /* 
         uint16[] memory assetCollateralFactors = new uint16[](2);
-        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        assetCollateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        assetCollateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint16[] memory assetLiquidationThresholds = new uint16[](2);
-        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        assetLiquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        assetLiquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        assetLiquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
         MainRegistry.AssetRisk[] memory assetRisks = new MainRegistry.AssetRisk[](2);
         assetRisks[0].asset = address(dai);
@@ -482,19 +482,19 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
 
 
         uint16[] memory assetCollateralFactors = new uint16[](1);
-        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint16[] memory assetLiquidationThresholds = new uint16[](1);
-        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        assetLiquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
-        MainRegistry.AssetRisk[] memory assetRisks = new MainRegistry.AssetRisk[](0);
+        MainRegistry.AssetRisk[] memory assetRisks = new MainRegistry.AssetRisk[](2);
+        assetRisks[0].asset = address(dai);
+        assetRisks[0].assetCollateralFactors = assetCollateralFactors;
+        assetRisks[0].assetLiquidationThresholds = assetLiquidationThresholds;
 
-        MainRegistry.AssetRisk[] memory assetRisks1 = new MainRegistry.AssetRisk[](1);
-        assetRisks1[0].asset = address(dai);
-        assetRisks1[0].assetCollateralFactors = assetCollateralFactors;
-        assetRisks1[0].assetLiquidationThresholds = assetLiquidationThresholds;
-
-        MainRegistry.AssetRisk[] memory assetRisks2 = new MainRegistry.AssetRisk[](0);
+        assetRisks[1].asset = address(eth);
+        assetRisks[1].assetCollateralFactors = assetCollateralFactors;
+        assetRisks[1].assetLiquidationThresholds = assetLiquidationThresholds;
 
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -514,7 +514,7 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            assetRisks2
+            assetRisks
         );
         uint256 baseCurrencycountr = mainRegistry.baseCurrencyCounter();
         emit log_named_uint("countr", baseCurrencycountr);
@@ -536,7 +536,7 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({

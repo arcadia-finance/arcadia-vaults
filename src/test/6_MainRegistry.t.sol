@@ -383,8 +383,8 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
 
     function testRevert_addBaseCurrency_WrongNumberOfRiskVariables() public {
         // Given: collateralFactors index 0, 1 and 2 is collFactor, liquidationThresholds index 0, 1 and 2 is liqTresh, creatorAddress calls addPricingModule and setAssetInformation
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        uint16 liqTresh = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = collFactor;
         collateralFactors[1] = collFactor;
@@ -430,7 +430,7 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         });
 
         // Then: addBaseCurrency reverts with "MR_ABC: LENGTH_MISMATCH"
-        vm.expectRevert("MR_ABC: LENGTH_MISMATCH");
+        vm.expectRevert("PM20_SRV: LENGTH_MISMATCH");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
@@ -469,10 +469,10 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
 
         uint16[] memory collateralFactors = new uint16[](2);
         collateralFactors[0] = 15000;
-        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
         RiskModule.AssetRisk[] memory assetRisk = new RiskModule.AssetRisk[](2);
         assetRisk[0] = RiskModule.AssetRisk({
@@ -501,7 +501,7 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
             assetRisk
         );
 
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         liquidationThresholds[0] = 11000;
 
         assetRisk[0] = RiskModule.AssetRisk({
@@ -552,6 +552,25 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
             })
         );
 
+        uint16[] memory collateralFactors = new uint16[](2);
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16[] memory liquidationThresholds = new uint16[](2);
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+
+        RiskModule.AssetRisk[] memory assetRisk = new RiskModule.AssetRisk[](2);
+        assetRisk[0] = RiskModule.AssetRisk({
+            asset: address(eth),
+            assetCollateralFactors: collateralFactors,
+            assetLiquidationThresholds: liquidationThresholds
+        });
+        assetRisk[1] = RiskModule.AssetRisk({
+            asset: address(link),
+            assetCollateralFactors: collateralFactors,
+            assetLiquidationThresholds: liquidationThresholds
+        });
+
         // When: creatorAddress calls addBaseCurrency
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -561,8 +580,31 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
             }),
-            new MainRegistry.AssetRisk[](0)
+            assetRisk
         );
+
+        uint16[] memory collateralFactors2 = new uint16[](3);
+        collateralFactors2[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        collateralFactors2[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        collateralFactors2[2] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16[] memory liquidationThresholds2 = new uint16[](3);
+        liquidationThresholds2[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds2[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds2[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+
+        RiskModule.AssetRisk[] memory assetRisk2 = new RiskModule.AssetRisk[](2);
+        assetRisk2[0] = RiskModule.AssetRisk({
+            asset: address(eth),
+            assetCollateralFactors: collateralFactors2,
+            assetLiquidationThresholds: liquidationThresholds2
+        });
+        assetRisk2[1] = RiskModule.AssetRisk({
+            asset: address(link),
+            assetCollateralFactors: collateralFactors2,
+            assetLiquidationThresholds: liquidationThresholds2
+        });
+
+
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
@@ -571,7 +613,7 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            new MainRegistry.AssetRisk[](0)
+            assetRisk2
         );
         vm.stopPrank();
 
@@ -603,11 +645,11 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         );
 
         uint16[] memory collateralFactors = new uint16[](2);
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
         RiskModule.AssetRisk[] memory assetRisk = new RiskModule.AssetRisk[](2);
         assetRisk[0] = RiskModule.AssetRisk({
@@ -759,67 +801,6 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_WrongNumberOfRiskVariables() public {
-        // Given: collateralFactors index 0 is 1, liquidationThresholds index 0 is 1
-        uint16[] memory collateralFactors = new uint16[](1);
-        uint16[] memory liquidationThresholds = new uint16[](1);
-        collateralFactors[0] = 1;
-        liquidationThresholds[0] = 1;
-
-        vm.startPrank(address(standardERC20PricingModule));
-        // When: address(standardERC20PricingModule) calls addAsset
-        // Then: addAsset should revert with "MR_AA: LENGTH_MISMATCH"
-        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-        mainRegistry.addAsset(address(eth));
-        vm.stopPrank();
-    }
-
-    function testRevert_addAsset_RiskVariablesTooSmall() public {
-        // Given: collateralFactors index 0, 1 and 2 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is 99, index 1 and 2 is DEFAULT_LIQUIDATION_THRESHOLD
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        collateralFactors[2] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = 99;
-        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        liquidationThresholds[2] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-
-        vm.startPrank(address(standardERC20PricingModule));
-        // When: address(standardERC20PricingModule) calls addAsset
-        // Then : addAsset should revert with "MR_AA: Liq.Thres not in limits"
-        vm.expectRevert("MR_AA: Liq.Thres not in limits");
-        mainRegistry.addAsset(address(eth));
-        vm.stopPrank();
-    }
-
-    function testRevert_addAsset_RiskVariablesTooBig() public {
-        // Given: collateralFactors index 0 is 1500, index 1 and 2 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0, 1 and 2 is DEFAULT_LIQUIDATION_THRESHOLD
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = 15000;
-        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        collateralFactors[2] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        liquidationThresholds[2] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-
-        vm.startPrank(address(standardERC20PricingModule));
-        // When: address(standardERC20PricingModule) calls addAsset
-        // Then : addAsset should revert with "MR_AA: Coll.Fact not in limits"
-        vm.expectRevert("MR_AA: Coll.Fact not in limits");
-        mainRegistry.addAsset(address(eth));
-        vm.stopPrank();
-
-        vm.startPrank(address(standardERC20PricingModule));
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        liquidationThresholds[0] = 11000;
-        vm.expectRevert("MR_AA: Liq.Thres not in limits");
-        mainRegistry.addAsset(address(eth));
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListRiskVariables() public {
         // When: standardERC20PricingModule calls addAsset with input of address(eth), emptyListUint16, emptyListUint16
         vm.startPrank(address(standardERC20PricingModule));
@@ -832,8 +813,8 @@ contract AssetManagementTest is MainRegistryTest {
 
     function testSuccess_addAsset_FullListRiskVariables() public {
         // Given: collateralFactors index 0, 1 and 2 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0, 1 and 2 is DEFAULT_LIQUIDATION_THRESHOLD
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        uint16 liqTresh = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = collFactor;
         collateralFactors[1] = collFactor;
@@ -1240,12 +1221,12 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         vm.assume(unprivilegedAddress != creatorAddress);
 
         uint16[] memory assetCollateralFactors = new uint16[](2);
-        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        assetCollateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        assetCollateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint16[] memory assetLiquidationThresholds = new uint16[](2);
-        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        assetLiquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        assetLiquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        assetLiquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
         RiskModule.AssetRisk[] memory assetRisks = new RiskModule.AssetRisk[](2);
         assetRisks[0].asset = address(eth);
@@ -1269,13 +1250,13 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         // Given : assetAddresses index 0 and 1 is address(eth), baseCurrencies index 0 is UsdBaseCurrency, collateralFactors index 0, 1 and 2 is DEFAULT_COLLATERAL_FACTOR
         // liquidationThresholds index 0, 1 and 2 is DEFAULT_LIQUIDATION_THRESHOLD
         uint16[] memory assetCollateralFactors = new uint16[](3);
-        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        assetCollateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        assetCollateralFactors[2] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        assetCollateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        assetCollateralFactors[2] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint16[] memory assetLiquidationThresholds = new uint16[](2);
-        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        assetLiquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        assetLiquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        assetLiquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
         RiskModule.AssetRisk[] memory assetRisks = new RiskModule.AssetRisk[](2);
         assetRisks[0].asset = address(eth);
@@ -1310,11 +1291,11 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         // liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
         uint16[] memory assetCollateralFactors = new uint16[](2);
         assetCollateralFactors[0] = 15000;
-        assetCollateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        assetCollateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint16[] memory assetLiquidationThresholds = new uint16[](2);
-        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        assetLiquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        assetLiquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        assetLiquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
         RiskModule.AssetRisk[] memory assetRisks = new RiskModule.AssetRisk[](2);
         assetRisks[0].asset = address(eth);
@@ -1333,7 +1314,7 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         mainRegistry.batchSetRiskVariables(assetRisks);
         vm.stopPrank();
 
-        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         assetLiquidationThresholds[0] = 11000;
         assetRisks[0].assetCollateralFactors = assetCollateralFactors;
         assetRisks[0].assetLiquidationThresholds = assetLiquidationThresholds;
@@ -1350,13 +1331,15 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         // Given : assetAddresses index 0 and 1 is address(eth), baseCurrencies index 0 is UsdBaseCurrency, collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR
         // liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
 
-        uint16[] memory assetCollateralFactors = new uint16[](2);
-        assetCollateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        assetCollateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16[] memory assetCollateralFactors = new uint16[](3);
+        assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        assetCollateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        assetCollateralFactors[2] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        uint16[] memory assetLiquidationThresholds = new uint16[](2);
-        assetLiquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        assetLiquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        uint16[] memory assetLiquidationThresholds = new uint16[](3);
+        assetLiquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        assetLiquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        assetLiquidationThresholds[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
         RiskModule.AssetRisk[] memory assetRisks = new RiskModule.AssetRisk[](2);
         assetRisks[0].asset = address(eth);
@@ -1378,8 +1361,8 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         (,, assetInfo.assetCollateralFactors, assetInfo.assetLiquidationThresholds,) =
             standardERC20PricingModule.assetToInformation_(address(eth));
 
-        assertEq(mainRegistry.DEFAULT_COLLATERAL_FACTOR(), assetInfo.assetCollateralFactors[0]);
-        assertEq(mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD(), assetInfo.assetLiquidationThresholds[0]);
+        assertEq(RiskConstants.DEFAULT_COLLATERAL_FACTOR, assetInfo.assetCollateralFactors[0]);
+        assertEq(RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD, assetInfo.assetLiquidationThresholds[0]);
     }
 }
 

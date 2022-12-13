@@ -130,11 +130,13 @@ contract ATokenPricingModule is PricingModule {
         // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
         if (assetCollateralFactorsLength == 0) {
             // Loop: Per base currency
+            assetCollateralFactors = new uint16[](baseCurrencyCounter);
+            assetLiquidationThresholds = new uint16[](baseCurrencyCounter);
             for (uint256 i; i < baseCurrencyCounter;) {
                 // Write: Default variables for collateralFactor and liquidationThreshold
                 // make in memory, store once
-                assetCollateralFactors[i] = DEFAULT_COLLATERAL_FACTOR;
-                assetLiquidationThresholds[i] = DEFAULT_LIQUIDATION_THRESHOLD;
+                assetCollateralFactors[i] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+                assetLiquidationThresholds[i] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
                 unchecked {
                     i++;
@@ -148,13 +150,13 @@ contract ATokenPricingModule is PricingModule {
             for (uint256 i; i < assetCollateralFactorsLength;) {
                 // Check: Values in the allowed limit
                 require(
-                    assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR
-                        && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
+                    assetCollateralFactors[i] <= RiskConstants.MAX_COLLATERAL_FACTOR
+                        && assetCollateralFactors[i] >= RiskConstants.MIN_COLLATERAL_FACTOR,
                     "PM4626_SRV: Coll.Fact not in limits"
                 );
                 require(
-                    assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
-                        && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
+                    assetLiquidationThresholds[i] <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
+                        && assetLiquidationThresholds[i] >= RiskConstants.MIN_LIQUIDATION_THRESHOLD,
                     "PM4626_SRV: Liq.Thres not in limits"
                 );
 

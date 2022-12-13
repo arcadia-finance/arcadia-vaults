@@ -421,7 +421,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    ) public view returns (AssetValueRisk[] memory valuesPerAsset) {
+    ) public view returns (AssetValueRisk[] memory) {
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
 
         uint256 assetAddressesLength = _assetAddresses.length;
@@ -436,7 +436,9 @@ contract MainRegistry is Ownable, RiskModule {
         address assetAddress;
         uint256 tempValueInUsd;
         uint256 tempValueInBaseCurrency;
+        AssetValueRisk[] memory valuesPerAsset = new AssetValueRisk[](assetAddressesLength);
         for (uint256 i; i < assetAddressesLength;) {
+
             assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
 

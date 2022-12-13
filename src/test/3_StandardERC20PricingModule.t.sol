@@ -181,13 +181,13 @@ contract StandardERC20PricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
         uint16[] memory collateralFactors = new uint16[](1);
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         // When: creatorAddress calls setAssetInformation with 19 decimals
 
         // Then: setAssetInformation should revert with "SSR_SAI: Maximal 18 decimals"
-        vm.expectRevert("SSR_SAI: Maximal 18 decimals");
+        vm.expectRevert("PM20_SAI: Maximal 18 decimals");
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -205,13 +205,13 @@ contract StandardERC20PricingModuleTest is Test {
         vm.startPrank(creatorAddress);
         // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
         uint16[] memory collateralFactors = new uint16[](1);
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         // When: creatorAddress calls setAssetInformation with wrong number of credits
 
         // Then: setAssetInformation should revert with "MR_AA: LENGTH_MISMATCH"
-        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
+        vm.expectRevert("PM20_SRV: LENGTH_MISMATCH");
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -247,11 +247,11 @@ contract StandardERC20PricingModuleTest is Test {
         // Given: collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](2);
-        collateralFactors[0] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        collateralFactors[1] = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
-        liquidationThresholds[1] = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         // When: creatorAddress calls setAssetInformation with full list credit ratings
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
@@ -416,6 +416,7 @@ contract StandardERC20PricingModuleTest is Test {
             assetAmount: amountLink,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
+
         // When: getValue called
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
             standardERC20PricingModule.getValue(getValueInput);
