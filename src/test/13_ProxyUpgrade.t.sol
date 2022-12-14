@@ -323,7 +323,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         Checks memory checks;
         VaultInfo memory vaultVar;
 
-        checks.erc20Stored = proxy.erc20Stored(0); //to be improved for whole list
+        checks.erc20Stored = proxy.erc20Stored(0); //ToDo; improve for whole list
         checks.erc721Stored = proxy.erc721Stored(0);
         checks.erc1155Stored = proxy.erc1155Stored(0);
         checks.erc721TokenIds = proxy.erc721TokenIds(0);
