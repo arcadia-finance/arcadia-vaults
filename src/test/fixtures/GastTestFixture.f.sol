@@ -184,8 +184,8 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
             })
         );
 
-        collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        liqTresh = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = collFactor;
         collateralFactors[1] = collFactor;
