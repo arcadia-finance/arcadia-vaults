@@ -103,73 +103,6 @@ contract ATokenPricingModule is PricingModule {
         require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PMAT_SAI: Unable to add in MR");
     }
 
-    function setRiskVariables(
-        address assetAddress,
-        uint16[] memory assetCollateralFactors,
-        uint16[] memory assetLiquidationThresholds
-    ) external override onlyMainRegistry {
-        _setRiskVariables(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
-    }
-
-    function _setRiskVariables(
-        address assetAddress,
-        uint16[] memory assetCollateralFactors,
-        uint16[] memory assetLiquidationThresholds
-    ) internal override {
-        // Check: Valid length of arrays
-        uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
-        uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
-        require(
-            (
-                assetCollateralFactorsLength == baseCurrencyCounter
-                    && assetCollateralFactorsLength == assetLiquidationThresholds.length
-            ) || (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
-            "PM4626_SRV: LENGTH_MISMATCH"
-        );
-
-        // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
-        if (assetCollateralFactorsLength == 0) {
-            // Loop: Per base currency
-            assetCollateralFactors = new uint16[](baseCurrencyCounter);
-            assetLiquidationThresholds = new uint16[](baseCurrencyCounter);
-            for (uint256 i; i < baseCurrencyCounter;) {
-                // Write: Default variables for collateralFactor and liquidationThreshold
-                // make in memory, store once
-                assetCollateralFactors[i] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-                assetLiquidationThresholds[i] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-
-                unchecked {
-                    i++;
-                }
-            }
-
-            assetToInformation[assetAddress].assetCollateralFactors = assetCollateralFactors;
-            assetToInformation[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
-        } else {
-            // Loop: Per value of collateral factor and liquidation threshold
-            for (uint256 i; i < assetCollateralFactorsLength;) {
-                // Check: Values in the allowed limit
-                require(
-                    assetCollateralFactors[i] <= RiskConstants.MAX_COLLATERAL_FACTOR
-                        && assetCollateralFactors[i] >= RiskConstants.MIN_COLLATERAL_FACTOR,
-                    "PM4626_SRV: Coll.Fact not in limits"
-                );
-                require(
-                    assetLiquidationThresholds[i] <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
-                        && assetLiquidationThresholds[i] >= RiskConstants.MIN_LIQUIDATION_THRESHOLD,
-                    "PM4626_SRV: Liq.Thres not in limits"
-                );
-
-                unchecked {
-                    i++;
-                }
-            }
-
-            assetToInformation[assetAddress].assetCollateralFactors = assetCollateralFactors;
-            assetToInformation[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
-        }
-    }
-
     /**
      * @notice Returns the information that is stored in the Pricing Module for a given asset
      * @dev struct is not taken into memory; saves 6613 gas
@@ -250,8 +183,8 @@ contract ATokenPricingModule is PricingModule {
             );
         }
 
-        collFactor = assetToInformation[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
+        collFactor = assetRiskVars[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
         liqThreshold =
-            assetToInformation[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
+            assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
     }
 }
