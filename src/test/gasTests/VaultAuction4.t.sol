@@ -446,7 +446,7 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
-/* 
+        /* 
         uint16[] memory assetCollateralFactors = new uint16[](1);
         assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
@@ -457,12 +457,12 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
         assetRisks1[0].asset = address(dai);
         assetRisks1[0].assetCollateralFactors = assetCollateralFactors;
         assetRisks1[0].assetLiquidationThresholds = assetLiquidationThresholds;
- 
+
         MainRegistry.AssetRisk[] memory assetRisks2 = new MainRegistry.AssetRisk[](1);
         assetRisks2[0].asset = address(eth);
         assetRisks2[0].assetCollateralFactors = assetCollateralFactors;
         assetRisks2[0].assetLiquidationThresholds = assetLiquidationThresholds; */
-/* 
+        /* 
         uint16[] memory assetCollateralFactors = new uint16[](2);
         assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         assetCollateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
@@ -479,7 +479,6 @@ contract gasVaultAuction_2ERC202ERC721 is Test {
         assetRisks[1].asset = address(eth);
         assetRisks[1].assetCollateralFactors = assetCollateralFactors;
         assetRisks[1].assetLiquidationThresholds = assetLiquidationThresholds; */
-
 
         uint16[] memory assetCollateralFactors = new uint16[](1);
         assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;

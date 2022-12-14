@@ -19,4 +19,4 @@ library RiskConstants {
 
     uint16 public constant DEFAULT_COLLATERAL_FACTOR = 50;
     uint16 public constant DEFAULT_LIQUIDATION_THRESHOLD = 110;
-    }
+}

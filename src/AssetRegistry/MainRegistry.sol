@@ -438,7 +438,6 @@ contract MainRegistry is Ownable, RiskModule {
         uint256 tempValueInBaseCurrency;
         AssetValueRisk[] memory valuesPerAsset = new AssetValueRisk[](assetAddressesLength);
         for (uint256 i; i < assetAddressesLength;) {
-
             assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
 

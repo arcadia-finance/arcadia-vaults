@@ -604,7 +604,6 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
             assetLiquidationThresholds: liquidationThresholds2
         });
 
-
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),

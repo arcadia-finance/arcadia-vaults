@@ -483,7 +483,7 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        standardERC20Registry.setAssetInformation( 
+        standardERC20Registry.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetAddress: address(eth),
@@ -646,7 +646,8 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
     }
 
     function testGetRemainingValue() public {
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) = proxy.generateAssetData();
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            proxy.generateAssetData();
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, 0);
         proxy.getFreeMargin();
     }
@@ -763,5 +764,4 @@ contract gasWithdrawal4_2ERC202ERC721 is Test {
         vm.startPrank(vaultOwner);
         proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
-    
 }

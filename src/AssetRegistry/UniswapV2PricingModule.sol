@@ -86,10 +86,7 @@ contract UniswapV2PricingModule is PricingModule {
      *      This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      *      assets are no longer updatable.
      */
-    function setAssetInformation(
-        AssetInformation memory assetInformation
-    ) external onlyOwner {
-
+    function setAssetInformation(AssetInformation memory assetInformation) external onlyOwner {
         address assetAddress = assetInformation.assetAddress;
 
         assetInformation.token0 = IUniswapV2Pair(assetAddress).token0();
@@ -114,7 +111,7 @@ contract UniswapV2PricingModule is PricingModule {
         );
 
         isAssetAddressWhiteListed[assetAddress] = true;
-        
+
         require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PMUV2_SAI: Unable to add in MR");
     }
 
@@ -184,7 +181,6 @@ contract UniswapV2PricingModule is PricingModule {
             assetToInformation[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
         }
     }
-
 
     /*///////////////////////////////////////////////////////////////
                         WHITE LIST MANAGEMENT

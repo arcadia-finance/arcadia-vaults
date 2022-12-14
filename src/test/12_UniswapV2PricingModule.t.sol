@@ -359,14 +359,15 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         //Then: setAssetInformation reverts with "Ownable: caller is not the owner"
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        uniswapV2PricingModule.setAssetInformation(UniswapV2PricingModule.AssetInformation({
-                    token0: address(snx),
-                    token1: address(eth),
-                    assetAddress: address(pairSnxEth),
-                    assetCollateralFactors: emptyListUint16,
-                    assetLiquidationThresholds: emptyListUint16
-                })
-            );
+        uniswapV2PricingModule.setAssetInformation(
+            UniswapV2PricingModule.AssetInformation({
+                token0: address(snx),
+                token1: address(eth),
+                assetAddress: address(pairSnxEth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );
         vm.stopPrank();
     }
 
@@ -376,14 +377,15 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         //Then: setAssetInformation reverts with "Ownable: caller is not the owner"
         vm.startPrank(creatorAddress);
         vm.expectRevert("UV2_SAI: NOT_WHITELISTED");
-        uniswapV2PricingModule.setAssetInformation(UniswapV2PricingModule.AssetInformation({
-                    token0: address(safemoon),
-                    token1: address(eth),
-                    assetAddress: address(pairSafemoonEth),
-                    assetCollateralFactors: emptyListUint16,
-                    assetLiquidationThresholds: emptyListUint16
-                })
-            );
+        uniswapV2PricingModule.setAssetInformation(
+            UniswapV2PricingModule.AssetInformation({
+                token0: address(safemoon),
+                token1: address(eth),
+                assetAddress: address(pairSafemoonEth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );
         vm.stopPrank();
     }
 
@@ -398,14 +400,15 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         //Then: setAssetInformation reverts with "MR_AA: LENGTH_MISMATCH"
         vm.startPrank(creatorAddress);
         vm.expectRevert("MR_AA: LENGTH_MISMATCH");
-        uniswapV2PricingModule.setAssetInformation(UniswapV2PricingModule.AssetInformation({
-                    token0: address(snx),
-                    token1: address(eth),
-                    assetAddress: address(pairSnxEth),
-                    assetCollateralFactors: collateralFactors,
-                    assetLiquidationThresholds: liquidationThresholds
-                })
-            );
+        uniswapV2PricingModule.setAssetInformation(
+            UniswapV2PricingModule.AssetInformation({
+                token0: address(snx),
+                token1: address(eth),
+                assetAddress: address(pairSnxEth),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
+        );
         vm.stopPrank();
     }
 
@@ -414,14 +417,15 @@ contract AssetManagement is UniswapV2PricingModuleTest {
 
         //When: creator adds a new asset
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(UniswapV2PricingModule.AssetInformation({
-                    token0: address(snx),
-                    token1: address(eth),
-                    assetAddress: address(pairSnxEth),
-                    assetCollateralFactors: emptyListUint16,
-                    assetLiquidationThresholds: emptyListUint16
-                })
-            );
+        uniswapV2PricingModule.setAssetInformation(
+            UniswapV2PricingModule.AssetInformation({
+                token0: address(snx),
+                token1: address(eth),
+                assetAddress: address(pairSnxEth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );
 
         //Then: Asset is added to the Pricing Module
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
@@ -440,14 +444,15 @@ contract AssetManagement is UniswapV2PricingModuleTest {
 
         //When: creator adds a new asset
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(UniswapV2PricingModule.AssetInformation({
-                    token0: address(snx),
-                    token1: address(eth),
-                    assetAddress: address(pairSnxEth),
-                    assetCollateralFactors: collateralFactors,
-                    assetLiquidationThresholds: liquidationThresholds
-                })
-            );
+        uniswapV2PricingModule.setAssetInformation(
+            UniswapV2PricingModule.AssetInformation({
+                token0: address(snx),
+                token1: address(eth),
+                assetAddress: address(pairSnxEth),
+                assetCollateralFactors: collateralFactors,
+                assetLiquidationThresholds: liquidationThresholds
+            })
+        );
 
         //Then: Asset is added to the Pricing Module
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
@@ -456,26 +461,28 @@ contract AssetManagement is UniswapV2PricingModuleTest {
     function testSuccess_setAssetInformation_OverwritesAsset() public {
         //Given: asset is added to pricing module
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(UniswapV2PricingModule.AssetInformation({
-                    token0: address(snx),
-                    token1: address(eth),
-                    assetAddress: address(pairSnxEth),
-                    assetCollateralFactors: emptyListUint16,
-                    assetLiquidationThresholds: emptyListUint16
-                })
-            );
+        uniswapV2PricingModule.setAssetInformation(
+            UniswapV2PricingModule.AssetInformation({
+                token0: address(snx),
+                token1: address(eth),
+                assetAddress: address(pairSnxEth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
 
         //When: creator adds asset again
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(UniswapV2PricingModule.AssetInformation({
-                    token0: address(snx),
-                    token1: address(eth),
-                    assetAddress: address(pairSnxEth),
-                    assetCollateralFactors: emptyListUint16,
-                    assetLiquidationThresholds: emptyListUint16
-                })
-            );
+        uniswapV2PricingModule.setAssetInformation(
+            UniswapV2PricingModule.AssetInformation({
+                token0: address(snx),
+                token1: address(eth),
+                assetAddress: address(pairSnxEth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );
 
         //Then: Asset is in Pricing Module
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
@@ -495,14 +502,15 @@ contract WhiteListManagement is UniswapV2PricingModuleTest {
 
         //When: pairSnxEth is added to the pricing module
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(UniswapV2PricingModule.AssetInformation({
-                    token0: address(snx),
-                    token1: address(eth),
-                    assetAddress: address(pairSnxEth),
-                    assetCollateralFactors: emptyListUint16,
-                    assetLiquidationThresholds: emptyListUint16
-                })
-            );
+        uniswapV2PricingModule.setAssetInformation(
+            UniswapV2PricingModule.AssetInformation({
+                token0: address(snx),
+                token1: address(eth),
+                assetAddress: address(pairSnxEth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );
 
         //Then: pairSnxEth is white-listed
         assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth), 0));
@@ -816,14 +824,15 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             deployToken(oracleSnxToUsd, _snxDecimals, _oracleSnxToUsdDecimals, _rateSnxToUsd, "SNX", oracleSnxToUsdArr);
         pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(UniswapV2PricingModule.AssetInformation({
-                    token0: address(snx),
-                    token1: address(eth),
-                    assetAddress: address(pairSnxEth),
-                    assetCollateralFactors: emptyListUint16,
-                    assetLiquidationThresholds: emptyListUint16
-                })
-            );
+        uniswapV2PricingModule.setAssetInformation(
+            UniswapV2PricingModule.AssetInformation({
+                token0: address(snx),
+                token1: address(eth),
+                assetAddress: address(pairSnxEth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );
 
         // Mint LP
         vm.assume(uint256(amountSnx) * amountEth > pairSnxEth.MINIMUM_LIQUIDITY()); //min liquidity in uniswap pool
@@ -870,14 +879,15 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             deployToken(oracleSnxToUsd, _snxDecimals, _oracleSnxToUsdDecimals, _rateSnxToUsd, "SNX", oracleSnxToUsdArr);
         pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(UniswapV2PricingModule.AssetInformation({
-                    token0: address(snx),
-                    token1: address(eth),
-                    assetAddress: address(pairSnxEth),
-                    assetCollateralFactors: emptyListUint16,
-                    assetLiquidationThresholds: emptyListUint16
-                })
-            );
+        uniswapV2PricingModule.setAssetInformation(
+            UniswapV2PricingModule.AssetInformation({
+                token0: address(snx),
+                token1: address(eth),
+                assetAddress: address(pairSnxEth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );
 
         // Mint a variable amount of balanced LP, for a given amountSnx
         vm.assume(

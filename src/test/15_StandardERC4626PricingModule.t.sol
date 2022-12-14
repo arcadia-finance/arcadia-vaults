@@ -158,7 +158,7 @@ contract standardERC4626PricingModuleTest is Test {
         collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](1);
         liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        
+
         vm.expectRevert("PM4626_SRV: LENGTH_MISMATCH");
         standardERC4626PricingModule.setAssetInformation(
             StandardERC4626PricingModule.AssetInformation({
