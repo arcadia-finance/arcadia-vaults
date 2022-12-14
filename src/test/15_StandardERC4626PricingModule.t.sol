@@ -6,84 +6,21 @@
  */
 pragma solidity >0.8.10;
 
-import "../../lib/forge-std/src/Test.sol";
+import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
 import {ERC4626Mock} from "../mockups/ERC4626Mock.sol";
-import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
-import "../OracleHub.sol";
-import "../utils/Constants.sol";
 import "../AssetRegistry/StandardERC4626PricingModule.sol";
-import "../AssetRegistry/StandardERC20PricingModule.sol";
-import "../AssetRegistry/MainRegistry.sol";
-import "../mockups/ArcadiaOracle.sol";
-import "./fixtures/ArcadiaOracleFixture.f.sol";
 
-contract standardERC4626PricingModuleTest is Test {
+contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
-    OracleHub private oracleHub;
-    MainRegistry private mainRegistry;
-
-    ERC20Mock private eth;
-    ERC4626Mock private ybEth;
-
-    ArcadiaOracle private oracleEthToUsd;
-
-    StandardERC20PricingModule private standardERC20PricingModule;
-    StandardERC4626PricingModule private standardERC4626PricingModule;
-
-    address private creatorAddress = address(1);
-    address private tokenCreatorAddress = address(2);
-    address private oracleOwner = address(3);
-
-    uint256 rateEthToUsd = 1850 * 10 ** Constants.oracleEthToUsdDecimals;
-
-    address[] public oracleEthToUsdArr = new address[](1);
-
-    uint256[] emptyList = new uint256[](0);
-    uint16[] emptyListUint16 = new uint16[](0);
-
-    // FIXTURES
-    ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
+    ERC4626Mock public ybEth;
+    StandardERC4626PricingModule public standardERC4626PricingModule;
 
     //this is a before
-    constructor() {
-        vm.startPrank(tokenCreatorAddress);
-        eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
+    constructor() DeployArcadiaVaults() {
+        vm.prank(tokenCreatorAddress);
         ybEth = new ERC4626Mock(eth, "ybETH Mock", "mybETH", uint8(Constants.ethDecimals));
-        vm.stopPrank();
-
-        vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
-        oracleHub = new OracleHub();
-        vm.stopPrank();
-
-        oracleEthToUsd =
-            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD", rateEthToUsd);
-
-        vm.startPrank(creatorAddress);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "ETH",
-                baseAsset: "USD",
-                oracle: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        vm.stopPrank();
-
-        oracleEthToUsdArr[0] = address(oracleEthToUsd);
     }
 
     //this is a before each
@@ -135,9 +72,9 @@ contract standardERC4626PricingModuleTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_NonOwner(address unprivilegedAddress) public {
-        vm.assume(unprivilegedAddress != creatorAddress);
-        vm.startPrank(unprivilegedAddress);
+    function testRevert_setAssetInformation_NonOwner(address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+        vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("Ownable: caller is not the owner");
         standardERC4626PricingModule.setAssetInformation(address(ybEth), emptyListUint16, emptyListUint16);
         vm.stopPrank();

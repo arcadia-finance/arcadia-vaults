@@ -6,16 +6,10 @@
  */
 pragma solidity >0.8.10;
 
-import "../../lib/forge-std/src/Test.sol";
-
-import "../mockups/ERC20SolmateMock.sol";
-import "../OracleHub.sol";
-import "../utils/Constants.sol";
-import "../AssetRegistry/AbstractPricingModule.sol";
-import "../AssetRegistry/MainRegistry.sol";
+import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
 contract AbstractPricingModuleForTest is PricingModule {
-    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
 
     function setAssetInformation(address assetAddress) public onlyOwner {
         if (!inPricingModule[assetAddress]) {
@@ -26,46 +20,13 @@ contract AbstractPricingModuleForTest is PricingModule {
     }
 }
 
-contract AbstractPricingModuleTest is Test {
+contract AbstractPricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     AbstractPricingModuleForTest internal abstractPricingModule;
-    OracleHub private oracleHub;
-    MainRegistry private mainRegistry;
-
-    ERC20Mock private eth;
-    ERC20Mock private snx;
-    ERC20Mock private link;
-
-    address private creatorAddress = address(1);
-    address private tokenCreatorAddress = address(2);
 
     //this is a before
-    constructor() {
-        vm.startPrank(tokenCreatorAddress);
-        eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
-        link = new ERC20Mock(
-            "LINK Mock",
-            "mLINK",
-            uint8(Constants.linkDecimals)
-        );
-
-        vm.stopPrank();
-
-        vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
-        oracleHub = new OracleHub();
-        vm.stopPrank();
-    }
+    constructor() DeployArcadiaVaults() {}
 
     //this is a before each
     function setUp() public {
@@ -86,14 +47,14 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(assetAddress));
     }
 
-    function testRevert_addToWhiteList_NonOwnerAddsExistingAssetToWhitelist(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not creatorAddress, creatorAddress calls setAssetInformation with address(eth)
-        vm.assume(unprivilegedAddress != creatorAddress);
+    function testRevert_addToWhiteList_NonOwnerAddsExistingAssetToWhitelist(address unprivilegedAddress_) public {
+        // Given: unprivilegedAddress_ is not creatorAddress, creatorAddress calls setAssetInformation with address(eth)
+        vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.prank(creatorAddress);
         abstractPricingModule.setAssetInformation(address(eth));
 
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls addToWhiteList
+        vm.startPrank(unprivilegedAddress_);
+        // When: unprivilegedAddress_ calls addToWhiteList
 
         // Then: addToWhiteList should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
@@ -130,18 +91,18 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testRevert_removeFromWhiteList_NonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress)
+    function testRevert_removeFromWhiteList_NonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress_)
         public
     {
-        // Given: unprivilegedAddress is not creatorAddress and address(this), creatorAddress calls setAssetInformation with address(eth)
-        vm.assume(unprivilegedAddress != creatorAddress);
-        vm.assume(unprivilegedAddress != address(this));
+        // Given: unprivilegedAddress_ is not creatorAddress and address(this), creatorAddress calls setAssetInformation with address(eth)
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+        vm.assume(unprivilegedAddress_ != address(this));
 
         vm.prank(creatorAddress);
         abstractPricingModule.setAssetInformation(address(eth));
 
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls removeFromWhiteList
+        vm.startPrank(unprivilegedAddress_);
+        // When: unprivilegedAddress_ calls removeFromWhiteList
 
         // Then: removeFromWhiteList should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
@@ -178,17 +139,17 @@ contract AbstractPricingModuleTest is Test {
         assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testRevert_addToWhiteList_NonOwnerAddsRemovedAssetToWhitelist(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not creatorAddress, creatorAddress setAssetInformation and removeFromWhiteList with address(eth)
-        vm.assume(unprivilegedAddress != creatorAddress);
+    function testRevert_addToWhiteList_NonOwnerAddsRemovedAssetToWhitelist(address unprivilegedAddress_) public {
+        // Given: unprivilegedAddress_ is not creatorAddress, creatorAddress setAssetInformation and removeFromWhiteList with address(eth)
+        vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(creatorAddress);
         abstractPricingModule.setAssetInformation(address(eth));
         abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls addToWhiteList
+        vm.startPrank(unprivilegedAddress_);
+        // When: unprivilegedAddress_ calls addToWhiteList
 
         // Then: addToWhiteList should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
