@@ -254,6 +254,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(owner != unprivilegedAddress_);
         vm.assume(owner != address(0));
         vm.assume(receiver != address(0));
+        vm.assume(unprivilegedAddress_ != address(0));
 
         vm.prank(owner);
         proxyAddr = factory.createVault(0, 0);
