@@ -7,6 +7,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "./utils/FixedPointMathLib.sol";
+import {RiskConstants} from "./utils/RiskConstants.sol";
 
 /**
  * @title Risk Module
@@ -17,19 +18,17 @@ import "./utils/FixedPointMathLib.sol";
 contract RiskModule {
     using FixedPointMathLib for uint256;
 
-    mapping(address => mapping(uint256 => uint16)) public collateralFactors;
-    mapping(address => mapping(uint256 => uint16)) public liquidationThresholds;
+    struct AssetValueRisk {
+        uint256 valueInBaseCurrency;
+        uint256 collFactor;
+        uint256 liqThreshold;
+    }
 
-    uint16 public constant VARIABLE_DECIMAL = 100;
-
-    uint16 public constant MIN_COLLATERAL_FACTOR = 0;
-    uint16 public constant MIN_LIQUIDATION_THRESHOLD = 100;
-
-    uint16 public constant MAX_COLLATERAL_FACTOR = 100;
-    uint16 public constant MAX_LIQUIDATION_THRESHOLD = 10000;
-
-    uint16 public constant DEFAULT_COLLATERAL_FACTOR = 50;
-    uint16 public constant DEFAULT_LIQUIDATION_THRESHOLD = 110;
+    struct AssetRisk {
+        address asset;
+        uint16[] assetCollateralFactors;
+        uint16[] assetLiquidationThresholds;
+    }
 
     /**
      * @notice Calculate the weighted collateral value given the assets
@@ -37,20 +36,20 @@ contract RiskModule {
      * @param valuesPerAsset The list of corresponding monetary values of each asset address.
      * @return collateralValue is the weighted collateral value of the given assets
      */
-    function calculateWeightedCollateralValue(
-        address[] calldata assetAddresses,
-        uint256[] memory valuesPerAsset,
-        uint256 baseCurrencyInd
-    ) public view returns (uint256 collateralValue) {
+    function calculateWeightedCollateralValue(address[] calldata assetAddresses, AssetValueRisk[] memory valuesPerAsset)
+        public
+        pure
+        returns (uint256 collateralValue)
+    {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
         for (uint256 i; i < assetAddressesLength;) {
-            collateralValue += valuesPerAsset[i] * uint256(collateralFactors[assetAddresses[i]][baseCurrencyInd]);
+            collateralValue += valuesPerAsset[i].valueInBaseCurrency * valuesPerAsset[i].collFactor;
             unchecked {
                 ++i;
             }
         }
-        collateralValue = collateralValue / VARIABLE_DECIMAL;
+        collateralValue = collateralValue / RiskConstants.VARIABLE_DECIMAL;
     }
 
     /**
@@ -61,9 +60,8 @@ contract RiskModule {
      */
     function calculateWeightedLiquidationThreshold(
         address[] calldata assetAddresses,
-        uint256[] memory valuesPerAsset,
-        uint256 baseCurrencyInd
-    ) public view returns (uint16 liquidationThreshold) {
+        AssetValueRisk[] memory valuesPerAsset
+    ) public pure returns (uint16 liquidationThreshold) {
         uint256 assetAddressesLength = assetAddresses.length;
         require(assetAddressesLength == valuesPerAsset.length, "RM_CWLT: LENGTH_MISMATCH");
 
@@ -71,9 +69,8 @@ contract RiskModule {
         uint256 totalValue;
 
         for (uint256 i; i < assetAddressesLength;) {
-            totalValue += valuesPerAsset[i];
-            liquidationThreshold256 +=
-                valuesPerAsset[i] * uint256(liquidationThresholds[assetAddresses[i]][baseCurrencyInd]);
+            totalValue += valuesPerAsset[i].valueInBaseCurrency;
+            liquidationThreshold256 += valuesPerAsset[i].valueInBaseCurrency * valuesPerAsset[i].liqThreshold;
             unchecked {
                 i++;
             }

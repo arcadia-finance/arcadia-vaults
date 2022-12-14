@@ -383,8 +383,7 @@ contract factoryTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new MainRegistry.AssetRisk[](0)
         );
 
         registryContr2 = new MainRegistry(
@@ -419,8 +418,7 @@ contract factoryTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new MainRegistry.AssetRisk[](0)
         );
 
         registryContr2 = new MainRegistry(
@@ -440,8 +438,7 @@ contract factoryTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new MainRegistry.AssetRisk[](0)
         );
         factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
@@ -474,8 +471,7 @@ contract factoryTest is Test {
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             }),
-            emptyListUint16,
-            emptyListUint16
+            new MainRegistry.AssetRisk[](0)
         );
         factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();

@@ -22,15 +22,17 @@ contract FloorERC721PricingModule is PricingModule {
         uint256 idRangeStart;
         uint256 idRangeEnd;
         address assetAddress;
+        uint16[] assetCollateralFactors;
+        uint16[] assetLiquidationThresholds;
         address[] oracleAddresses;
     }
 
     /**
      * @notice A Pricing Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
-     * @param mainRegistry The address of the Main-registry
-     * @param oracleHub The address of the Oracle-Hub
+     * @param mainRegistry_ The address of the Main-registry
+     * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -42,9 +44,9 @@ contract FloorERC721PricingModule is PricingModule {
      * - idRangeStart: The id of the first NFT of the collection
      * - idRangeEnd: The id of the last NFT of the collection
      * - assetAddress: The contract address of the asset
+     * - assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
+     * - assetLiquidationThresholds: The List of liquidation thresholds for the asset for the different BaseCurrencies
      * - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
-     * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -56,21 +58,29 @@ contract FloorERC721PricingModule is PricingModule {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function setAssetInformation(
-        AssetInformation calldata assetInformation,
-        uint16[] calldata assetCollateralFactors,
-        uint16[] calldata assetLiquidationThresholds
-    ) external onlyOwner {
-        IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+    function setAssetInformation(AssetInformation memory assetInformation) external onlyOwner {
+        //no asset units
 
         address assetAddress = assetInformation.assetAddress;
+
+        IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+
         if (!inPricingModule[assetAddress]) {
             inPricingModule[assetAddress] = true;
             assetsInPricingModule.push(assetAddress);
         }
-        assetToInformation[assetAddress] = assetInformation;
+
+        assetToInformation[assetAddress].idRangeStart = assetInformation.idRangeStart;
+        assetToInformation[assetAddress].idRangeEnd = assetInformation.idRangeEnd;
+        assetToInformation[assetAddress].assetAddress = assetAddress;
+        assetToInformation[assetAddress].oracleAddresses = assetInformation.oracleAddresses;
+        _setRiskVariables(
+            assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds
+        );
+
         isAssetAddressWhiteListed[assetAddress] = true;
-        IMainRegistry(mainRegistry).addAsset(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
+
+        require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PM721_SAI: Unable to add in MR");
     }
 
     /**
@@ -153,10 +163,13 @@ contract FloorERC721PricingModule is PricingModule {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInBaseCurrency)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
     {
         (valueInUsd, valueInBaseCurrency) = IOraclesHub(oracleHub).getRate(
             assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.baseCurrency
         );
+
+        collFactor = assetRiskVars[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
+        liqThreshold = assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
     }
 }

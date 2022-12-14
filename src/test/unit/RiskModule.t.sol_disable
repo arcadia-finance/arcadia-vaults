@@ -60,9 +60,9 @@ contract RiskModuleTest is Test {
         addresses[0] = firstAssetAddress;
         addresses[1] = secondAssetAddress;
 
-        uint256[] memory values = new uint256[](2);
-        values[0] = firstValue;
-        values[1] = secondValue;
+        RiskModule.AssetValueRisk[] memory values = new RiskModule.AssetValueRisk[](2);
+        values[0].valueInBaseCurrency = firstValue;
+        values[1].valueInBaseCurrency = secondValue;
 
         // And: Liquidity Thresholds are within allowed ranges
         vm.assume(
@@ -86,7 +86,7 @@ contract RiskModuleTest is Test {
         ).with_key(uint256(0)).checked_write(secondLiqThreshold);
 
         // When: The liquidation threshold is calculated with given values
-        uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
+        uint16 liqThres = riskModule.calculateWeightedLiquidationThreshold(addresses, values);
 
         // Then: The liquidation threshold should be equal to calculated liquidity threshold
         uint256 calcLiqThreshold;
@@ -95,10 +95,10 @@ contract RiskModuleTest is Test {
         address assetAddress;
 
         for (uint256 i; i < addresses.length;) {
-            totalValue += values[i];
+            totalValue += values[i].valueInBaseCurrency;
             assetAddress = addresses[i];
             calcLiqThres = riskModule.liquidationThresholds(assetAddress, 0);
-            calcLiqThreshold += values[i] * liquidationThresholds[i];
+            calcLiqThreshold += values[i].valueInBaseCurrency * liquidationThresholds[i];
             unchecked {
                 ++i;
             }
@@ -117,13 +117,13 @@ contract RiskModuleTest is Test {
         addresses[0] = firstAssetAddress;
         addresses[1] = firstAssetAddress;
 
-        uint256[] memory values = new uint256[](2);
-        values[0] = firstValue;
-        values[1] = secondValue;
+        RiskModule.AssetValueRisk[] memory values = new RiskModule.AssetValueRisk[](2);
+        values[0].valueInBaseCurrency = firstValue;
+        values[1].valueInBaseCurrency = secondValue;
 
         // When Then: Calculation of the liquidation threshold should fail since the total value can't be zero
         vm.expectRevert("RM_CWLT: Total asset value must be bigger than zero");
-        riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
+        riskModule.calculateWeightedLiquidationThreshold(addresses, values);
     }
 
     function testRevert_calculateWeightedLiquidationThreshold_arithmetic(uint8 firstValueShift, uint8 secondValueShift)
@@ -142,13 +142,13 @@ contract RiskModuleTest is Test {
         addresses[0] = firstAssetAddress;
         addresses[1] = secondAssetAddress;
 
-        uint256[] memory values = new uint256[](2);
-        values[0] = firstValue;
-        values[1] = secondValue;
+        RiskModule.AssetValueRisk[] memory values = new RiskModule.AssetValueRisk[](2);
+        values[0].valueInBaseCurrency = firstValue;
+        values[1].valueInBaseCurrency = secondValue;
 
         // When Then: Calculation of the liquidation threshold should fail and reverted since liquidation calculation overflow
         vm.expectRevert(stdError.arithmeticError);
-        riskModule.calculateWeightedLiquidationThreshold(addresses, values, 0);
+        riskModule.calculateWeightedLiquidationThreshold(addresses, values);
     }
 
     function testSuccess_calculateWeightedCollateralFactor_Success(
@@ -166,9 +166,9 @@ contract RiskModuleTest is Test {
         addresses[0] = firstAssetAddress;
         addresses[1] = secondAssetAddress;
 
-        uint256[] memory values = new uint256[](2);
-        values[0] = firstValue;
-        values[1] = secondValue;
+        RiskModule.AssetValueRisk[] memory values = new RiskModule.AssetValueRisk[](2);
+        values[0].valueInBaseCurrency = firstValue;
+        values[1].valueInBaseCurrency = secondValue;
 
         // And: Liquidity Thresholds are within allowed ranges
         vm.assume(
@@ -192,7 +192,7 @@ contract RiskModuleTest is Test {
         ).with_key(uint256(0)).checked_write(secondCollFactor);
 
         // When: The collateral factor is calculated with given values
-        uint256 collateralValue = riskModule.calculateWeightedCollateralValue(addresses, values, 0);
+        uint256 collateralValue = riskModule.calculateWeightedCollateralValue(addresses, values);
 
         // Then: It should be equal to calculated collateral factor
         uint256 calcCollateralValue;
@@ -200,7 +200,7 @@ contract RiskModuleTest is Test {
 
         for (uint256 i; i < addresses.length;) {
             assetAddress = addresses[i];
-            calcCollateralValue += values[i] * collateralFactors[i];
+            calcCollateralValue += values[i].valueInBaseCurrency * collateralFactors[i];
             unchecked {
                 ++i;
             }
@@ -217,12 +217,12 @@ contract RiskModuleTest is Test {
         addresses[0] = firstAssetAddress;
         addresses[1] = secondAssetAddress;
 
-        uint256[] memory values = new uint256[](2);
-        values[0] = 0;
-        values[1] = 1;
+        RiskModule.AssetValueRisk[] memory values = new RiskModule.AssetValueRisk[](2);
+        values[0].valueInBaseCurrency = 0;
+        values[1].valueInBaseCurrency = 1;
 
         // When: Calculation of the collateral factor
-        uint256 collateralValue = riskModule.calculateWeightedCollateralValue(addresses, values, 0);
+        uint256 collateralValue = riskModule.calculateWeightedCollateralValue(addresses, values);
 
         // Then: Collateral value is zero, since the values are zero
         assertEq(collateralValue, 0);
@@ -244,12 +244,12 @@ contract RiskModuleTest is Test {
         addresses[0] = firstAssetAddress;
         addresses[1] = secondAssetAddress;
 
-        uint256[] memory values = new uint256[](2);
-        values[0] = firstValue;
-        values[1] = secondValue;
+        RiskModule.AssetValueRisk[] memory values = new RiskModule.AssetValueRisk[](2);
+        values[0].valueInBaseCurrency = firstValue;
+        values[1].valueInBaseCurrency = secondValue;
 
         // When Then: Calculation of the collateral factor should fail and reverted since collateral calculation overflow
         vm.expectRevert(stdError.arithmeticError);
-        riskModule.calculateWeightedCollateralValue(addresses, values, 0);
+        riskModule.calculateWeightedCollateralValue(addresses, values);
     }
 }

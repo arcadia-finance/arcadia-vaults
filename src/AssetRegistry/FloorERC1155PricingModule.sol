@@ -21,15 +21,17 @@ contract FloorERC1155PricingModule is PricingModule {
     struct AssetInformation {
         uint256 id;
         address assetAddress;
+        uint16[] assetCollateralFactors;
+        uint16[] assetLiquidationThresholds;
         address[] oracleAddresses;
     }
 
     /**
      * @notice A Pricing Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
-     * @param mainRegistry The address of the Main-registry
-     * @param oracleHub The address of the Oracle-Hub
+     * @param mainRegistry_ The address of the Main-registry
+     * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -40,9 +42,9 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param assetInformation A Struct with information about the asset
      * - id: The Id of the asset
      * - assetAddress: The contract address of the asset
+     * - assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
+     * - assetLiquidationThresholds: The List of liquidation thresholds for the asset for the different BaseCurrencies
      * - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
-     * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -54,21 +56,28 @@ contract FloorERC1155PricingModule is PricingModule {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function setAssetInformation(
-        AssetInformation calldata assetInformation,
-        uint16[] calldata assetCollateralFactors,
-        uint16[] calldata assetLiquidationThresholds
-    ) external onlyOwner {
-        IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+    function setAssetInformation(AssetInformation memory assetInformation) external onlyOwner {
+        //no asset units
 
         address assetAddress = assetInformation.assetAddress;
+
+        IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+
         if (!inPricingModule[assetAddress]) {
             inPricingModule[assetAddress] = true;
             assetsInPricingModule.push(assetAddress);
         }
-        assetToInformation[assetAddress] = assetInformation;
+
+        assetToInformation[assetAddress].id = assetInformation.id;
+        assetToInformation[assetAddress].assetAddress = assetAddress;
+        assetToInformation[assetAddress].oracleAddresses = assetInformation.oracleAddresses;
+        _setRiskVariables(
+            assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds
+        );
+
         isAssetAddressWhiteListed[assetAddress] = true;
-        IMainRegistry(mainRegistry).addAsset(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
+
+        require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PM1155_SAI: Unable to add in MR");
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -117,7 +126,7 @@ contract FloorERC1155PricingModule is PricingModule {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInBaseCurrency)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
     {
         uint256 rateInUsd;
         uint256 rateInBaseCurrency;
@@ -131,5 +140,8 @@ contract FloorERC1155PricingModule is PricingModule {
         } else {
             valueInUsd = getValueInput.assetAmount * rateInUsd;
         }
+
+        collFactor = assetRiskVars[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
+        liqThreshold = assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
     }
 }

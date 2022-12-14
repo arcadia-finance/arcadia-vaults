@@ -10,6 +10,7 @@ import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../interfaces/IOraclesHub.sol";
 import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import {RiskConstants} from "../utils/RiskConstants.sol";
 
 /**
  * @title Abstract Pricing Module
@@ -28,6 +29,7 @@ abstract contract PricingModule is Ownable {
 
     mapping(address => bool) public inPricingModule;
     mapping(address => bool) public isAssetAddressWhiteListed;
+    mapping(address => AssetRisksVars) internal assetRiskVars;
 
     //struct with input variables necessary to avoid stack to deep error
     struct GetValueInput {
@@ -35,6 +37,16 @@ abstract contract PricingModule is Ownable {
         uint256 assetId;
         uint256 assetAmount;
         uint256 baseCurrency;
+    }
+
+    struct AssetRisksVars {
+        uint16[] assetCollateralFactors;
+        uint16[] assetLiquidationThresholds;
+    }
+
+    modifier onlyMainRegistry() {
+        require(msg.sender == mainRegistry, "APM: ONLY_MAIN_REGISTRY");
+        _;
     }
 
     /**
@@ -92,5 +104,82 @@ abstract contract PricingModule is Ownable {
      * one denominated in USD and the other one in the different BaseCurrency).
      * @dev All price feeds should be fetched in the Oracle-Hub
      */
-    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256) {}
+    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) {}
+
+    /**
+     * @notice Returns the risk variable arrays of an asset
+     * @param asset The address of the asset
+     * @return assetCollateralFactors The array of collateral factors for the asset
+     * @return assetLiquidationThresholds The array of liquidation thresholds for the asset
+     */
+    function getRiskVariables(address asset) public view virtual returns (uint16[] memory, uint16[] memory) {
+        return (assetRiskVars[asset].assetCollateralFactors, assetRiskVars[asset].assetLiquidationThresholds);
+    }
+
+    function setRiskVariables(
+        address assetAddress,
+        uint16[] memory assetCollateralFactors,
+        uint16[] memory assetLiquidationThresholds
+    ) external virtual onlyMainRegistry {
+        _setRiskVariables(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
+    }
+
+    function _setRiskVariables(
+        address assetAddress,
+        uint16[] memory assetCollateralFactors,
+        uint16[] memory assetLiquidationThresholds
+    ) internal virtual {
+        // Check: Valid length of arrays
+        uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
+        uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
+        require(
+            (
+                assetCollateralFactorsLength == baseCurrencyCounter
+                    && assetCollateralFactorsLength == assetLiquidationThresholds.length
+            ) || (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
+            "APM_SRV: LENGTH_MISMATCH"
+        );
+
+        // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
+        if (assetCollateralFactorsLength == 0) {
+            // Loop: Per base currency
+            assetCollateralFactors = new uint16[](baseCurrencyCounter);
+            assetLiquidationThresholds = new uint16[](baseCurrencyCounter);
+            for (uint256 i; i < baseCurrencyCounter;) {
+                // Write: Default variables for collateralFactor and liquidationThreshold
+                // make in memory, store once
+                assetCollateralFactors[i] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+                assetLiquidationThresholds[i] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+
+                unchecked {
+                    i++;
+                }
+            }
+
+            assetRiskVars[assetAddress].assetCollateralFactors = assetCollateralFactors;
+            assetRiskVars[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
+        } else {
+            // Loop: Per value of collateral factor and liquidation threshold
+            for (uint256 i; i < assetCollateralFactorsLength;) {
+                // Check: Values in the allowed limit
+                require(
+                    assetCollateralFactors[i] <= RiskConstants.MAX_COLLATERAL_FACTOR
+                        && assetCollateralFactors[i] >= RiskConstants.MIN_COLLATERAL_FACTOR,
+                    "APM_SRV: Coll.Fact not in limits"
+                );
+                require(
+                    assetLiquidationThresholds[i] <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
+                        && assetLiquidationThresholds[i] >= RiskConstants.MIN_LIQUIDATION_THRESHOLD,
+                    "APM_SRV: Liq.Thres not in limits"
+                );
+
+                unchecked {
+                    i++;
+                }
+            }
+
+            assetRiskVars[assetAddress].assetCollateralFactors = assetCollateralFactors;
+            assetRiskVars[assetAddress].assetLiquidationThresholds = assetLiquidationThresholds;
+        }
+    }
 }
