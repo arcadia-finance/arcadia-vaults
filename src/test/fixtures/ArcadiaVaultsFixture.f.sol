@@ -24,6 +24,26 @@ import "../../utils/Constants.sol";
 import "../../mockups/ArcadiaOracle.sol";
 import ".././fixtures/ArcadiaOracleFixture.f.sol";
 
+contract StandardERC20PricingModuleExtended is StandardERC20PricingModule {
+    constructor(address mainRegistry_, address oracleHub_) StandardERC20PricingModule(mainRegistry_, oracleHub_) {}
+
+    function assetToInformation_(address asset)
+        public
+        view
+        returns (uint64, address, uint16[] memory, uint16[] memory, address[] memory)
+    {
+        AssetInformation memory assetInfo = assetToInformation[asset];
+
+        return (
+            assetInfo.assetUnit,
+            assetInfo.assetAddress,
+            assetInfo.assetCollateralFactors,
+            assetInfo.assetLiquidationThresholds,
+            assetInfo.oracleAddresses
+        );
+    }
+}
+
 contract DeployArcadiaVaults is Test {
     Factory public factory;
     Vault public vault;
@@ -49,7 +69,7 @@ contract DeployArcadiaVaults is Test {
     ArcadiaOracle public oracleWmaycToUsd;
     ArcadiaOracle public oracleInterleaveToEth;
     MainRegistry public mainRegistry;
-    StandardERC20PricingModule public standardERC20PricingModule;
+    StandardERC20PricingModuleExtended public standardERC20PricingModule;
     FloorERC721PricingModule public floorERC721PricingModule;
     FloorERC1155PricingModule public floorERC1155PricingModule;
     Liquidator public liquidator;
@@ -279,7 +299,7 @@ contract DeployArcadiaVaults is Test {
             emptyListUint16
         );
 
-        standardERC20PricingModule = new StandardERC20PricingModule(
+        standardERC20PricingModule = new StandardERC20PricingModuleExtended(
             address(mainRegistry),
             address(oracleHub)
         );
