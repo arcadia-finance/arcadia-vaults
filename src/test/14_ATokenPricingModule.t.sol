@@ -37,6 +37,16 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            }),
+            new MainRegistry.AssetRisk[](0)
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
@@ -46,7 +56,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
             new MainRegistry.AssetRisk[](0)
         );
 
-        standardERC20PricingModule = new StandardERC20PricingModule(
+        standardERC20PricingModule = new StandardERC20PricingModuleExtended( //ToDo: remove extension
             address(mainRegistry),
             address(oracleHub)
         );
@@ -96,7 +106,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         uint16[] memory liquidationThresholds = new uint16[](1);
         liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
-        vm.expectRevert("PM4626_SRV: LENGTH_MISMATCH");
+        vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -131,12 +141,14 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[2] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         aTokenPricingModule.setAssetInformation(
             ATokenPricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),

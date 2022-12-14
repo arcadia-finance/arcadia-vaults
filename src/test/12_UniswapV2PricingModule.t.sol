@@ -229,7 +229,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         //When: creator adds a new asset
         //Then: setAssetInformation reverts with "Ownable: caller is not the owner"
         vm.startPrank(creatorAddress);
-        vm.expectRevert("UV2_SAI: NOT_WHITELISTED");
+        vm.expectRevert("PMUV2_SAI: NOT_WHITELISTED");
         uniswapV2PricingModule.setAssetInformation(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(safemoon),
@@ -250,9 +250,9 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         liquidationThresholds[0] = 100;
 
         //When: creator adds a new asset
-        //Then: setAssetInformation reverts with "MR_AA: LENGTH_MISMATCH"
+        //Then: setAssetInformation reverts with "APM_SRV: LENGTH_MISMATCH"
         vm.startPrank(creatorAddress);
-        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
+        vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
         uniswapV2PricingModule.setAssetInformation(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(snx),

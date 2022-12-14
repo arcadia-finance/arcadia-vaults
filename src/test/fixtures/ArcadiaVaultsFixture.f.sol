@@ -27,19 +27,16 @@ import ".././fixtures/ArcadiaOracleFixture.f.sol";
 contract StandardERC20PricingModuleExtended is StandardERC20PricingModule {
     constructor(address mainRegistry_, address oracleHub_) StandardERC20PricingModule(mainRegistry_, oracleHub_) {}
 
-    function assetToInformation_(address asset)
+    function assetRiskVars_(address asset)
         public
         view
-        returns (uint64, address, uint16[] memory, uint16[] memory, address[] memory)
+        returns (uint16[] memory, uint16[] memory)
     {
-        AssetInformation memory assetInfo = assetToInformation[asset];
+        AssetRisksVars memory riskvars = assetRiskVars[asset];
 
         return (
-            assetInfo.assetUnit,
-            assetInfo.assetAddress,
-            assetInfo.assetCollateralFactors,
-            assetInfo.assetLiquidationThresholds,
-            assetInfo.oracleAddresses
+            riskvars.assetCollateralFactors,
+            riskvars.assetLiquidationThresholds
         );
     }
 }
@@ -318,28 +315,28 @@ contract DeployArcadiaVaults is Test {
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(link),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
-                assetAddress: address(snx)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(snx),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
 
         floorERC721PricingModule.setAssetInformation(
@@ -347,20 +344,20 @@ contract DeployArcadiaVaults is Test {
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
                 idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(bayc),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
 
         floorERC1155PricingModule.setAssetInformation(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
+                assetAddress: address(interleave),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
         );
 
         vault = new Vault();

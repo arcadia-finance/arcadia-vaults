@@ -8,7 +8,7 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-contract AbstractPricingModuleForTest is PricingModule {
+contract AbstractPricingModuleExtension is PricingModule {
     constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
 
     function setAssetInformation(address assetAddress) public onlyOwner {
@@ -23,7 +23,7 @@ contract AbstractPricingModuleForTest is PricingModule {
 contract AbstractPricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
-    AbstractPricingModuleForTest internal abstractPricingModule;
+    AbstractPricingModuleExtension internal abstractPricingModule;
 
     //this is a before
     constructor() DeployArcadiaVaults() {}
@@ -31,7 +31,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     //this is a before each
     function setUp() public {
         vm.prank(creatorAddress);
-        abstractPricingModule = new AbstractPricingModuleForTest(
+        abstractPricingModule = new AbstractPricingModuleExtension(
             address(mainRegistry),
             address(oracleHub)
         );

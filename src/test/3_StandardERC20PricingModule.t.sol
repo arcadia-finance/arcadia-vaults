@@ -28,6 +28,16 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            }),
+            new MainRegistry.AssetRisk[](0)
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
                 assetAddress: address(eth),
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
@@ -37,7 +47,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
             new MainRegistry.AssetRisk[](0)
         );
 
-        standardERC20PricingModule = new StandardERC20PricingModule(
+        standardERC20PricingModule = new StandardERC20PricingModuleExtended( //ToDo: remove extension
             address(mainRegistry),
             address(oracleHub)
         );
@@ -99,7 +109,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // When: creatorAddress calls setAssetInformation with wrong number of credits
 
         // Then: setAssetInformation should revert with "MR_AA: LENGTH_MISMATCH"
-        vm.expectRevert("MR_AA: LENGTH_MISMATCH");
+        vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
@@ -134,12 +144,14 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
     function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
         // Given: collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
         vm.startPrank(creatorAddress);
-        uint16[] memory collateralFactors = new uint16[](2);
+        uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16[] memory liquidationThresholds = new uint16[](2);
+        collateralFactors[2] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16[] memory liquidationThresholds = new uint16[](3);
         liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        liquidationThresholds[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         // When: creatorAddress calls setAssetInformation with full list credit ratings
         standardERC20PricingModule.setAssetInformation(
             StandardERC20PricingModule.AssetInformation({

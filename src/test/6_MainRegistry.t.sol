@@ -77,9 +77,9 @@ contract ExternalContractsTest is MainRegistryTest {
         super.setUp();
     }
 
-    function testRevert_setFactory_NonOwner(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not creatorAddress, creatorAddress deploys Factory contract, calls setNewVaultInfo and confirmNewVaultInfo
-        vm.assume(unprivilegedAddress != creatorAddress);
+    function testRevert_setFactory_NonOwner(address unprivilegedAddress_) public {
+        // Given: unprivilegedAddress_ is not creatorAddress, creatorAddress deploys Factory contract, calls setNewVaultInfo and confirmNewVaultInfo
+        vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(creatorAddress);
         factory = new Factory();
         factory.setNewVaultInfo(
@@ -88,8 +88,8 @@ contract ExternalContractsTest is MainRegistryTest {
         factory.confirmNewVaultInfo();
         vm.stopPrank();
 
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls setFactory
+        vm.startPrank(unprivilegedAddress_);
+        // When: unprivilegedAddress_ calls setFactory
 
         // Then: setFactory should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
@@ -142,11 +142,11 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         super.setUp();
     }
 
-    function testRevert_addBaseCurrency_NonOwner(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not creatorAddress
-        vm.assume(unprivilegedAddress != creatorAddress);
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls addBaseCurrency
+    function testRevert_addBaseCurrency_NonOwner(address unprivilegedAddress_) public {
+        // Given: unprivilegedAddress_ is not creatorAddress
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+        vm.startPrank(unprivilegedAddress_);
+        // When: unprivilegedAddress_ calls addBaseCurrency
 
         // Then: addBaseCurrency should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
@@ -212,7 +212,7 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         });
 
         // Then: addBaseCurrency reverts with "MR_ABC: LENGTH_MISMATCH"
-        vm.expectRevert("PM20_SRV: LENGTH_MISMATCH");
+        vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
@@ -271,7 +271,7 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         // When: creatorAddress calls addBaseCurrency
 
         // Then: addBaseCurrency reverts with "MR_ABC: Coll.Fact not in limits"
-        vm.expectRevert("PM20_SRV: Coll.Fact not in limits");
+        vm.expectRevert("APM_SRV: Coll.Fact not in limits");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
@@ -297,7 +297,7 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
             assetLiquidationThresholds: liquidationThresholds
         });
 
-        vm.expectRevert("PM20_SRV: Liq.Thres not in limits");
+        vm.expectRevert("APM_SRV: Liq.Thres not in limits");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
@@ -312,6 +312,48 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
     }
 
     function testSuccess_addBaseCurrency_EmptyListOfRiskVariables() public {
+        // Given: creatorAddress has empty list of credit ratings
+        vm.startPrank(creatorAddress);
+        mainRegistry.addPricingModule(address(standardERC20PricingModule));
+        standardERC20PricingModule.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleEthToUsdArr,
+                assetUnit: uint64(10 ** Constants.ethDecimals),
+                assetAddress: address(eth),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );
+        standardERC20PricingModule.setAssetInformation(
+            StandardERC20PricingModule.AssetInformation({
+                oracleAddresses: oracleLinkToUsdArr,
+                assetUnit: uint64(10 ** Constants.linkDecimals),
+                assetAddress: address(link),
+                assetCollateralFactors: emptyListUint16,
+                assetLiquidationThresholds: emptyListUint16
+            })
+        );
+
+        RiskModule.AssetRisk[] memory assetRisk = new MainRegistry.AssetRisk[](0);
+
+        // When: creatorAddress calls addBaseCurrency
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            }),
+            assetRisk
+        );
+        vm.stopPrank();
+
+        // Then: baseCurrencyCounter should return 3
+        assertEq(2, mainRegistry.baseCurrencyCounter());
+    }
+
+    function testSuccess_addBaseCurrency_FullListOfRiskVariables() public {
         // Given: creatorAddress has empty list of credit ratings
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
@@ -364,97 +406,6 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
             }),
             assetRisk
         );
-
-        uint16[] memory collateralFactors2 = new uint16[](3);
-        collateralFactors2[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        collateralFactors2[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        collateralFactors2[2] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16[] memory liquidationThresholds2 = new uint16[](3);
-        liquidationThresholds2[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        liquidationThresholds2[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        liquidationThresholds2[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-
-        RiskModule.AssetRisk[] memory assetRisk2 = new RiskModule.AssetRisk[](2);
-        assetRisk2[0] = RiskModule.AssetRisk({
-            asset: address(eth),
-            assetCollateralFactors: collateralFactors2,
-            assetLiquidationThresholds: liquidationThresholds2
-        });
-        assetRisk2[1] = RiskModule.AssetRisk({
-            asset: address(link),
-            assetCollateralFactors: collateralFactors2,
-            assetLiquidationThresholds: liquidationThresholds2
-        });
-
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            assetRisk2
-        );
-        vm.stopPrank();
-
-        // Then: baseCurrencyCounter should return 3
-        assertEq(3, mainRegistry.baseCurrencyCounter());
-    }
-
-    function testSuccess_addBaseCurrency_FullListOfRiskVariables() public {
-        // Given: creatorAddress has empty list of credit ratings
-        vm.startPrank(creatorAddress);
-        mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-
-        uint16[] memory collateralFactors = new uint16[](2);
-        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16[] memory liquidationThresholds = new uint16[](2);
-        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-
-        RiskModule.AssetRisk[] memory assetRisk = new RiskModule.AssetRisk[](2);
-        assetRisk[0] = RiskModule.AssetRisk({
-            asset: address(eth),
-            assetCollateralFactors: collateralFactors,
-            assetLiquidationThresholds: liquidationThresholds
-        });
-        assetRisk[1] = RiskModule.AssetRisk({
-            asset: address(link),
-            assetCollateralFactors: collateralFactors,
-            assetLiquidationThresholds: liquidationThresholds
-        });
-
-        // When: creatorAddress calls addBaseCurrency
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            assetRisk
-        );
         vm.stopPrank();
 
         // Then: baseCurrencyCounter should return 2
@@ -470,11 +421,11 @@ contract PriceModuleManagementTest is MainRegistryTest {
         super.setUp();
     }
 
-    function testRevert_addPricingModule_NonOwner(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not creatorAddress
-        vm.assume(unprivilegedAddress != creatorAddress);
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls addPricingModule
+    function testRevert_addPricingModule_NonOwner(address unprivilegedAddress_) public {
+        // Given: unprivilegedAddress_ is not creatorAddress
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+        vm.startPrank(unprivilegedAddress_);
+        // When: unprivilegedAddress_ calls addPricingModule
 
         // Then: addPricingModule should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
@@ -546,11 +497,11 @@ contract AssetManagementTest is MainRegistryTest {
         assertTrue(mainRegistry.assetsUpdatable());
     }
 
-    function testRevert_setAssetsToNonUpdatable_NonOwner(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not creatorAddress
-        vm.assume(unprivilegedAddress != creatorAddress);
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls setAssetsToNonUpdatable
+    function testRevert_setAssetsToNonUpdatable_NonOwner(address unprivilegedAddress_) public {
+        // Given: unprivilegedAddress_ is not creatorAddress
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+        vm.startPrank(unprivilegedAddress_);
+        // When: unprivilegedAddress_ calls setAssetsToNonUpdatable
 
         // Then: setAssetsToNonUpdatable should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
@@ -569,13 +520,13 @@ contract AssetManagementTest is MainRegistryTest {
         assertTrue(!mainRegistry.assetsUpdatable());
     }
 
-    function testRevert_addAsset_NonPricingModule(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not address(standardERC20PricingModule), address(floorERC721PricingModule) or address(floorERC1155PricingModule)
-        vm.assume(unprivilegedAddress != address(standardERC20PricingModule));
-        vm.assume(unprivilegedAddress != address(floorERC721PricingModule));
-        vm.assume(unprivilegedAddress != address(floorERC1155PricingModule));
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls addAsset
+    function testRevert_addAsset_NonPricingModule(address unprivilegedAddress_) public {
+        // Given: unprivilegedAddress_ is not address(standardERC20PricingModule), address(floorERC721PricingModule) or address(floorERC1155PricingModule)
+        vm.assume(unprivilegedAddress_ != address(standardERC20PricingModule));
+        vm.assume(unprivilegedAddress_ != address(floorERC721PricingModule));
+        vm.assume(unprivilegedAddress_ != address(floorERC1155PricingModule));
+        vm.startPrank(unprivilegedAddress_);
+        // When: unprivilegedAddress_ calls addAsset
         // Then: addAsset should revert with "Caller is not a Price Module."
         vm.expectRevert("Caller is not a Price Module.");
         mainRegistry.addAsset(address(eth));
@@ -996,10 +947,10 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
-    function testRevert_batchSetRiskVariables_NonOwner(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not creatorAddress, assetAddresses index 0 and 1 is address(eth), baseCurrencies index 0 is UsdBaseCurrency, index 1 is EthBaseCurrency, collateralFactors index 0, 1 and 2 is DEFAULT_COLLATERAL_FACTOR
+    function testRevert_batchSetRiskVariables_NonOwner(address unprivilegedAddress_) public {
+        // Given: unprivilegedAddress_ is not creatorAddress, assetAddresses index 0 and 1 is address(eth), baseCurrencies index 0 is UsdBaseCurrency, index 1 is EthBaseCurrency, collateralFactors index 0, 1 and 2 is DEFAULT_COLLATERAL_FACTOR
         // liquidationThresholds index 0, 1 and 2 is DEFAULT_LIQUIDATION_THRESHOLD
-        vm.assume(unprivilegedAddress != creatorAddress);
+        vm.assume(unprivilegedAddress_ != creatorAddress);
 
         uint16[] memory assetCollateralFactors = new uint16[](2);
         assetCollateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
@@ -1018,8 +969,8 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         assetRisks[1].assetCollateralFactors = assetCollateralFactors;
         assetRisks[1].assetLiquidationThresholds = assetLiquidationThresholds;
 
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls batchSetRiskVariables for assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds
+        vm.startPrank(unprivilegedAddress_);
+        // When: unprivilegedAddress_ calls batchSetRiskVariables for assetAddresses, baseCurrencies, collateralFactors, liquidationThresholds
 
         // batchSetRiskVariables should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
@@ -1138,12 +1089,12 @@ contract RiskVariablesManagementTest is MainRegistryTest {
 
         // Then: collateralFactors for address(eth) and Constants.UsdBaseCurrency should return DEFAULT_COLLATERAL_FACTOR,
         // liquidationThresholds for address(eth) and Constants.EthBaseCurrency should return DEFAULT_LIQUIDATION_THRESHOLD
-        StandardERC20PricingModule.AssetInformation memory assetInfo;
-        (,, assetInfo.assetCollateralFactors, assetInfo.assetLiquidationThresholds,) =
-            standardERC20PricingModule.assetToInformation_(address(eth));
+        StandardERC20PricingModule.AssetRisksVars memory riskVars;
+        (riskVars.assetCollateralFactors, riskVars.assetLiquidationThresholds) =
+            standardERC20PricingModule.assetRiskVars_(address(eth));
 
-        assertEq(RiskConstants.DEFAULT_COLLATERAL_FACTOR, assetInfo.assetCollateralFactors[0]);
-        assertEq(RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD, assetInfo.assetLiquidationThresholds[0]);
+        assertEq(RiskConstants.DEFAULT_COLLATERAL_FACTOR, riskVars.assetCollateralFactors[0]);
+        assertEq(RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD, riskVars.assetLiquidationThresholds[0]);
     }
 }
 
