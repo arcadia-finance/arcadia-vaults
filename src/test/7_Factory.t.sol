@@ -16,29 +16,31 @@ import "../utils/Constants.sol";
 contract factoryTest is Test {
     using stdStorage for StdStorage;
 
-    Factory internal factoryContr;
-    Vault internal vaultContr;
-    Liquidator internal liquidatorContr;
-    MainRegistry internal registryContr;
-    MainRegistry internal registryContr2;
+    Factory internal factory;
+    Vault internal vault;
+    address proxy;
+    Liquidator internal liquidator;
+    MainRegistry internal registry;
+    MainRegistry internal registry2;
 
     address private creatorAddress = address(1);
 
     uint16[] emptyListUint16 = new uint16[](0);
 
+    //events
     event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 length);
 
     //this is a before
     constructor() {
         vm.startPrank(creatorAddress);
-        factoryContr = new Factory();
-        vaultContr = new Vault();
-        liquidatorContr = new Liquidator(
-            address(factoryContr),
+        factory = new Factory();
+        vault = new Vault();
+        liquidator = new Liquidator(
+            address(factory),
             0x0000000000000000000000000000000000000000
         );
 
-        registryContr = new MainRegistry(
+        registry = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
@@ -48,9 +50,9 @@ contract factoryTest is Test {
             })
         );
 
-        factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), Constants.upgradeProof1To2);
-        factoryContr.confirmNewVaultInfo();
-        registryContr.setFactory(address(factoryContr));
+        factory.setNewVaultInfo(address(registry), address(vault), Constants.upgradeProof1To2);
+        factory.confirmNewVaultInfo();
+        registry.setFactory(address(factory));
         vm.stopPrank();
     }
 
@@ -93,41 +95,41 @@ contract factoryTest is Test {
     ///////////////////////////////////////////////////////////////*/
 
     function testSuccess_createVault_DeployVaultContractMappings(uint256 salt) public {
-        uint256 amountBefore = factoryContr.allVaultsLength();
+        uint256 amountBefore = factory.allVaultsLength();
 
-        address actualDeployed = factoryContr.createVault(salt, 0);
-        assertEq(amountBefore + 1, factoryContr.allVaultsLength());
-        assertEq(actualDeployed, factoryContr.allVaults(factoryContr.allVaultsLength() - 1));
-        assertEq(factoryContr.vaultIndex(actualDeployed), (factoryContr.allVaultsLength()));
+        address actualDeployed = factory.createVault(salt, 0);
+        assertEq(amountBefore + 1, factory.allVaultsLength());
+        assertEq(actualDeployed, factory.allVaults(factory.allVaultsLength() - 1));
+        assertEq(factory.vaultIndex(actualDeployed), (factory.allVaultsLength()));
     }
 
     function testSuccess_createVault_DeployNewProxyWithLogic(uint256 salt) public {
-        uint256 amountBefore = factoryContr.allVaultsLength();
+        uint256 amountBefore = factory.allVaultsLength();
 
-        address actualDeployed = factoryContr.createVault(salt, 0);
-        assertEq(amountBefore + 1, factoryContr.allVaultsLength());
+        address actualDeployed = factory.createVault(salt, 0);
+        assertEq(amountBefore + 1, factory.allVaultsLength());
         assertEq(Vault(actualDeployed).life(), 0);
 
         assertEq(Vault(actualDeployed).owner(), address(this));
     }
 
     function testSuccess_createVault_DeployNewProxyWithLogicOwner(uint256 salt, address sender) public {
-        uint256 amountBefore = factoryContr.allVaultsLength();
+        uint256 amountBefore = factory.allVaultsLength();
         vm.prank(sender);
         vm.assume(sender != address(0));
-        address actualDeployed = factoryContr.createVault(salt, 0);
-        assertEq(amountBefore + 1, factoryContr.allVaultsLength());
+        address actualDeployed = factory.createVault(salt, 0);
+        assertEq(amountBefore + 1, factory.allVaultsLength());
         assertEq(Vault(actualDeployed).life(), 0);
 
         assertEq(Vault(actualDeployed).owner(), address(sender));
     }
 
     function testRevert_createVault_CreateNonExistingVaultVersion(uint256 vaultVersion) public {
-        uint256 currentVersion = factoryContr.latestVaultVersion();
+        uint256 currentVersion = factory.latestVaultVersion();
         vm.assume(vaultVersion > currentVersion);
 
         vm.expectRevert("FTRY_CV: Unknown vault version");
-        factoryContr.createVault(uint256(keccak256(abi.encodePacked(vaultVersion, block.timestamp))), vaultVersion);
+        factory.createVault(uint256(keccak256(abi.encodePacked(vaultVersion, block.timestamp))), vaultVersion);
     }
 
     function testRevert_createVault_FromBlockedVersion(
@@ -140,33 +142,40 @@ contract factoryTest is Test {
         vm.assume(vaultVersion <= versionsToMake + 1);
         for (uint256 i; i < versionsToMake; ++i) {
             vm.prank(creatorAddress);
-            factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), Constants.upgradeProof1To2);
+            factory.setNewVaultInfo(address(registry), address(vault), Constants.upgradeProof1To2);
         }
 
         for (uint256 y; y < versionsToBlock.length; ++y) {
-            if (versionsToBlock[y] == 0 || versionsToBlock[y] > factoryContr.latestVaultVersion()) {
+            if (versionsToBlock[y] == 0 || versionsToBlock[y] > factory.latestVaultVersion()) {
                 continue;
             }
             vm.prank(creatorAddress);
-            factoryContr.blockVaultVersion(versionsToBlock[y]);
+            factory.blockVaultVersion(versionsToBlock[y]);
         }
 
         for (uint256 z; z < versionsToBlock.length; ++z) {
-            if (versionsToBlock[z] == 0 || versionsToBlock[z] > factoryContr.latestVaultVersion()) {
+            if (versionsToBlock[z] == 0 || versionsToBlock[z] > factory.latestVaultVersion()) {
                 continue;
             }
             vm.expectRevert("FTRY_CV: This vault version cannot be created");
-            factoryContr.createVault(
+            factory.createVault(
                 uint256(keccak256(abi.encodePacked(versionsToBlock[z], block.timestamp))), versionsToBlock[z]
             );
         }
     }
 
-    function testSuccess_isVault() public {
-        address vault = factoryContr.createVault(0, 0);
+    function testSuccess_isVault_positive() public {
+        proxy = factory.createVault(0, 0);
 
-        bool expectedReturn = factoryContr.isVault(address(vault));
+        bool expectedReturn = factory.isVault(address(proxy));
         bool actualReturn = true;
+
+        assertEq(expectedReturn, actualReturn);
+    }
+
+    function testSuccess_isVault_negative(address random) public {
+        bool expectedReturn = factory.isVault(random);
+        bool actualReturn = false;
 
         assertEq(expectedReturn, actualReturn);
     }
@@ -178,25 +187,25 @@ contract factoryTest is Test {
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
 
         vm.startPrank(owner);
-        address vault = factoryContr.createVault(0, 0);
+        proxy = factory.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
+        assertEq(IVault(proxy).owner(), factory.ownerOf(1));
 
-        //Make sure vault itself is owned by owner
-        assertEq(IVault(vault).owner(), owner);
+        //Make sure proxy itself is owned by owner
+        assertEq(IVault(proxy).owner(), owner);
 
         //Make sure erc721 is owned by owner
-        assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), owner);
+        assertEq(factory.ownerOf(factory.vaultIndex(proxy)), owner);
 
-        //Transfer vault to another address
-        factoryContr.safeTransferFrom(owner, receiver, factoryContr.vaultIndex(vault));
+        //Transfer proxy to another address
+        factory.safeTransferFrom(owner, receiver, factory.vaultIndex(proxy));
 
-        //Make sure vault itself is owned by receiver
-        assertEq(IVault(vault).owner(), receiver);
+        //Make sure proxy itself is owned by receiver
+        assertEq(IVault(proxy).owner(), receiver);
 
         //Make sure erc721 is owned by receiver
-        assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), receiver);
+        assertEq(factory.ownerOf(factory.vaultIndex(proxy)), receiver);
         vm.stopPrank();
     }
 
@@ -209,29 +218,29 @@ contract factoryTest is Test {
         vm.assume(unprivilegedAddress != address(0));
 
         vm.prank(owner);
-        address vault = factoryContr.createVault(0, 0);
+        proxy = factory.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
+        assertEq(IVault(proxy).owner(), factory.ownerOf(1));
 
-        //Make sure vault itself is owned by owner
-        assertEq(IVault(vault).owner(), owner);
+        //Make sure proxy itself is owned by owner
+        assertEq(IVault(proxy).owner(), owner);
 
         //Make sure erc721 is owned by owner
-        assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), owner);
+        assertEq(factory.ownerOf(factory.vaultIndex(proxy)), owner);
 
-        //Transfer vault to another address by not owner
-        uint256 index = factoryContr.vaultIndex(vault);
+        //Transfer proxy to another address by not owner
+        uint256 index = factory.vaultIndex(proxy);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("NOT_AUTHORIZED");
-        factoryContr.safeTransferFrom(owner, receiver, index);
+        factory.safeTransferFrom(owner, receiver, index);
         vm.stopPrank();
 
-        //Make sure vault itself is still owned by owner
-        assertEq(IVault(vault).owner(), owner);
+        //Make sure proxy itself is still owned by owner
+        assertEq(IVault(proxy).owner(), owner);
 
         //Make sure erc721 is still owned by owner
-        assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), owner);
+        assertEq(factory.ownerOf(factory.vaultIndex(proxy)), owner);
     }
 
     function testSuccess_transferFrom(address owner) public {
@@ -239,25 +248,25 @@ contract factoryTest is Test {
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
 
         vm.startPrank(owner);
-        address vault = factoryContr.createVault(0, 0);
+        proxy = factory.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
+        assertEq(IVault(proxy).owner(), factory.ownerOf(1));
 
-        //Make sure vault itself is owned by owner
-        assertEq(IVault(vault).owner(), owner);
+        //Make sure proxy itself is owned by owner
+        assertEq(IVault(proxy).owner(), owner);
 
         //Make sure erc721 is owned by owner
-        assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), owner);
+        assertEq(factory.ownerOf(factory.vaultIndex(proxy)), owner);
 
-        //Transfer vault to another address
-        factoryContr.transferFrom(owner, receiver, factoryContr.vaultIndex(vault));
+        //Transfer proxy to another address
+        factory.transferFrom(owner, receiver, factory.vaultIndex(proxy));
 
-        //Make sure vault itself is owned by receiver
-        assertEq(IVault(vault).owner(), receiver);
+        //Make sure proxy itself is owned by receiver
+        assertEq(IVault(proxy).owner(), receiver);
 
         //Make sure erc721 is owned by receiver
-        assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), receiver);
+        assertEq(factory.ownerOf(factory.vaultIndex(proxy)), receiver);
         vm.stopPrank();
     }
 
@@ -267,29 +276,29 @@ contract factoryTest is Test {
         vm.assume(receiver != address(0));
 
         vm.prank(owner);
-        address vault = factoryContr.createVault(0, 0);
+        proxy = factory.createVault(0, 0);
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(vault).owner(), factoryContr.ownerOf(1));
+        assertEq(IVault(proxy).owner(), factory.ownerOf(1));
 
-        //Make sure vault itself is owned by owner
-        assertEq(IVault(vault).owner(), owner);
+        //Make sure proxy itself is owned by owner
+        assertEq(IVault(proxy).owner(), owner);
 
         //Make sure erc721 is owned by owner
-        assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), owner);
+        assertEq(factory.ownerOf(factory.vaultIndex(proxy)), owner);
 
-        //Transfer vault to another address
-        uint256 index = factoryContr.vaultIndex(vault);
+        //Transfer proxy to another address
+        uint256 index = factory.vaultIndex(proxy);
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("NOT_AUTHORIZED");
-        factoryContr.transferFrom(owner, receiver, index);
+        factory.transferFrom(owner, receiver, index);
         vm.stopPrank();
 
-        //Make sure vault itself is still owned by owner
-        assertEq(IVault(vault).owner(), owner);
+        //Make sure proxy itself is still owned by owner
+        assertEq(IVault(proxy).owner(), owner);
 
         //Make sure erc721 is still owned by owner
-        assertEq(factoryContr.ownerOf(factoryContr.vaultIndex(vault)), owner);
+        assertEq(factory.ownerOf(factory.vaultIndex(proxy)), owner);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -301,7 +310,23 @@ contract factoryTest is Test {
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        factoryContr.setNewVaultInfo(address(registryContr), address(vaultContr), Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(registry), address(proxy), Constants.upgradeProof1To2);
+        vm.stopPrank();
+    }
+
+    function testRevert_setNewVaultInfo_VersionRootIsZero(address registry, address logic) public {
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("FTRY_SNVI: version root is zero");
+        factory.setNewVaultInfo(registry, logic, bytes32(0));
+        vm.stopPrank();
+    }
+
+    function testRevert_setNewVaultInfo_LogicAddressIsZero(address registry, bytes32 versionRoot) public {
+        vm.assume(versionRoot != bytes32(0));
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("FTRY_SNVI: logic address is zero");
+        factory.setNewVaultInfo(registry, address(0), versionRoot);
         vm.stopPrank();
     }
 
@@ -309,23 +334,23 @@ contract factoryTest is Test {
         vm.assume(logic != address(0));
 
         vm.prank(creatorAddress);
-        factoryContr = new Factory();
-        assertTrue(factoryContr.getVaultVersionRoot() == bytes32(0));
-        assertTrue(!factoryContr.newVaultInfoSet());
+        factory = new Factory();
+        assertTrue(factory.getVaultVersionRoot() == bytes32(0));
+        assertTrue(!factory.newVaultInfoSet());
 
         vm.prank(creatorAddress);
-        factoryContr.setNewVaultInfo(registry, logic, Constants.upgradeProof1To2);
-        assertTrue(factoryContr.getVaultVersionRoot() == bytes32(0));
-        assertTrue(factoryContr.newVaultInfoSet());
+        factory.setNewVaultInfo(registry, logic, Constants.upgradeProof1To2);
+        assertTrue(factory.getVaultVersionRoot() == bytes32(0));
+        assertTrue(factory.newVaultInfoSet());
     }
 
     function testSuccess_setNewVaultInfo_OwnerSetsNewVaultInfoWithIdenticalMainRegistry(address logic) public {
         vm.assume(logic != address(0));
 
-        assertTrue(!factoryContr.newVaultInfoSet());
+        assertTrue(!factory.newVaultInfoSet());
         vm.prank(creatorAddress);
-        factoryContr.setNewVaultInfo(address(registryContr), logic, Constants.upgradeProof1To2);
-        assertTrue(factoryContr.newVaultInfoSet());
+        factory.setNewVaultInfo(address(registry), logic, Constants.upgradeProof1To2);
+        assertTrue(factory.newVaultInfoSet());
     }
 
     function testSuccess_setNewVaultInfo_OwnerSetsNewVaultInfoSecondTimeWithIdenticalMainRegistry(address logic)
@@ -333,13 +358,13 @@ contract factoryTest is Test {
     {
         vm.assume(logic != address(0));
 
-        assertTrue(!factoryContr.newVaultInfoSet());
+        assertTrue(!factory.newVaultInfoSet());
         vm.prank(creatorAddress);
-        factoryContr.setNewVaultInfo(address(registryContr), logic, Constants.upgradeProof1To2);
-        assertTrue(factoryContr.newVaultInfoSet());
+        factory.setNewVaultInfo(address(registry), logic, Constants.upgradeProof1To2);
+        assertTrue(factory.newVaultInfoSet());
         vm.prank(creatorAddress);
-        factoryContr.setNewVaultInfo(address(registryContr), logic, Constants.upgradeProof1To2);
-        assertTrue(factoryContr.newVaultInfoSet());
+        factory.setNewVaultInfo(address(registry), logic, Constants.upgradeProof1To2);
+        assertTrue(factory.newVaultInfoSet());
     }
 
     function testRevert_setNewVaultInfo_OwnerSetsNewVaultInfoWithDifferentBaseCurrencyInMainRegistry(
@@ -347,11 +372,11 @@ contract factoryTest is Test {
         address logic
     ) public {
         vm.assume(logic != address(0));
-        vm.assume(randomAssetAddress != 0x0000000000000000000000000000000000000000);
-        assertEq(false, factoryContr.newVaultInfoSet());
+        vm.assume(randomAssetAddress != address(0));
+        assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
-        registryContr2 = new MainRegistry(
+        registry2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: randomAssetAddress,
@@ -361,10 +386,10 @@ contract factoryTest is Test {
             })
         );
         vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
-        factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(registry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
 
-        assertEq(false, factoryContr.newVaultInfoSet());
+        assertEq(false, factory.newVaultInfoSet());
     }
 
     function testRevert_setNewVaultInfo_OwnerSetsNewVaultWithInfoMissingBaseCurrencyInMainRegistry(
@@ -373,10 +398,10 @@ contract factoryTest is Test {
     ) public {
         vm.assume(logic != address(0));
         vm.assume(newAssetAddress != address(0));
-        assertEq(false, factoryContr.newVaultInfoSet());
+        assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
-        registryContr.addBaseCurrency(
+        registry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: newAssetAddress,
@@ -388,7 +413,7 @@ contract factoryTest is Test {
             emptyListUint16
         );
 
-        registryContr2 = new MainRegistry(
+        registry2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
@@ -398,10 +423,10 @@ contract factoryTest is Test {
             })
         );
         vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
-        factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(registry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
 
-        assertEq(false, factoryContr.newVaultInfoSet());
+        assertEq(false, factory.newVaultInfoSet());
     }
 
     function testSuccess_setNewVaultInfo_OwnerSetsNewVaultWithIdenticalBaseCurrenciesInMainRegistry(
@@ -409,10 +434,10 @@ contract factoryTest is Test {
         address logic
     ) public {
         vm.assume(logic != address(0));
-        assertEq(false, factoryContr.newVaultInfoSet());
+        assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
-        registryContr.addBaseCurrency(
+        registry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: newAssetAddress,
@@ -424,7 +449,7 @@ contract factoryTest is Test {
             emptyListUint16
         );
 
-        registryContr2 = new MainRegistry(
+        registry2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
@@ -433,7 +458,7 @@ contract factoryTest is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
-        registryContr2.addBaseCurrency(
+        registry2.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: newAssetAddress,
@@ -444,10 +469,10 @@ contract factoryTest is Test {
             emptyListUint16,
             emptyListUint16
         );
-        factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(registry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
 
-        assertEq(true, factoryContr.newVaultInfoSet());
+        assertEq(true, factory.newVaultInfoSet());
     }
 
     function testSuccess_setNewVaultInfo_OwnerSetsNewVaultWithMoreBaseCurrenciesInMainRegistry(
@@ -455,10 +480,10 @@ contract factoryTest is Test {
         address logic
     ) public {
         vm.assume(logic != address(0));
-        assertEq(false, factoryContr.newVaultInfoSet());
+        assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
-        registryContr2 = new MainRegistry(
+        registry2 = new MainRegistry(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
@@ -467,7 +492,7 @@ contract factoryTest is Test {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             })
         );
-        registryContr2.addBaseCurrency(
+        registry2.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: newAssetAddress,
@@ -478,10 +503,10 @@ contract factoryTest is Test {
             emptyListUint16,
             emptyListUint16
         );
-        factoryContr.setNewVaultInfo(address(registryContr2), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(registry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
 
-        assertEq(true, factoryContr.newVaultInfoSet());
+        assertEq(true, factory.newVaultInfoSet());
     }
 
     function testRevert_confirmNewVaultInfo_NonOwner(address unprivilegedAddress) public {
@@ -489,7 +514,7 @@ contract factoryTest is Test {
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        factoryContr.confirmNewVaultInfo();
+        factory.confirmNewVaultInfo();
         vm.stopPrank();
     }
 
@@ -499,79 +524,79 @@ contract factoryTest is Test {
         vm.assume(logic != address(0));
 
         vm.prank(creatorAddress);
-        factoryContr = new Factory();
-        assertTrue(factoryContr.getVaultVersionRoot() == bytes32(0));
-        assertEq(0, factoryContr.latestVaultVersion());
+        factory = new Factory();
+        assertTrue(factory.getVaultVersionRoot() == bytes32(0));
+        assertEq(0, factory.latestVaultVersion());
 
         vm.prank(creatorAddress);
-        factoryContr.setNewVaultInfo(registry, logic, Constants.upgradeProof1To2);
-        assertTrue(factoryContr.newVaultInfoSet());
+        factory.setNewVaultInfo(registry, logic, Constants.upgradeProof1To2);
+        assertTrue(factory.newVaultInfoSet());
 
         vm.prank(creatorAddress);
-        factoryContr.confirmNewVaultInfo();
-        assertTrue(factoryContr.getVaultVersionRoot() == Constants.upgradeProof1To2);
-        assertTrue(!factoryContr.newVaultInfoSet());
-        assertEq(1, factoryContr.latestVaultVersion());
+        factory.confirmNewVaultInfo();
+        assertTrue(factory.getVaultVersionRoot() == Constants.upgradeProof1To2);
+        assertTrue(!factory.newVaultInfoSet());
+        assertEq(1, factory.latestVaultVersion());
     }
 
     function testSuccess_confirmNewVaultInfo_OwnerConfirmsNewVaultInfoWithIdenticalMainRegistry(address logic) public {
         vm.assume(logic != address(0));
 
-        assertTrue(!factoryContr.newVaultInfoSet());
-        assertEq(1, factoryContr.latestVaultVersion());
+        assertTrue(!factory.newVaultInfoSet());
+        assertEq(1, factory.latestVaultVersion());
 
         vm.prank(creatorAddress);
-        factoryContr.setNewVaultInfo(address(registryContr), logic, Constants.upgradeProof1To2);
-        assertTrue(factoryContr.newVaultInfoSet());
-        assertEq(1, factoryContr.latestVaultVersion());
+        factory.setNewVaultInfo(address(registry), logic, Constants.upgradeProof1To2);
+        assertTrue(factory.newVaultInfoSet());
+        assertEq(1, factory.latestVaultVersion());
 
         vm.prank(creatorAddress);
-        factoryContr.confirmNewVaultInfo();
-        assertTrue(!factoryContr.newVaultInfoSet());
-        assertEq(2, factoryContr.latestVaultVersion());
+        factory.confirmNewVaultInfo();
+        assertTrue(!factory.newVaultInfoSet());
+        assertEq(2, factory.latestVaultVersion());
     }
 
     function testSuccess_confirmNewVaultInfo_OwnerConfirmsVaultInfoWithoutNewVaultInfoSet() public {
-        assertTrue(!factoryContr.newVaultInfoSet());
-        assertEq(1, factoryContr.latestVaultVersion());
+        assertTrue(!factory.newVaultInfoSet());
+        assertEq(1, factory.latestVaultVersion());
 
         vm.prank(creatorAddress);
-        factoryContr.confirmNewVaultInfo();
-        assertTrue(!factoryContr.newVaultInfoSet());
-        assertEq(1, factoryContr.latestVaultVersion());
+        factory.confirmNewVaultInfo();
+        assertTrue(!factory.newVaultInfoSet());
+        assertEq(1, factory.latestVaultVersion());
     }
 
     function testSuccess_blockVaultVersion(uint16 vaultVersion) public {
-        uint256 currentVersion = factoryContr.latestVaultVersion();
+        uint256 currentVersion = factory.latestVaultVersion();
         vm.assume(vaultVersion <= currentVersion);
         vm.assume(vaultVersion != 0);
 
         vm.prank(creatorAddress);
-        factoryContr.blockVaultVersion(vaultVersion);
+        factory.blockVaultVersion(vaultVersion);
 
-        assertTrue(factoryContr.vaultVersionBlocked(vaultVersion));
+        assertTrue(factory.vaultVersionBlocked(vaultVersion));
     }
 
     function testRevert_blockVaultVersion_BlockNonExistingVaultVersion(uint16 vaultVersion) public {
-        uint256 currentVersion = factoryContr.latestVaultVersion();
+        uint256 currentVersion = factory.latestVaultVersion();
         vm.assume(vaultVersion > currentVersion || vaultVersion == 0);
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("FTRY_BVV: Invalid version");
-        factoryContr.blockVaultVersion(vaultVersion);
+        factory.blockVaultVersion(vaultVersion);
         vm.stopPrank();
     }
 
     function testRevert_blockVaultVersion_ByNonOwner(uint16 vaultVersion, address unprivilegedAddress) public {
         vm.assume(unprivilegedAddress != creatorAddress);
 
-        uint256 currentVersion = factoryContr.latestVaultVersion();
+        uint256 currentVersion = factory.latestVaultVersion();
         vm.assume(vaultVersion <= currentVersion);
         vm.assume(vaultVersion != 0);
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        factoryContr.blockVaultVersion(vaultVersion);
+        factory.blockVaultVersion(vaultVersion);
         vm.stopPrank();
     }
 
@@ -584,12 +609,12 @@ contract factoryTest is Test {
     ///////////////////////////////////////////////////////////////*/
 
     function testSuccess_allVaultsLength_VaultIdStartFromZero() public {
-        assertEq(factoryContr.allVaultsLength(), 0);
+        assertEq(factory.allVaultsLength(), 0);
     }
 
     function testSuccess_getCurrentRegistry() public {
-        address expectedRegistry = factoryContr.getCurrentRegistry();
-        address actualRegistry = address(registryContr);
+        address expectedRegistry = factory.getCurrentRegistry();
+        address actualRegistry = address(registry);
 
         assertEq(expectedRegistry, actualRegistry);
     }
@@ -600,9 +625,9 @@ contract factoryTest is Test {
 
     function testSuccess_setBaseURI(string calldata uri) public {
         vm.prank(creatorAddress);
-        factoryContr.setBaseURI(uri);
+        factory.setBaseURI(uri);
 
-        string memory expectedUri = factoryContr.baseURI();
+        string memory expectedUri = factory.baseURI();
 
         assertEq(expectedUri, uri);
     }
@@ -612,7 +637,7 @@ contract factoryTest is Test {
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert("Ownable: caller is not the owner");
-        factoryContr.setBaseURI(uri);
+        factory.setBaseURI(uri);
         vm.stopPrank();
     }
 }
