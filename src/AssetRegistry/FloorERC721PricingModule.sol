@@ -170,7 +170,6 @@ contract FloorERC721PricingModule is PricingModule {
         );
 
         collFactor = assetRiskVars[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
-        liqThreshold =
-            assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
+        liqThreshold = assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
     }
 }

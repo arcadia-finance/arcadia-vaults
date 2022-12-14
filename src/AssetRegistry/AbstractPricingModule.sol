@@ -106,7 +106,6 @@ abstract contract PricingModule is Ownable {
      */
     function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) {}
 
-
     /**
      * @notice Returns the risk variable arrays of an asset
      * @param asset The address of the asset
@@ -124,7 +123,7 @@ abstract contract PricingModule is Ownable {
     ) external virtual onlyMainRegistry {
         _setRiskVariables(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
     }
-    
+
     function _setRiskVariables(
         address assetAddress,
         uint16[] memory assetCollateralFactors,

@@ -190,8 +190,7 @@ contract UniswapV2PricingModule is PricingModule {
             + FixedPointMathLib.mulDivDown(token1Amount, trustedUsdPriceToken1, FixedPointMathLib.WAD);
 
         collFactor = assetRiskVars[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
-        liqThreshold =
-            assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
+        liqThreshold = assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
 
         return (valueInUsd, 0, collFactor, liqThreshold);
     }
