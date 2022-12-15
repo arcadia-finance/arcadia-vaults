@@ -204,15 +204,15 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         super.setUp();
     }
 
-    function testRevert_setAssetInformation_Unauthorised(address unprivilegedAddress_) public {
+    function testRevert_addAsset_Unauthorised(address unprivilegedAddress_) public {
         //Given: unprivilegedAddress_ is not protocol deployer
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         //When: unprivilegedAddress_ adds a new asset
-        //Then: setAssetInformation reverts with "Ownable: caller is not the owner"
+        //Then: addAsset reverts with "Ownable: caller is not the owner"
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("Ownable: caller is not the owner");
-        uniswapV2PricingModule.setAssetInformation(
+        uniswapV2PricingModule.addAsset(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(snx),
                 token1: address(eth),
@@ -224,13 +224,13 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_NonWhiteListedUnderlyingAsset() public {
+    function testRevert_addAsset_NonWhiteListedUnderlyingAsset() public {
         //Given: One of the underlying assets is not whitelisted (SafeMoon)
         //When: creator adds a new asset
-        //Then: setAssetInformation reverts with "Ownable: caller is not the owner"
+        //Then: addAsset reverts with "Ownable: caller is not the owner"
         vm.startPrank(creatorAddress);
         vm.expectRevert("PMUV2_SAI: NOT_WHITELISTED");
-        uniswapV2PricingModule.setAssetInformation(
+        uniswapV2PricingModule.addAsset(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(safemoon),
                 token1: address(eth),
@@ -242,7 +242,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_WrongNumberOfCreditRatings() public {
+    function testRevert_addAsset_WrongNumberOfCreditRatings() public {
         //Given: The number of credit ratings is not 0 and not the number of baseCurrencies
         uint16[] memory collateralFactors = new uint16[](1);
         collateralFactors[0] = 0;
@@ -250,10 +250,10 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         liquidationThresholds[0] = 100;
 
         //When: creator adds a new asset
-        //Then: setAssetInformation reverts with "APM_SRV: LENGTH_MISMATCH"
+        //Then: addAsset reverts with "APM_SRV: LENGTH_MISMATCH"
         vm.startPrank(creatorAddress);
         vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
-        uniswapV2PricingModule.setAssetInformation(
+        uniswapV2PricingModule.addAsset(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(snx),
                 token1: address(eth),
@@ -265,12 +265,12 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetInformation_EmptyListCreditRatings() public {
+    function testSuccess_addAsset_EmptyListCreditRatings() public {
         //Given: credit rating list is empty
 
         //When: creator adds a new asset
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(
+        uniswapV2PricingModule.addAsset(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(snx),
                 token1: address(eth),
@@ -284,7 +284,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
     }
 
-    function testSuccess_setAssetInformation_FullListCreditRatings() public {
+    function testSuccess_addAsset_FullListCreditRatings() public {
         //Given: The number of credit ratings equals the number of baseCurrencies
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = 0;
@@ -297,7 +297,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
 
         //When: creator adds a new asset
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(
+        uniswapV2PricingModule.addAsset(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(snx),
                 token1: address(eth),
@@ -311,10 +311,10 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
     }
 
-    function testSuccess_setAssetInformation_OverwritesAsset() public {
+    function testSuccess_addAsset_OverwritesAsset() public {
         //Given: asset is added to pricing module
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(
+        uniswapV2PricingModule.addAsset(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(snx),
                 token1: address(eth),
@@ -327,7 +327,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
 
         //When: creator adds asset again
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(
+        uniswapV2PricingModule.addAsset(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(snx),
                 token1: address(eth),
@@ -355,7 +355,7 @@ contract WhiteListManagement is UniswapV2PricingModuleTest {
 
         //When: pairSnxEth is added to the pricing module
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(
+        uniswapV2PricingModule.addAsset(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(snx),
                 token1: address(eth),
@@ -677,7 +677,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             deployToken(oracleSnxToUsd, _snxDecimals, _oracleSnxToUsdDecimals, _rateSnxToUsd, "SNX", oracleSnxToUsdArr);
         pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(
+        uniswapV2PricingModule.addAsset(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(snx),
                 token1: address(eth),
@@ -732,7 +732,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             deployToken(oracleSnxToUsd, _snxDecimals, _oracleSnxToUsdDecimals, _rateSnxToUsd, "SNX", oracleSnxToUsdArr);
         pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.setAssetInformation(
+        uniswapV2PricingModule.addAsset(
             UniswapV2PricingModule.AssetInformation({
                 token0: address(snx),
                 token1: address(eth),
@@ -824,7 +824,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
                 baseAssetIsBaseCurrency: true
             })
         );
-        standardERC20PricingModule.setAssetInformation(
+        standardERC20PricingModule.addAsset(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleTokenToUsdArr,
                 assetUnit: uint64(10 ** tokenDecimals),

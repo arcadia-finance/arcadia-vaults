@@ -25,12 +25,8 @@ contract StandardERC4626PricingModule is PricingModule {
 
     struct AssetInformation {
         uint64 assetUnit;
-        address assetAddress;
-        uint16[] assetCollateralFactors;
-        uint16[] assetLiquidationThresholds;
-        uint64 underlyingAssetUnit;
         address underlyingAsset;
-        address[] underlyingAssetOracleAddresses;
+        address[] underlyingAssetOracles;
     }
 
     /**
@@ -46,14 +42,9 @@ contract StandardERC4626PricingModule is PricingModule {
 
     /**
      * @notice Adds a new asset to the ATokenPricingModule, or overwrites an existing asset.
-     * @param assetInformation A (partially empty!!) Struct with information about the asset
-     * - assetUnit: The unit of the asset, equal to 10 to the power of the number of decimals of the asset
-     * - uint16[] assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
-     * - uint16[] assetLiquidationThresholds: The List of liquidation thresholds for the asset for the different BaseCurrencies
-     * - assetAddress: The contract address of the asset
-     * - underlyingAssetUnit: The unit of the underlying asset, equal to 10 to the power of the number of decimals of the underlying asset
-     * - underlyingAsset: The address of the underlying asset
-     * - underlyingAssetOracleAddresses: An array of addresses of oracle contracts, to price the underlying asset in USD
+     * @param asset The contract address of the asset
+     * @param assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
+     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -66,41 +57,45 @@ contract StandardERC4626PricingModule is PricingModule {
      * assets are no longer updatable.
      * @dev Assets can't have more than 18 decimals.
      */
-    function setAssetInformation(AssetInformation memory assetInformation) external onlyOwner {
-        require(assetInformation.assetUnit <= 1000000000000000000, "PM4626_SAI: Maximal 18 decimals");
+    function addAsset(address asset, 
+                                 RiskVarInput[] calldata assetCollateralFactors, 
+                                 RiskVarInput[] calldata assetLiquidationThresholds) external onlyOwner {
+        
+        uint256 assetUnit = 10 ** IERC4626(asset).decimals();
+        require(assetUnit <= 1000000000000000000, "PM4626_SAI: Maximal 18 decimals");
 
-        address assetAddress = assetInformation.assetAddress;
 
-        /* ///////////////////////////////////////////////////////////////
-                            ERC4626 SPECIFIC
-        /////////////////////////////////////////////////////////////// */
-        address underlyingAsset = address(IERC4626(assetAddress).asset());
-        (uint64 underlyingAssetUnit,, address[] memory underlyingAssetOracleAddresses) = IPricingModule(
+        address underlyingAsset = address(IERC4626(asset).asset());
+        (uint64 underlyingAssetUnit,, address[] memory underlyingAssetOracles) = IPricingModule(
             IMainRegistry(mainRegistry).assetToPricingModule(underlyingAsset)
         ).getAssetInformation(underlyingAsset);
 
-        require(10 ** IERC4626(assetAddress).decimals() == underlyingAssetUnit, "PM4626_SAI: Decimals don't match");
+        require(10 ** IERC4626(asset).decimals() == underlyingAssetUnit, "PM4626_SAI: Decimals don't match");
         //
 
         //we can skip the oracle addresses check, already checked on underlying asset
 
-        if (!inPricingModule[assetAddress]) {
-            inPricingModule[assetAddress] = true;
-            assetsInPricingModule.push(assetAddress);
-        }
+        require(!inPricingModule[asset], "PM4626_SAI: already added");        
+        inPricingModule[asset] = true;
+        assetsInPricingModule.push(asset);
 
-        assetToInformation[assetAddress].assetAddress = assetAddress;
-        assetToInformation[assetAddress].assetUnit = assetInformation.assetUnit;
-        assetToInformation[assetAddress].underlyingAsset = underlyingAsset;
-        assetToInformation[assetAddress].underlyingAssetUnit = underlyingAssetUnit;
-        assetToInformation[assetAddress].underlyingAssetOracleAddresses = underlyingAssetOracleAddresses;
+        assetToInformation[asset].assetUnit = uint64(assetUnit);
+        assetToInformation[asset].underlyingAsset = underlyingAsset;
+        assetToInformation[asset].underlyingAssetOracles = underlyingAssetOracles;
         _setRiskVariables(
-            assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds
+            asset, assetCollateralFactors, assetLiquidationThresholds
         );
 
-        isAssetAddressWhiteListed[assetInformation.assetAddress] = true;
+        isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PM4626_SAI: Unable to add in MR");
+        require(IMainRegistry(mainRegistry).addAsset(asset), "PM4626_SAI: Unable to add in MR");
+    }
+
+    function syncOracles(address asset) external {
+        (,, address[] memory underlyingAssetOracles) = IPricingModule(
+            IMainRegistry(mainRegistry).assetToPricingModule(assetToInformation[asset].underlyingAsset)
+        ).getAssetInformation(assetToInformation[asset].underlyingAsset);
+        assetToInformation[asset].underlyingAssetOracles = underlyingAssetOracles;
     }
 
     /**
@@ -108,16 +103,14 @@ contract StandardERC4626PricingModule is PricingModule {
      * @dev struct is not taken into memory; saves 6613 gas
      * @param asset The Token address of the asset
      * @return assetDecimals The number of decimals of the asset
-     * @return assetAddress The Token address of the asset
      * @return underlyingAssetAddress The Token address of the underlying asset
-     * @return underlyingAssetOracleAddresses The list of addresses of the oracles to get the exchange rate of the underlying asset in USD
+     * @return underlyingAssetOracles The list of addresses of the oracles to get the exchange rate of the underlying asset in USD
      */
-    function getAssetInformation(address asset) external view returns (uint64, address, address, address[] memory) {
+    function getAssetInformation(address asset) external view returns (uint64, address, address[] memory) {
         return (
             assetToInformation[asset].assetUnit,
-            assetToInformation[asset].assetAddress,
             assetToInformation[asset].underlyingAsset,
-            assetToInformation[asset].underlyingAssetOracleAddresses
+            assetToInformation[asset].underlyingAssetOracles
         );
     }
 
@@ -171,18 +164,18 @@ contract StandardERC4626PricingModule is PricingModule {
         uint256 rateInBaseCurrency;
 
         (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[getValueInput.assetAddress].underlyingAssetOracleAddresses, getValueInput.baseCurrency
+            assetToInformation[getValueInput.asset].underlyingAssetOracles, getValueInput.baseCurrency
         );
 
-        uint256 assetAmount = IERC4626(getValueInput.assetAddress).convertToAssets(getValueInput.assetAmount);
+        uint256 assetAmount = IERC4626(getValueInput.asset).convertToAssets(getValueInput.assetAmount);
         if (rateInBaseCurrency > 0) {
             valueInBaseCurrency =
-                assetAmount.mulDivDown(rateInBaseCurrency, assetToInformation[getValueInput.assetAddress].assetUnit);
+                assetAmount.mulDivDown(rateInBaseCurrency, assetToInformation[getValueInput.asset].assetUnit);
         } else {
-            valueInUsd = assetAmount.mulDivDown(rateInUsd, assetToInformation[getValueInput.assetAddress].assetUnit);
+            valueInUsd = assetAmount.mulDivDown(rateInUsd, assetToInformation[getValueInput.asset].assetUnit);
         }
 
-        collFactor = assetRiskVars[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
-        liqThreshold = assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
+        collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;
     }
 }

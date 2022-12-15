@@ -21,10 +21,7 @@ contract FloorERC721PricingModule is PricingModule {
     struct AssetInformation {
         uint256 idRangeStart;
         uint256 idRangeEnd;
-        address assetAddress;
-        uint16[] assetCollateralFactors;
-        uint16[] assetLiquidationThresholds;
-        address[] oracleAddresses;
+        address[] oracles;
     }
 
     /**
@@ -40,13 +37,12 @@ contract FloorERC721PricingModule is PricingModule {
 
     /**
      * @notice Adds a new asset to the FloorERC721PricingModule, or overwrites an existing asset.
-     * @param assetInformation A Struct with information about the asset
-     * - idRangeStart: The id of the first NFT of the collection
-     * - idRangeEnd: The id of the last NFT of the collection
-     * - assetAddress: The contract address of the asset
-     * - assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
-     * - assetLiquidationThresholds: The List of liquidation thresholds for the asset for the different BaseCurrencies
-     * - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
+     * @param asset The contract address of the asset
+     * @param idRangeStart: The id of the first NFT of the collection
+     * @param idRangeEnd: The id of the last NFT of the collection
+     * @param oracles An array of addresses of oracle contracts, to price the asset in USD
+     * @param assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
+     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -58,29 +54,31 @@ contract FloorERC721PricingModule is PricingModule {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function setAssetInformation(AssetInformation memory assetInformation) external onlyOwner {
+    function addAsset(address asset, uint256 idRangeStart, uint256 idRangeEnd, address[] calldata oracles, RiskVarInput[] calldata assetCollateralFactors, RiskVarInput[] calldata assetLiquidationThresholds) external onlyOwner {
         //no asset units
 
-        address assetAddress = assetInformation.assetAddress;
+        IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
-        IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+        require(!inPricingModule[asset], "PM721_SAI: already added");        
+        inPricingModule[asset] = true;
+        assetsInPricingModule.push(asset);
 
-        if (!inPricingModule[assetAddress]) {
-            inPricingModule[assetAddress] = true;
-            assetsInPricingModule.push(assetAddress);
-        }
-
-        assetToInformation[assetAddress].idRangeStart = assetInformation.idRangeStart;
-        assetToInformation[assetAddress].idRangeEnd = assetInformation.idRangeEnd;
-        assetToInformation[assetAddress].assetAddress = assetAddress;
-        assetToInformation[assetAddress].oracleAddresses = assetInformation.oracleAddresses;
+        assetToInformation[asset].idRangeStart = idRangeStart;
+        assetToInformation[asset].idRangeEnd = idRangeEnd;
+        assetToInformation[asset].oracles = oracles;
         _setRiskVariables(
-            assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds
+            asset, assetCollateralFactors, assetLiquidationThresholds
         );
 
-        isAssetAddressWhiteListed[assetAddress] = true;
+        isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PM721_SAI: Unable to add in MR");
+        require(IMainRegistry(mainRegistry).addAsset(asset), "PM721_SAI: Unable to add in MR");
+    }
+
+    function setOracles(address asset, address[] calldata oracles) external onlyOwner {
+        require(inPricingModule[asset], "PM20_SAI: asset unknown");
+        IOraclesHub(oracleHub).checkOracleSequence(oracles);
+        assetToInformation[asset].oracles = oracles;
     }
 
     /**
@@ -89,15 +87,13 @@ contract FloorERC721PricingModule is PricingModule {
      * @param asset The Token address of the asset
      * @return idRangeStart The id of the first token of the collection
      * @return idRangeEnd The id of the last token of the collection
-     * @return assetAddress The contract address of the asset
-     * @return oracleAddresses The list of addresses of the oracles to get the exchange rate of the asset in USD
+     * @return oracles The list of addresses of the oracles to get the exchange rate of the asset in USD
      */
-    function getAssetInformation(address asset) external view returns (uint256, uint256, address, address[] memory) {
+    function getAssetInformation(address asset) external view returns (uint256, uint256, address[] memory) {
         return (
             assetToInformation[asset].idRangeStart,
             assetToInformation[asset].idRangeEnd,
-            assetToInformation[asset].assetAddress,
-            assetToInformation[asset].oracleAddresses
+            assetToInformation[asset].oracles
         );
     }
 
@@ -107,13 +103,13 @@ contract FloorERC721PricingModule is PricingModule {
 
     /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
-     * @param assetAddress The address of the asset
+     * @param asset The address of the asset
      * @param assetId The Id of the asset
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address assetAddress, uint256 assetId) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[assetAddress]) {
-            if (isIdInRange(assetAddress, assetId)) {
+    function isWhiteListed(address asset, uint256 assetId) external view override returns (bool) {
+        if (isAssetAddressWhiteListed[asset]) {
+            if (isIdInRange(asset, assetId)) {
                 return true;
             }
         }
@@ -123,14 +119,14 @@ contract FloorERC721PricingModule is PricingModule {
 
     /**
      * @notice Checks if the Id for a given token is in the range for which there exists a price feed
-     * @param assetAddress The address of the asset
+     * @param asset The address of the asset
      * @param assetId The Id of the asset
      * @return A boolean, indicating if the Id of the given asset is whitelisted
      */
-    function isIdInRange(address assetAddress, uint256 assetId) private view returns (bool) {
+    function isIdInRange(address asset, uint256 assetId) private view returns (bool) {
         if (
-            assetId >= assetToInformation[assetAddress].idRangeStart
-                && assetId <= assetToInformation[assetAddress].idRangeEnd
+            assetId >= assetToInformation[asset].idRangeStart
+                && assetId <= assetToInformation[asset].idRangeEnd
         ) {
             return true;
         } else {
@@ -166,10 +162,10 @@ contract FloorERC721PricingModule is PricingModule {
         returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
     {
         (valueInUsd, valueInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.baseCurrency
+            assetToInformation[getValueInput.asset].oracles, getValueInput.baseCurrency
         );
 
-        collFactor = assetRiskVars[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
-        liqThreshold = assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
+        collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;
     }
 }

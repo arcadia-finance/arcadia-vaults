@@ -25,12 +25,8 @@ contract ATokenPricingModule is PricingModule {
 
     struct AssetInformation {
         uint64 assetUnit;
-        address assetAddress;
-        uint16[] assetCollateralFactors;
-        uint16[] assetLiquidationThresholds;
-        uint64 underlyingAssetUnit;
         address underlyingAsset;
-        address[] underlyingAssetOracleAddresses;
+        address[] underlyingAssetOracles;
     }
 
     /**
@@ -46,14 +42,9 @@ contract ATokenPricingModule is PricingModule {
 
     /**
      * @notice Adds a new asset to the ATokenPricingModule, or overwrites an existing asset.
-     * @param assetInformation A (partially empty!!) Struct with information about the asset
-     * - assetUnit: The unit of the asset, equal to 10 to the power of the number of decimals of the asset
-     * - assetAddress: The contract address of the asset
-     * - assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
-     * - assetLiquidationThresholds: The List of liquidation thresholds for the asset for the different BaseCurrencies
-     * - underlyingAssetUnit: The unit of the underlying asset, equal to 10 to the power of the number of decimals of the underlying asset
-     * - underlyingAsset: The address of the underlying asset
-     * - underlyingAssetOracleAddresses: An array of addresses of oracle contracts, to price the underlying asset in USD
+     * @param asset The contract address of the asset
+     * @param assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
+     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should or be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -66,41 +57,43 @@ contract ATokenPricingModule is PricingModule {
      * assets are no longer updatable.
      * @dev Assets can't have more than 18 decimals.
      */
-    function setAssetInformation(AssetInformation memory assetInformation) external onlyOwner {
-        require(assetInformation.assetUnit <= 1000000000000000000, "PMAT_SAI: Maximal 18 decimals");
+    function addAsset(address asset, 
+                                 RiskVarInput[] calldata assetCollateralFactors, 
+                                 RiskVarInput[] calldata assetLiquidationThresholds) external onlyOwner {
 
-        address assetAddress = assetInformation.assetAddress;
+        uint256 assetUnit = 10 ** IERC20(asset).decimals();
+        require(assetUnit <= 1000000000000000000, "PMAT_SAI: Maximal 18 decimals");
 
-        /* ///////////////////////////////////////////////////////////////
-                            ATOKEN SPECIFIC
-        /////////////////////////////////////////////////////////////// */
-        address underlyingAsset = IAToken(assetAddress).UNDERLYING_ASSET_ADDRESS();
-        (uint64 underlyingAssetUnit,, address[] memory underlyingAssetOracleAddresses) = IPricingModule(
+        address underlyingAsset = IAToken(asset).UNDERLYING_ASSET_ADDRESS();
+        (uint64 underlyingAssetUnit,, address[] memory underlyingAssetOracles) = IPricingModule(
             IMainRegistry(mainRegistry).assetToPricingModule(underlyingAsset)
         ).getAssetInformation(underlyingAsset);
 
-        require(10 ** IAToken(assetAddress).decimals() == underlyingAssetUnit, "PMAT_SAI: Decimals don't match");
-        //
+        require(10 ** IAToken(asset).decimals() == underlyingAssetUnit, "PMAT_SAI: Decimals don't match");
 
         //we can skip the oracle addresses check, already checked on underlying asset
 
-        if (!inPricingModule[assetAddress]) {
-            inPricingModule[assetAddress] = true;
-            assetsInPricingModule.push(assetAddress);
-        }
+        require(!inPricingModule[asset], "PMAT_SAI: already added");        
+        inPricingModule[asset] = true;
+        assetsInPricingModule.push(asset);
 
-        assetToInformation[assetAddress].assetAddress = assetAddress;
-        assetToInformation[assetAddress].assetUnit = assetInformation.assetUnit;
-        assetToInformation[assetAddress].underlyingAsset = underlyingAsset;
-        assetToInformation[assetAddress].underlyingAssetUnit = underlyingAssetUnit;
-        assetToInformation[assetAddress].underlyingAssetOracleAddresses = underlyingAssetOracleAddresses;
+        assetToInformation[asset].assetUnit = uint64(assetUnit); //Can safely cast to uint64, we previously checked it is smaller than 10e18
+        assetToInformation[asset].underlyingAsset = underlyingAsset;
+        assetToInformation[asset].underlyingAssetOracles = underlyingAssetOracles;
         _setRiskVariables(
-            assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds
+            asset, assetCollateralFactors, assetLiquidationThresholds
         );
 
-        isAssetAddressWhiteListed[assetAddress] = true;
+        isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PMAT_SAI: Unable to add in MR");
+        require(IMainRegistry(mainRegistry).addAsset(asset), "PMAT_SAI: Unable to add in MR");
+    }
+
+    function syncOracles(address asset) external {
+        (,, address[] memory underlyingAssetOracles) = IPricingModule(
+            IMainRegistry(mainRegistry).assetToPricingModule(assetToInformation[asset].underlyingAsset)
+        ).getAssetInformation(assetToInformation[asset].underlyingAsset);
+        assetToInformation[asset].underlyingAssetOracles = underlyingAssetOracles;
     }
 
     /**
@@ -108,16 +101,14 @@ contract ATokenPricingModule is PricingModule {
      * @dev struct is not taken into memory; saves 6613 gas
      * @param asset The Token address of the asset
      * @return assetUnit The number of decimals of the asset
-     * @return assetAddress The Token address of the asset
      * @return underlyingAssetAddress The Token address of the underlyting asset
      * @return underlyingAsseOracleoracleAddresses The list of addresses of the oracles to get the exchange rate of the underlying asset in USD
      */
-    function getAssetInformation(address asset) external view returns (uint64, address, address, address[] memory) {
+    function getAssetInformation(address asset) external view returns (uint64, address, address[] memory) {
         return (
             assetToInformation[asset].assetUnit,
-            assetToInformation[asset].assetAddress,
             assetToInformation[asset].underlyingAsset,
-            assetToInformation[asset].underlyingAssetOracleAddresses
+            assetToInformation[asset].underlyingAssetOracles
         );
     }
 
@@ -127,12 +118,12 @@ contract ATokenPricingModule is PricingModule {
 
     /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
-     * @param assetAddress The address of the asset
+     * @param asset The address of the asset
      * @dev Since ERC20 tokens have no Id, the Id should be set to 0
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address assetAddress, uint256) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[assetAddress]) {
+    function isWhiteListed(address asset, uint256) external view override returns (bool) {
+        if (isAssetAddressWhiteListed[asset]) {
             return true;
         }
 
@@ -146,7 +137,7 @@ contract ATokenPricingModule is PricingModule {
     /**
      * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency
      * @param getValueInput A Struct with all the information neccessary to get the value of an asset
-     * - assetAddress: The contract address of the asset
+     * - asset: The contract address of the asset
      * - assetId: Since ERC20 tokens have no Id, the Id should be set to 0
      * - assetAmount: The Amount of tokens, ERC20 tokens can have any Decimals precision smaller than 18.
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
@@ -170,20 +161,20 @@ contract ATokenPricingModule is PricingModule {
         uint256 rateInUsd;
         uint256 rateInBaseCurrency;
         (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[getValueInput.assetAddress].underlyingAssetOracleAddresses, getValueInput.baseCurrency
+            assetToInformation[getValueInput.asset].underlyingAssetOracles, getValueInput.baseCurrency
         );
 
         if (rateInBaseCurrency > 0) {
             valueInBaseCurrency = (getValueInput.assetAmount).mulDivDown(
-                rateInBaseCurrency, assetToInformation[getValueInput.assetAddress].assetUnit
+                rateInBaseCurrency, assetToInformation[getValueInput.asset].assetUnit
             );
         } else {
             valueInUsd = (getValueInput.assetAmount).mulDivDown(
-                rateInUsd, assetToInformation[getValueInput.assetAddress].assetUnit
+                rateInUsd, assetToInformation[getValueInput.asset].assetUnit
             );
         }
 
-        collFactor = assetRiskVars[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
-        liqThreshold = assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
+        collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;
     }
 }

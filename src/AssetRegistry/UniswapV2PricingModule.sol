@@ -35,9 +35,6 @@ contract UniswapV2PricingModule is PricingModule {
     struct AssetInformation {
         address token0;
         address token1;
-        address assetAddress;
-        uint16[] assetCollateralFactors;
-        uint16[] assetLiquidationThresholds;
     }
 
     /**
@@ -70,11 +67,9 @@ contract UniswapV2PricingModule is PricingModule {
 
     /**
      * @notice Adds a new asset to the UniswapV2PricingModule, or overwrites an existing asset.
-     * @param assetInformation A Struct with information about the asset
-     * - token0: The first token in the Uni pair
-     * - token1: The second token in the Uni pair
-     * - assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
-     * - assetLiquidationThresholds: The List of liquidation thresholds for the asset for the different BaseCurrencies
+     * @param asset The contract address of the asset
+     * @param assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
+     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of baseCurrencies added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -86,33 +81,30 @@ contract UniswapV2PricingModule is PricingModule {
      *      This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      *      assets are no longer updatable.
      */
-    function setAssetInformation(AssetInformation memory assetInformation) external onlyOwner {
-        address assetAddress = assetInformation.assetAddress;
+    function addAsset(address asset, RiskVarInput[] calldata assetCollateralFactors, RiskVarInput[] calldata assetLiquidationThresholds) external onlyOwner {
 
-        assetInformation.token0 = IUniswapV2Pair(assetAddress).token0();
-        assetInformation.token1 = IUniswapV2Pair(assetAddress).token1();
+        address token0 = IUniswapV2Pair(asset).token0();
+        address token1 = IUniswapV2Pair(asset).token1();
 
         address[] memory tokens = new address[](2);
-        tokens[0] = assetInformation.token0;
-        tokens[1] = assetInformation.token1;
+        tokens[0] = token0;
+        tokens[1] = token1;
 
         require(IMainRegistry(mainRegistry).batchIsWhiteListed(tokens, new uint256[](2)), "PMUV2_SAI: NOT_WHITELISTED");
 
-        if (!inPricingModule[assetAddress]) {
-            inPricingModule[assetAddress] = true;
-            assetsInPricingModule.push(assetAddress);
-        }
+        require(!inPricingModule[asset], "PMUV2_SAI: already added");
+        inPricingModule[asset] = true;
+        assetsInPricingModule.push(asset);
 
-        assetToInformation[assetAddress].token0 = assetInformation.token0;
-        assetToInformation[assetAddress].token1 = assetInformation.token1;
-        assetToInformation[assetAddress].assetAddress = assetAddress;
+        assetToInformation[asset].token0 = token0;
+        assetToInformation[asset].token1 = token1;
         _setRiskVariables(
-            assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds
+            asset, assetCollateralFactors, assetLiquidationThresholds
         );
 
-        isAssetAddressWhiteListed[assetAddress] = true;
+        isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PMUV2_SAI: Unable to add in MR");
+        require(IMainRegistry(mainRegistry).addAsset(asset), "PMUV2_SAI: Unable to add in MR");
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -121,12 +113,12 @@ contract UniswapV2PricingModule is PricingModule {
 
     /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
-     * @param assetAddress The address of the asset
+     * @param asset The address of the asset
      * @dev Since Uniswap V2 LP tokens (ERC20) have no Id, the Id should be set to 0
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address assetAddress, uint256) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[assetAddress]) {
+    function isWhiteListed(address asset, uint256) external view override returns (bool) {
+        if (isAssetAddressWhiteListed[asset]) {
             return true;
         }
 
@@ -140,7 +132,7 @@ contract UniswapV2PricingModule is PricingModule {
     /**
      * @notice Returns the value of a Uniswap V2 LP-token
      * @param getValueInput A Struct with all the information neccessary to get the value of an asset
-     * - assetAddress: The contract address of the LP-token
+     * - asset: The contract address of the LP-token
      * - assetId: Since ERC20 tokens have no Id, the Id should be set to 0
      * - assetAmount: The Amount of tokens, ERC20 tokens can have any Decimals precision smaller than 18.
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
@@ -165,7 +157,7 @@ contract UniswapV2PricingModule is PricingModule {
         // we use for both tokens the USD price of 1 WAD (10**18) to guarantee precision.
         (uint256 trustedUsdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
             GetValueInput({
-                assetAddress: assetToInformation[getValueInput.assetAddress].token0,
+                asset: assetToInformation[getValueInput.asset].token0,
                 assetId: 0,
                 assetAmount: FixedPointMathLib.WAD,
                 baseCurrency: 0
@@ -173,7 +165,7 @@ contract UniswapV2PricingModule is PricingModule {
         );
         (uint256 trustedUsdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
             GetValueInput({
-                assetAddress: assetToInformation[getValueInput.assetAddress].token1,
+                asset: assetToInformation[getValueInput.asset].token1,
                 assetId: 0,
                 assetAmount: FixedPointMathLib.WAD,
                 baseCurrency: 0
@@ -182,15 +174,15 @@ contract UniswapV2PricingModule is PricingModule {
 
         //
         (uint256 token0Amount, uint256 token1Amount) = _getTrustedTokenAmounts(
-            getValueInput.assetAddress, trustedUsdPriceToken0, trustedUsdPriceToken1, getValueInput.assetAmount
+            getValueInput.asset, trustedUsdPriceToken0, trustedUsdPriceToken1, getValueInput.assetAmount
         );
         // trustedUsdPriceToken0 is the value of token0 in USD with 18 decimals precision for 1 WAD of tokens,
         // we need to recalculate to find the value of the actual amount of underlying token0 in the liquidity position.
         valueInUsd = FixedPointMathLib.mulDivDown(token0Amount, trustedUsdPriceToken0, FixedPointMathLib.WAD)
             + FixedPointMathLib.mulDivDown(token1Amount, trustedUsdPriceToken1, FixedPointMathLib.WAD);
 
-        collFactor = assetRiskVars[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
-        liqThreshold = assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
+        collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;
 
         return (valueInUsd, 0, collFactor, liqThreshold);
     }

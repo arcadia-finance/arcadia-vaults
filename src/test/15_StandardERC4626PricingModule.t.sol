@@ -69,7 +69,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(standardERC4626PricingModule));
 
-        standardERC20PricingModule.setAssetInformation(
+        standardERC20PricingModule.addAsset(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -81,11 +81,11 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_NonOwner(address unprivilegedAddress_) public {
+    function testRevert_addAsset_NonOwner(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("Ownable: caller is not the owner");
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
@@ -99,7 +99,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
+    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](1);
         collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
@@ -107,7 +107,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
         vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: collateralFactors,
@@ -121,12 +121,12 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfDecimals() public {
+    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfDecimals() public {
         ybEth = new ERC4626Mock(eth, "ybETH Mock", "mybETH", uint8(Constants.ethDecimals) - 1);
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("PM4626_SAI: Decimals don't match");
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
@@ -140,9 +140,9 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
+    function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
@@ -158,7 +158,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
+    function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](3);
         collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
@@ -168,7 +168,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         liquidationThresholds[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: collateralFactors,
@@ -184,9 +184,9 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
+    function testSuccess_addAsset_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
@@ -197,7 +197,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
                 underlyingAssetOracleAddresses: oracleEthToUsdArr
             })
         );
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
@@ -216,7 +216,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
     function testSuccess_isWhiteListed_Positive() public {
         vm.startPrank(creatorAddress);
 
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
@@ -247,7 +247,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
@@ -307,7 +307,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,
@@ -369,7 +369,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        standardERC4626PricingModule.setAssetInformation(
+        standardERC4626PricingModule.addAsset(
             StandardERC4626PricingModule.AssetInformation({
                 assetUnit: uint64(10 ** Constants.ethDecimals),
                 assetCollateralFactors: emptyListUint16,

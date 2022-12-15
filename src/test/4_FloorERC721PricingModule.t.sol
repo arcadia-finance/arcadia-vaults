@@ -55,15 +55,15 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_NonOwnerAddsAsset(address unprivilegedAddress) public {
+    function testRevert_addAsset_NonOwnerAddsAsset(address unprivilegedAddress) public {
         // Given: unprivilegedAddress is not creatorAddress
         vm.assume(unprivilegedAddress != creatorAddress);
         vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls setAssetInformation
+        // When: unprivilegedAddress calls addAsset
 
-        // Then: setAssetInformation should revert with "Ownable: caller is not the owner"
+        // Then: addAsset should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
-        floorERC721PricingModule.setAssetInformation(
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -76,18 +76,18 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_setAssetInformation_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
+    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
         vm.startPrank(creatorAddress);
         // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
         uint16[] memory collateralFactors = new uint16[](1);
         collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16[] memory liquidationThresholds = new uint16[](1);
         liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        // When: creatorAddress calls setAssetInformation with wrong number of credits
+        // When: creatorAddress calls addAsset with wrong number of credits
 
-        // Then: setAssetInformation should revert with "PM721_SRV: LENGTH_MISMATCH"
+        // Then: addAsset should revert with "PM721_SRV: LENGTH_MISMATCH"
         vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
-        floorERC721PricingModule.setAssetInformation(
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -101,11 +101,11 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithEmptyListRiskVariables() public {
+    function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
-        // When: creatorAddress calls setAssetInformation with empty list credit ratings
-        floorERC721PricingModule.setAssetInformation(
+        // When: creatorAddress calls addAsset with empty list credit ratings
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -121,7 +121,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testSuccess_setAssetInformation_OwnerAddsAssetWithFullListRiskVariables() public {
+    function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
         // Given: collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
         vm.startPrank(creatorAddress);
         uint16[] memory collateralFactors = new uint16[](3);
@@ -132,8 +132,8 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         liquidationThresholds[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        // When: creatorAddress calls setAssetInformation with full list credit ratings
-        floorERC721PricingModule.setAssetInformation(
+        // When: creatorAddress calls addAsset with full list credit ratings
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -149,11 +149,11 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testSuccess_setAssetInformation_OwnerOverwritesExistingAsset() public {
+    function testSuccess_addAsset_OwnerOverwritesExistingAsset() public {
         // Given:
         vm.startPrank(creatorAddress);
-        // When: creatorAddress setAssetInformation twice
-        floorERC721PricingModule.setAssetInformation(
+        // When: creatorAddress addAsset twice
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -163,7 +163,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
                 assetLiquidationThresholds: emptyListUint16
             })
         );
-        floorERC721PricingModule.setAssetInformation(
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -182,8 +182,8 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
     function testSuccess_isWhiteListed_Positive() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
-        // When: creatorAddress calls setAssetInformation
-        floorERC721PricingModule.setAssetInformation(
+        // When: creatorAddress calls addAsset
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -213,8 +213,8 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         // Given: id is lower than 10 or bigger than 1000
         vm.assume(id < 10 || id > 1000);
         vm.startPrank(creatorAddress);
-        // When: creatorAddress calls setAssetInformation
-        floorERC721PricingModule.setAssetInformation(
+        // When: creatorAddress calls addAsset
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 10,
@@ -232,8 +232,8 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd() public {
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress calls setAssetInformation, expectedValueInBaseCurrency is zero
-        floorERC721PricingModule.setAssetInformation(
+        // Given: creatorAddress calls addAsset, expectedValueInBaseCurrency is zero
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -266,8 +266,8 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_getValue_ReturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress calls setAssetInformation, expectedValueInUsd is zero
-        floorERC721PricingModule.setAssetInformation(
+        // Given: creatorAddress calls addAsset, expectedValueInUsd is zero
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -300,8 +300,8 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd() public {
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress calls setAssetInformation, expectedValueInBaseCurrency is zero
-        floorERC721PricingModule.setAssetInformation(
+        // Given: creatorAddress calls addAsset, expectedValueInBaseCurrency is zero
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWmaycToUsdArr,
                 idRangeStart: 0,

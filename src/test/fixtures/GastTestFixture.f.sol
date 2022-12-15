@@ -195,7 +195,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
         liquidationThresholds[1] = liqTresh;
         liquidationThresholds[2] = liqTresh;
 
-        standardERC20PricingModule.setAssetInformation(
+        standardERC20PricingModule.addAsset(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -204,7 +204,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
                 assetLiquidationThresholds: liquidationThresholds
             })
         );
-        standardERC20PricingModule.setAssetInformation(
+        standardERC20PricingModule.addAsset(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
@@ -213,7 +213,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
                 assetLiquidationThresholds: liquidationThresholds
             })
         );
-        standardERC20PricingModule.setAssetInformation(
+        standardERC20PricingModule.addAsset(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
@@ -223,7 +223,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
             })
         );
 
-        floorERC721PricingModule.setAssetInformation(
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -233,7 +233,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
                 assetLiquidationThresholds: liquidationThresholds
             })
         );
-        floorERC721PricingModule.setAssetInformation(
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWmaycToUsdArr,
                 idRangeStart: 0,
@@ -243,7 +243,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
                 assetLiquidationThresholds: liquidationThresholds
             })
         );
-        floorERC1155PricingModule.setAssetInformation(
+        floorERC1155PricingModule.addAsset(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
@@ -252,7 +252,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
                 assetLiquidationThresholds: liquidationThresholds
             })
         );
-        floorERC1155PricingModule.setAssetInformation(
+        floorERC1155PricingModule.addAsset(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleGenericStoreFrontToEthEthToUsd,
                 id: 1,

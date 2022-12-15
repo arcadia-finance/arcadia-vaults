@@ -20,10 +20,7 @@ contract FloorERC1155PricingModule is PricingModule {
 
     struct AssetInformation {
         uint256 id;
-        address assetAddress;
-        uint16[] assetCollateralFactors;
-        uint16[] assetLiquidationThresholds;
-        address[] oracleAddresses;
+        address[] oracles;
     }
 
     /**
@@ -39,12 +36,11 @@ contract FloorERC1155PricingModule is PricingModule {
 
     /**
      * @notice Adds a new asset to the FloorERC1155PricingModule, or overwrites an existing one.
-     * @param assetInformation A Struct with information about the asset
-     * - id: The Id of the asset
-     * - assetAddress: The contract address of the asset
-     * - assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
-     * - assetLiquidationThresholds: The List of liquidation thresholds for the asset for the different BaseCurrencies
-     * - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
+     * @param asset The contract address of the asset
+     * @param id: The id of the collection
+     * @param oracles An array of addresses of oracle contracts, to price the asset in USD
+     * @param assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
+     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -56,28 +52,31 @@ contract FloorERC1155PricingModule is PricingModule {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function setAssetInformation(AssetInformation memory assetInformation) external onlyOwner {
+    function addAsset(address asset, uint256 id, address[] calldata oracles, RiskVarInput[] calldata assetCollateralFactors, RiskVarInput[] calldata assetLiquidationThresholds) external onlyOwner {
         //no asset units
 
-        address assetAddress = assetInformation.assetAddress;
 
-        IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+        IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
-        if (!inPricingModule[assetAddress]) {
-            inPricingModule[assetAddress] = true;
-            assetsInPricingModule.push(assetAddress);
-        }
+        require(!inPricingModule[asset], "PM1155_SAI: already added");
+        inPricingModule[asset] = true;
+        assetsInPricingModule.push(asset);
 
-        assetToInformation[assetAddress].id = assetInformation.id;
-        assetToInformation[assetAddress].assetAddress = assetAddress;
-        assetToInformation[assetAddress].oracleAddresses = assetInformation.oracleAddresses;
+        assetToInformation[asset].id = id;
+        assetToInformation[asset].oracles = oracles;
         _setRiskVariables(
-            assetAddress, assetInformation.assetCollateralFactors, assetInformation.assetLiquidationThresholds
+            asset, assetCollateralFactors, assetLiquidationThresholds
         );
 
-        isAssetAddressWhiteListed[assetAddress] = true;
+        isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(assetAddress), "PM1155_SAI: Unable to add in MR");
+        require(IMainRegistry(mainRegistry).addAsset(asset), "PM1155_SAI: Unable to add in MR");
+    }
+
+    function setOracles(address asset, address[] calldata oracles) external onlyOwner {
+        require(inPricingModule[asset], "PM20_SAI: asset unknown");
+        IOraclesHub(oracleHub).checkOracleSequence(oracles);
+        assetToInformation[asset].oracles = oracles;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -132,7 +131,7 @@ contract FloorERC1155PricingModule is PricingModule {
         uint256 rateInBaseCurrency;
 
         (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.baseCurrency
+            assetToInformation[getValueInput.asset].oracles, getValueInput.baseCurrency
         );
 
         if (rateInBaseCurrency > 0) {
@@ -141,7 +140,7 @@ contract FloorERC1155PricingModule is PricingModule {
             valueInUsd = getValueInput.assetAmount * rateInUsd;
         }
 
-        collFactor = assetRiskVars[getValueInput.assetAddress].assetCollateralFactors[getValueInput.baseCurrency];
-        liqThreshold = assetRiskVars[getValueInput.assetAddress].assetLiquidationThresholds[getValueInput.baseCurrency];
+        collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;
     }
 }

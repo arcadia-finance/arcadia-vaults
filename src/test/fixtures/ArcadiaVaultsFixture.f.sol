@@ -311,7 +311,7 @@ contract DeployArcadiaVaults is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        standardERC20PricingModule.setAssetInformation(
+        standardERC20PricingModule.addAsset(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleEthToUsdArr,
                 assetUnit: uint64(10 ** Constants.ethDecimals),
@@ -320,7 +320,7 @@ contract DeployArcadiaVaults is Test {
                 assetLiquidationThresholds: emptyListUint16
             })
         );
-        standardERC20PricingModule.setAssetInformation(
+        standardERC20PricingModule.addAsset(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleLinkToUsdArr,
                 assetUnit: uint64(10 ** Constants.linkDecimals),
@@ -329,7 +329,7 @@ contract DeployArcadiaVaults is Test {
                 assetLiquidationThresholds: emptyListUint16
             })
         );
-        standardERC20PricingModule.setAssetInformation(
+        standardERC20PricingModule.addAsset(
             StandardERC20PricingModule.AssetInformation({
                 oracleAddresses: oracleSnxToEthEthToUsd,
                 assetUnit: uint64(10 ** Constants.snxDecimals),
@@ -339,7 +339,7 @@ contract DeployArcadiaVaults is Test {
             })
         );
 
-        floorERC721PricingModule.setAssetInformation(
+        floorERC721PricingModule.addAsset(
             FloorERC721PricingModule.AssetInformation({
                 oracleAddresses: oracleWbaycToEthEthToUsd,
                 idRangeStart: 0,
@@ -350,7 +350,7 @@ contract DeployArcadiaVaults is Test {
             })
         );
 
-        floorERC1155PricingModule.setAssetInformation(
+        floorERC1155PricingModule.addAsset(
             FloorERC1155PricingModule.AssetInformation({
                 oracleAddresses: oracleInterleaveToEthEthToUsd,
                 id: 1,
