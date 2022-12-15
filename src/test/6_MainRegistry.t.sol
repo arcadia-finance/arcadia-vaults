@@ -178,24 +178,9 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
 
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+
 
         // When: creatorAddress calls addBaseCurrency
 
@@ -230,24 +215,9 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         // Given: creatorAddress calls addPricingModule and addAsset
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+
 
         uint16[] memory collateralFactors = new uint16[](2);
         collateralFactors[0] = 15000;
@@ -315,24 +285,9 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         // Given: creatorAddress has empty list of credit ratings
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+
 
         RiskModule.AssetRisk[] memory assetRisk = new MainRegistry.AssetRisk[](0);
 
@@ -357,24 +312,9 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         // Given: creatorAddress has empty list of credit ratings
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+
 
         uint16[] memory collateralFactors = new uint16[](2);
         collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
@@ -649,25 +589,8 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testSuccess_batchIsWhiteListed_AllAssetsWhiteListed() public {
         // Given: creatorAddress calls addAsset on standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(eth), index 1 is address(bayc) and assetIds index 0 is 0, index 1 is 0
@@ -686,25 +609,8 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testRevert_batchIsWhiteListed_NonEqualInputLists() public {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(eth), index 1 is address(bayc) and assetIds index 0 is 0
@@ -723,25 +629,8 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testSuccess_batchIsWhiteListed_SingleAssetNotWhitelisted() public {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: 9999,
-                assetAddress: address(bayc),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(eth), index 1 is address(bayc) and assetIds index 0 is 0, index 1 is 10000
@@ -760,25 +649,8 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testSuccess_batchIsWhiteListed_AssetNotInMainregistry() public {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: 9999,
-                assetAddress: address(bayc),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(safemoon), index 1 is address(bayc) and assetIds index 0 is 0, index 1 is 0
@@ -797,34 +669,10 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testSuccess_getWhiteList_MultipleAssets() public {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleSnxToEthEthToUsd,
-                assetUnit: uint64(10 ** Constants.snxDecimals),
-                assetAddress: address(snx),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: 9999,
-                assetAddress: address(bayc),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
+        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
+
         vm.stopPrank();
 
         // When: expectedWhiteList index 0 is address(eth), index 1 is address(snx), index 2 is address(bayc), actualWhiteList is getWhiteList
@@ -841,34 +689,10 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testSuccess_getWhiteList_RemovalOfAsset() public {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule, calls removeFromWhiteList and addToWhiteList for address(snx)
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleSnxToEthEthToUsd,
-                assetUnit: uint64(10 ** Constants.snxDecimals),
-                assetAddress: address(snx),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: 9999,
-                assetAddress: address(bayc),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
+        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
+
         standardERC20PricingModule.removeFromWhiteList(address(snx));
         standardERC20PricingModule.addToWhiteList(address(snx));
         vm.stopPrank();
@@ -916,34 +740,10 @@ contract RiskVariablesManagementTest is MainRegistryTest {
         );
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
     }
 
@@ -1089,12 +889,11 @@ contract RiskVariablesManagementTest is MainRegistryTest {
 
         // Then: collateralFactors for address(eth) and Constants.UsdBaseCurrency should return DEFAULT_COLLATERAL_FACTOR,
         // liquidationThresholds for address(eth) and Constants.EthBaseCurrency should return DEFAULT_LIQUIDATION_THRESHOLD
-        StandardERC20PricingModule.AssetRisksVars memory riskVars;
-        (riskVars.assetCollateralFactors, riskVars.assetLiquidationThresholds) =
-            standardERC20PricingModule.assetRiskVars_(address(eth));
+        (uint16 collateralFactor, uint16 liquidationThreshold) =
+            standardERC20PricingModule.assetRiskVars_(address(eth), 0);
 
-        assertEq(RiskConstants.DEFAULT_COLLATERAL_FACTOR, riskVars.assetCollateralFactors[0]);
-        assertEq(RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD, riskVars.assetLiquidationThresholds[0]);
+        assertEq(RiskConstants.DEFAULT_COLLATERAL_FACTOR, collateralFactor);
+        assertEq(RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD, liquidationThreshold);
     }
 }
 
@@ -1128,34 +927,10 @@ contract PricingLogicTest is MainRegistryTest {
         );
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
     }
 
@@ -1184,15 +959,7 @@ contract PricingLogicTest is MainRegistryTest {
         );
 
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -1244,15 +1011,7 @@ contract PricingLogicTest is MainRegistryTest {
         );
 
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);

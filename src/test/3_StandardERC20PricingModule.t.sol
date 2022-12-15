@@ -63,62 +63,35 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
 
         // Then: addAsset should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
     }
 
     function testRevert_addAsset_OwnerAddsAssetWithMoreThan18Decimals() public {
-        vm.startPrank(creatorAddress);
-        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
-        uint16[] memory collateralFactors = new uint16[](1);
-        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16[] memory liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        // When: creatorAddress calls addAsset with 19 decimals
+        vm.prank(tokenCreatorAddress);
+        eth = new ERC20Mock("ETH Mock", "mETH", 19);
 
+        // When: creatorAddress calls addAsset with 19 decimals
         // Then: addAsset should revert with "SSR_SAI: Maximal 18 decimals"
+        vm.startPrank(creatorAddress);
         vm.expectRevert("PM20_SAI: Maximal 18 decimals");
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** 19),
-                assetAddress: address(eth),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
+    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public { //Todo: Will become testSuccess
         // Turn this into invalid uint16
         vm.startPrank(creatorAddress);
         // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
-        uint16[] memory collateralFactors = new uint16[](1);
-        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16[] memory liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
+        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
+        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
+        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
         // When: creatorAddress calls addAsset with wrong number of credits
 
         // Then: addAsset should revert with "MR_AA: LENGTH_MISMATCH"
         vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors_, liquidationThresholds_);
         vm.stopPrank();
     }
 
@@ -126,15 +99,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with empty list credit ratings
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         // Then: address(eth) should be inPricingModule
@@ -142,54 +107,22 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
-        // Given: collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
+        // Given: 
         vm.startPrank(creatorAddress);
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        collateralFactors[2] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        liquidationThresholds[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         // When: creatorAddress calls addAsset with full list credit ratings
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
         // Then: address(eth) should be inPricingModule
         assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
     }
 
-    function testSuccess_addAsset_OwnerOverwritesExistingAsset() public {
+    function testSuccess_addAsset_OwnerOverwritesExistingAsset() public { //Todo: Will become testRevert
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset twice
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         // Then: address(eth) should be inPricingModule
@@ -200,15 +133,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         // Then: address(eth) should return true on isWhiteListed
@@ -227,15 +152,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
         // Given: creatorAddress calls addAsset, expectedValueInBaseCurrency is zero
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
@@ -243,7 +160,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency = 0;
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(eth),
+            asset: address(eth),
             assetId: 0,
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
@@ -261,15 +178,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         // Given: creatorAddress calls addAsset, expectedValueInUsd is zero
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleSnxToEthEthToUsd,
-                assetUnit: uint64(10 ** Constants.snxDecimals),
-                assetAddress: address(snx),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = 0;
@@ -277,7 +186,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(snx),
+            asset: address(snx),
             assetId: 0,
             assetAmount: amountSnx,
             baseCurrency: uint8(Constants.EthBaseCurrency)
@@ -295,15 +204,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         // Given: creatorAddress calls addAsset, expectedValueInBaseCurrency is zero
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (amountLink * rateLinkToUsd * Constants.WAD)
@@ -311,7 +212,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency = 0;
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(link),
+            asset: address(link),
             assetId: 0,
             assetAmount: amountLink,
             baseCurrency: uint8(Constants.EthBaseCurrency)
@@ -346,15 +247,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (
@@ -363,7 +256,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency = 0;
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(eth),
+            asset: address(eth),
             assetId: 0,
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
@@ -393,19 +286,11 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(eth),
+            asset: address(eth),
             assetId: 0,
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)

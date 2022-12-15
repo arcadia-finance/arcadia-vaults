@@ -32,9 +32,6 @@ contract vaultTests is DeployArcadiaVaults {
     Tranche tranche;
     DebtToken debt;
 
-    uint16[] public collateralFactors = new uint16[](3);
-    uint16[] public liquidationThresholds = new uint16[](3);
-
     struct Assets {
         address[] assetAddresses;
         uint256[] assetIds;
@@ -99,14 +96,6 @@ contract vaultTests is DeployArcadiaVaults {
         snx.approve(address(vault_), type(uint256).max);
         safemoon.approve(address(vault_), type(uint256).max);
         vm.stopPrank();
-
-        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        collateralFactors[2] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-
-        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        liquidationThresholds[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -369,15 +358,7 @@ contract vaultTests is DeployArcadiaVaults {
         vm.assume(amountEth > 0);
 
         vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
         uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
@@ -540,15 +521,7 @@ contract vaultTests is DeployArcadiaVaults {
 
     function testSuccess_deposit_SingleERC20(uint16 amount) public {
         vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -572,15 +545,7 @@ contract vaultTests is DeployArcadiaVaults {
         vm.assume(amount <= 50000);
 
         vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
@@ -606,16 +571,7 @@ contract vaultTests is DeployArcadiaVaults {
 
     function testSuccess_deposit_SingleERC721() public {
         vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: 9999,
-                assetAddress: address(bayc),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
@@ -637,16 +593,7 @@ contract vaultTests is DeployArcadiaVaults {
 
     function testSuccess_deposit_MultipleERC721() public {
         vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: 9999,
-                assetAddress: address(bayc),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
@@ -681,15 +628,7 @@ contract vaultTests is DeployArcadiaVaults {
 
     function testSuccess_deposit_SingleERC1155() public {
         vm.prank(creatorAddress);
-        floorERC1155PricingModule.addAsset(
-            FloorERC1155PricingModule.AssetInformation({
-                oracleAddresses: oracleInterleaveToEthEthToUsd,
-                id: 1,
-                assetAddress: address(interleave),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(interleave);
@@ -732,34 +671,9 @@ contract vaultTests is DeployArcadiaVaults {
         assetTypes[2] = 1;
 
         vm.startPrank(creatorAddress);
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: 9999,
-                assetAddress: address(bayc),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors, liquidationThresholds);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
         vm.prank(vaultOwner);
@@ -794,43 +708,10 @@ contract vaultTests is DeployArcadiaVaults {
         assetTypes[3] = 2;
 
         vm.startPrank(creatorAddress);
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: 9999,
-                assetAddress: address(bayc),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
-        floorERC1155PricingModule.addAsset(
-            FloorERC1155PricingModule.AssetInformation({
-                oracleAddresses: oracleInterleaveToEthEthToUsd,
-                id: 1,
-                assetAddress: address(interleave),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors, liquidationThresholds);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
+        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
         vm.prank(vaultOwner);
@@ -841,15 +722,7 @@ contract vaultTests is DeployArcadiaVaults {
         vm.assume(sender != vaultOwner);
 
         vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -1049,15 +922,7 @@ contract vaultTests is DeployArcadiaVaults {
 
     function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
         vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
 
         depositERC20InVault(eth, amountEth, vaultOwner);
         vm.startPrank(vaultOwner);
@@ -1099,15 +964,7 @@ contract vaultTests is DeployArcadiaVaults {
 
     function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
         vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -1143,15 +1000,7 @@ contract vaultTests is DeployArcadiaVaults {
         )
     {
         vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors, liquidationThresholds);
 
         assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
@@ -1180,16 +1029,7 @@ contract vaultTests is DeployArcadiaVaults {
         )
     {
         vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds
-            })
-        );
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
 
         assetAddresses = new address[](tokenIds.length);
         assetIds = new uint256[](tokenIds.length);

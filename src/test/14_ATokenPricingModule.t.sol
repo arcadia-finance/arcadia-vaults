@@ -69,15 +69,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(aTokenPricingModule));
 
-        standardERC20PricingModule.addAsset(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16
-            })
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
     }
 
@@ -85,55 +77,25 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("Ownable: caller is not the owner");
-        aTokenPricingModule.addAsset(
-            ATokenPricingModule.AssetInformation({
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16,
-                assetAddress: address(aEth),
-                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
-                underlyingAsset: address(eth),
-                underlyingAssetOracleAddresses: oracleEthToUsdArr
-            })
-        );
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public {
+    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public { //Todo: Will become testSuccess
         vm.startPrank(creatorAddress);
-        uint16[] memory collateralFactors = new uint16[](1);
-        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16[] memory liquidationThresholds = new uint16[](1);
-        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
+        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
+        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
+        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
 
         vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
-        aTokenPricingModule.addAsset(
-            ATokenPricingModule.AssetInformation({
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds,
-                assetAddress: address(aEth),
-                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
-                underlyingAsset: address(eth),
-                underlyingAssetOracleAddresses: oracleEthToUsdArr
-            })
-        );
+        aTokenPricingModule.addAsset(address(aEth), collateralFactors_, liquidationThresholds_);
         vm.stopPrank();
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(
-            ATokenPricingModule.AssetInformation({
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16,
-                assetAddress: address(aEth),
-                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
-                underlyingAsset: address(eth),
-                underlyingAssetOracleAddresses: oracleEthToUsdArr
-            })
-        );
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
@@ -141,54 +103,16 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        collateralFactors[1] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        collateralFactors[2] = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        liquidationThresholds[1] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        liquidationThresholds[2] = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        aTokenPricingModule.addAsset(
-            ATokenPricingModule.AssetInformation({
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetCollateralFactors: collateralFactors,
-                assetLiquidationThresholds: liquidationThresholds,
-                assetAddress: address(aEth),
-                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
-                underlyingAsset: address(eth),
-                underlyingAssetOracleAddresses: oracleEthToUsdArr
-            })
-        );
+        aTokenPricingModule.addAsset(address(aEth), collateralFactors, liquidationThresholds);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
-    function testSuccess_OwnerOverwritesExistingAsset() public {
+    function testSuccess_OwnerOverwritesExistingAsset() public { //Todo: Will become testRevert
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(
-            ATokenPricingModule.AssetInformation({
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16,
-                assetAddress: address(aEth),
-                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
-                underlyingAsset: address(eth),
-                underlyingAssetOracleAddresses: oracleEthToUsdArr
-            })
-        );
-        aTokenPricingModule.addAsset(
-            ATokenPricingModule.AssetInformation({
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16,
-                assetAddress: address(aEth),
-                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
-                underlyingAsset: address(eth),
-                underlyingAssetOracleAddresses: oracleEthToUsdArr
-            })
-        );
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
@@ -197,17 +121,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     function testSuccess_isWhiteListed() public {
         vm.startPrank(creatorAddress);
 
-        aTokenPricingModule.addAsset(
-            ATokenPricingModule.AssetInformation({
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16,
-                assetAddress: address(aEth),
-                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
-                underlyingAsset: address(eth),
-                underlyingAssetOracleAddresses: oracleEthToUsdArr
-            })
-        );
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
@@ -220,17 +134,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(
-            ATokenPricingModule.AssetInformation({
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16,
-                assetAddress: address(aEth),
-                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
-                underlyingAsset: address(eth),
-                underlyingAssetOracleAddresses: oracleEthToUsdArr
-            })
-        );
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
@@ -238,7 +142,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency = 0;
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(aEth),
+            asset: address(aEth),
             assetId: 0,
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
@@ -268,17 +172,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(
-            ATokenPricingModule.AssetInformation({
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16,
-                assetAddress: address(aEth),
-                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
-                underlyingAsset: address(eth),
-                underlyingAssetOracleAddresses: oracleEthToUsdArr
-            })
-        );
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (
@@ -291,7 +185,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency = 0;
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(aEth),
+            asset: address(aEth),
             assetId: 0,
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
@@ -317,21 +211,11 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(
-            ATokenPricingModule.AssetInformation({
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetCollateralFactors: emptyListUint16,
-                assetLiquidationThresholds: emptyListUint16,
-                assetAddress: address(aEth),
-                underlyingAssetUnit: uint64(10 ** Constants.ethDecimals),
-                underlyingAsset: address(eth),
-                underlyingAssetOracleAddresses: oracleEthToUsdArr
-            })
-        );
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
-            assetAddress: address(aEth),
+            asset: address(aEth),
             assetId: 0,
             assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)

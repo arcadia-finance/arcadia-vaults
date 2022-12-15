@@ -125,8 +125,8 @@ abstract contract PricingModule is Ownable {
         address asset,
         RiskVarInput[] memory collateralFactors, 
         RiskVarInput[] memory liquidationThresholds
-    ) external virtual onlyMainRegistry {
-        require(msg.sender == mainRegistry || msg.sender == owner(), "APM: ONLY_MAINrREG OR OWNER");
+    ) external virtual {
+        require(msg.sender == mainRegistry || msg.sender == owner(), "APM: ONLY_MAIN_REG OR OWNER");
 
         _setRiskVariables(asset, collateralFactors, liquidationThresholds);
     }
