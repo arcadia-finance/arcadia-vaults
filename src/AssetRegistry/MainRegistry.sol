@@ -264,6 +264,7 @@ contract MainRegistry is Ownable, RiskModule {
      * @dev The function loops over all indexes, and changes for each index the Risk Variable of the combination of asset and baseCurrency.
      * In case multiple Risk Variables for the same assets need to be changed, the address must be repeated in the assets.
      * @dev Risk variable have 2 decimals precision.
+          TODO: changed
      */
     function batchSetRiskVariables(AssetRisk[] memory assetsRisks) external onlyOwner {
         uint256 assetsLength = assetsRisks.length;

@@ -9,6 +9,7 @@ pragma solidity >=0.4.22 <0.9.0;
 import "./AbstractPricingModule.sol";
 import "../interfaces/IAToken.sol";
 import "../interfaces/IPricingModule.sol";
+import "../interfaces/IStandardERC20PricingModule.sol";
 import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
@@ -22,6 +23,7 @@ contract ATokenPricingModule is PricingModule {
     using FixedPointMathLib for uint256;
 
     mapping(address => AssetInformation) public assetToInformation;
+    address public immutable erc20PricingModule;
 
     struct AssetInformation {
         uint64 assetUnit;
@@ -34,7 +36,9 @@ contract ATokenPricingModule is PricingModule {
      * @param mainRegistry_ The address of the Main-registry
      * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
+    constructor(address mainRegistry_, address oracleHub_, address _erc20PricingModule) PricingModule(mainRegistry_, oracleHub_) {
+        erc20PricingModule = _erc20PricingModule;
+    }
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -62,18 +66,16 @@ contract ATokenPricingModule is PricingModule {
                                  RiskVarInput[] calldata assetLiquidationThresholds) external onlyOwner {
 
         uint256 assetUnit = 10 ** IERC20(asset).decimals();
-        require(assetUnit <= 1000000000000000000, "PMAT_SAI: Maximal 18 decimals");
+        require(assetUnit <= 1000000000000000000, "PMAT_AA: Maximal 18 decimals");
 
         address underlyingAsset = IAToken(asset).UNDERLYING_ASSET_ADDRESS();
-        (uint64 underlyingAssetUnit,, address[] memory underlyingAssetOracles) = IPricingModule(
-            IMainRegistry(mainRegistry).assetToPricingModule(underlyingAsset)
-        ).getAssetInformation(underlyingAsset);
-
-        require(10 ** IAToken(asset).decimals() == underlyingAssetUnit, "PMAT_SAI: Decimals don't match");
+        (uint64 underlyingAssetUnit, address[] memory underlyingAssetOracles) = IStandardERC20PricingModule(
+            erc20PricingModule).getAssetInformation(underlyingAsset);
+        require(assetUnit == underlyingAssetUnit, "PMAT_AA: Decimals don't match");
 
         //we can skip the oracle addresses check, already checked on underlying asset
 
-        require(!inPricingModule[asset], "PMAT_SAI: already added");        
+        require(!inPricingModule[asset], "PMAT_AA: already added");        
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
@@ -86,7 +88,7 @@ contract ATokenPricingModule is PricingModule {
 
         isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(asset), "PMAT_SAI: Unable to add in MR");
+        require(IMainRegistry(mainRegistry).addAsset(asset), "PMAT_AA: Unable to add in MR");
     }
 
     function syncOracles(address asset) external {

@@ -221,22 +221,8 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         //When: creator adds a new asset
         //Then: addAsset reverts with "Ownable: caller is not the owner"
         vm.startPrank(creatorAddress);
-        vm.expectRevert("PMUV2_SAI: NOT_WHITELISTED");
+        vm.expectRevert("PMUV2_AA: NOT_WHITELISTED");
         uniswapV2PricingModule.addAsset(address(pairSafemoonEth), emptyRiskVarInput, emptyRiskVarInput);
-        vm.stopPrank();
-    }
-
-    function testRevert_addAsset_WrongNumberOfCreditRatings() public { //Todo: Will become testSuccess
-        //Given: The number of credit ratings is not 0 and not the number of baseCurrencies
-        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
-        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
-        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
-        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
-        //When: creator adds a new asset
-        //Then: addAsset reverts with "APM_SRV: LENGTH_MISMATCH"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), collateralFactors_, liquidationThresholds_);
         vm.stopPrank();
     }
 
@@ -251,6 +237,21 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
     }
 
+    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
+        //Given: The number of credit ratings is not 0 and not the number of baseCurrencies
+        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
+        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
+        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
+        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
+        //When: creator adds a new asset
+        //Then: addAsset reverts with "APM_SRV: LENGTH_MISMATCH"
+        vm.startPrank(creatorAddress);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), collateralFactors_, liquidationThresholds_);
+        vm.stopPrank();
+
+        assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
+    }
+
     function testSuccess_addAsset_FullListCreditRatings() public {
         //Given: The number of credit ratings equals the number of baseCurrencies
         //When: creator adds a new asset
@@ -261,7 +262,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
     }
 
-    function testSuccess_addAsset_OverwritesAsset() public { //Todo: Will become testRevert
+    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
         //Given: asset is added to pricing module
         vm.prank(creatorAddress);
         uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, emptyRiskVarInput);
@@ -269,10 +270,8 @@ contract AssetManagement is UniswapV2PricingModuleTest {
 
         //When: creator adds asset again
         vm.prank(creatorAddress);
+        vm.expectRevert("PMUV2_AA: already added");
         uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, emptyRiskVarInput);
-
-        //Then: Asset is in Pricing Module
-        assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
     }
 }
 

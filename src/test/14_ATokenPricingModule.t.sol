@@ -20,7 +20,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     //this is a before
     constructor() DeployArcadiaVaults() {
         vm.prank(tokenCreatorAddress);
-        aEth = new ATokenMock   (address(eth), "aETH Mock", "maETH");
+        aEth = new ATokenMock(address(eth), "aETH Mock", "maETH");
     }
 
     //this is a before each
@@ -63,7 +63,8 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
         aTokenPricingModule = new ATokenPricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            address(standardERC20PricingModule)
         );
 
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
@@ -81,16 +82,17 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public { //Todo: Will become testSuccess
+    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
         collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
         PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
         liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
 
-        vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
         aTokenPricingModule.addAsset(address(aEth), collateralFactors_, liquidationThresholds_);
         vm.stopPrank();
+
+        assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
@@ -109,13 +111,14 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
-    function testSuccess_OwnerOverwritesExistingAsset() public { //Todo: Will become testRevert
+    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
+        IAToken(address(aEth)).decimals();
+
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
+        vm.expectRevert("PMAT_AA: already added");
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
-
-        assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
     function testSuccess_isWhiteListed() public {

@@ -67,21 +67,6 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public { //Todo: Will become testSuccess
-        vm.startPrank(creatorAddress);
-        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
-        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
-        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
-        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
-        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
-        // When: creatorAddress calls addAsset with wrong number of credits
-
-        // Then: addAsset should revert with "PM721_SRV: LENGTH_MISMATCH"
-        vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, collateralFactors_, liquidationThresholds_);
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
@@ -90,6 +75,22 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         // Then: inPricingModule for address(bayc) should return true
+        assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
+    }
+
+    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
+        vm.startPrank(creatorAddress);
+        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
+        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
+        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
+        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
+        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
+        // When: creatorAddress calls addAsset with wrong number of credits
+
+        // Then: addAsset should add asset
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, collateralFactors_, liquidationThresholds_);
+        vm.stopPrank();
+
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
@@ -104,16 +105,14 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testSuccess_addAsset_OwnerOverwritesExistingAsset() public { //Todo: Will become testRevert
+    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
         // Given:
         vm.startPrank(creatorAddress);
         // When: creatorAddress addAsset twice
         floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
+        vm.expectRevert("PM721_AA: already added");
         floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
-
-        // Then: address(bayc) should be inPricingModule
-        assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
     function testSuccess_isWhiteListed_Positive() public {

@@ -299,9 +299,9 @@ contract vaultTests is DeployArcadiaVaults {
 
         uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amount
             / 10 ** (18 - Constants.daiDecimals);
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        uint256 expectedRemaining = (depositValue * collFactor) / 100;
+        uint256 expectedRemaining = (depositValue * collFactor_) / 100;
         assertEq(expectedRemaining, vault_.getFreeMargin());
     }
 
@@ -309,17 +309,17 @@ contract vaultTests is DeployArcadiaVaults {
         public
     {
         vm.assume(tokenIds.length < 10 && tokenIds.length > 1);
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         depositEthInVault(amountEth, vaultOwner);
         uint256 depositValueEth = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth;
-        assertEq((depositValueEth / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100, vault_.getFreeMargin());
+        assertEq((depositValueEth / 10 ** (18 - Constants.daiDecimals) * collFactor_) / 100, vault_.getFreeMargin());
 
         depositLinkInVault(amountLink, vaultOwner);
         uint256 depositValueLink =
             ((Constants.WAD * rateLinkToUsd) / 10 ** Constants.oracleLinkToUsdDecimals) * amountLink;
         assertEq(
-            ((depositValueEth + depositValueLink) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100,
+            ((depositValueEth + depositValueLink) / 10 ** (18 - Constants.daiDecimals) * collFactor_) / 100,
             vault_.getFreeMargin()
         );
 
@@ -329,7 +329,7 @@ contract vaultTests is DeployArcadiaVaults {
                 / 10 ** (Constants.oracleEthToUsdDecimals + Constants.oracleWbaycToEthDecimals)
         ) * assetIds.length;
         assertEq(
-            ((depositValueEth + depositValueLink + depositBaycValue) / 10 ** (18 - Constants.daiDecimals) * collFactor)
+            ((depositValueEth + depositValueLink + depositBaycValue) / 10 ** (18 - Constants.daiDecimals) * collFactor_)
                 / 100,
             vault_.getFreeMargin()
         );
@@ -339,16 +339,16 @@ contract vaultTests is DeployArcadiaVaults {
         uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth
             / 10 ** (18 - Constants.daiDecimals);
 
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        vm.assume((depositValue * collFactor) / 100 > amountCredit);
+        vm.assume((depositValue * collFactor_) / 100 > amountCredit);
         depositEthInVault(amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
         pool.borrow(amountCredit, address(vault_), vaultOwner);
 
         uint256 actualRemainingCredit = vault_.getFreeMargin();
-        uint256 expectedRemainingCredit = (depositValue * collFactor) / 100 - amountCredit;
+        uint256 expectedRemainingCredit = (depositValue * collFactor_) / 100 - amountCredit;
 
         assertEq(expectedRemainingCredit, actualRemainingCredit);
     }
@@ -357,13 +357,10 @@ contract vaultTests is DeployArcadiaVaults {
         vm.assume(amountEth < 10 * 10 ** 9 * 10 ** 18);
         vm.assume(amountEth > 0);
 
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
-
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.prank(vaultOwner);
-        pool.borrow((((amountEth * collFactor) / 100) * factor) / 255, address(vault_), vaultOwner);
+        pool.borrow((((amountEth * collFactor_) / 100) * factor) / 255, address(vault_), vaultOwner);
 
         uint256 currentValue = vault_.getVaultValue(address(dai));
         uint256 openDebt = vault_.getUsedMargin();
@@ -372,7 +369,7 @@ contract vaultTests is DeployArcadiaVaults {
         uint256 remainingCreditLocal;
         //gas: cannot overflow unless currentValue is more than
         // 1.15**57 *10**18 decimals, which is too many billions to write out
-        maxAllowedCreditLocal = (currentValue * collFactor) / 100;
+        maxAllowedCreditLocal = (currentValue * collFactor_) / 100;
 
         //gas: explicit check is done to prevent underflow
         remainingCreditLocal = maxAllowedCreditLocal > openDebt ? maxAllowedCreditLocal - openDebt : 0;
@@ -520,9 +517,6 @@ contract vaultTests is DeployArcadiaVaults {
     }
 
     function testSuccess_deposit_SingleERC20(uint16 amount) public {
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
-
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
 
@@ -543,9 +537,6 @@ contract vaultTests is DeployArcadiaVaults {
 
     function testSuccess_deposit_MultipleSameERC20(uint16 amount) public {
         vm.assume(amount <= 50000);
-
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
@@ -570,8 +561,6 @@ contract vaultTests is DeployArcadiaVaults {
     }
 
     function testSuccess_deposit_SingleERC721() public {
-        vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
@@ -592,9 +581,6 @@ contract vaultTests is DeployArcadiaVaults {
     }
 
     function testSuccess_deposit_MultipleERC721() public {
-        vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
-
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
 
@@ -627,9 +613,6 @@ contract vaultTests is DeployArcadiaVaults {
     }
 
     function testSuccess_deposit_SingleERC1155() public {
-        vm.prank(creatorAddress);
-        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, collateralFactors, liquidationThresholds);
-
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(interleave);
 
@@ -670,12 +653,6 @@ contract vaultTests is DeployArcadiaVaults {
         assetTypes[1] = 0;
         assetTypes[2] = 1;
 
-        vm.startPrank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors, liquidationThresholds);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
-        vm.stopPrank();
-
         vm.prank(vaultOwner);
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
@@ -707,22 +684,12 @@ contract vaultTests is DeployArcadiaVaults {
         assetTypes[2] = 1;
         assetTypes[3] = 2;
 
-        vm.startPrank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors, liquidationThresholds);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
-        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, collateralFactors, liquidationThresholds);
-        vm.stopPrank();
-
         vm.prank(vaultOwner);
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
     function testRevert_deposit_ByNonOwner(address sender) public {
         vm.assume(sender != vaultOwner);
-
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -774,9 +741,9 @@ contract vaultTests is DeployArcadiaVaults {
             * baseAmountWithdraw / 10 ** (18 - Constants.daiDecimals);
         vm.assume(baseAmountWithdraw < baseAmountDeposit);
 
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        vm.assume(amountCredit < ((valueDeposit - valueWithdraw) * collFactor) / 100);
+        vm.assume(amountCredit < ((valueDeposit - valueWithdraw) * collFactor_) / 100);
 
         Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
         vm.startPrank(vaultOwner);
@@ -807,10 +774,10 @@ contract vaultTests is DeployArcadiaVaults {
         uint256 ValueWithdraw = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * baseAmountWithdraw / 10 ** (18 - Constants.daiDecimals);
 
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        vm.assume(amountCredit <= (valueDeposit * collFactor) / 100);
-        vm.assume(amountCredit > ((valueDeposit - ValueWithdraw) * collFactor) / 100);
+        vm.assume(amountCredit <= (valueDeposit * collFactor_) / 100);
+        vm.assume(amountCredit > ((valueDeposit - ValueWithdraw) * collFactor_) / 100);
 
         Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
         vm.startPrank(vaultOwner);
@@ -839,7 +806,7 @@ contract vaultTests is DeployArcadiaVaults {
             ) % assetIds.length
             : 0;
 
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint256 rateInUsd = (
             ((Constants.WAD * rateWbaycToEth) / 10 ** Constants.oracleWbaycToEthDecimals) * rateEthToUsd
@@ -848,9 +815,9 @@ contract vaultTests is DeployArcadiaVaults {
 
         uint256 valueOfWithdrawal = rateInUsd * randomAmounts;
 
-        vm.assume((valueOfDeposit * collFactor) / 100 >= amountCredit);
+        vm.assume((valueOfDeposit * collFactor_) / 100 >= amountCredit);
         vm.assume(valueOfWithdrawal < valueOfDeposit);
-        vm.assume(amountCredit < ((valueOfDeposit - valueOfWithdrawal) * collFactor) / 100);
+        vm.assume(amountCredit < ((valueOfDeposit - valueOfWithdrawal) * collFactor_) / 100);
 
         vm.startPrank(vaultOwner);
         pool.borrow(amountCredit, address(vault_), vaultOwner);
@@ -880,12 +847,12 @@ contract vaultTests is DeployArcadiaVaults {
         (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
         vm.assume(assetIds.length >= amountsWithdrawn && assetIds.length > 1 && amountsWithdrawn > 1);
 
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint256 rateInUsd = (
             ((Constants.WAD * rateWbaycToEth) / 10 ** Constants.oracleWbaycToEthDecimals) * rateEthToUsd
         ) / 10 ** Constants.oracleEthToUsdDecimals / 10 ** (18 - Constants.daiDecimals);
 
-        uint128 maxAmountCredit = uint128(((assetIds.length - amountsWithdrawn) * rateInUsd * collFactor) / 100);
+        uint128 maxAmountCredit = uint128(((assetIds.length - amountsWithdrawn) * rateInUsd * collFactor_) / 100);
 
         vm.startPrank(vaultOwner);
         pool.borrow(maxAmountCredit + 1, address(vault_), vaultOwner);
@@ -921,9 +888,6 @@ contract vaultTests is DeployArcadiaVaults {
     /////////////////////////////////////////////////////////////// */
 
     function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
-
         depositERC20InVault(eth, amountEth, vaultOwner);
         vm.startPrank(vaultOwner);
         uint256 remainingCredit = vault_.getFreeMargin();
@@ -963,8 +927,6 @@ contract vaultTests is DeployArcadiaVaults {
     }
 
     function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -999,8 +961,6 @@ contract vaultTests is DeployArcadiaVaults {
             uint256[] memory assetTypes
         )
     {
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors, liquidationThresholds);
 
         assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
@@ -1028,8 +988,6 @@ contract vaultTests is DeployArcadiaVaults {
             uint256[] memory assetTypes
         )
     {
-        vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
 
         assetAddresses = new address[](tokenIds.length);
         assetIds = new uint256[](tokenIds.length);
@@ -1060,7 +1018,7 @@ contract vaultTests is DeployArcadiaVaults {
     /////////////////////////////////////////////////////////////// */
     //ToDo: All depreciated tests should be moved to Arcadia Lending, to double check that everything is covered there
     struct debtInfo {
-        uint16 collFactor; //factor 100
+        uint16 collFactor_; //factor 100
         uint8 liqThres; //factor 100
         uint8 baseCurrency;
     }
@@ -1070,9 +1028,9 @@ contract vaultTests is DeployArcadiaVaults {
         vm.assume(amountDeposit > 0);
         uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.daiDecimals);
 
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        vm.assume((amountDeposit * collFactor) / 100 >= amountCredit);
+        vm.assume((amountDeposit * collFactor_) / 100 >= amountCredit);
         depositEthInVault(baseAmountDeposit, vaultOwner);
 
         vm.startPrank(vaultOwner);
@@ -1086,8 +1044,8 @@ contract vaultTests is DeployArcadiaVaults {
         vm.assume(amountCredit > 0);
         vm.assume(unprivilegedAddress != vaultOwner);
         uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth;
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        vm.assume((depositValue * collFactor) / 100 > amountCredit);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume((depositValue * collFactor_) / 100 > amountCredit);
         depositEthInVault(amountEth, vaultOwner);
 
         vm.startPrank(unprivilegedAddress);
@@ -1097,7 +1055,7 @@ contract vaultTests is DeployArcadiaVaults {
 
     function testSuccess_MinCollValueUnchecked() public {
         //uint256 minCollValue;
-        //unchecked {minCollValue = uint256(debt._usedMargin) * debt.collFactor / 100;}
+        //unchecked {minCollValue = uint256(debt._usedMargin) * debt.collFactor_ / 100;}
         assertTrue(uint256(type(uint128).max) * type(uint16).max < type(uint256).max);
     }
 
@@ -1163,11 +1121,11 @@ contract vaultTests is DeployArcadiaVaults {
         //        vm.assume(additionalDeposit < 10);
         vm.assume(openDebt <= type(uint128).max / (10 ** 5)); //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
 
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint128 amountEthToDeposit = uint128(
             (
                 (openDebt / rateEthToUsd / 10 ** 18) * 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals)
-                    * collFactor
+                    * collFactor_
             ) / 100
         ); // This is always zero
         amountEthToDeposit += uint128(additionalDeposit);
@@ -1197,11 +1155,11 @@ contract vaultTests is DeployArcadiaVaults {
         vm.assume(blocksToRoll <= 255555555); //up to the year 2122
         vm.assume(baseAmountEthToDeposit > 0);
         vm.assume(baseAmountEthToDeposit < 10);
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint128 amountEthToDeposit = uint128(
             (
                 ((10 * 10 ** 9 * 10 ** 18) / rateEthToUsd / 10 ** 18)
-                    * 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals) * collFactor
+                    * 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals) * collFactor_
             ) / 100
         ); //equivalent to 10bn USD debt // This is always zero
         amountEthToDeposit += baseAmountEthToDeposit;

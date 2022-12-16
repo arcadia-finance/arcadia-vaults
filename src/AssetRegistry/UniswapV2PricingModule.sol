@@ -90,9 +90,9 @@ contract UniswapV2PricingModule is PricingModule {
         tokens[0] = token0;
         tokens[1] = token1;
 
-        require(IMainRegistry(mainRegistry).batchIsWhiteListed(tokens, new uint256[](2)), "PMUV2_SAI: NOT_WHITELISTED");
+        require(IMainRegistry(mainRegistry).batchIsWhiteListed(tokens, new uint256[](2)), "PMUV2_AA: NOT_WHITELISTED");
 
-        require(!inPricingModule[asset], "PMUV2_SAI: already added");
+        require(!inPricingModule[asset], "PMUV2_AA: already added");
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
@@ -104,7 +104,7 @@ contract UniswapV2PricingModule is PricingModule {
 
         isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(asset), "PMUV2_SAI: Unable to add in MR");
+        require(IMainRegistry(mainRegistry).addAsset(asset), "PMUV2_AA: Unable to add in MR");
     }
 
     /*///////////////////////////////////////////////////////////////

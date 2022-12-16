@@ -59,7 +59,7 @@ contract FloorERC721PricingModule is PricingModule {
 
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
-        require(!inPricingModule[asset], "PM721_SAI: already added");        
+        require(!inPricingModule[asset], "PM721_AA: already added");        
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
@@ -72,11 +72,11 @@ contract FloorERC721PricingModule is PricingModule {
 
         isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(asset), "PM721_SAI: Unable to add in MR");
+        require(IMainRegistry(mainRegistry).addAsset(asset), "PM721_AA: Unable to add in MR");
     }
 
     function setOracles(address asset, address[] calldata oracles) external onlyOwner {
-        require(inPricingModule[asset], "PM20_SAI: asset unknown");
+        require(inPricingModule[asset], "PM20_AA: asset unknown");
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
         assetToInformation[asset].oracles = oracles;
     }

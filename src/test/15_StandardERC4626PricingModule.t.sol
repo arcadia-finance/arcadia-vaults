@@ -63,7 +63,8 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
 
         standardERC4626PricingModule = new StandardERC4626PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            address(standardERC20PricingModule)
         );
 
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
@@ -81,25 +82,17 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public { //Todo: Will become testSuccess
+    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
         collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
         PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
         liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
 
-        vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
         standardERC4626PricingModule.addAsset(address(ybEth), collateralFactors_, liquidationThresholds_);
         vm.stopPrank();
-    }
-
-    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfDecimals() public {
-        ybEth = new ERC4626Mock(eth, "ybETH Mock", "mybETH", uint8(Constants.ethDecimals) - 1);
-
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PM4626_SAI: Decimals don't match");
-        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, emptyRiskVarInput);
-        vm.stopPrank();
+        
+        assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
@@ -110,6 +103,15 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
+    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfDecimals() public {
+        ybEth = new ERC4626Mock(eth, "ybETH Mock", "mybETH", uint8(Constants.ethDecimals) - 1);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM4626_AA: Decimals don't match");
+        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, emptyRiskVarInput);
+        vm.stopPrank();
+    }
+
     function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.addAsset(address(ybEth), collateralFactors, liquidationThresholds);
@@ -118,9 +120,10 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testSuccess_addAsset_OwnerOverwritesExistingAsset() public {
+    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, emptyRiskVarInput);
+        vm.expectRevert("PM4626_AA: already added");
         standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 

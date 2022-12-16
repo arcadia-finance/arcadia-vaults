@@ -959,6 +959,11 @@ contract PricingLogicTest is MainRegistryTest {
         );
 
         vm.startPrank(creatorAddress);
+        link = new ERC20Mock(
+            "LINK Mock",
+            "mLINK",
+            linkDecimals
+        );
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 
@@ -1011,6 +1016,10 @@ contract PricingLogicTest is MainRegistryTest {
         );
 
         vm.startPrank(creatorAddress);
+        link = new ERC20Mock(
+            "LINK Mock",
+            "mLINK",
+            linkDecimals);
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 

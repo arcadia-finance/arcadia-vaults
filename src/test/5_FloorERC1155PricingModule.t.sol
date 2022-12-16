@@ -68,21 +68,6 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public { //Todo: Will become testSuccess
-        vm.startPrank(creatorAddress);
-        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
-        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
-        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
-        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
-        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
-        // When: creatorAddress calls addAsset with wrong number of credits
-
-        // Then: addAsset should revert with "PM1155_SRV: LENGTH_MISMATCH"
-        vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
-        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, collateralFactors_, liquidationThresholds_);
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
@@ -91,6 +76,20 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         // Then: inPricingModule for address(interleave) should return true
+        assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
+    }
+
+    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
+        vm.startPrank(creatorAddress);
+        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
+        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
+        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
+        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
+        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
+
+        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, collateralFactors_, liquidationThresholds_);
+        vm.stopPrank();
+
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
@@ -105,11 +104,12 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
-    function testSuccess_addAsset_OwnerOverwritesExistingAsset() public {
+    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset twice
         floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
+        vm.expectRevert("PM1155_AA: already added");
         floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
 

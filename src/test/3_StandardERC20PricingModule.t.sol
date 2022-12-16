@@ -74,24 +74,8 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // When: creatorAddress calls addAsset with 19 decimals
         // Then: addAsset should revert with "SSR_SAI: Maximal 18 decimals"
         vm.startPrank(creatorAddress);
-        vm.expectRevert("PM20_SAI: Maximal 18 decimals");
+        vm.expectRevert("PM20_AA: Maximal 18 decimals");
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
-        vm.stopPrank();
-    }
-
-    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfRiskVariables() public { //Todo: Will become testSuccess
-        // Turn this into invalid uint16
-        vm.startPrank(creatorAddress);
-        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
-        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
-        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
-        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
-        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
-        // When: creatorAddress calls addAsset with wrong number of credits
-
-        // Then: addAsset should revert with "MR_AA: LENGTH_MISMATCH"
-        vm.expectRevert("APM_SRV: LENGTH_MISMATCH");
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors_, liquidationThresholds_);
         vm.stopPrank();
     }
 
@@ -106,6 +90,23 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
     }
 
+    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
+        // Turn this into invalid uint16
+        vm.startPrank(creatorAddress);
+        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
+        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
+        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
+        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
+        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
+        // When: creatorAddress calls addAsset with wrong number of credits
+
+        // Then: addAsset should add asset
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors_, liquidationThresholds_);
+        vm.stopPrank();
+
+        assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
+    }
+
     function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
         // Given: 
         vm.startPrank(creatorAddress);
@@ -117,16 +118,14 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
     }
 
-    function testSuccess_addAsset_OwnerOverwritesExistingAsset() public { //Todo: Will become testRevert
+    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset twice
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        vm.expectRevert("PM20_AA: already added");
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
         vm.stopPrank();
-
-        // Then: address(eth) should be inPricingModule
-        assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
     }
 
     function testSuccess_isWhiteListed_Positive() public {

@@ -59,12 +59,12 @@ contract StandardERC20PricingModule is PricingModule {
 
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
-        require(!inPricingModule[asset], "PM20_SAI: already added");        
+        require(!inPricingModule[asset], "PM20_AA: already added");        
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
         uint256 assetUnit = 10 ** IERC20(asset).decimals();
-        require(assetUnit <= 1000000000000000000, "PM20_SAI: Maximal 18 decimals");
+        require(assetUnit <= 1000000000000000000, "PM20_AA: Maximal 18 decimals");
 
         assetToInformation[asset].assetUnit = uint64(assetUnit); //Can safely cast to uint64, we previously checked it is smaller than 10e18
         assetToInformation[asset].oracles = oracles;
@@ -74,11 +74,11 @@ contract StandardERC20PricingModule is PricingModule {
 
         isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(asset), "PM20_SAI: Unable to add in MR");
+        require(IMainRegistry(mainRegistry).addAsset(asset), "PM20_AA: Unable to add in MR");
     }
 
     function setOracles(address asset, address[] calldata oracles) external onlyOwner {
-        require(inPricingModule[asset], "PM20_SAI: asset unknown");
+        require(inPricingModule[asset], "PM20_AA: asset unknown");
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
         assetToInformation[asset].oracles = oracles;
     }
