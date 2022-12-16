@@ -44,7 +44,7 @@ contract UniswapV2PricingModule is PricingModule {
      * @param _uniswapV2Factory The factory for Uniswap V2 pairs
      */
     constructor(address _mainRegistry, address _oracleHub, address _uniswapV2Factory, address _erc20PricingModule)
-        PricingModule(_mainRegistry, _oracleHub)
+        PricingModule(_mainRegistry, _oracleHub, msg.sender)
     {
         uniswapV2Factory = _uniswapV2Factory;
         erc20PricingModule = _erc20PricingModule;
@@ -68,8 +68,7 @@ contract UniswapV2PricingModule is PricingModule {
     /**
      * @notice Adds a new asset to the UniswapV2PricingModule, or overwrites an existing asset.
      * @param asset The contract address of the asset
-     * @param assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
+     * @param riskVars An array of Risk Variables (Collateral Factor and Liquidation Threshold) for the asset
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of baseCurrencies added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -81,8 +80,10 @@ contract UniswapV2PricingModule is PricingModule {
      *      This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      *      assets are no longer updatable.
      */
-    function addAsset(address asset, RiskVarInput[] calldata assetCollateralFactors, RiskVarInput[] calldata assetLiquidationThresholds) external onlyOwner {
-
+    function addAsset(
+        address asset,
+        RiskVarInput[] calldata riskVars
+    ) external onlyOwner {
         address token0 = IUniswapV2Pair(asset).token0();
         address token1 = IUniswapV2Pair(asset).token1();
 
@@ -98,9 +99,7 @@ contract UniswapV2PricingModule is PricingModule {
 
         assetToInformation[asset].token0 = token0;
         assetToInformation[asset].token1 = token1;
-        _setRiskVariables(
-            asset, assetCollateralFactors, assetLiquidationThresholds
-        );
+        _setRiskVariablesForAsset(asset, riskVars);
 
         isAssetAddressWhiteListed[asset] = true;
 

@@ -27,17 +27,10 @@ import ".././fixtures/ArcadiaOracleFixture.f.sol";
 contract StandardERC20PricingModuleExtended is StandardERC20PricingModule {
     constructor(address mainRegistry_, address oracleHub_) StandardERC20PricingModule(mainRegistry_, oracleHub_) {}
 
-    function assetRiskVars_(address asset, uint256 baseCurrency)
-        public
-        view
-        returns (uint16, uint16)
-    {
+    function assetRiskVars_(address asset, uint256 baseCurrency) public view returns (uint16, uint16) {
         RiskVars memory riskvars = assetRiskVars[asset][baseCurrency];
 
-        return (
-            riskvars.collateralFactor,
-            riskvars.liquidationThreshold
-        );
+        return (riskvars.collateralFactor, riskvars.liquidationThreshold);
     }
 }
 
@@ -98,8 +91,7 @@ contract DeployArcadiaVaults is Test {
     uint16 public liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
     PricingModule.RiskVarInput[] emptyRiskVarInput;
-    PricingModule.RiskVarInput[] collateralFactors;
-    PricingModule.RiskVarInput[] liquidationThresholds;
+    PricingModule.RiskVarInput[] riskVars;
 
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
@@ -285,8 +277,7 @@ contract DeployArcadiaVaults is Test {
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            new MainRegistry.AssetRisk[](0)
+            })
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -295,8 +286,7 @@ contract DeployArcadiaVaults is Test {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            new MainRegistry.AssetRisk[](0)
+            })
         );
 
         standardERC20PricingModule = new StandardERC20PricingModuleExtended(
@@ -316,23 +306,29 @@ contract DeployArcadiaVaults is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        PricingModule.RiskVarInput[] memory collateralFactors_m = new PricingModule.RiskVarInput[](3);
-        PricingModule.RiskVarInput[] memory liquidationThresholds_m = new PricingModule.RiskVarInput[](3);
+        riskVars.push(PricingModule.RiskVarInput({baseCurrency: 0, asset: address(0), collateralFactor: collFactor, liquidationThreshold:liqTresh}));
+        riskVars.push(PricingModule.RiskVarInput({baseCurrency: 1, asset: address(0), collateralFactor: collFactor, liquidationThreshold:liqTresh}));
+        riskVars.push(PricingModule.RiskVarInput({baseCurrency: 2, asset: address(0), collateralFactor: collFactor, liquidationThreshold:liqTresh}));
 
-        collateralFactors_m[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
-        collateralFactors_m[1] = PricingModule.RiskVarInput({baseCurrency:1, value:collFactor});
-        collateralFactors_m[2] = PricingModule.RiskVarInput({baseCurrency:2, value:collFactor});
-        liquidationThresholds_m[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
-        liquidationThresholds_m[1] = PricingModule.RiskVarInput({baseCurrency:1, value:liqTresh});
-        liquidationThresholds_m[2] = PricingModule.RiskVarInput({baseCurrency:2, value:liqTresh});
+        PricingModule.RiskVarInput[] memory riskVars_ = riskVars;
 
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors_m, liquidationThresholds_m);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors_m, liquidationThresholds_m);
-        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, collateralFactors_m, liquidationThresholds_m);
+        standardERC20PricingModule.addAsset(
+            address(eth), oracleEthToUsdArr, riskVars_
+        );
+        standardERC20PricingModule.addAsset(
+            address(link), oracleLinkToUsdArr, riskVars_
+        );
+        standardERC20PricingModule.addAsset(
+            address(snx), oracleSnxToEthEthToUsd, riskVars_
+        );
 
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, collateralFactors_m, liquidationThresholds_m);
+        floorERC721PricingModule.addAsset(
+            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars_
+        );
 
-        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, collateralFactors_m, liquidationThresholds_m);
+        floorERC1155PricingModule.addAsset(
+            address(interleave), 1, oracleInterleaveToEthEthToUsd, riskVars_
+        );
 
         vault = new Vault();
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
@@ -340,17 +336,5 @@ contract DeployArcadiaVaults is Test {
         mainRegistry.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
         vm.stopPrank();
-
-        storeStuff();
-    }
-
-    function storeStuff() public {
-        
-        collateralFactors.push(PricingModule.RiskVarInput({baseCurrency:0, value:collFactor}));
-        collateralFactors.push(PricingModule.RiskVarInput({baseCurrency:1, value:collFactor}));
-        collateralFactors.push(PricingModule.RiskVarInput({baseCurrency:2, value:collFactor}));
-        liquidationThresholds.push(PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh}));
-        liquidationThresholds.push(PricingModule.RiskVarInput({baseCurrency:1, value:liqTresh}));
-        liquidationThresholds.push(PricingModule.RiskVarInput({baseCurrency:2, value:liqTresh}));
     }
 }

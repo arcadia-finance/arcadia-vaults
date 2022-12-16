@@ -102,21 +102,14 @@ contract MainRegistry is Ownable, RiskModule {
      * - assetAddress: The contract address of the baseCurrency,
      * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
-     * @param assetRisks List of assets and their complete risk arrays
      * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
      * Tokens pegged to the native token do not count as native tokens
      * - USDC is not a native token for USD as BaseCurrency
      * - WETH is a native token for ETH as BaseCurrency
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
-     * the number of assets added to the Main Registry,or the list must have length 0.
-     * If the list has length zero, the risk variables of the baseCurrency for all assets
-     * is initiated as default (safest lowest rating).
+     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be set through the pricing modules!
      * @dev Risk variable have 2 decimals precision
      */
-    function addBaseCurrency(BaseCurrencyInformation calldata baseCurrencyInformation, AssetRisk[] calldata assetRisks)
-        external
-        onlyOwner
-    {
+    function addBaseCurrency(BaseCurrencyInformation calldata baseCurrencyInformation) external onlyOwner {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
@@ -124,20 +117,6 @@ contract MainRegistry is Ownable, RiskModule {
 
         unchecked {
             ++baseCurrencyCounter;
-        }
-
-        uint256 assetLength = assetRisks.length;
-        require(assetLength == assetsInMainRegistry.length, "MR_ABC: assetRisks array wrong length");
-
-        // Loop: Per value of collateral factor and liquidation threshold
-        for (uint256 i; i < assetLength;) {
-            IPricingModule(assetToPricingModule[assetRisks[i].asset]).setRiskVariables(
-                assetRisks[i].asset, assetRisks[i].assetCollateralFactors, assetRisks[i].assetLiquidationThresholds
-            );
-
-            unchecked {
-                i++;
-            }
         }
     }
 
@@ -264,7 +243,7 @@ contract MainRegistry is Ownable, RiskModule {
      * @dev The function loops over all indexes, and changes for each index the Risk Variable of the combination of asset and baseCurrency.
      * In case multiple Risk Variables for the same assets need to be changed, the address must be repeated in the assets.
      * @dev Risk variable have 2 decimals precision.
-          TODO: changed
+     *       TODO: changed
      */
     function batchSetRiskVariables(AssetRisk[] memory assetsRisks) external onlyOwner {
         uint256 assetsLength = assetsRisks.length;
@@ -282,7 +261,7 @@ contract MainRegistry is Ownable, RiskModule {
                 collFactLenght == baseCurrencyCounter && collFactLenght == liqThresLength, "MR_BSCR: LENGTH_MISMATCH"
             );
 
-            IPricingModule(assetToPricingModule[assetsRisks[i].asset]).setRiskVariables(
+            IPricingModule(assetToPricingModule[assetsRisks[i].asset]).setRiskVariablesForAsset(
                 assetsRisks[i].asset, assetsRisks[i].assetCollateralFactors, assetsRisks[i].assetLiquidationThresholds
             );
 

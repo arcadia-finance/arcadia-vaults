@@ -42,8 +42,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            new MainRegistry.AssetRisk[](0)
+            })
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -52,8 +51,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            new MainRegistry.AssetRisk[](0)
+            })
         );
 
         standardERC20PricingModule = new StandardERC20PricingModuleExtended( //ToDo: remove extension
@@ -70,7 +68,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(aTokenPricingModule));
 
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr,  emptyRiskVarInput);
         vm.stopPrank();
     }
 
@@ -78,18 +76,16 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("Ownable: caller is not the owner");
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth),  emptyRiskVarInput);
         vm.stopPrank();
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        PricingModule.RiskVarInput[] memory collateralFactors_ = new PricingModule.RiskVarInput[](1);
-        collateralFactors_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
-        PricingModule.RiskVarInput[] memory liquidationThresholds_ = new PricingModule.RiskVarInput[](1);
-        liquidationThresholds_[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
+        PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
+        riskVars_[0] = PricingModule.RiskVarInput({baseCurrency: 0, asset: address(0), collateralFactor: collFactor, liquidationThreshold:liqTresh});
 
-        aTokenPricingModule.addAsset(address(aEth), collateralFactors_, liquidationThresholds_);
+        aTokenPricingModule.addAsset(address(aEth), riskVars_);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
@@ -97,7 +93,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth),  emptyRiskVarInput);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
@@ -105,7 +101,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), collateralFactors, liquidationThresholds);
+        aTokenPricingModule.addAsset(address(aEth),  riskVars);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
@@ -115,16 +111,16 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         IAToken(address(aEth)).decimals();
 
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth),  emptyRiskVarInput);
         vm.expectRevert("PMAT_AA: already added");
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth),  emptyRiskVarInput);
         vm.stopPrank();
     }
 
     function testSuccess_isWhiteListed() public {
         vm.startPrank(creatorAddress);
 
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth),  emptyRiskVarInput);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
@@ -137,7 +133,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth),  emptyRiskVarInput);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
@@ -175,7 +171,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth),  emptyRiskVarInput);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (
@@ -214,7 +210,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth),  emptyRiskVarInput);
         vm.stopPrank();
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({

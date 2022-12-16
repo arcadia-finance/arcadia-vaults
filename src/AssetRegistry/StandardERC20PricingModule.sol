@@ -31,7 +31,7 @@ contract StandardERC20PricingModule is PricingModule {
      * @param mainRegistry_ The address of the Main-registry
      * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -41,8 +41,7 @@ contract StandardERC20PricingModule is PricingModule {
      * @notice Adds a new asset to the StandardERC20PricingModule, or overwrites an existing asset.
      * @param asset The contract address of the asset
      * @param oracles An array of addresses of oracle contracts, to price the asset in USD
-     * @param assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
+     * @param riskVars An array of Risk Variables (Collateral Factor and Liquidation Threshold) for the asset
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -55,11 +54,14 @@ contract StandardERC20PricingModule is PricingModule {
      * assets are no longer updatable.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata assetCollateralFactors, RiskVarInput[] calldata assetLiquidationThresholds) external onlyOwner {
-
+    function addAsset(
+        address asset,
+        address[] calldata oracles,
+        RiskVarInput[] calldata riskVars
+    ) external onlyOwner {
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
-        require(!inPricingModule[asset], "PM20_AA: already added");        
+        require(!inPricingModule[asset], "PM20_AA: already added");
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
@@ -68,9 +70,7 @@ contract StandardERC20PricingModule is PricingModule {
 
         assetToInformation[asset].assetUnit = uint64(assetUnit); //Can safely cast to uint64, we previously checked it is smaller than 10e18
         assetToInformation[asset].oracles = oracles;
-        _setRiskVariables(
-            asset, assetCollateralFactors, assetLiquidationThresholds
-        );
+        _setRiskVariablesForAsset(asset, riskVars);
 
         isAssetAddressWhiteListed[asset] = true;
 
@@ -91,10 +91,7 @@ contract StandardERC20PricingModule is PricingModule {
      * @return oracles The list of addresses of the oracles to get the exchange rate of the asset in USD
      */
     function getAssetInformation(address asset) external view returns (uint64, address[] memory) {
-        return (
-            assetToInformation[asset].assetUnit,
-            assetToInformation[asset].oracles
-        );
+        return (assetToInformation[asset].assetUnit, assetToInformation[asset].oracles);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -146,18 +143,16 @@ contract StandardERC20PricingModule is PricingModule {
         uint256 rateInUsd;
         uint256 rateInBaseCurrency;
 
-        (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[getValueInput.asset].oracles, getValueInput.baseCurrency
-        );
+        (rateInUsd, rateInBaseCurrency) =
+            IOraclesHub(oracleHub).getRate(assetToInformation[getValueInput.asset].oracles, getValueInput.baseCurrency);
 
         if (rateInBaseCurrency > 0) {
             valueInBaseCurrency = (getValueInput.assetAmount).mulDivDown(
                 rateInBaseCurrency, assetToInformation[getValueInput.asset].assetUnit
             );
         } else {
-            valueInUsd = (getValueInput.assetAmount).mulDivDown(
-                rateInUsd, assetToInformation[getValueInput.asset].assetUnit
-            );
+            valueInUsd =
+                (getValueInput.assetAmount).mulDivDown(rateInUsd, assetToInformation[getValueInput.asset].assetUnit);
         }
 
         collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;

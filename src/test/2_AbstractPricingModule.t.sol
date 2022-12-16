@@ -9,14 +9,13 @@ pragma solidity >0.8.10;
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
 contract AbstractPricingModuleExtension is PricingModule {
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
 
-    function addAsset(address assetAddress) public onlyOwner {
-        if (!inPricingModule[assetAddress]) {
-            inPricingModule[assetAddress] = true;
-            assetsInPricingModule.push(assetAddress);
-        }
-        isAssetAddressWhiteListed[assetAddress] = true;
+    function addAsset(address asset) public onlyOwner {
+        inPricingModule[asset] = true;
+        assetsInPricingModule.push(asset);
+
+        isAssetAddressWhiteListed[asset] = true;
     }
 }
 
@@ -37,14 +36,14 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         );
     }
 
-    function testSuccess_addAsset_AssetWhitelistedWhenAddedToPricingModule(address assetAddress) public {
+    function testSuccess_addAsset_AssetWhitelistedWhenAddedToPricingModule(address asset) public {
         // Given: All necessary contracts deployed on setup
         vm.prank(creatorAddress);
         // When: creatorAddress calls addAsset
-        abstractPricingModule.addAsset(assetAddress);
+        abstractPricingModule.addAsset(asset);
 
         // Then: isAssetAddressWhiteListed should return true
-        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(assetAddress));
+        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(asset));
     }
 
     function testRevert_addToWhiteList_NonOwnerAddsExistingAssetToWhitelist(address unprivilegedAddress_) public {

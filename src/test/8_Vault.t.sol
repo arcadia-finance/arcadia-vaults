@@ -561,7 +561,6 @@ contract vaultTests is DeployArcadiaVaults {
     }
 
     function testSuccess_deposit_SingleERC721() public {
-
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
 
@@ -927,7 +926,6 @@ contract vaultTests is DeployArcadiaVaults {
     }
 
     function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
-
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
 
@@ -961,7 +959,6 @@ contract vaultTests is DeployArcadiaVaults {
             uint256[] memory assetTypes
         )
     {
-
         assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
 
@@ -988,7 +985,6 @@ contract vaultTests is DeployArcadiaVaults {
             uint256[] memory assetTypes
         )
     {
-
         assetAddresses = new address[](tokenIds.length);
         assetIds = new uint256[](tokenIds.length);
         assetAmounts = new uint256[](tokenIds.length);

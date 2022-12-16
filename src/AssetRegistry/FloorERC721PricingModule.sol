@@ -29,7 +29,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param mainRegistry_ The address of the Main-registry
      * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -41,8 +41,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param idRangeStart: The id of the first NFT of the collection
      * @param idRangeEnd: The id of the last NFT of the collection
      * @param oracles An array of addresses of oracle contracts, to price the asset in USD
-     * @param assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
+     * @param riskVars An array of Risk Variables (Collateral Factor and Liquidation Threshold) for the asset
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -54,21 +53,25 @@ contract FloorERC721PricingModule is PricingModule {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function addAsset(address asset, uint256 idRangeStart, uint256 idRangeEnd, address[] calldata oracles, RiskVarInput[] calldata assetCollateralFactors, RiskVarInput[] calldata assetLiquidationThresholds) external onlyOwner {
+    function addAsset(
+        address asset,
+        uint256 idRangeStart,
+        uint256 idRangeEnd,
+        address[] calldata oracles,
+        RiskVarInput[] calldata riskVars
+    ) external onlyOwner {
         //no asset units
 
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
-        require(!inPricingModule[asset], "PM721_AA: already added");        
+        require(!inPricingModule[asset], "PM721_AA: already added");
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
         assetToInformation[asset].idRangeStart = idRangeStart;
         assetToInformation[asset].idRangeEnd = idRangeEnd;
         assetToInformation[asset].oracles = oracles;
-        _setRiskVariables(
-            asset, assetCollateralFactors, assetLiquidationThresholds
-        );
+        _setRiskVariablesForAsset(asset, riskVars);
 
         isAssetAddressWhiteListed[asset] = true;
 
@@ -124,10 +127,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @return A boolean, indicating if the Id of the given asset is whitelisted
      */
     function isIdInRange(address asset, uint256 assetId) private view returns (bool) {
-        if (
-            assetId >= assetToInformation[asset].idRangeStart
-                && assetId <= assetToInformation[asset].idRangeEnd
-        ) {
+        if (assetId >= assetToInformation[asset].idRangeStart && assetId <= assetToInformation[asset].idRangeEnd) {
             return true;
         } else {
             return false;
@@ -161,9 +161,8 @@ contract FloorERC721PricingModule is PricingModule {
         override
         returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
     {
-        (valueInUsd, valueInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[getValueInput.asset].oracles, getValueInput.baseCurrency
-        );
+        (valueInUsd, valueInBaseCurrency) =
+            IOraclesHub(oracleHub).getRate(assetToInformation[getValueInput.asset].oracles, getValueInput.baseCurrency);
 
         collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
         liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;

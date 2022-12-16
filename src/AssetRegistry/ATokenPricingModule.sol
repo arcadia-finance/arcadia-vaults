@@ -36,7 +36,9 @@ contract ATokenPricingModule is PricingModule {
      * @param mainRegistry_ The address of the Main-registry
      * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry_, address oracleHub_, address _erc20PricingModule) PricingModule(mainRegistry_, oracleHub_) {
+    constructor(address mainRegistry_, address oracleHub_, address _erc20PricingModule)
+        PricingModule(mainRegistry_, oracleHub_, msg.sender)
+    {
         erc20PricingModule = _erc20PricingModule;
     }
 
@@ -47,8 +49,7 @@ contract ATokenPricingModule is PricingModule {
     /**
      * @notice Adds a new asset to the ATokenPricingModule, or overwrites an existing asset.
      * @param asset The contract address of the asset
-     * @param assetCollateralFactors: The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
+     * @param riskVars An array of Risk Variables (Collateral Factor and Liquidation Threshold) for the asset
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should or be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -61,30 +62,28 @@ contract ATokenPricingModule is PricingModule {
      * assets are no longer updatable.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(address asset, 
-                                 RiskVarInput[] calldata assetCollateralFactors, 
-                                 RiskVarInput[] calldata assetLiquidationThresholds) external onlyOwner {
-
+    function addAsset(
+        address asset,
+        RiskVarInput[] calldata riskVars
+    ) external onlyOwner {
         uint256 assetUnit = 10 ** IERC20(asset).decimals();
         require(assetUnit <= 1000000000000000000, "PMAT_AA: Maximal 18 decimals");
 
         address underlyingAsset = IAToken(asset).UNDERLYING_ASSET_ADDRESS();
-        (uint64 underlyingAssetUnit, address[] memory underlyingAssetOracles) = IStandardERC20PricingModule(
-            erc20PricingModule).getAssetInformation(underlyingAsset);
+        (uint64 underlyingAssetUnit, address[] memory underlyingAssetOracles) =
+            IStandardERC20PricingModule(erc20PricingModule).getAssetInformation(underlyingAsset);
         require(assetUnit == underlyingAssetUnit, "PMAT_AA: Decimals don't match");
 
         //we can skip the oracle addresses check, already checked on underlying asset
 
-        require(!inPricingModule[asset], "PMAT_AA: already added");        
+        require(!inPricingModule[asset], "PMAT_AA: already added");
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
         assetToInformation[asset].assetUnit = uint64(assetUnit); //Can safely cast to uint64, we previously checked it is smaller than 10e18
         assetToInformation[asset].underlyingAsset = underlyingAsset;
         assetToInformation[asset].underlyingAssetOracles = underlyingAssetOracles;
-        _setRiskVariables(
-            asset, assetCollateralFactors, assetLiquidationThresholds
-        );
+        _setRiskVariablesForAsset(asset, riskVars);
 
         isAssetAddressWhiteListed[asset] = true;
 
@@ -171,9 +170,8 @@ contract ATokenPricingModule is PricingModule {
                 rateInBaseCurrency, assetToInformation[getValueInput.asset].assetUnit
             );
         } else {
-            valueInUsd = (getValueInput.assetAmount).mulDivDown(
-                rateInUsd, assetToInformation[getValueInput.asset].assetUnit
-            );
+            valueInUsd =
+                (getValueInput.assetAmount).mulDivDown(rateInUsd, assetToInformation[getValueInput.asset].assetUnit);
         }
 
         collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;

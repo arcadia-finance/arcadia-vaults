@@ -389,8 +389,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            new MainRegistry.AssetRisk[](0)
+            })
         );
 
         mainRegistry2 = new MainRegistry(
@@ -424,8 +423,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            new MainRegistry.AssetRisk[](0)
+            })
         );
 
         mainRegistry2 = new MainRegistry(
@@ -444,8 +442,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            new MainRegistry.AssetRisk[](0)
+            })
         );
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
@@ -477,8 +474,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            new MainRegistry.AssetRisk[](0)
+            })
         );
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
