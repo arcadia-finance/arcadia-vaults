@@ -97,9 +97,9 @@ contract DeployArcadiaVaults is Test {
     uint16 public collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
     uint16 public liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
 
-    PricingModule.RiskVarInput[] emptyRiskVarInput = new PricingModule.RiskVarInput[](0);
-    PricingModule.RiskVarInput[] collateralFactors = new PricingModule.RiskVarInput[](3);
-    PricingModule.RiskVarInput[] liquidationThresholds = new PricingModule.RiskVarInput[](3);
+    PricingModule.RiskVarInput[] emptyRiskVarInput;
+    PricingModule.RiskVarInput[] collateralFactors;
+    PricingModule.RiskVarInput[] liquidationThresholds;
 
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
@@ -316,20 +316,23 @@ contract DeployArcadiaVaults is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        collateralFactors[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
-        collateralFactors[1] = PricingModule.RiskVarInput({baseCurrency:1, value:collFactor});
-        collateralFactors[2] = PricingModule.RiskVarInput({baseCurrency:2, value:collFactor});
-        liquidationThresholds[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
-        liquidationThresholds[1] = PricingModule.RiskVarInput({baseCurrency:1, value:liqTresh});
-        liquidationThresholds[2] = PricingModule.RiskVarInput({baseCurrency:2, value:liqTresh});
+        PricingModule.RiskVarInput[] memory collateralFactors_m = new PricingModule.RiskVarInput[](3);
+        PricingModule.RiskVarInput[] memory liquidationThresholds_m = new PricingModule.RiskVarInput[](3);
 
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors, liquidationThresholds);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors, liquidationThresholds);
-        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, collateralFactors, liquidationThresholds);
+        collateralFactors_m[0] = PricingModule.RiskVarInput({baseCurrency:0, value:collFactor});
+        collateralFactors_m[1] = PricingModule.RiskVarInput({baseCurrency:1, value:collFactor});
+        collateralFactors_m[2] = PricingModule.RiskVarInput({baseCurrency:2, value:collFactor});
+        liquidationThresholds_m[0] = PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh});
+        liquidationThresholds_m[1] = PricingModule.RiskVarInput({baseCurrency:1, value:liqTresh});
+        liquidationThresholds_m[2] = PricingModule.RiskVarInput({baseCurrency:2, value:liqTresh});
 
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, collateralFactors, liquidationThresholds);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, collateralFactors_m, liquidationThresholds_m);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, collateralFactors_m, liquidationThresholds_m);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, collateralFactors_m, liquidationThresholds_m);
 
-        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, collateralFactors, liquidationThresholds);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, collateralFactors_m, liquidationThresholds_m);
+
+        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, collateralFactors_m, liquidationThresholds_m);
 
         vault = new Vault();
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
@@ -337,5 +340,17 @@ contract DeployArcadiaVaults is Test {
         mainRegistry.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
         vm.stopPrank();
+
+        storeStuff();
+    }
+
+    function storeStuff() public {
+        
+        collateralFactors.push(PricingModule.RiskVarInput({baseCurrency:0, value:collFactor}));
+        collateralFactors.push(PricingModule.RiskVarInput({baseCurrency:1, value:collFactor}));
+        collateralFactors.push(PricingModule.RiskVarInput({baseCurrency:2, value:collFactor}));
+        liquidationThresholds.push(PricingModule.RiskVarInput({baseCurrency:0, value:liqTresh}));
+        liquidationThresholds.push(PricingModule.RiskVarInput({baseCurrency:1, value:liqTresh}));
+        liquidationThresholds.push(PricingModule.RiskVarInput({baseCurrency:2, value:liqTresh}));
     }
 }
