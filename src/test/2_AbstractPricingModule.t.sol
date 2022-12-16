@@ -172,4 +172,10 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         // Then: isAssetAddressWhiteListed for address(eth) should return true
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
+
+    //function testSuccess_batchSetRiskVariables todo
+    // testRevert_batchSetRiskVariables_NonOwner
+    // testRevert_batchSetRiskVariables_NonEqualInputLists
+    // testRevert_batchSetRiskVariables_InvalidValue
+    // testSuccess_batchSetRiskVariables
 }

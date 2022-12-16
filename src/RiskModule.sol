@@ -15,7 +15,7 @@ import {RiskConstants} from "./utils/RiskConstants.sol";
  * @notice The Risk Module manages the supported asset related risks, collateral factor, liquidity threshold
  * @dev No end-user should directly interact with the Risk Module
  */
-contract RiskModule {
+library RiskModule {
     using FixedPointMathLib for uint256;
 
     struct AssetValueRisk {
