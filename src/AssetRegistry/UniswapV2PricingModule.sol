@@ -80,10 +80,7 @@ contract UniswapV2PricingModule is PricingModule {
      *      This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      *      assets are no longer updatable.
      */
-    function addAsset(
-        address asset,
-        RiskVarInput[] calldata riskVars
-    ) external onlyOwner {
+    function addAsset(address asset, RiskVarInput[] calldata riskVars) external onlyOwner {
         address token0 = IUniswapV2Pair(asset).token0();
         address token1 = IUniswapV2Pair(asset).token1();
 

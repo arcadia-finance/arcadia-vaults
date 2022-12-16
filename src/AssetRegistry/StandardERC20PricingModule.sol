@@ -54,11 +54,7 @@ contract StandardERC20PricingModule is PricingModule {
      * assets are no longer updatable.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(
-        address asset,
-        address[] calldata oracles,
-        RiskVarInput[] calldata riskVars
-    ) external onlyOwner {
+    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars) external onlyOwner {
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
         require(!inPricingModule[asset], "PM20_AA: already added");

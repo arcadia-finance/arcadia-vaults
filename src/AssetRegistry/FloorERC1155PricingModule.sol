@@ -51,12 +51,10 @@ contract FloorERC1155PricingModule is PricingModule {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function addAsset(
-        address asset,
-        uint256 id,
-        address[] calldata oracles,
-        RiskVarInput[] calldata riskVars
-    ) external onlyOwner {
+    function addAsset(address asset, uint256 id, address[] calldata oracles, RiskVarInput[] calldata riskVars)
+        external
+        onlyOwner
+    {
         //no asset units
 
         IOraclesHub(oracleHub).checkOracleSequence(oracles);

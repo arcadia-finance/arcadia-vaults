@@ -62,10 +62,7 @@ contract StandardERC4626PricingModule is PricingModule {
      * assets are no longer updatable.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(
-        address asset,
-        RiskVarInput[] calldata riskVars
-    ) external onlyOwner {
+    function addAsset(address asset, RiskVarInput[] calldata riskVars) external onlyOwner {
         uint256 assetUnit = 10 ** IERC4626(asset).decimals();
         require(assetUnit <= 1000000000000000000, "PM4626_AA: Maximal 18 decimals");
 
