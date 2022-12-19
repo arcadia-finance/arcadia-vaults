@@ -131,6 +131,12 @@ abstract contract PricingModule is Ownable {
         );
     }
 
+    /**
+     * @notice Sets the risk variables for a batch of assets.
+     * @param riskVarInputs An array of risk variable inputs for the assets.
+     * @dev Risk variable are variables with decimal by 100
+     * @dev Can only be called by the Risk Manager
+     */
     function setBatchRiskVariables(RiskVarInput[] memory riskVarInputs) public virtual onlyRiskManager {
         // Check: Valid length of arrays
 

@@ -39,17 +39,13 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param asset The contract address of the asset
      * @param id: The id of the collection
      * @param oracles An array of addresses of oracle contracts, to price the asset in USD
-     * @param riskVars An array of Risk Variables (Collateral Factor and Liquidation Threshold) for the asset
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
-     * the number of assets added to the Main Registry,or the list must have length 0.
-     * If the list has length zero, the risk variables of the baseCurrency for all assets
-     * is initiated as default (safest lowest rating).
+     * @param riskVars An array of Risk Variables for the asset
+     * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.
+     * If no risk variables are provided, the asset is added with the risk variables set to zero, meaning it can't be used as collateral.
+     * @dev RiskVarInput.asset can be zero as it is not taken into account.
      * @dev Risk variable are variables with 2 decimals precision
-     * @dev The assets are added/overwritten in the Main-Registry as well.
-     * By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     * (for instance by changing the oracleaddres to a fake price feed) and poses a security risk towards protocol users.
-     * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
-     * assets are no longer updatable.
+     * @dev The assets are added in the Main-Registry as well.
+     * @dev Assets can't have more than 18 decimals.
      */
     function addAsset(address asset, uint256 id, address[] calldata oracles, RiskVarInput[] calldata riskVars)
         external
@@ -72,6 +68,11 @@ contract FloorERC1155PricingModule is PricingModule {
         require(IMainRegistry(mainRegistry).addAsset(asset), "PM1155_AA: Unable to add in MR");
     }
 
+    /**
+     * @notice Sets the oracle addresses for the given asset.
+     * @param asset The contract address of the asset.
+     * @param oracles An array of oracle addresses for the asset.
+     */
     function setOracles(address asset, address[] calldata oracles) external onlyOwner {
         require(inPricingModule[asset], "PM20_AA: asset unknown");
         IOraclesHub(oracleHub).checkOracleSequence(oracles);

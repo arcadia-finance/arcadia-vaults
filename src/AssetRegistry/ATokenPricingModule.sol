@@ -49,17 +49,12 @@ contract ATokenPricingModule is PricingModule {
     /**
      * @notice Adds a new asset to the ATokenPricingModule, or overwrites an existing asset.
      * @param asset The contract address of the asset
-     * @param riskVars An array of Risk Variables (Collateral Factor and Liquidation Threshold) for the asset
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should or be as long as
-     * the number of assets added to the Main Registry,or the list must have length 0.
-     * If the list has length zero, the risk variables of the baseCurrency for all assets
-     * is initiated as default (safest lowest rating).
-     * Risk variable are variables with decimal by 100
-     * @dev The assets are added/overwritten in the Main-Registry as well.
-     * By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     * (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
-     * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
-     * assets are no longer updatable.
+     * @param riskVars An array of Risk Variables for the asset
+     * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.
+     * If no risk variables are provided, the asset is added with the risk variables set to zero, meaning it can't be used as collateral.
+     * @dev RiskVarInput.asset can be zero as it is not taken into account.
+     * @dev Risk variable are variables with 2 decimals precision
+     * @dev The assets are added in the Main-Registry as well.
      * @dev Assets can't have more than 18 decimals.
      */
     function addAsset(address asset, RiskVarInput[] calldata riskVars) external onlyOwner {
@@ -87,6 +82,12 @@ contract ATokenPricingModule is PricingModule {
         require(IMainRegistry(mainRegistry).addAsset(asset), "PMAT_AA: Unable to add in MR");
     }
 
+    /**
+     * @notice Synchronizes the oracle addresses for the given asset with its underlying asset.
+     * @param asset The contract address of the asset.
+     * @dev This function can by called by anyone, however since it reads from the Pricing Module of the underlying asset,
+     * unprivileged users can't mis-use it.
+     */
     function syncOracles(address asset) external {
         (,, address[] memory underlyingAssetOracles) = IPricingModule(
             IMainRegistry(mainRegistry).assetToPricingModule(assetToInformation[asset].underlyingAsset)

@@ -312,6 +312,7 @@ contract AssetManagementTest is MainRegistryTest {
     }
 
     function testSuccess_addAsset_FullListRiskVariables() public {
+        //todo: change test
         // Given: collateralFactors index 0, 1 and 2 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0, 1 and 2 is DEFAULT_LIQUIDATION_THRESHOLD
         uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint16 liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
