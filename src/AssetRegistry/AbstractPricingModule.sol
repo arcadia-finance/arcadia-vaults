@@ -10,6 +10,7 @@ import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../interfaces/IOraclesHub.sol";
 import "../interfaces/IMainRegistry.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import {RiskConstants} from "../utils/RiskConstants.sol";
 
 /**
  * @title Abstract Pricing Module
@@ -23,18 +24,37 @@ abstract contract PricingModule is Ownable {
 
     address public mainRegistry;
     address public oracleHub;
+    address public riskManager;
 
     address[] public assetsInPricingModule;
 
     mapping(address => bool) public inPricingModule;
     mapping(address => bool) public isAssetAddressWhiteListed;
+    mapping(address => mapping(uint256 => RiskVars)) public assetRiskVars;
 
     //struct with input variables necessary to avoid stack to deep error
     struct GetValueInput {
-        address assetAddress;
+        address asset;
         uint256 assetId;
         uint256 assetAmount;
         uint256 baseCurrency;
+    }
+
+    struct RiskVars {
+        uint16 collateralFactor;
+        uint16 liquidationThreshold;
+    }
+
+    struct RiskVarInput {
+        address asset;
+        uint8 baseCurrency;
+        uint16 collateralFactor;
+        uint16 liquidationThreshold;
+    }
+
+    modifier onlyRiskManager() {
+        require(msg.sender == riskManager, "APM: ONLY_RISK_MANAGER");
+        _;
     }
 
     /**
@@ -42,9 +62,14 @@ abstract contract PricingModule is Ownable {
      * @param _mainRegistry The address of the Main-registry
      * @param _oracleHub The address of the Oracle-Hub
      */
-    constructor(address _mainRegistry, address _oracleHub) {
+    constructor(address _mainRegistry, address _oracleHub, address _riskManager) {
         mainRegistry = _mainRegistry;
         oracleHub = _oracleHub;
+        riskManager = _riskManager;
+    }
+
+    function setRiskManager(address _riskManager) external onlyRiskManager {
+        riskManager = _riskManager;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -92,5 +117,82 @@ abstract contract PricingModule is Ownable {
      * one denominated in USD and the other one in the different BaseCurrency).
      * @dev All price feeds should be fetched in the Oracle-Hub
      */
-    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256) {}
+    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) {}
+
+    /**
+     * @notice Returns the risk variable arrays of an asset
+     * @param asset The address of the asset
+     * @return assetCollateralFactors The array of collateral factors for the asset
+     * @return assetLiquidationThresholds The array of liquidation thresholds for the asset
+     */
+    function getRiskVariables(address asset, uint256 baseCurrency) public view virtual returns (uint16, uint16) {
+        return (
+            assetRiskVars[asset][baseCurrency].collateralFactor, assetRiskVars[asset][baseCurrency].liquidationThreshold
+        );
+    }
+
+    /**
+     * @notice Sets the risk variables for a batch of assets.
+     * @param riskVarInputs An array of risk variable inputs for the assets.
+     * @dev Risk variable are variables with decimal by 100
+     * @dev Can only be called by the Risk Manager
+     */
+    function setBatchRiskVariables(RiskVarInput[] memory riskVarInputs) public virtual onlyRiskManager {
+        // Check: Valid length of arrays
+
+        uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
+        uint256 riskVarInputsLength = riskVarInputs.length;
+
+        for (uint256 i; i < riskVarInputsLength;) {
+            require(riskVarInputs[i].baseCurrency < baseCurrencyCounter, "APM_SBRV: BaseCurrency not in limits");
+
+            _setRiskVariables(
+                riskVarInputs[i].asset,
+                riskVarInputs[i].baseCurrency,
+                RiskVars({
+                    collateralFactor: riskVarInputs[i].collateralFactor,
+                    liquidationThreshold: riskVarInputs[i].liquidationThreshold
+                })
+            );
+
+            unchecked {
+                i++;
+            }
+        }
+    }
+
+    function _setRiskVariablesForAsset(address asset, RiskVarInput[] memory riskVarInputs) internal virtual {
+        // Check: Valid length of arrays
+
+        uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
+        uint256 riskVarInputsLength = riskVarInputs.length;
+
+        for (uint256 i; i < riskVarInputsLength;) {
+            require(baseCurrencyCounter > riskVarInputs[i].baseCurrency, "APM_SRVFA: BaseCurrency not in limits");
+            _setRiskVariables(
+                asset,
+                riskVarInputs[i].baseCurrency,
+                RiskVars({
+                    collateralFactor: riskVarInputs[i].collateralFactor,
+                    liquidationThreshold: riskVarInputs[i].liquidationThreshold
+                })
+            );
+
+            unchecked {
+                i++;
+            }
+        }
+    }
+
+    function _setRiskVariables(address asset, uint256 basecurrency, RiskVars memory riskVars) internal virtual {
+        require(riskVars.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR, "APM_SRV: Coll.Fact not in limits");
+
+        require(
+            riskVars.liquidationThreshold <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
+                && riskVars.liquidationThreshold >= RiskConstants.MIN_LIQUIDATION_THRESHOLD,
+            "APM_SRV: Liq.Thres not in limits"
+        );
+
+        assetRiskVars[asset][basecurrency] = riskVars;
+    }
 }

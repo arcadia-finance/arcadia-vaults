@@ -52,6 +52,9 @@ contract gasWithdrawal4_2ERC202ERC721 is GasTestFixture {
     }
 
     function testGetRemainingValue() public {
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            proxy.generateAssetData();
+        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, 0);
         proxy.getFreeMargin();
     }
 

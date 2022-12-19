@@ -137,8 +137,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     }
 
     function testSuccess_liquidate_StartAuction(uint128 amountEth, uint256 newPrice) public {
-        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -164,8 +164,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     }
 
     function testSuccess_liquidate_ShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public {
-        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -197,8 +197,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
         public
     {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -239,8 +239,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     function testSuccess_buyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -270,8 +270,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     function testSuccess_withdraw_FromPurchasedVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
@@ -677,8 +677,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
         public
     {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * breakevenTime);
-        uint16 collFactorProxy = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        uint16 liqThresProxy = mainRegistry.DEFAULT_LIQUIDATION_THRESHOLD();
+        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);

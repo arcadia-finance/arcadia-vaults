@@ -13,7 +13,7 @@ import "../interfaces/IFactory.sol";
 import "../interfaces/IPricingModule.sol";
 
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
-import "../RiskModule.sol";
+import {RiskModule} from "../RiskModule.sol";
 
 /**
  * @title Main Asset registry
@@ -21,7 +21,7 @@ import "../RiskModule.sol";
  * @notice The Main-registry stores basic information for each token that can, or could at some point, be deposited in the vaults
  * @dev No end-user should directly interact with the Main-registry, only vaults, Sub-Registries or the contract owner
  */
-contract MainRegistry is Ownable, RiskModule {
+contract MainRegistry is Ownable {
     using FixedPointMathLib for uint256;
 
     bool public assetsUpdatable = true;
@@ -102,75 +102,18 @@ contract MainRegistry is Ownable, RiskModule {
      * - assetAddress: The contract address of the baseCurrency,
      * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
-     * @param baseCurrencyCollateralFactors The List of collateral factors for the asset for the new base currency
-     * @param baseCurrencyLiquidationThresholds The List of liquidation thresholds for each asset for the new base currency
      * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
      * Tokens pegged to the native token do not count as native tokens
      * - USDC is not a native token for USD as BaseCurrency
      * - WETH is a native token for ETH as BaseCurrency
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
-     * the number of assets added to the Main Registry,or the list must have length 0.
-     * If the list has length zero, the risk variables of the baseCurrency for all assets
-     * is initiated as default (safest lowest rating).
+     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be set through the pricing modules!
      * @dev Risk variable have 2 decimals precision
      */
-    function addBaseCurrency(
-        BaseCurrencyInformation calldata baseCurrencyInformation,
-        uint16[] calldata baseCurrencyCollateralFactors,
-        uint16[] calldata baseCurrencyLiquidationThresholds
-    ) external onlyOwner {
+    function addBaseCurrency(BaseCurrencyInformation calldata baseCurrencyInformation) external onlyOwner {
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
         baseCurrencies.push(baseCurrencyInformation.assetAddress);
-
-        // Check: Valid length of arrays
-        uint256 baseCurrencyCollateralFactorsLength = baseCurrencyCollateralFactors.length;
-        require(
-            (
-                baseCurrencyCollateralFactorsLength == assetsInMainRegistry.length
-                    && baseCurrencyCollateralFactorsLength == baseCurrencyLiquidationThresholds.length
-            ) || (baseCurrencyCollateralFactorsLength == 0 && baseCurrencyLiquidationThresholds.length == 0),
-            "MR_ABC: LENGTH_MISMATCH"
-        );
-        // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
-        if (baseCurrencyCollateralFactorsLength == 0) {
-            // Loop: Per base currency
-            for (uint256 i; i < assetsInMainRegistry.length;) {
-                // Write: Default variables for collateralFactor and liquidationThreshold
-                collateralFactors[assetsInMainRegistry[i]][baseCurrencyCounter] = DEFAULT_COLLATERAL_FACTOR;
-                liquidationThresholds[assetsInMainRegistry[i]][baseCurrencyCounter] = DEFAULT_LIQUIDATION_THRESHOLD;
-                unchecked {
-                    i++;
-                }
-            }
-            unchecked {
-                ++baseCurrencyCounter;
-            }
-            // Early termination
-            return;
-        }
-        // Loop: Per value of collateral factor and liquidation threshold
-        for (uint256 i; i < baseCurrencyCollateralFactorsLength;) {
-            // Check: Values in the allowed limit
-            require(
-                baseCurrencyCollateralFactors[i] <= MAX_COLLATERAL_FACTOR
-                    && baseCurrencyCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                "MR_ABC: Coll.Fact not in limits"
-            );
-            require(
-                baseCurrencyLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
-                    && baseCurrencyLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                "MR_ABC: Liq.Thres not in limits"
-            );
-
-            collateralFactors[assetsInMainRegistry[i]][baseCurrencyCounter] = baseCurrencyCollateralFactors[i];
-            liquidationThresholds[assetsInMainRegistry[i]][baseCurrencyCounter] = baseCurrencyLiquidationThresholds[i];
-
-            unchecked {
-                i++;
-            }
-        }
 
         unchecked {
             ++baseCurrencyCounter;
@@ -206,8 +149,6 @@ contract MainRegistry is Ownable, RiskModule {
     /**
      * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
      * @param assetAddress The address of the asset
-     * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
      * the number of assets added to the Main Registry,or the list must have length 0.
      * If the list has length zero, the risk variables of the baseCurrency for all assets
@@ -218,21 +159,7 @@ contract MainRegistry is Ownable, RiskModule {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
-    function addAsset(
-        address assetAddress,
-        uint16[] memory assetCollateralFactors,
-        uint16[] memory assetLiquidationThresholds
-    ) external onlyPricingModule {
-        // Check: Valid length of arrays
-        uint256 assetCollateralFactorsLength = assetCollateralFactors.length;
-        require(
-            (
-                assetCollateralFactorsLength == baseCurrencyCounter
-                    && assetCollateralFactorsLength == assetLiquidationThresholds.length
-            ) || (assetCollateralFactorsLength == 0 && assetLiquidationThresholds.length == 0),
-            "MR_AA: LENGTH_MISMATCH"
-        );
-
+    function addAsset(address assetAddress) external onlyPricingModule returns (bool) {
         if (inMainRegistry[assetAddress]) {
             require(assetsUpdatable, "MR_AA: Asset not updatable");
         } else {
@@ -241,40 +168,7 @@ contract MainRegistry is Ownable, RiskModule {
         }
         assetToPricingModule[assetAddress] = msg.sender;
 
-        // Logic Fork: If the list are empty, initate the variables with default collateralFactor and liquidationThreshold
-        if (assetCollateralFactorsLength == 0) {
-            // Loop: Per base currency
-            for (uint256 i; i < baseCurrencyCounter;) {
-                // Write: Default variables for collateralFactor and liquidationThreshold
-                collateralFactors[assetAddress][i] = DEFAULT_COLLATERAL_FACTOR;
-                liquidationThresholds[assetAddress][i] = DEFAULT_LIQUIDATION_THRESHOLD;
-                unchecked {
-                    i++;
-                }
-            }
-            // Early termination
-            return;
-        }
-        // Loop: Per value of collateral factor and liquidation threshold
-        for (uint256 i; i < assetCollateralFactorsLength;) {
-            // Check: Values in the allowed limit
-            require(
-                assetCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && assetCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                "MR_AA: Coll.Fact not in limits"
-            );
-            require(
-                assetLiquidationThresholds[i] <= MAX_LIQUIDATION_THRESHOLD
-                    && assetLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                "MR_AA: Liq.Thres not in limits"
-            );
-
-            collateralFactors[assetAddress][i] = assetCollateralFactors[i];
-            liquidationThresholds[assetAddress][i] = assetLiquidationThresholds[i];
-
-            unchecked {
-                i++;
-            }
-        }
+        return true;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -337,52 +231,6 @@ contract MainRegistry is Ownable, RiskModule {
         }
 
         return whiteList;
-    }
-
-    /* ///////////////////////////////////////////////////////////////
-                    RISK VARIABLES MANAGEMENT
-    /////////////////////////////////////////////////////////////// */
-
-    /**
-     * @notice Change the Risk Variables for one or more assets for one or more baseCurrencies
-     * @param assets The List of addresses of the assets
-     * @param _baseCurrencies The corresponding List of BaseCurrencies
-     * @param newCollateralFactors The corresponding List of new Collateral Factors
-     * @param newLiquidationThresholds The corresponding List of new Liquidation Thresholds
-     * @dev The function loops over all indexes, and changes for each index the Risk Variable of the combination of asset and baseCurrency.
-     * In case multiple Risk Variables for the same assets need to be changed, the address must be repeated in the assets.
-     * @dev Risk variable have 2 decimals precision.
-     */
-    function batchSetRiskVariables(
-        address[] calldata assets,
-        uint256[] calldata _baseCurrencies,
-        uint16[] calldata newCollateralFactors,
-        uint16[] calldata newLiquidationThresholds
-    ) external onlyOwner {
-        uint256 assetsLength = assets.length;
-        require(
-            assetsLength == _baseCurrencies.length && assetsLength == newCollateralFactors.length
-                && assetsLength == newLiquidationThresholds.length,
-            "MR_BSCR: LENGTH_MISMATCH"
-        );
-
-        for (uint256 i; i < assetsLength;) {
-            // Check: Values in the allowed limit
-            require(
-                newCollateralFactors[i] <= MAX_COLLATERAL_FACTOR && newCollateralFactors[i] >= MIN_COLLATERAL_FACTOR,
-                "MR_BSRV: CollFact not in limits"
-            );
-            require(
-                newLiquidationThresholds[i] < MAX_LIQUIDATION_THRESHOLD
-                    && newLiquidationThresholds[i] >= MIN_LIQUIDATION_THRESHOLD,
-                "MR_BSRV: Liq.Thres not in limits"
-            );
-            collateralFactors[assets[i]][_baseCurrencies[i]] = newCollateralFactors[i];
-            liquidationThresholds[assets[i]][_baseCurrencies[i]] = newLiquidationThresholds[i];
-            unchecked {
-                ++i;
-            }
-        }
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -455,7 +303,7 @@ contract MainRegistry is Ownable, RiskModule {
                     + _assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //_assetAmounts can have a variable decimal precision -> bring to 18 decimals
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
-                (tempValueInUsd, tempValueInBaseCurrency) =
+                (tempValueInUsd, tempValueInBaseCurrency,,) =
                     IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 valueInUsd = valueInUsd + tempValueInUsd;
                 valueInBaseCurrency = valueInBaseCurrency + tempValueInBaseCurrency;
@@ -495,7 +343,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    ) public view returns (uint256[] memory valuesPerAsset) {
+    ) public view returns (RiskModule.AssetValueRisk[] memory valuesPerAsset) {
         valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
@@ -515,9 +363,7 @@ contract MainRegistry is Ownable, RiskModule {
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    ) public view returns (uint256[] memory valuesPerAsset) {
-        valuesPerAsset = new uint256[](_assetAddresses.length);
-
+    ) public view returns (RiskModule.AssetValueRisk[] memory) {
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
 
         uint256 assetAddressesLength = _assetAddresses.length;
@@ -530,8 +376,9 @@ contract MainRegistry is Ownable, RiskModule {
 
         int256 rateBaseCurrencyToUsd;
         address assetAddress;
-        uint256 valueInUsd;
-        uint256 valueInBaseCurrency;
+        uint256 tempValueInUsd;
+        uint256 tempValueInBaseCurrency;
+        RiskModule.AssetValueRisk[] memory valuesPerAsset = new RiskModule.AssetValueRisk[](assetAddressesLength);
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
@@ -542,18 +389,19 @@ contract MainRegistry is Ownable, RiskModule {
 
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
-                valuesPerAsset[i] = _assetAmounts[i];
+                valuesPerAsset[i].valueInBaseCurrency = _assetAmounts[i];
             } else {
-                (valueInUsd, valueInBaseCurrency) =
-                    IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
+                (tempValueInUsd, tempValueInBaseCurrency, valuesPerAsset[i].collFactor, valuesPerAsset[i].liqThreshold)
+                = IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 //Check if baseCurrency is USD
                 if (baseCurrency == 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
-                    valuesPerAsset[i] = valueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-                } else if (valueInBaseCurrency > 0) {
+                    valuesPerAsset[i].valueInBaseCurrency =
+                        tempValueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                } else if (tempValueInBaseCurrency > 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
-                    valuesPerAsset[i] =
-                        valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                    valuesPerAsset[i].valueInBaseCurrency =
+                        tempValueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else {
                     //Check if the BaseCurrency-USD rate is already fetched
                     if (rateBaseCurrencyToUsd == 0) {
@@ -562,7 +410,7 @@ contract MainRegistry is Ownable, RiskModule {
                             baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
                         ).latestRoundData();
                     }
-                    valuesPerAsset[i] = valueInUsd.mulDivDown(
+                    valuesPerAsset[i].valueInBaseCurrency = tempValueInUsd.mulDivDown(
                         baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
                         uint256(rateBaseCurrencyToUsd)
                     ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //Bring from internal 18 decimals to the number of decimals of baseCurrency
@@ -599,9 +447,9 @@ contract MainRegistry is Ownable, RiskModule {
             "MR_GCV: LENGTH_MISMATCH"
         );
         uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
-        uint256[] memory valuesPerAsset =
+        RiskModule.AssetValueRisk[] memory valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
-        collateralValue = calculateWeightedCollateralValue(_assetAddresses, valuesPerAsset, baseCurrencyInd);
+        collateralValue = RiskModule.calculateWeightedCollateralValue(_assetAddresses, valuesPerAsset);
     }
 
     /**
@@ -625,8 +473,8 @@ contract MainRegistry is Ownable, RiskModule {
             "MR_GCF: LENGTH_MISMATCH"
         );
         uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
-        uint256[] memory valuesPerAsset =
+        RiskModule.AssetValueRisk[] memory valuesPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
-        liquidationThreshold = calculateWeightedLiquidationThreshold(_assetAddresses, valuesPerAsset, baseCurrencyInd);
+        liquidationThreshold = RiskModule.calculateWeightedLiquidationThreshold(_assetAddresses, valuesPerAsset);
     }
 }

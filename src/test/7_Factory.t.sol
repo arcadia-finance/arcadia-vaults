@@ -254,6 +254,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(owner != unprivilegedAddress_);
         vm.assume(owner != address(0));
         vm.assume(receiver != address(0));
+        vm.assume(unprivilegedAddress_ != address(0));
 
         vm.prank(owner);
         proxyAddr = factory.createVault(0, 0);
@@ -388,9 +389,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
+            })
         );
 
         mainRegistry2 = new MainRegistry(
@@ -424,9 +423,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
+            })
         );
 
         mainRegistry2 = new MainRegistry(
@@ -445,9 +442,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
+            })
         );
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
@@ -479,9 +474,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
+            })
         );
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();

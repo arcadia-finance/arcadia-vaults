@@ -8,22 +8,21 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-contract AbstractPricingModuleForTest is PricingModule {
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_) {}
+contract AbstractPricingModuleExtension is PricingModule {
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
 
-    function setAssetInformation(address assetAddress) public onlyOwner {
-        if (!inPricingModule[assetAddress]) {
-            inPricingModule[assetAddress] = true;
-            assetsInPricingModule.push(assetAddress);
-        }
-        isAssetAddressWhiteListed[assetAddress] = true;
+    function addAsset(address asset) public onlyOwner {
+        inPricingModule[asset] = true;
+        assetsInPricingModule.push(asset);
+
+        isAssetAddressWhiteListed[asset] = true;
     }
 }
 
 contract AbstractPricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
-    AbstractPricingModuleForTest internal abstractPricingModule;
+    AbstractPricingModuleExtension internal abstractPricingModule;
 
     //this is a before
     constructor() DeployArcadiaVaults() {}
@@ -31,27 +30,27 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     //this is a before each
     function setUp() public {
         vm.prank(creatorAddress);
-        abstractPricingModule = new AbstractPricingModuleForTest(
+        abstractPricingModule = new AbstractPricingModuleExtension(
             address(mainRegistry),
             address(oracleHub)
         );
     }
 
-    function testSuccess_setAssetInformation_AssetWhitelistedWhenAddedToPricingModule(address assetAddress) public {
+    function testSuccess_addAsset_AssetWhitelistedWhenAddedToPricingModule(address asset) public {
         // Given: All necessary contracts deployed on setup
         vm.prank(creatorAddress);
-        // When: creatorAddress calls setAssetInformation
-        abstractPricingModule.setAssetInformation(assetAddress);
+        // When: creatorAddress calls addAsset
+        abstractPricingModule.addAsset(asset);
 
         // Then: isAssetAddressWhiteListed should return true
-        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(assetAddress));
+        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(asset));
     }
 
     function testRevert_addToWhiteList_NonOwnerAddsExistingAssetToWhitelist(address unprivilegedAddress_) public {
-        // Given: unprivilegedAddress_ is not creatorAddress, creatorAddress calls setAssetInformation with address(eth)
+        // Given: unprivilegedAddress_ is not creatorAddress, creatorAddress calls addAsset with address(eth)
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.prank(creatorAddress);
-        abstractPricingModule.setAssetInformation(address(eth));
+        abstractPricingModule.addAsset(address(eth));
 
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addToWhiteList
@@ -81,8 +80,8 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_addToWhiteList_OwnerAddsExistingAssetToWhitelist() public {
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress calls setAssetInformation with address(eth)
-        abstractPricingModule.setAssetInformation(address(eth));
+        // Given: creatorAddress calls addAsset with address(eth)
+        abstractPricingModule.addAsset(address(eth));
         // When: creatorAddress calls addToWhiteList with address(eth)
         abstractPricingModule.addToWhiteList(address(eth));
         vm.stopPrank();
@@ -94,12 +93,12 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     function testRevert_removeFromWhiteList_NonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress_)
         public
     {
-        // Given: unprivilegedAddress_ is not creatorAddress and address(this), creatorAddress calls setAssetInformation with address(eth)
+        // Given: unprivilegedAddress_ is not creatorAddress and address(this), creatorAddress calls addAsset with address(eth)
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.assume(unprivilegedAddress_ != address(this));
 
         vm.prank(creatorAddress);
-        abstractPricingModule.setAssetInformation(address(eth));
+        abstractPricingModule.addAsset(address(eth));
 
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls removeFromWhiteList
@@ -129,8 +128,8 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_removeFromWhiteList_OwnerRemovesExistingAssetFromWhitelist() public {
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress calls setAssetInformation
-        abstractPricingModule.setAssetInformation(address(eth));
+        // Given: creatorAddress calls addAsset
+        abstractPricingModule.addAsset(address(eth));
         // When: creatorAddress calls removeFromWhiteList
         abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
@@ -140,11 +139,11 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     }
 
     function testRevert_addToWhiteList_NonOwnerAddsRemovedAssetToWhitelist(address unprivilegedAddress_) public {
-        // Given: unprivilegedAddress_ is not creatorAddress, creatorAddress setAssetInformation and removeFromWhiteList with address(eth)
+        // Given: unprivilegedAddress_ is not creatorAddress, creatorAddress addAsset and removeFromWhiteList with address(eth)
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(creatorAddress);
-        abstractPricingModule.setAssetInformation(address(eth));
+        abstractPricingModule.addAsset(address(eth));
         abstractPricingModule.removeFromWhiteList(address(eth));
         vm.stopPrank();
 
@@ -161,9 +160,9 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     }
 
     function testSuccess_addToWhiteList_OwnerAddsRemovedAssetToWhitelist() public {
-        // Given: creatorAddress calls setAssetInformation and removeFromWhiteList
+        // Given: creatorAddress calls addAsset and removeFromWhiteList
         vm.startPrank(creatorAddress);
-        abstractPricingModule.setAssetInformation(address(eth));
+        abstractPricingModule.addAsset(address(eth));
         abstractPricingModule.removeFromWhiteList(address(eth));
 
         // When: creatorAddress calls addToWhiteList
@@ -173,4 +172,10 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         // Then: isAssetAddressWhiteListed for address(eth) should return true
         assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
+
+    //function testSuccess_batchSetRiskVariables todo
+    // testRevert_batchSetRiskVariables_NonOwner
+    // testRevert_batchSetRiskVariables_NonEqualInputLists
+    // testRevert_batchSetRiskVariables_InvalidValue
+    // testSuccess_batchSetRiskVariables
 }
