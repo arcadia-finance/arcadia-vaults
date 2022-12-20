@@ -53,7 +53,11 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_NonOwnerAddsAsset(address unprivilegedAddress_) public {
+    /*///////////////////////////////////////////////////////////////
+                        ASSET MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    function testRevert_addAsset_NonOwner(address unprivilegedAddress_) public {
         // Given: unprivilegedAddress_ is not creatorAddress
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
@@ -67,7 +71,21 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
+    function testRevert_addAsset_OverwriteExistingAsset() public {
+        // Given:
+        vm.startPrank(creatorAddress);
+        // When: creatorAddress addAsset twice
+        floorERC721PricingModule.addAsset(
+            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput
+        );
+        vm.expectRevert("PM721_AA: already added");
+        floorERC721PricingModule.addAsset(
+            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput
+        );
+        vm.stopPrank();
+    }
+
+    function testSuccess_addAsset_EmptyListRiskVariables() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with empty list credit ratings
@@ -78,9 +96,18 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
 
         // Then: inPricingModule for address(bayc) should return true
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
+        assertEq(floorERC721PricingModule.assetsInPricingModule(0), address(bayc));
+        (uint256 idRangeStart, uint256 idRangeEnd, address[] memory oracles) =
+            floorERC721PricingModule.getAssetInformation(address(bayc));
+        assertEq(idRangeStart, 0);
+        assertEq(idRangeEnd, type(uint256).max);
+        for (uint256 i; i < oracleWbaycToEthEthToUsd.length; i++) {
+            assertEq(oracles[i], oracleWbaycToEthEthToUsd[i]);
+        }
+        assertTrue(floorERC721PricingModule.isAssetAddressWhiteListed(address(bayc)));
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
+    function testSuccess_addAsset_NonFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
@@ -99,7 +126,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
+    function testSuccess_addAsset_FullListRiskVariables() public {
         // Given: collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with full list credit ratings
@@ -110,19 +137,38 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
-        // Given:
-        vm.startPrank(creatorAddress);
-        // When: creatorAddress addAsset twice
-        floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput
-        );
-        vm.expectRevert("PM721_AA: already added");
-        floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput
-        );
+    function testRevert_setOracles_NonOwner(address unprivilegedAddress_, address asset) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Ownable: caller is not the owner");
+        floorERC721PricingModule.setOracles(asset, new address[](0));
         vm.stopPrank();
     }
+
+    function testRevert_setOracles_AssetUnknown(address asset) public {
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM721_SO: asset unknown");
+        floorERC721PricingModule.setOracles(asset, new address[](0));
+        vm.stopPrank();
+    }
+
+    function testSuccess_setOracles() public {
+        stdstore.target(address(floorERC721PricingModule)).sig(floorERC721PricingModule.inPricingModule.selector)
+            .with_key(address(bayc)).checked_write(true);
+
+        vm.prank(creatorAddress);
+        floorERC721PricingModule.setOracles(address(bayc), oracleWbaycToEthEthToUsd);
+
+        (,, address[] memory oracles) = floorERC721PricingModule.getAssetInformation(address(bayc));
+        for (uint256 i; i < oracleWbaycToEthEthToUsd.length; i++) {
+            assertEq(oracles[i], oracleWbaycToEthEthToUsd[i]);
+        }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     function testSuccess_isWhiteListed_Positive() public {
         // Given: All necessary contracts deployed on setup
@@ -156,6 +202,10 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         // Then: isWhiteListed for address(bayc) should return false
         assertTrue(!floorERC721PricingModule.isWhiteListed(address(bayc), id));
     }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd() public {
         vm.startPrank(creatorAddress);
