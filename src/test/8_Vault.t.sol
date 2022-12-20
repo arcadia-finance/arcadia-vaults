@@ -23,7 +23,7 @@ contract VaultTestExtension is Vault {
     }
 }
 
-contract vaultTests is DeployArcadiaVaults {
+abstract contract vaultTests is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     VaultTestExtension public vault_;
@@ -67,26 +67,27 @@ contract vaultTests is DeployArcadiaVaults {
     }
 
     //this is a before each
-    function setUp() public {
+    function setUp() virtual public {
         vm.prank(vaultOwner);
         vault_ = new VaultTestExtension();
 
+        vm.prank(vaultOwner);
+        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+    }
+
+    function deployFactory() internal {
         vm.startPrank(creatorAddress);
         factory.setNewVaultInfo(address(mainRegistry), address(vault_), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
         vm.stopPrank();
 
-        uint256 slot = stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault_)).find();
-        bytes32 loc = bytes32(slot);
-        bytes32 mockedCurrentTokenId = bytes32(abi.encode(true));
-        vm.store(address(factory), loc, mockedCurrentTokenId);
+        stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault_)).checked_write(true);
+    }
 
+    function openMarginAccount() internal {
         vm.startPrank(vaultOwner);
-        vault_.initialize(vaultOwner, address(mainRegistry), 1);
-
         vault_.openTrustedMarginAccount(address(pool));
         dai.approve(address(vault_), type(uint256).max);
-
         bayc.setApprovalForAll(address(vault_), true);
         mayc.setApprovalForAll(address(vault_), true);
         dickButs.setApprovalForAll(address(vault_), true);
@@ -99,17 +100,166 @@ contract vaultTests is DeployArcadiaVaults {
     }
 
     /* ///////////////////////////////////////////////////////////////
-                        VAULT MANAGEMENT
+                    HELPER FUNCTIONS
     /////////////////////////////////////////////////////////////// */
 
-    function testRevert_initialize_AlreadyInitialized() public {
+    function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
+        depositERC20InVault(eth, amountEth, vaultOwner);
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_I: Already initialized!");
-        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+        uint256 remainingCredit = vault_.getFreeMargin();
+        pool.borrow(uint128(remainingCredit), address(vault_), vaultOwner);
+        vm.stopPrank();
+
+        return remainingCredit;
+    }
+
+    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](1);
+        assetAddresses[0] = address(token);
+
+        assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount;
+
+        assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.prank(tokenCreatorAddress);
+        token.mint(sender, amount);
+
+        vm.startPrank(sender);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
 
+    function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount * 10 ** Constants.ethDecimals;
+
+        uint256[] memory assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.startPrank(sender);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+
+        assetInfo = Assets({
+            assetAddresses: assetAddresses,
+            assetIds: assetIds,
+            assetAmounts: assetAmounts,
+            assetTypes: assetTypes
+        });
+    }
+
+    function depositLinkInVault(uint8 amount, address sender)
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount * 10 ** Constants.linkDecimals;
+
+        assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.startPrank(sender);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+    function depositBaycInVault(uint128[] memory tokenIds, address sender)
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](tokenIds.length);
+        assetIds = new uint256[](tokenIds.length);
+        assetAmounts = new uint256[](tokenIds.length);
+        assetTypes = new uint256[](tokenIds.length);
+
+        uint256 tokenIdToWorkWith;
+        for (uint256 i; i < tokenIds.length; i++) {
+            tokenIdToWorkWith = tokenIds[i];
+            while (bayc.ownerOf(tokenIdToWorkWith) != address(0)) {
+                tokenIdToWorkWith++;
+            }
+
+            bayc.mint(sender, tokenIdToWorkWith);
+            assetAddresses[i] = address(bayc);
+            assetIds[i] = tokenIdToWorkWith;
+            assetAmounts[i] = 1;
+            assetTypes[i] = 1;
+        }
+
+        vm.startPrank(sender);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+}
+
+/* ///////////////////////////////////////////////////////////////
+                    VAULT MANAGEMENT
+/////////////////////////////////////////////////////////////// */
+contract VaultManagementTest is vaultTests {
+    function setUp() public override {
+        vault_ = new VaultTestExtension();
+    }
+
+    function testRevert_initialize_AlreadyInitialized() public {
+        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+
+        vm.expectRevert("V_I: Already initialized!");
+        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+    }
+
+    function testRevert_initialize_InvalidVersion() public {
+        vm.expectRevert("V_I: Invalid vault version");
+        vault_.initialize(vaultOwner, address(mainRegistry), 0);
+    }
+
+    function testSuccess_initialize(address owner_, address registry_, uint16 vaultVersion_) public {
+        vm.assume(vaultVersion_ > 0);
+
+        vault_.initialize(owner_, registry_, vaultVersion_);
+
+        assertEq(vault_.owner(), owner_);
+        assertEq(vault_.registry(), registry_);
+        assertEq(vault_.vaultVersion(), vaultVersion_);
+    }
+
     function testSuccess_upgradeVault(address newImplementation, uint16 newVersion) public {
+        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+
         vm.startPrank(address(factory));
         vault_.upgradeVault(newImplementation, newVersion);
         vm.stopPrank();
@@ -124,15 +274,22 @@ contract vaultTests is DeployArcadiaVaults {
     {
         vm.assume(nonOwner != address(factory));
 
+        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+
         vm.startPrank(nonOwner);
         vm.expectRevert("VL: You are not the factory");
         vault_.upgradeVault(newImplementation, newVersion);
         vm.stopPrank();
     }
+}
 
-    /* ///////////////////////////////////////////////////////////////
-                    OWNERSHIP MANAGEMENT
-    /////////////////////////////////////////////////////////////// */
+/* ///////////////////////////////////////////////////////////////
+                OWNERSHIP MANAGEMENT
+/////////////////////////////////////////////////////////////// */
+contract OwnershipManagementTest is vaultTests {
+    function setUp() public override {
+        super.setUp();
+    }
 
     function testRevert_transferOwnership_NonOwner(address sender, address to) public {
         vm.assume(sender != address(factory));
@@ -157,21 +314,25 @@ contract vaultTests is DeployArcadiaVaults {
 
         assertEq(to, vault_.owner());
     }
+}
 
-    /* ///////////////////////////////////////////////////////////////
-                    BASE CURRENCY LOGIC
-    /////////////////////////////////////////////////////////////// */
+/* ///////////////////////////////////////////////////////////////
+                BASE CURRENCY LOGIC
+/////////////////////////////////////////////////////////////// */
+contract BaseCurrencyLogicTest is vaultTests {
+    using stdStorage for StdStorage;
+
+    function setUp() public override {
+        super.setUp();
+        deployFactory();
+        openMarginAccount();
+    }
 
     function testSuccess_setBaseCurrency(address authorised) public {
-        uint256 slot = stdstore.target(address(vault_)).sig(vault_.allowed.selector).with_key(authorised).find();
-        bytes32 loc = bytes32(slot);
-        bool allowed = true;
-        bytes32 value = bytes32(abi.encode(allowed));
-        vm.store(address(vault_), loc, value);
+        stdstore.target(address(vault_)).sig(vault_.allowed.selector).with_key(authorised).checked_write(true);
 
-        vm.startPrank(authorised);
+        vm.prank(authorised);
         vault_.setBaseCurrency(address(eth));
-        vm.stopPrank();
 
         (, address baseCurrency) = vault_.vault();
         assertEq(baseCurrency, address(eth));
@@ -190,25 +351,13 @@ contract vaultTests is DeployArcadiaVaults {
         assertEq(baseCurrency, address(dai));
     }
 
-    function testRevert_setBaseCurrency_WithDebt(address authorised) public {
-        uint256 slot = stdstore.target(address(vault_)).sig(vault_.allowed.selector).with_key(authorised).find();
-        bytes32 loc = bytes32(slot);
-        bool allowed = true;
-        bytes32 value = bytes32(abi.encode(allowed));
-        vm.store(address(vault_), loc, value);
+    function testRevert_setBaseCurrency_WithUsedMargin(address authorised) public {
+        stdstore.target(address(vault_)).sig(vault_.allowed.selector).with_key(authorised).checked_write(true);
 
-        slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
-        loc = bytes32(slot);
         bytes32 addDebt = bytes32(abi.encode(1));
-        vm.store(address(debt), loc, addDebt);
-
-        slot = stdstore.target(address(debt)).sig(debt.realisedDebt.selector).find();
-        loc = bytes32(slot);
-        vm.store(address(debt), loc, addDebt);
-
-        slot = stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).find();
-        loc = bytes32(slot);
-        vm.store(address(debt), loc, addDebt);
+        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(addDebt);
+        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(addDebt);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(addDebt);
 
         vm.startPrank(authorised);
         vm.expectRevert("VL_SBC: Can't change baseCurrency when Used Margin > 0");
@@ -219,15 +368,27 @@ contract vaultTests is DeployArcadiaVaults {
         assertEq(baseCurrency, address(dai));
     }
 
-    /* ///////////////////////////////////////////////////////////////
-                MARGIN ACCOUNT SETTINGS
-    /////////////////////////////////////////////////////////////// */
+    function testRevert_setBaseCurrency_BaseCurrencyNotFound(address authorised, address baseCurrency_) public {
+        vm.assume(baseCurrency_ != address(0));
+        vm.assume(baseCurrency_ != address(eth));
+        vm.assume(baseCurrency_ != address(dai));
 
-    function testRevert_openTrustedMarginAccount_AlreadySet(address trustedProtocol) public {
-        vm.startPrank(vaultOwner);
-        vm.expectRevert("V_OMA: ALREADY SET");
-        vault_.openTrustedMarginAccount(trustedProtocol);
+        stdstore.target(address(vault_)).sig(vault_.allowed.selector).with_key(authorised).checked_write(true);
+
+        vm.startPrank(authorised);
+        vm.expectRevert("VL_SBC: baseCurrency not found");
+        vault_.setBaseCurrency(baseCurrency_);
         vm.stopPrank();
+    }
+}
+
+/* ///////////////////////////////////////////////////////////////
+            MARGIN ACCOUNT SETTINGS
+/////////////////////////////////////////////////////////////// */
+contract MarginAccountSettingsTest is vaultTests {
+    function setUp() public override {
+        super.setUp();
+        deployFactory();
     }
 
     function testRevert_openTrustedMarginAccount_NonOwner(address nonOwner, address trustedProtocol) public {
@@ -239,11 +400,14 @@ contract vaultTests is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_closeTrustedMarginAccount_CloseNonSetTrustedMarginAccount() public {
-        vm.startPrank(vaultOwner);
-        vault_.closeTrustedMarginAccount();
+    function testRevert_openTrustedMarginAccount_AlreadySet(address trustedProtocol) public {
+        vm.prank(vaultOwner);
+        vault_.openTrustedMarginAccount(address(pool));
 
-        assertEq(vault_.isTrustedProtocolSet(), false);
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_OMA: ALREADY SET");
+        vault_.openTrustedMarginAccount(trustedProtocol);
+        vm.stopPrank();
     }
 
     function testRevert_closeTrustedMarginAccount_NonOwner(address nonOwner) public {
@@ -254,11 +418,24 @@ contract vaultTests is DeployArcadiaVaults {
         vault_.closeTrustedMarginAccount();
     }
 
-    /* ///////////////////////////////////////////////////////////////
-                        MARGIN REQUIREMENTS
-    /////////////////////////////////////////////////////////////// */
+    function testRevert_closeTrustedMarginAccount_NonSetTrustedMarginAccount() public {
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_CMA: NOT SET");
+        vault_.closeTrustedMarginAccount();
+        vm.stopPrank();
+    }
+}
 
-    //ToDo: increaseMarginPosition, decreaseMarginPosition, getCollateralValue
+/* ///////////////////////////////////////////////////////////////
+                    MARGIN REQUIREMENTS
+/////////////////////////////////////////////////////////////// */
+//ToDo: increaseMarginPosition, decreaseMarginPosition, getCollateralValue
+contract MarginRequirementsTest is vaultTests {
+    function setUp() public override {
+        super.setUp();
+        deployFactory();
+        openMarginAccount();
+    }
 
     function testSuccess_getVaultValue(uint8 depositAmount) public {
         depositEthInVault(depositAmount, vaultOwner);
@@ -381,10 +558,19 @@ contract vaultTests is DeployArcadiaVaults {
         //always equal to the unchecked operations
         assertEq(remainingCreditLocal, remainingCreditFetched);
     }
+}
 
-    /* ///////////////////////////////////////////////////////////////
-                        LIQUIDATION LOGIC
-    /////////////////////////////////////////////////////////////// */
+/* ///////////////////////////////////////////////////////////////
+                    LIQUIDATION LOGIC
+/////////////////////////////////////////////////////////////// */
+contract LiquidationLogicTest is vaultTests {
+    using stdStorage for StdStorage;
+
+    function setUp() public override {
+        super.setUp();
+        deployFactory();
+        openMarginAccount();
+    }
 
     function testSuccess_liquidate_NewOwnerIsLiquidator(address liquidationKeeper) public {
         vm.assume(
@@ -425,10 +611,17 @@ contract vaultTests is DeployArcadiaVaults {
 
         assertEq(vault_.owner(), vaultOwner);
     }
+}
 
-    /* ///////////////////////////////////////////////////////////////
-                ASSET DEPOSIT/WITHDRAWN LOGIC
-    /////////////////////////////////////////////////////////////// */
+/* ///////////////////////////////////////////////////////////////
+            ASSET DEPOSIT/WITHDRAWN LOGIC
+/////////////////////////////////////////////////////////////// */
+contract AssetManagementTest is vaultTests {
+    function setUp() public override {
+        super.setUp();
+        deployFactory();
+        openMarginAccount();
+    }
 
     //input as uint8 to prevent too long lists as fuzz input
     function testRevert_deposit_LengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen, uint8 typesLen)
@@ -881,138 +1074,21 @@ contract vaultTests is DeployArcadiaVaults {
         vm.expectRevert("VL: You are not the owner");
         vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
     }
+}
 
-    /* ///////////////////////////////////////////////////////////////
-                    HELPER FUNCTIONS
-    /////////////////////////////////////////////////////////////// */
+/* ///////////////////////////////////////////////////////////////
+                DEPRECIATED TESTS
+/////////////////////////////////////////////////////////////// */
+//ToDo: All depreciated tests should be moved to Arcadia Lending, to double check that everything is covered there
+contract DepreciatedTest is vaultTests {
+    using stdStorage for StdStorage;
 
-    function depositEthAndTakeMaxCredit(uint128 amountEth) public returns (uint256) {
-        depositERC20InVault(eth, amountEth, vaultOwner);
-        vm.startPrank(vaultOwner);
-        uint256 remainingCredit = vault_.getFreeMargin();
-        pool.borrow(uint128(remainingCredit), address(vault_), vaultOwner);
-        vm.stopPrank();
-
-        return remainingCredit;
+    function setUp() public override {
+        super.setUp();
+        deployFactory();
+        openMarginAccount();
     }
 
-    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](1);
-        assetAddresses[0] = address(token);
-
-        assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount;
-
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
-        vm.prank(tokenCreatorAddress);
-        token.mint(sender, amount);
-
-        vm.startPrank(sender);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
-    }
-
-    function depositEthInVault(uint8 amount, address sender) public returns (Assets memory assetInfo) {
-        address[] memory assetAddresses = new address[](1);
-        assetAddresses[0] = address(eth);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount * 10 ** Constants.ethDecimals;
-
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
-        vm.startPrank(sender);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
-
-        assetInfo = Assets({
-            assetAddresses: assetAddresses,
-            assetIds: assetIds,
-            assetAmounts: assetAmounts,
-            assetTypes: assetTypes
-        });
-    }
-
-    function depositLinkInVault(uint8 amount, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](1);
-        assetAddresses[0] = address(link);
-
-        assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount * 10 ** Constants.linkDecimals;
-
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
-        vm.startPrank(sender);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
-    }
-
-    function depositBaycInVault(uint128[] memory tokenIds, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](tokenIds.length);
-        assetIds = new uint256[](tokenIds.length);
-        assetAmounts = new uint256[](tokenIds.length);
-        assetTypes = new uint256[](tokenIds.length);
-
-        uint256 tokenIdToWorkWith;
-        for (uint256 i; i < tokenIds.length; i++) {
-            tokenIdToWorkWith = tokenIds[i];
-            while (bayc.ownerOf(tokenIdToWorkWith) != address(0)) {
-                tokenIdToWorkWith++;
-            }
-
-            bayc.mint(sender, tokenIdToWorkWith);
-            assetAddresses[i] = address(bayc);
-            assetIds[i] = tokenIdToWorkWith;
-            assetAmounts[i] = 1;
-            assetTypes[i] = 1;
-        }
-
-        vm.startPrank(sender);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
-    }
-
-    /* ///////////////////////////////////////////////////////////////
-                    DEPRECIATED TESTS
-    /////////////////////////////////////////////////////////////// */
-    //ToDo: All depreciated tests should be moved to Arcadia Lending, to double check that everything is covered there
     struct debtInfo {
         uint16 collFactor_; //factor 100
         uint8 liqThres; //factor 100
