@@ -69,7 +69,6 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-
     function testRevert_addAsset_OverwriteExistingAsset() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
@@ -158,9 +157,8 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
     }
 
     function testSuccess_setOracles() public {
-        stdstore.target(address(standardERC20PricingModule)).sig(standardERC20PricingModule.inPricingModule.selector).with_key(
-            address(eth)
-        ).checked_write(true);
+        stdstore.target(address(standardERC20PricingModule)).sig(standardERC20PricingModule.inPricingModule.selector)
+            .with_key(address(eth)).checked_write(true);
 
         vm.prank(creatorAddress);
         standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr);

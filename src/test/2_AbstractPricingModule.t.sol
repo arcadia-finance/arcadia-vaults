@@ -108,7 +108,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     }
 
     function testSuccess_addToWhiteList_NonWhiteListedAsset(address asset) public {
-        // Given: asset is in the pricing module 
+        // Given: asset is in the pricing module
         stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.inPricingModule.selector).with_key(
             asset
         ).checked_write(true);
@@ -125,15 +125,14 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     }
 
     function testSuccess_addToWhiteList_WhiteListedAsset(address asset) public {
-        // Given: asset is in the pricing module 
+        // Given: asset is in the pricing module
         stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.inPricingModule.selector).with_key(
             asset
         ).checked_write(true);
 
         // And: asset is white listed
-        stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.isAssetAddressWhiteListed.selector).with_key(
-            asset
-        ).checked_write(true);
+        stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.isAssetAddressWhiteListed.selector)
+            .with_key(asset).checked_write(true);
 
         // When: creatorAddress adds asset to the white list
         vm.prank(creatorAddress);
@@ -167,7 +166,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     }
 
     function testSuccess_removeFromWhiteList_NonWhiteListedAsset(address asset) public {
-        // Given: asset is in the pricing module 
+        // Given: asset is in the pricing module
         stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.inPricingModule.selector).with_key(
             asset
         ).checked_write(true);
@@ -184,15 +183,14 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     }
 
     function testSuccess_removeFromWhiteList_WhiteListedAsset(address asset) public {
-        // Given: asset is in the pricing module 
+        // Given: asset is in the pricing module
         stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.inPricingModule.selector).with_key(
             asset
         ).checked_write(true);
 
         // And: asset is white listed
-        stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.isAssetAddressWhiteListed.selector).with_key(
-            asset
-        ).checked_write(true);
+        stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.isAssetAddressWhiteListed.selector)
+            .with_key(asset).checked_write(true);
 
         // When: creatorAddress removes asset from the white list
         vm.prank(creatorAddress);
@@ -206,40 +204,55 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
                     RISK VARIABLES MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
-    function testSuccess_getRiskVariables_RiskVariablesAreSet(address asset, uint256 baseCurrency, uint16 collateralFactor, uint16 liquidationThreshold) public {
-        uint256 slot = stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.assetRiskVars.selector).with_key(
-            asset).with_key(baseCurrency
-        ).find();
+    function testSuccess_getRiskVariables_RiskVariablesAreSet(
+        address asset,
+        uint256 baseCurrency,
+        uint16 collateralFactor,
+        uint16 liquidationThreshold
+    ) public {
+        uint256 slot = stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.assetRiskVars.selector)
+            .with_key(asset).with_key(baseCurrency).find();
         bytes32 loc = bytes32(slot);
         bytes32 value = bytes32(abi.encodePacked(liquidationThreshold, collateralFactor));
         value = value >> 224;
         vm.store(address(abstractPricingModule), loc, value);
 
-        (uint16 actualCollateralFactor, uint16 actualLiquidationThreshold) = abstractPricingModule.getRiskVariables(asset, baseCurrency);
+        (uint16 actualCollateralFactor, uint16 actualLiquidationThreshold) =
+            abstractPricingModule.getRiskVariables(asset, baseCurrency);
 
         assertEq(actualCollateralFactor, collateralFactor);
         assertEq(actualLiquidationThreshold, liquidationThreshold);
     }
 
     function testSuccess_getRiskVariables_RiskVariablesAreNotSet(address asset, uint256 baseCurrency) public {
-        (uint16 actualCollateralFactor, uint16 actualLiquidationThreshold) = abstractPricingModule.getRiskVariables(asset, baseCurrency);
+        (uint16 actualCollateralFactor, uint16 actualLiquidationThreshold) =
+            abstractPricingModule.getRiskVariables(asset, baseCurrency);
 
         assertEq(actualCollateralFactor, 0);
         assertEq(actualLiquidationThreshold, 0);
     }
 
-    function testRevert_setRiskVariables_CollateralFactorOutOfLimits(address asset, uint256 baseCurrency, PricingModule.RiskVars memory riskVars_) public {
+    function testRevert_setRiskVariables_CollateralFactorOutOfLimits(
+        address asset,
+        uint256 baseCurrency,
+        PricingModule.RiskVars memory riskVars_
+    ) public {
         vm.assume(riskVars_.collateralFactor > RiskConstants.MAX_COLLATERAL_FACTOR);
 
         vm.expectRevert("APM_SRV: Coll.Fact not in limits");
         abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
 
-        (uint16 collateralFactor, uint16 liquidationThreshold) = abstractPricingModule.getRiskVariables(asset, baseCurrency);
+        (uint16 collateralFactor, uint16 liquidationThreshold) =
+            abstractPricingModule.getRiskVariables(asset, baseCurrency);
         assertEq(collateralFactor, 0);
         assertEq(liquidationThreshold, 0);
     }
 
-    function testRevert_setRiskVariables_LiquidationTreshholdOutOfLimits(address asset, uint256 baseCurrency, PricingModule.RiskVars memory riskVars_) public {
+    function testRevert_setRiskVariables_LiquidationTreshholdOutOfLimits(
+        address asset,
+        uint256 baseCurrency,
+        PricingModule.RiskVars memory riskVars_
+    ) public {
         vm.assume(riskVars_.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
 
         vm.assume(
@@ -250,12 +263,15 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         vm.expectRevert("APM_SRV: Liq.Thres not in limits");
         abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
 
-        (uint16 collateralFactor, uint16 liquidationThreshold) = abstractPricingModule.getRiskVariables(asset, baseCurrency);
+        (uint16 collateralFactor, uint16 liquidationThreshold) =
+            abstractPricingModule.getRiskVariables(asset, baseCurrency);
         assertEq(collateralFactor, 0);
         assertEq(liquidationThreshold, 0);
     }
 
-    function testSuccess_setRiskVariables(address asset, uint256 baseCurrency, PricingModule.RiskVars memory riskVars_) public {
+    function testSuccess_setRiskVariables(address asset, uint256 baseCurrency, PricingModule.RiskVars memory riskVars_)
+        public
+    {
         vm.assume(riskVars_.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
 
         vm.assume(
@@ -265,12 +281,16 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
 
         abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
 
-        (uint16 collateralFactor, uint16 liquidationThreshold) = abstractPricingModule.getRiskVariables(asset, baseCurrency);
+        (uint16 collateralFactor, uint16 liquidationThreshold) =
+            abstractPricingModule.getRiskVariables(asset, baseCurrency);
         assertEq(collateralFactor, riskVars_.collateralFactor);
         assertEq(liquidationThreshold, riskVars_.liquidationThreshold);
     }
 
-    function testRevert_setBatchRiskVariables_NonRiskManager(PricingModule.RiskVarInput[] memory riskVarInputs, address unprivilegedAddress_) public {
+    function testRevert_setBatchRiskVariables_NonRiskManager(
+        PricingModule.RiskVarInput[] memory riskVarInputs,
+        address unprivilegedAddress_
+    ) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
@@ -279,11 +299,16 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_setBatchRiskVariables_BaseCurrencyNotInLimits(PricingModule.RiskVarInput[] memory riskVarInputs, uint256 baseCurrencyCounter) public {
+    function testRevert_setBatchRiskVariables_BaseCurrencyNotInLimits(
+        PricingModule.RiskVarInput[] memory riskVarInputs,
+        uint256 baseCurrencyCounter
+    ) public {
         vm.assume(riskVarInputs.length > 0);
         vm.assume(riskVarInputs[0].baseCurrency >= baseCurrencyCounter);
 
-        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(baseCurrencyCounter);
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(
+            baseCurrencyCounter
+        );
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("APM_SBRV: BaseCurrency not in limits");
@@ -293,7 +318,9 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_setBatchRiskVariables(PricingModule.RiskVarInput[2] memory riskVarInputs) public {
         vm.assume(riskVarInputs[0].baseCurrency != riskVarInputs[1].baseCurrency);
-        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(type(uint256).max);
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(
+            type(uint256).max
+        );
 
         for (uint256 i; i < riskVarInputs_.length; i++) {
             riskVarInputs_.push(riskVarInputs[i]);
@@ -308,17 +335,24 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         abstractPricingModule.setBatchRiskVariables(riskVarInputs_);
 
         for (uint256 i; i < riskVarInputs_.length; i++) {
-            (uint16 collateralFactor, uint16 liquidationThreshold) = abstractPricingModule.getRiskVariables(riskVarInputs_[i].asset, riskVarInputs_[i].baseCurrency);
+            (uint16 collateralFactor, uint16 liquidationThreshold) =
+                abstractPricingModule.getRiskVariables(riskVarInputs_[i].asset, riskVarInputs_[i].baseCurrency);
             assertEq(collateralFactor, riskVarInputs_[i].collateralFactor);
             assertEq(liquidationThreshold, riskVarInputs_[i].liquidationThreshold);
         }
     }
 
-    function testRevert_setRiskVariablesForAsset_BaseCurrencyNotInLimits(address asset, PricingModule.RiskVarInput[] memory riskVarInputs, uint256 baseCurrencyCounter) public {
+    function testRevert_setRiskVariablesForAsset_BaseCurrencyNotInLimits(
+        address asset,
+        PricingModule.RiskVarInput[] memory riskVarInputs,
+        uint256 baseCurrencyCounter
+    ) public {
         vm.assume(riskVarInputs.length > 0);
         vm.assume(riskVarInputs[0].baseCurrency >= baseCurrencyCounter);
 
-        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(baseCurrencyCounter);
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(
+            baseCurrencyCounter
+        );
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("APM_SRVFA: BaseCurrency not in limits");
@@ -326,10 +360,14 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_setRiskVariablesForAsset(address asset, PricingModule.RiskVarInput[2] memory riskVarInputs) public {
+    function testSuccess_setRiskVariablesForAsset(address asset, PricingModule.RiskVarInput[2] memory riskVarInputs)
+        public
+    {
         vm.assume(riskVarInputs[0].baseCurrency != riskVarInputs[1].baseCurrency);
 
-        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(type(uint256).max);
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(
+            type(uint256).max
+        );
 
         for (uint256 i; i < riskVarInputs.length; i++) {
             riskVarInputs_.push(riskVarInputs[i]);
@@ -344,7 +382,8 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         abstractPricingModule.setRiskVariablesForAsset(asset, riskVarInputs_);
 
         for (uint256 i; i < riskVarInputs.length; i++) {
-            (uint16 collateralFactor, uint16 liquidationThreshold) = abstractPricingModule.getRiskVariables(asset, riskVarInputs[i].baseCurrency);
+            (uint16 collateralFactor, uint16 liquidationThreshold) =
+                abstractPricingModule.getRiskVariables(asset, riskVarInputs[i].baseCurrency);
             assertEq(collateralFactor, riskVarInputs[i].collateralFactor);
             assertEq(liquidationThreshold, riskVarInputs[i].liquidationThreshold);
         }
