@@ -96,7 +96,8 @@ contract UniswapV2PricingModule is PricingModule {
 
         isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(asset), "PMUV2_AA: Unable to add in MR");
+        //Will revert in MainRegistry if asset can't be added
+        IMainRegistry(mainRegistry).addAsset(asset);
     }
 
     /*///////////////////////////////////////////////////////////////

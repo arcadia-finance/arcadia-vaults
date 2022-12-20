@@ -118,6 +118,7 @@ contract DeploymentTest is UniswapV2PricingModuleTest {
         assertEq(uniswapV2PricingModule.mainRegistry(), address(mainRegistry));
         assertEq(uniswapV2PricingModule.oracleHub(), address(oracleHub));
         assertEq(uniswapV2PricingModule.uniswapV2Factory(), address(uniswapV2Factory));
+        assertEq(uniswapV2PricingModule.erc20PricingModule(), address(standardERC20PricingModule));
     }
 }
 
@@ -226,6 +227,18 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         vm.stopPrank();
     }
 
+    function testRevert_addAsset_OverwriteExistingAsset() public {
+        //Given: asset is added to pricing module
+        vm.prank(creatorAddress);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
+        assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
+
+        //When: creator adds asset again
+        vm.prank(creatorAddress);
+        vm.expectRevert("PMUV2_AA: already added");
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
+    }
+
     function testSuccess_addAsset_EmptyListCreditRatings() public {
         //Given: credit rating list is empty
 
@@ -235,6 +248,11 @@ contract AssetManagement is UniswapV2PricingModuleTest {
 
         //Then: Asset is added to the Pricing Module
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
+        assertEq(uniswapV2PricingModule.assetsInPricingModule(0), address(pairSnxEth));
+        (address token0, address token1) = uniswapV2PricingModule.assetToInformation(address(pairSnxEth));
+        assertEq(token0, address(snx));
+        assertEq(token1, address(eth));
+        assertTrue(uniswapV2PricingModule.isAssetAddressWhiteListed(address(pairSnxEth)));
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
@@ -263,18 +281,6 @@ contract AssetManagement is UniswapV2PricingModuleTest {
 
         //Then: Asset is added to the Pricing Module
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
-    }
-
-    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
-        //Given: asset is added to pricing module
-        vm.prank(creatorAddress);
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
-        assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
-
-        //When: creator adds asset again
-        vm.prank(creatorAddress);
-        vm.expectRevert("PMUV2_AA: already added");
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
     }
 }
 
