@@ -61,18 +61,18 @@ contract MainRegistry is Ownable {
     /**
      * @notice The Main Registry must always be initialised with the BaseCurrency USD
      * @dev Since the BaseCurrency USD has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
-     * @param _baseCurrencyInformation A Struct with information about the BaseCurrency USD
+     * @param baseCurrencyInformation A Struct with information about the BaseCurrency USD
      * - baseCurrencyToUsdOracleUnit: Since there is no price oracle for usd to USD, this is 0 by default for USD
      * - baseCurrencyUnit: Since there is no native token for USD, this is 0 by default for USD
      * - assetAddress: Since there is no native token for usd, this is 0 address by default for USD
      * - baseCurrencyToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      */
-    constructor(BaseCurrencyInformation memory _baseCurrencyInformation) {
+    constructor(BaseCurrencyInformation memory baseCurrencyInformation) {
         //Main registry must be initialised with usd
-        baseCurrencyToInformation[baseCurrencyCounter] = _baseCurrencyInformation;
-        assetToBaseCurrency[_baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
-        baseCurrencies.push(_baseCurrencyInformation.assetAddress);
+        baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
+        assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
+        baseCurrencies.push(baseCurrencyInformation.assetAddress);
         unchecked {
             ++baseCurrencyCounter;
         }

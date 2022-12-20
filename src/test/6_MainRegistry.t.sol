@@ -57,11 +57,14 @@ contract DeploymentTest is MainRegistryTest {
         // Given: All necessary contracts deployed on setup
         // When:
         // Then: baseCurrencyLabel should return "USD"
-        (,,,, string memory baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
+        (,, address assetaddress,, string memory baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
+        assertEq(assetaddress, address(0));
         assertTrue(StringHelpers.compareStrings("USD", baseCurrencyLabel));
+        assertEq(mainRegistry.assetToBaseCurrency(address(0)), 0);
+        assertEq(mainRegistry.baseCurrencies(0), address(0));
     }
 
-    function testSuccess_deployment_BaseCurrencyCounterIsZero() public {
+    function testSuccess_deployment_BaseCurrencyCounterIsOne() public {
         // Given: All necessary contracts deployed on setup
         // When:
         // Then: baseCurrencyCounter should return 1
@@ -302,35 +305,13 @@ contract AssetManagementTest is MainRegistryTest {
     }
 
     function testSuccess_addAsset_EmptyListRiskVariables() public {
-        // When: standardERC20PricingModule calls addAsset with input of address(eth), emptyListUint16, emptyListUint16
+        // When: standardERC20PricingModule calls addAsset with input of address(eth)
         vm.startPrank(address(standardERC20PricingModule));
         mainRegistry.addAsset(address(eth));
         vm.stopPrank();
 
         // Then: inMainRegistry for address(eth) should return true
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
-    }
-
-    function testSuccess_addAsset_FullListRiskVariables() public {
-        //todo: change test
-        // Given: collateralFactors index 0, 1 and 2 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0, 1 and 2 is DEFAULT_LIQUIDATION_THRESHOLD
-        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqTresh_ = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = collFactor_;
-        collateralFactors[1] = collFactor_;
-        collateralFactors[2] = collFactor_;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = liqTresh_;
-        liquidationThresholds[1] = liqTresh_;
-        liquidationThresholds[2] = liqTresh_;
-
-        vm.startPrank(address(standardERC20PricingModule));
-        // When: address(standardERC20PricingModule) calls addAsset
-        mainRegistry.addAsset(address(eth));
-        vm.stopPrank();
-
-        // Then:
     }
 
     function testSuccess_addAsset_OverwriteAssetPositive() public {
