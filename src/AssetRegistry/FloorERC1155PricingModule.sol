@@ -45,14 +45,12 @@ contract FloorERC1155PricingModule is PricingModule {
      * @dev RiskVarInput.asset can be zero as it is not taken into account.
      * @dev Risk variable are variables with 2 decimals precision
      * @dev The assets are added in the Main-Registry as well.
-     * @dev Assets can't have more than 18 decimals.
      */
     function addAsset(address asset, uint256 id, address[] calldata oracles, RiskVarInput[] calldata riskVars)
         external
         onlyOwner
     {
-        //no asset units
-
+        //Read function, reverts in OracleHub if sequence is not correct
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
         require(!inPricingModule[asset], "PM1155_AA: already added");
@@ -65,7 +63,8 @@ contract FloorERC1155PricingModule is PricingModule {
 
         isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(asset), "PM1155_AA: Unable to add in MR");
+        //Will revert in MainRegistry if asset can't be added
+        IMainRegistry(mainRegistry).addAsset(asset);
     }
 
     /**
@@ -74,9 +73,20 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param oracles An array of oracle addresses for the asset.
      */
     function setOracles(address asset, address[] calldata oracles) external onlyOwner {
-        require(inPricingModule[asset], "PM20_AA: asset unknown");
+        require(inPricingModule[asset], "PM1155_SO: asset unknown");
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
         assetToInformation[asset].oracles = oracles;
+    }
+
+    /**
+     * @notice Returns the information that is stored in the Pricing Module for a given asset
+     * @dev struct is not taken into memory; saves 6613 gas
+     * @param asset The Token address of the asset
+     * @return id The id of the token
+     * @return oracles The list of addresses of the oracles to get the exchange rate of the asset in USD
+     */
+    function getAssetInformation(address asset) external view returns (uint256, address[] memory) {
+        return (assetToInformation[asset].id, assetToInformation[asset].oracles);
     }
 
     /*///////////////////////////////////////////////////////////////

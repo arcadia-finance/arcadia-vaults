@@ -47,7 +47,6 @@ contract FloorERC721PricingModule is PricingModule {
      * @dev RiskVarInput.asset can be zero as it is not taken into account.
      * @dev Risk variable are variables with 2 decimals precision
      * @dev The assets are added in the Main-Registry as well.
-     * @dev Assets can't have more than 18 decimals.
      */
     function addAsset(
         address asset,
@@ -70,6 +69,7 @@ contract FloorERC721PricingModule is PricingModule {
 
         isAssetAddressWhiteListed[asset] = true;
 
+        //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
     }
 
