@@ -15,6 +15,8 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     ERC4626Mock public ybEth;
+    ERC4626Mock public ybSnx;
+    ERC4626Mock public ybLink;
     StandardERC4626PricingModule public standardERC4626PricingModule;
 
     //this is a before
@@ -72,6 +74,20 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
+    /*//////////////////////////////////////////////////////////////
+                            DEPLOYMENT
+    //////////////////////////////////////////////////////////////*/
+
+    function testSuccess_deployment() public {
+        assertEq(standardERC4626PricingModule.mainRegistry(), address(mainRegistry));
+        assertEq(standardERC4626PricingModule.oracleHub(), address(oracleHub));
+        assertEq(standardERC4626PricingModule.erc20PricingModule(), address(standardERC20PricingModule));
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        ASSET MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
     function testRevert_addAsset_NonOwner(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
@@ -80,7 +96,45 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
+    function testRevert_addAsset_DecimalsDontMatch(uint8 decimals) public {
+        vm.assume(decimals != uint8(Constants.ethDecimals));
+        vm.assume(decimals <= 20);
+        vm.prank(tokenCreatorAddress);
+        ybEth = new ERC4626Mock(eth, "aETH Mock", "maETH", decimals);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM4626_AA: Decimals don't match");
+        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput);
+        vm.stopPrank();
+    }
+
+    function testRevert_addAsset_OverwriteExistingAsset() public {
+        vm.startPrank(creatorAddress);
+        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput);
+        vm.expectRevert("PM4626_AA: already added");
+        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput);
+        vm.stopPrank();
+
+        assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
+    }
+
+    function testSuccess_addAsset_EmptyListRiskVariables() public {
+        vm.startPrank(creatorAddress);
+        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput);
+        vm.stopPrank();
+
+        assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
+        assertEq(standardERC4626PricingModule.assetsInPricingModule(0), address(ybEth));
+        (uint64 assetUnit, address underlyingAsset, address[] memory oracles) = standardERC4626PricingModule.getAssetInformation(address(ybEth));
+        assertEq(assetUnit, 10 ** uint8(Constants.ethDecimals));
+        assertEq(underlyingAsset, address(eth));
+        for (uint256 i; i < oracleEthToUsdArr.length; i++) {
+            assertEq(oracles[i], oracleEthToUsdArr[i]);
+        }
+        assertTrue(standardERC4626PricingModule.isAssetAddressWhiteListed(address(ybEth)));
+    }
+
+    function testSuccess_addAsset_NonFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
         riskVars_[0] = PricingModule.RiskVarInput({
@@ -96,24 +150,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
-        vm.startPrank(creatorAddress);
-        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput);
-        vm.stopPrank();
-
-        assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
-    }
-
-    function testRevert_addAsset_OwnerAddsAssetWithWrongNumberOfDecimals() public {
-        ybEth = new ERC4626Mock(eth, "ybETH Mock", "mybETH", uint8(Constants.ethDecimals) - 1);
-
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PM4626_AA: Decimals don't match");
-        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput);
-        vm.stopPrank();
-    }
-
-    function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
+    function testSuccess_addAsset_FullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.addAsset(address(ybEth), riskVars);
         vm.stopPrank();
@@ -121,15 +158,33 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
+    function testRevert_syncOracles_AssetUnknown(address sender, address asset) public {
+        vm.startPrank(sender);
+        vm.expectRevert("PM4626_SO: asset unknown");
+        standardERC4626PricingModule.syncOracles(asset);
+        vm.stopPrank();
+    }
+
+    function testSuccess_syncOracles(address sender) public {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput);
-        vm.expectRevert("PM4626_AA: already added");
-        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput);
+
+        //Given: oracle sequence of underlying asset is modified
+        standardERC20PricingModule.setOracles(address(eth), oracleLinkToUsdArr);
         vm.stopPrank();
 
-        assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
+        vm.prank(sender);
+        standardERC4626PricingModule.syncOracles(address(ybEth));
+
+        (, , address[] memory oracles) = standardERC4626PricingModule.getAssetInformation(address(ybEth));
+        for (uint256 i; i < oracleLinkToUsdArr.length; i++) {
+            assertEq(oracles[i], oracleLinkToUsdArr[i]);
+        }
     }
+
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     function testSuccess_isWhiteListed_Positive() public {
         vm.startPrank(creatorAddress);
@@ -142,6 +197,106 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_isWhiteListed_Negative(address randomAsset) public {
         assertTrue(!standardERC4626PricingModule.isWhiteListed(randomAsset, 0));
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
+        //Does not test on overflow, test to check if function correctly returns value in USD
+        vm.startPrank(creatorAddress);
+        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput);
+        vm.stopPrank();
+
+        //Cheat totalSupply
+        stdstore.target(address(ybEth)).sig(ybEth.totalSupply.selector).checked_write(1);
+
+        //Cheat balance of
+        stdstore.target(address(eth)).sig(ybEth.balanceOf.selector).with_key(address(ybEth)).checked_write(amountEth);
+
+        uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
+            / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
+        uint256 expectedValueInBaseCurrency = 0;
+
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+            asset: address(ybEth),
+            assetId: 0,
+            assetAmount: 1, //100% of the shares
+            baseCurrency: uint8(Constants.UsdBaseCurrency)
+        });
+
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = standardERC4626PricingModule.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, expectedValueInUsd);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
+    }
+
+    function testSuccess_getValue_ReturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountSnx) public {
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
+        vm.prank(tokenCreatorAddress);
+        ybSnx = new ERC4626Mock(snx, "ybSNX Mock", "mybSNX", uint8(Constants.snxDecimals));
+
+        vm.startPrank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput);
+        standardERC4626PricingModule.addAsset(address(ybSnx), emptyRiskVarInput);
+        vm.stopPrank();
+
+        //Cheat totalSupply
+        stdstore.target(address(ybSnx)).sig(ybSnx.totalSupply.selector).checked_write(1);
+
+        //Cheat balance of
+        stdstore.target(address(snx)).sig(snx.balanceOf.selector).with_key(address(ybSnx)).checked_write(amountSnx);
+
+        uint256 expectedValueInUsd = 0;
+        uint256 expectedValueInBaseCurrency = (amountSnx * rateSnxToEth * Constants.WAD)
+            / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
+
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+            asset: address(ybSnx),
+            assetId: 0,
+            assetAmount: 1, //100% of the shares
+            baseCurrency: uint8(Constants.EthBaseCurrency)
+        });
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
+            standardERC4626PricingModule.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, expectedValueInUsd);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
+    }
+
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountLink) public {
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
+        vm.prank(tokenCreatorAddress);
+        ybLink = new ERC4626Mock(link, "ybLINK Mock", "mybLINK", uint8(Constants.linkDecimals));
+
+        vm.startPrank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput);
+        standardERC4626PricingModule.addAsset(address(ybLink), emptyRiskVarInput);
+        vm.stopPrank();
+
+        //Cheat totalSupply
+        stdstore.target(address(ybLink)).sig(ybLink.totalSupply.selector).checked_write(1);
+
+        //Cheat balance of
+        stdstore.target(address(link)).sig(link.balanceOf.selector).with_key(address(ybLink)).checked_write(amountLink);
+
+        uint256 expectedValueInUsd = (amountLink * rateLinkToUsd * Constants.WAD)
+            / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
+        uint256 expectedValueInBaseCurrency = 0;
+
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+            asset: address(ybLink),
+            assetId: 0,
+            assetAmount: 1, //100% of the shares
+            baseCurrency: uint8(Constants.EthBaseCurrency)
+        });
+
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
+            standardERC4626PricingModule.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, expectedValueInUsd);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
     function testSuccess_getValue_ZeroTotalSupply(uint256 rateEthToUsd_, uint256 totalAssets) public {
@@ -159,7 +314,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         //Cheat balance of
-        uint256 slot2 = stdstore.target(address(eth)).sig(ybEth.balanceOf.selector).with_key(address(ybEth)).find();
+        uint256 slot2 = stdstore.target(address(eth)).sig(eth.balanceOf.selector).with_key(address(ybEth)).find();
         bytes32 loc2 = bytes32(slot2);
         bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
         vm.store(address(eth), loc2, mockedBalanceOf);
@@ -215,7 +370,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.store(address(ybEth), loc, mockedTotalSupply);
 
         //Cheat balance of
-        uint256 slot2 = stdstore.target(address(eth)).sig(ybEth.balanceOf.selector).with_key(address(ybEth)).find();
+        uint256 slot2 = stdstore.target(address(eth)).sig(eth.balanceOf.selector).with_key(address(ybEth)).find();
         bytes32 loc2 = bytes32(slot2);
         bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
         vm.store(address(eth), loc2, mockedBalanceOf);
