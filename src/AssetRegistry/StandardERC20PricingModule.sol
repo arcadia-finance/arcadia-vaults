@@ -50,6 +50,7 @@ contract StandardERC20PricingModule is PricingModule {
      * @dev Assets can't have more than 18 decimals.
      */
     function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars) external onlyOwner {
+        //Read function, will revert in OracleHub if asset can't be added
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
         require(!inPricingModule[asset], "PM20_AA: already added");
@@ -65,7 +66,8 @@ contract StandardERC20PricingModule is PricingModule {
 
         isAssetAddressWhiteListed[asset] = true;
 
-        require(IMainRegistry(mainRegistry).addAsset(asset), "PM20_AA: Unable to add in MR");
+        //Will revert in MainRegistry if asset can't be added
+        IMainRegistry(mainRegistry).addAsset(asset);
     }
 
     /**
@@ -74,7 +76,7 @@ contract StandardERC20PricingModule is PricingModule {
      * @param oracles An array of oracle addresses for the asset.
      */
     function setOracles(address asset, address[] calldata oracles) external onlyOwner {
-        require(inPricingModule[asset], "PM20_AA: asset unknown");
+        require(inPricingModule[asset], "PM20_SO: asset unknown");
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
         assetToInformation[asset].oracles = oracles;
     }

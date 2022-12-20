@@ -54,7 +54,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
             })
         );
 
-        standardERC20PricingModule = new StandardERC20PricingModuleExtended( //ToDo: remove extension
+        standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );

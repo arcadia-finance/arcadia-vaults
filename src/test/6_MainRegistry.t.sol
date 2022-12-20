@@ -29,7 +29,7 @@ abstract contract MainRegistryTest is DeployArcadiaVaults {
             })
         );
 
-        standardERC20PricingModule = new StandardERC20PricingModuleExtended(
+        standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -314,16 +314,16 @@ contract AssetManagementTest is MainRegistryTest {
     function testSuccess_addAsset_FullListRiskVariables() public {
         //todo: change test
         // Given: collateralFactors index 0, 1 and 2 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0, 1 and 2 is DEFAULT_LIQUIDATION_THRESHOLD
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint16 liqTresh_ = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
         uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = collFactor;
-        collateralFactors[1] = collFactor;
-        collateralFactors[2] = collFactor;
+        collateralFactors[0] = collFactor_;
+        collateralFactors[1] = collFactor_;
+        collateralFactors[2] = collFactor_;
         uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = liqTresh;
-        liquidationThresholds[1] = liqTresh;
-        liquidationThresholds[2] = liqTresh;
+        liquidationThresholds[0] = liqTresh_;
+        liquidationThresholds[1] = liqTresh_;
+        liquidationThresholds[2] = liqTresh_;
 
         vm.startPrank(address(standardERC20PricingModule));
         // When: address(standardERC20PricingModule) calls addAsset
