@@ -124,7 +124,8 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
         assertEq(aTokenPricingModule.assetsInPricingModule(0), address(aEth));
-        (uint64 assetUnit, address underlyingAsset, address[] memory oracles) = aTokenPricingModule.getAssetInformation(address(aEth));
+        (uint64 assetUnit, address underlyingAsset, address[] memory oracles) =
+            aTokenPricingModule.getAssetInformation(address(aEth));
         assertEq(assetUnit, 10 ** uint8(Constants.ethDecimals));
         assertEq(underlyingAsset, address(eth));
         for (uint256 i; i < oracleEthToUsdArr.length; i++) {
@@ -149,7 +150,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
+    function testSuccess_addAsset_FullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.addAsset(address(aEth), riskVars);
         vm.stopPrank();
@@ -175,7 +176,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.prank(sender);
         aTokenPricingModule.syncOracles(address(aEth));
 
-        (, , address[] memory oracles) = aTokenPricingModule.getAssetInformation(address(aEth));
+        (,, address[] memory oracles) = aTokenPricingModule.getAssetInformation(address(aEth));
         for (uint256 i; i < oracleLinkToUsdArr.length; i++) {
             assertEq(oracles[i], oracleLinkToUsdArr[i]);
         }
@@ -202,20 +203,20 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/
 
-    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountaEth) public {
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (amountaEth * rateEthToUsd * Constants.WAD)
+        uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
             / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             asset: address(aEth),
             assetId: 0,
-            assetAmount: amountaEth,
+            assetAmount: amountEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
 
@@ -225,7 +226,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testSuccess_getValue_ReturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountaSnx) public {
+    function testSuccess_getValue_ReturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountSnx) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.prank(tokenCreatorAddress);
         aSnx = new ATokenMock(address(snx), "aSNX Mock", "maSNX", uint8(Constants.snxDecimals));
@@ -236,23 +237,22 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         uint256 expectedValueInUsd = 0;
-        uint256 expectedValueInBaseCurrency = (amountaSnx * rateSnxToEth * Constants.WAD)
+        uint256 expectedValueInBaseCurrency = (amountSnx * rateSnxToEth * Constants.WAD)
             / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             asset: address(aSnx),
             assetId: 0,
-            assetAmount: amountaSnx,
+            assetAmount: amountSnx,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
-            aTokenPricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = aTokenPricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountaLink) public {
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountLink) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.prank(tokenCreatorAddress);
         aLink = new ATokenMock(address(link), "aLINK Mock", "maLINK", uint8(Constants.linkDecimals));
@@ -262,19 +262,18 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         aTokenPricingModule.addAsset(address(aLink), emptyRiskVarInput);
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (amountaLink * rateLinkToUsd * Constants.WAD)
+        uint256 expectedValueInUsd = (amountLink * rateLinkToUsd * Constants.WAD)
             / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             asset: address(aLink),
             assetId: 0,
-            assetAmount: amountaLink,
+            assetAmount: amountLink,
             baseCurrency: uint8(Constants.EthBaseCurrency)
         });
 
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
-            aTokenPricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = aTokenPricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);

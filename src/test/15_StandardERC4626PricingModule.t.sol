@@ -125,7 +125,8 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
 
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
         assertEq(standardERC4626PricingModule.assetsInPricingModule(0), address(ybEth));
-        (uint64 assetUnit, address underlyingAsset, address[] memory oracles) = standardERC4626PricingModule.getAssetInformation(address(ybEth));
+        (uint64 assetUnit, address underlyingAsset, address[] memory oracles) =
+            standardERC4626PricingModule.getAssetInformation(address(ybEth));
         assertEq(assetUnit, 10 ** uint8(Constants.ethDecimals));
         assertEq(underlyingAsset, address(eth));
         for (uint256 i; i < oracleEthToUsdArr.length; i++) {
@@ -176,7 +177,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         vm.prank(sender);
         standardERC4626PricingModule.syncOracles(address(ybEth));
 
-        (, , address[] memory oracles) = standardERC4626PricingModule.getAssetInformation(address(ybEth));
+        (,, address[] memory oracles) = standardERC4626PricingModule.getAssetInformation(address(ybEth));
         for (uint256 i; i < oracleLinkToUsdArr.length; i++) {
             assertEq(oracles[i], oracleLinkToUsdArr[i]);
         }
@@ -226,7 +227,8 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
 
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = standardERC4626PricingModule.getValue(getValueInput);
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
+            standardERC4626PricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);

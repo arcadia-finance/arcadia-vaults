@@ -89,7 +89,8 @@ contract ATokenPricingModule is PricingModule {
      */
     function syncOracles(address asset) external {
         require(inPricingModule[asset], "PMAT_SO: asset unknown");
-        (, address[] memory underlyingAssetOracles) = IStandardERC20PricingModule(erc20PricingModule).getAssetInformation(assetToInformation[asset].underlyingAsset);
+        (, address[] memory underlyingAssetOracles) = IStandardERC20PricingModule(erc20PricingModule)
+            .getAssetInformation(assetToInformation[asset].underlyingAsset);
         assetToInformation[asset].underlyingAssetOracles = underlyingAssetOracles;
     }
 
