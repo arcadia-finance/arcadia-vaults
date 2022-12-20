@@ -15,12 +15,14 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     ATokenMock public aEth;
+    ATokenMock public aSnx;
+    ATokenMock public aLink;
     ATokenPricingModule public aTokenPricingModule;
 
     //this is a before
     constructor() DeployArcadiaVaults() {
         vm.prank(tokenCreatorAddress);
-        aEth = new ATokenMock(address(eth), "aETH Mock", "maETH");
+        aEth = new ATokenMock(address(eth), "aETH Mock", "maETH", uint8(Constants.ethDecimals));
     }
 
     //this is a before each
@@ -72,7 +74,21 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_NonOwnerAddsAsset(address unprivilegedAddress_) public {
+    /*//////////////////////////////////////////////////////////////
+                            DEPLOYMENT
+    //////////////////////////////////////////////////////////////*/
+
+    function testSuccess_deployment() public {
+        assertEq(aTokenPricingModule.mainRegistry(), address(mainRegistry));
+        assertEq(aTokenPricingModule.oracleHub(), address(oracleHub));
+        assertEq(aTokenPricingModule.erc20PricingModule(), address(standardERC20PricingModule));
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        ASSET MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    function testRevert_addAsset_NonOwner(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -80,7 +96,44 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
+    function testRevert_addAsset_DecimalsDontMatch(uint8 decimals) public {
+        vm.assume(decimals != uint8(Constants.ethDecimals));
+        vm.assume(decimals <= 20);
+        vm.prank(tokenCreatorAddress);
+        aEth = new ATokenMock(address(eth), "aETH Mock", "maETH", decimals);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PMAT_AA: Decimals don't match");
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        vm.stopPrank();
+    }
+
+    function testRevert_addAsset_OverwriteExistingAsset() public {
+        vm.startPrank(creatorAddress);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+
+        vm.expectRevert("PMAT_AA: already added");
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        vm.stopPrank();
+    }
+
+    function testSuccess_addAsset_EmptyListRiskVariables() public {
+        vm.startPrank(creatorAddress);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        vm.stopPrank();
+
+        assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
+        assertEq(aTokenPricingModule.assetsInPricingModule(0), address(aEth));
+        (uint64 assetUnit, address underlyingAsset, address[] memory oracles) = aTokenPricingModule.getAssetInformation(address(aEth));
+        assertEq(assetUnit, 10 ** uint8(Constants.ethDecimals));
+        assertEq(underlyingAsset, address(eth));
+        for (uint256 i; i < oracleEthToUsdArr.length; i++) {
+            assertEq(oracles[i], oracleEthToUsdArr[i]);
+        }
+        assertTrue(aTokenPricingModule.isAssetAddressWhiteListed(address(aEth)));
+    }
+
+    function testSuccess_addAsset_NonFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
         riskVars_[0] = PricingModule.RiskVarInput({
@@ -96,14 +149,6 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
-        vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
-        vm.stopPrank();
-
-        assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
-    }
-
     function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.addAsset(address(aEth), riskVars);
@@ -112,17 +157,35 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
-    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
-        vm.startPrank(creatorAddress);
-        IAToken(address(aEth)).decimals();
-
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
-        vm.expectRevert("PMAT_AA: already added");
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+    function testRevert_syncOracles_AssetUnknown(address sender, address asset) public {
+        vm.startPrank(sender);
+        vm.expectRevert("PMAT_SO: asset unknown");
+        aTokenPricingModule.syncOracles(asset);
         vm.stopPrank();
     }
 
-    function testSuccess_isWhiteListed() public {
+    function testSuccess_syncOracles(address sender) public {
+        vm.startPrank(creatorAddress);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+
+        //Given: oracle sequence of underlying asset is modified
+        standardERC20PricingModule.setOracles(address(eth), oracleLinkToUsdArr);
+        vm.stopPrank();
+
+        vm.prank(sender);
+        aTokenPricingModule.syncOracles(address(aEth));
+
+        (, , address[] memory oracles) = aTokenPricingModule.getAssetInformation(address(aEth));
+        for (uint256 i; i < oracleLinkToUsdArr.length; i++) {
+            assertEq(oracles[i], oracleLinkToUsdArr[i]);
+        }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    function testSuccess_isWhiteListed_Positive() public {
         vm.startPrank(creatorAddress);
 
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
@@ -135,24 +198,83 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         assertTrue(!aTokenPricingModule.isWhiteListed(randomAsset, 0));
     }
 
-    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountaEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
+        uint256 expectedValueInUsd = (amountaEth * rateEthToUsd * Constants.WAD)
             / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
             asset: address(aEth),
             assetId: 0,
-            assetAmount: amountEth,
+            assetAmount: amountaEth,
             baseCurrency: uint8(Constants.UsdBaseCurrency)
         });
 
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = aTokenPricingModule.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, expectedValueInUsd);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
+    }
+
+    function testSuccess_getValue_ReturnBaseCurrencyValueWhenBaseCurrencyIsNotUsd(uint128 amountaSnx) public {
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
+        vm.prank(tokenCreatorAddress);
+        aSnx = new ATokenMock(address(snx), "aSNX Mock", "maSNX", uint8(Constants.snxDecimals));
+
+        vm.startPrank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aSnx), emptyRiskVarInput);
+        vm.stopPrank();
+
+        uint256 expectedValueInUsd = 0;
+        uint256 expectedValueInBaseCurrency = (amountaSnx * rateSnxToEth * Constants.WAD)
+            / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
+
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+            asset: address(aSnx),
+            assetId: 0,
+            assetAmount: amountaSnx,
+            baseCurrency: uint8(Constants.EthBaseCurrency)
+        });
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
+            aTokenPricingModule.getValue(getValueInput);
+
+        assertEq(actualValueInUsd, expectedValueInUsd);
+        assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
+    }
+
+    function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsNotUsd(uint128 amountaLink) public {
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
+        vm.prank(tokenCreatorAddress);
+        aLink = new ATokenMock(address(link), "aLINK Mock", "maLINK", uint8(Constants.linkDecimals));
+
+        vm.startPrank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aLink), emptyRiskVarInput);
+        vm.stopPrank();
+
+        uint256 expectedValueInUsd = (amountaLink * rateLinkToUsd * Constants.WAD)
+            / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
+        uint256 expectedValueInBaseCurrency = 0;
+
+        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+            asset: address(aLink),
+            assetId: 0,
+            assetAmount: amountaLink,
+            baseCurrency: uint8(Constants.EthBaseCurrency)
+        });
+
+        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) =
+            aTokenPricingModule.getValue(getValueInput);
 
         assertEq(actualValueInUsd, expectedValueInUsd);
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
