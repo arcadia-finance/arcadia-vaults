@@ -234,7 +234,7 @@ contract Vault {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Can be called by authorised applications to open or increase a margin position.
+     * @notice Can be called by authorised applications to increase a margin position.
      * @param baseCurrency The Base-currency in which the margin position is denominated
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
@@ -247,7 +247,7 @@ contract Vault {
         returns (bool success)
     {
         if (baseCurrency != vault.baseCurrency) {
-            _setBaseCurrency(baseCurrency);
+            return false;
         }
         success = getFreeMargin() >= amount;
         // Update the vault values
@@ -262,17 +262,10 @@ contract Vault {
      * @param baseCurrency The Base-currency in which the margin position is denominated.
      * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
      * @return success Boolean indicating if there the margin position is successfully decreased.
-     * @dev Since decreasing margin position is financial activity, liquidation threshold update is done here.
      * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
      */
-    function decreaseMarginPosition(address baseCurrency, uint256) public onlyAuthorized returns (bool success) {
+    function decreaseMarginPosition(address baseCurrency, uint256) public onlyAuthorized view returns (bool success) {
         success = baseCurrency == vault.baseCurrency;
-
-        // Update the vault values
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
-        vault.liqThres =
-            IRegistry(registry).getLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
