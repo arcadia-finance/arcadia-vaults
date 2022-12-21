@@ -1106,7 +1106,10 @@ contract AssetManagementTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testRevert_withdraw_ERC721UnsufficientCollateral(uint128[] calldata tokenIdsDeposit, uint8 amountsWithdrawn) public {
+    function testRevert_withdraw_ERC721UnsufficientCollateral(
+        uint128[] calldata tokenIdsDeposit,
+        uint8 amountsWithdrawn
+    ) public {
         vm.assume(tokenIdsDeposit.length < 50); //test speed
 
         (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
