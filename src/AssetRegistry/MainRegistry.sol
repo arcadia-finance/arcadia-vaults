@@ -455,7 +455,7 @@ contract MainRegistry is Ownable {
         uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
-        collateralValue = RiskModule.calculateWeightedCollateralValue(_assetAddresses, valuesAndRiskVarPerAsset);
+        collateralValue = RiskModule.calculateWeightedCollateralValue(valuesAndRiskVarPerAsset);
     }
 
     /**
@@ -481,7 +481,6 @@ contract MainRegistry is Ownable {
         uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
-        liquidationThreshold =
-            RiskModule.calculateWeightedLiquidationThreshold(_assetAddresses, valuesAndRiskVarPerAsset);
+        liquidationThreshold = RiskModule.calculateWeightedLiquidationThreshold(valuesAndRiskVarPerAsset);
     }
 }
