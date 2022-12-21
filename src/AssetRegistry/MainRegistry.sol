@@ -216,9 +216,10 @@ contract MainRegistry is Ownable {
         uint256 maxLength = assetsInMainRegistry.length;
         whiteList = new address[](maxLength);
 
+        address assetAddress;
         uint256 counter = 0;
         for (uint256 i; i < maxLength;) {
-            address assetAddress = assetsInMainRegistry[i];
+            assetAddress = assetsInMainRegistry[i];
             if (IPricingModule(assetToPricingModule[assetAddress]).isAssetAddressWhiteListed(assetAddress)) {
                 whiteList[counter] = assetAddress;
                 unchecked {
@@ -336,15 +337,15 @@ contract MainRegistry is Ownable {
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
      * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency The contract address of the BaseCurrency
-     * @return valuesPerAsset The list of values per assets denominated in BaseCurrency
+     * @return valuesAndRiskVarPerAsset The list of values per assets denominated in BaseCurrency
      */
     function getListOfValuesPerAsset(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         address baseCurrency
-    ) public view returns (RiskModule.AssetValueRisk[] memory valuesPerAsset) {
-        valuesPerAsset =
+    ) public view returns (RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset) {
+        valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
 
@@ -356,14 +357,14 @@ contract MainRegistry is Ownable {
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
      * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency An identifier (uint256) of the BaseCurrency
-     * @return valuesPerAsset The list of values per assets denominated in BaseCurrency
+     * @return valuesAndRiskVarPerAsset The list of values per assets denominated in BaseCurrency
      */
     function getListOfValuesPerAsset(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata _assetAmounts,
         uint256 baseCurrency
-    ) public view returns (RiskModule.AssetValueRisk[] memory) {
+    ) public view returns (RiskModule.AssetValueAndRiskVariables[] memory) {
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
 
         uint256 assetAddressesLength = _assetAddresses.length;
@@ -378,7 +379,8 @@ contract MainRegistry is Ownable {
         address assetAddress;
         uint256 tempValueInUsd;
         uint256 tempValueInBaseCurrency;
-        RiskModule.AssetValueRisk[] memory valuesPerAsset = new RiskModule.AssetValueRisk[](assetAddressesLength);
+        RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
+            new RiskModule.AssetValueAndRiskVariables[](assetAddressesLength);
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = _assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
@@ -389,18 +391,22 @@ contract MainRegistry is Ownable {
 
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
-                valuesPerAsset[i].valueInBaseCurrency = _assetAmounts[i];
+                valuesAndRiskVarPerAsset[i].valueInBaseCurrency = _assetAmounts[i];
             } else {
-                (tempValueInUsd, tempValueInBaseCurrency, valuesPerAsset[i].collFactor, valuesPerAsset[i].liqThreshold)
-                = IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
+                (
+                    tempValueInUsd,
+                    tempValueInBaseCurrency,
+                    valuesAndRiskVarPerAsset[i].collFactor,
+                    valuesAndRiskVarPerAsset[i].liqThreshold
+                ) = IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 //Check if baseCurrency is USD
                 if (baseCurrency == 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
-                    valuesPerAsset[i].valueInBaseCurrency =
+                    valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
                         tempValueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else if (tempValueInBaseCurrency > 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
-                    valuesPerAsset[i].valueInBaseCurrency =
+                    valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
                         tempValueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                 } else {
                     //Check if the BaseCurrency-USD rate is already fetched
@@ -410,7 +416,7 @@ contract MainRegistry is Ownable {
                             baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
                         ).latestRoundData();
                     }
-                    valuesPerAsset[i].valueInBaseCurrency = tempValueInUsd.mulDivDown(
+                    valuesAndRiskVarPerAsset[i].valueInBaseCurrency = tempValueInUsd.mulDivDown(
                         baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
                         uint256(rateBaseCurrencyToUsd)
                     ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //Bring from internal 18 decimals to the number of decimals of baseCurrency
@@ -420,7 +426,7 @@ contract MainRegistry is Ownable {
                 ++i;
             }
         }
-        return valuesPerAsset;
+        return valuesAndRiskVarPerAsset;
     }
 
     /**
@@ -447,9 +453,9 @@ contract MainRegistry is Ownable {
             "MR_GCV: LENGTH_MISMATCH"
         );
         uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
-        RiskModule.AssetValueRisk[] memory valuesPerAsset =
+        RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
-        collateralValue = RiskModule.calculateWeightedCollateralValue(_assetAddresses, valuesPerAsset);
+        collateralValue = RiskModule.calculateWeightedCollateralValue(_assetAddresses, valuesAndRiskVarPerAsset);
     }
 
     /**
@@ -473,8 +479,9 @@ contract MainRegistry is Ownable {
             "MR_GCF: LENGTH_MISMATCH"
         );
         uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
-        RiskModule.AssetValueRisk[] memory valuesPerAsset =
+        RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
-        liquidationThreshold = RiskModule.calculateWeightedLiquidationThreshold(_assetAddresses, valuesPerAsset);
+        liquidationThreshold =
+            RiskModule.calculateWeightedLiquidationThreshold(_assetAddresses, valuesAndRiskVarPerAsset);
     }
 }
