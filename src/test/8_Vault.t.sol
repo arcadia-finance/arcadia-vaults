@@ -8,6 +8,7 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
+import {TrustedProtocolMock} from "../mockups/TrustedProtocolMock.sol";
 import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
@@ -386,28 +387,81 @@ contract BaseCurrencyLogicTest is vaultTests {
             MARGIN ACCOUNT SETTINGS
 /////////////////////////////////////////////////////////////// */
 contract MarginAccountSettingsTest is vaultTests {
+    using stdStorage for StdStorage;
+
+    TrustedProtocolMock trustedProtocol;
+
     function setUp() public override {
         super.setUp();
         deployFactory();
     }
 
-    function testRevert_openTrustedMarginAccount_NonOwner(address nonOwner, address trustedProtocol) public {
-        vm.assume(nonOwner != vaultOwner);
+    function testRevert_openTrustedMarginAccount_NonOwner(address unprivilegedAddress_, address trustedProtocol_)
+        public
+    {
+        vm.assume(unprivilegedAddress_ != vaultOwner);
 
-        vm.startPrank(nonOwner);
+        vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("VL: You are not the owner");
-        vault_.openTrustedMarginAccount(trustedProtocol);
+        vault_.openTrustedMarginAccount(trustedProtocol_);
         vm.stopPrank();
     }
 
-    function testRevert_openTrustedMarginAccount_AlreadySet(address trustedProtocol) public {
+    function testRevert_openTrustedMarginAccount_AlreadySet(address trustedProtocol_) public {
         vm.prank(vaultOwner);
         vault_.openTrustedMarginAccount(address(pool));
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_OMA: ALREADY SET");
-        vault_.openTrustedMarginAccount(trustedProtocol);
+        vault_.openTrustedMarginAccount(trustedProtocol_);
         vm.stopPrank();
+    }
+
+    function testRevert_openTrustedMarginAccount_OpeningMarginAccountFails() public {
+        trustedProtocol = new TrustedProtocolMock();
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_OMA: OPENING ACCOUNT REVERTED");
+        vault_.openTrustedMarginAccount(address(trustedProtocol));
+        vm.stopPrank();
+    }
+
+    function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency() public {
+        (, address baseCurrency) = vault_.vault();
+        assertEq(baseCurrency, address(0));
+
+        vm.prank(vaultOwner);
+        vault_.openTrustedMarginAccount(address(pool));
+
+        assertEq(vault_.liquidator(), address(liquidator));
+        assertEq(vault_.trustedProtocol(), address(pool));
+        (, baseCurrency) = vault_.vault();
+        assertEq(baseCurrency, address(dai));
+        assertEq(dai.allowance(address(vault_), address(pool)), type(uint256).max);
+        assertTrue(vault_.isTrustedProtocolSet());
+        assertTrue(vault_.allowed(address(pool)));
+    }
+
+    function testSuccess_openTrustedMarginAccount_SameBaseCurrency() public {
+        //Set BaseCurrency to dai
+        uint256 slot = stdstore.target(address(vault_)).sig(vault_.vault.selector).find();
+        bytes32 loc = bytes32(slot);
+        bytes32 value = bytes32(abi.encodePacked(uint16(1), address(dai)));
+        value = value >> 64;
+        vm.store(address(vault_), loc, value);
+        (, address baseCurrency) = vault_.vault();
+        assertEq(baseCurrency, address(dai));
+
+        vm.prank(vaultOwner);
+        vault_.openTrustedMarginAccount(address(pool));
+
+        assertEq(vault_.liquidator(), address(liquidator));
+        assertEq(vault_.trustedProtocol(), address(pool));
+        (, baseCurrency) = vault_.vault();
+        assertEq(baseCurrency, address(dai));
+        assertEq(dai.allowance(address(vault_), address(pool)), type(uint256).max);
+        assertTrue(vault_.isTrustedProtocolSet());
+        assertTrue(vault_.allowed(address(pool)));
     }
 
     function testRevert_closeTrustedMarginAccount_NonOwner(address nonOwner) public {
@@ -423,6 +477,32 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.expectRevert("V_CMA: NOT SET");
         vault_.closeTrustedMarginAccount();
         vm.stopPrank();
+    }
+
+    function testRevert_closeTrustedMarginAccount_OpenPosition() public {
+        vm.prank(vaultOwner);
+        vault_.openTrustedMarginAccount(address(pool));
+
+        bytes32 addDebt = bytes32(abi.encode(1));
+        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(addDebt);
+        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(addDebt);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(addDebt);
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_CMA: NON-ZERO OPEN POSITION");
+        vault_.closeTrustedMarginAccount();
+        vm.stopPrank();
+    }
+
+    function testSuccess_closeTrustedMarginAccount() public {
+        vm.prank(vaultOwner);
+        vault_.openTrustedMarginAccount(address(pool));
+
+        vm.prank(vaultOwner);
+        vault_.closeTrustedMarginAccount();
+
+        assertTrue(!vault_.isTrustedProtocolSet());
+        assertTrue(!vault_.allowed(address(pool)));
     }
 }
 
