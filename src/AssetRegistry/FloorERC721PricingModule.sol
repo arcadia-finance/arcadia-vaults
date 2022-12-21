@@ -55,7 +55,7 @@ contract FloorERC721PricingModule is PricingModule {
         address[] calldata oracles,
         RiskVarInput[] calldata riskVars
     ) external onlyOwner {
-        //Read function, reverts in OracleHub if sequence is not correct
+        //View function, reverts in OracleHub if sequence is not correct
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
         require(!inPricingModule[asset], "PM721_AA: already added");
