@@ -67,7 +67,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
     }
 
     //this is a before each
-    function setUp() virtual public {
+    function setUp() public virtual {
         vm.prank(vaultOwner);
         vault_ = new VaultTestExtension();
 
