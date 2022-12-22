@@ -38,7 +38,7 @@ contract StandardERC20PricingModule is PricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Adds a new asset to the StandardERC20PricingModule, or overwrites an existing asset.
+     * @notice Adds a new asset to the StandardERC20PricingModule.
      * @param asset The contract address of the asset
      * @param oracles An array of addresses of oracle contracts, to price the asset in USD
      * @param riskVars An array of Risk Variables for the asset

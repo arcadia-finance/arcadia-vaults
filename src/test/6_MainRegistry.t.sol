@@ -907,7 +907,7 @@ contract PricingLogicTest is MainRegistryTest {
         assetAmounts[1] = 10 ** Constants.linkDecimals;
         assetAmounts[2] = 1;
 
-        RiskModule.AssetValueRisk[] memory actualValuesPerAsset =
+        RiskModule.AssetValueAndRiskVariables[] memory actualValuesPerAsset =
             mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
 
         uint256 ethValueInEth = assetAmounts[0];

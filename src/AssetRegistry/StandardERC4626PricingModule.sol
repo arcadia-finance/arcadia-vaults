@@ -47,7 +47,7 @@ contract StandardERC4626PricingModule is PricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Adds a new asset to the ATokenPricingModule, or overwrites an existing asset.
+     * @notice Adds a new asset to the ATokenPricingModule.
      * @param asset The contract address of the asset
      * @param riskVars An array of Risk Variables for the asset
      * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.

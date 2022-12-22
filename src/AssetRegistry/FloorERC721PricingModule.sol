@@ -36,7 +36,7 @@ contract FloorERC721PricingModule is PricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Adds a new asset to the FloorERC721PricingModule, or overwrites an existing asset.
+     * @notice Adds a new asset to the FloorERC721PricingModule.
      * @param asset The contract address of the asset
      * @param idRangeStart: The id of the first NFT of the collection
      * @param idRangeEnd: The id of the last NFT of the collection

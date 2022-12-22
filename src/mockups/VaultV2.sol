@@ -76,7 +76,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than the factory adress.
      */
     modifier onlyFactory() {
-        require(msg.sender == IMainRegistry(registry).factoryAddress(), "VL: You are not the factory");
+        require(msg.sender == IMainRegistry(registry).factoryAddress(), "V: You are not the factory");
         _;
     }
 
@@ -84,7 +84,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than an authorised adress.
      */
     modifier onlyAuthorized() {
-        require(allowed[msg.sender], "VL: You are not authorized");
+        require(allowed[msg.sender], "V: You are not authorized");
         _;
     }
 
@@ -92,7 +92,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner, "VL: You are not the owner");
+        require(msg.sender == owner, "V: You are not the owner");
         _;
     }
 
@@ -152,7 +152,7 @@ contract VaultV2 {
      */
     function transferOwnership(address newOwner) public onlyFactory {
         if (newOwner == address(0)) {
-            revert("New owner cannot be zero address upon liquidation");
+            revert("V_TO: INVALID_RECIPIENT");
         }
         _transferOwnership(newOwner);
     }
@@ -185,8 +185,8 @@ contract VaultV2 {
      * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
      */
     function _setBaseCurrency(address baseCurrency_) private {
-        require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
-        require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "VL_SBC: baseCurrency not found");
+        require(getUsedMargin() == 0, "V_SBC: Can't change baseCurrency when Used Margin > 0");
+        require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
         vault.baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
     }
 
@@ -419,10 +419,10 @@ contract VaultV2 {
         require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
                 && assetAddressesLength == assetTypes.length,
-            "Length mismatch"
+            "V_D: Length mismatch"
         );
 
-        require(IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "Not all assets are whitelisted!");
+        require(IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "V_D: Not all assets whitelisted");
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
@@ -432,7 +432,7 @@ contract VaultV2 {
             } else if (assetTypes[i] == 2) {
                 _depositERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
-                require(false, "Unknown asset type");
+                require(false, "V_D: Unknown asset type");
             }
             unchecked {
                 ++i;
@@ -476,7 +476,7 @@ contract VaultV2 {
         require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
                 && assetAddressesLength == assetTypes.length,
-            "Length mismatch"
+            "V_W: Length mismatch"
         );
 
         for (uint256 i; i < assetAddressesLength;) {
@@ -487,7 +487,7 @@ contract VaultV2 {
             } else if (assetTypes[i] == 2) {
                 _withdrawERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
-                require(false, "Unknown asset type");
+                require(false, "V_W: Unknown asset type");
             }
             unchecked {
                 ++i;
