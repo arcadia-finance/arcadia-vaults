@@ -66,7 +66,7 @@ contract UniswapV2PricingModule is PricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Adds a new asset to the UniswapV2PricingModule, or overwrites an existing asset.
+     * @notice Adds a new asset to the UniswapV2PricingModule.
      * @param asset The contract address of the asset
      * @param riskVars An array of Risk Variables for the asset
      * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.

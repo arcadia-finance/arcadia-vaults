@@ -35,7 +35,7 @@ contract FloorERC1155PricingModule is PricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Adds a new asset to the FloorERC1155PricingModule, or overwrites an existing one.
+     * @notice Adds a new asset to the FloorERC1155PricingModule.
      * @param asset The contract address of the asset
      * @param id: The id of the collection
      * @param oracles An array of addresses of oracle contracts, to price the asset in USD
@@ -80,7 +80,6 @@ contract FloorERC1155PricingModule is PricingModule {
 
     /**
      * @notice Returns the information that is stored in the Pricing Module for a given asset
-     * @dev struct is not taken into memory; saves 6613 gas
      * @param asset The Token address of the asset
      * @return id The id of the token
      * @return oracles The list of addresses of the oracles to get the exchange rate of the asset in USD
