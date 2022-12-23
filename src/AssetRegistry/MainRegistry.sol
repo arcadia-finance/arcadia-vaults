@@ -445,10 +445,7 @@ contract MainRegistry is Ownable {
         uint256[] calldata assetAmounts,
         address baseCurrency
     ) public view returns (uint256 collateralValue) {
-        require(
-            assetAddresses.length == assetIds.length && assetAddresses.length == assetAmounts.length,
-            "MR_GCV: LENGTH_MISMATCH"
-        );
+        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 
@@ -471,10 +468,7 @@ contract MainRegistry is Ownable {
         uint256[] calldata assetAmounts,
         address baseCurrency
     ) public view returns (uint256 liquidationThreshold) {
-        require(
-            assetAddresses.length == assetIds.length && assetAddresses.length == assetAmounts.length,
-            "MR_GCF: LENGTH_MISMATCH"
-        );
+        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 
@@ -498,10 +492,7 @@ contract MainRegistry is Ownable {
         uint256[] calldata assetAmounts,
         address baseCurrency
     ) public view returns (uint256 collateralValue, uint256 liquidationThreshold) {
-        require(
-            assetAddresses.length == assetIds.length && assetAddresses.length == assetAmounts.length,
-            "MR_GCF: LENGTH_MISMATCH"
-        );
+        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 

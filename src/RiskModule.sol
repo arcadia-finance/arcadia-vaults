@@ -103,7 +103,7 @@ library RiskModule {
                 i++;
             }
         }
-        require(totalValue > 0, "RM_CWLT: DIVIDE_BY_ZERO");
+        require(totalValue > 0, "RM_CCFALT: DIVIDE_BY_ZERO");
 
         unchecked {
             collateralValue = collateralValue / RiskConstants.RISK_VARIABLES_UNIT;
