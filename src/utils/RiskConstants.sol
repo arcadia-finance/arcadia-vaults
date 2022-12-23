@@ -9,7 +9,7 @@ pragma solidity ^0.8.0;
 
 library RiskConstants {
     // Math
-    uint16 public constant VARIABLE_DECIMAL = 100;
+    uint16 public constant RISK_VARIABLES_UNIT = 100;
 
     uint16 public constant MIN_COLLATERAL_FACTOR = 0;
     uint16 public constant MIN_LIQUIDATION_THRESHOLD = 100;

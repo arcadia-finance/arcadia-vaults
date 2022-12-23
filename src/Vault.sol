@@ -249,12 +249,16 @@ contract Vault {
         if (baseCurrency != vault.baseCurrency) {
             return false;
         }
-        success = getFreeMargin() >= amount;
-        // Update the vault values
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres =
-            IRegistry(registry).getLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+        (uint256 collateralValue, uint256 liquidationThreshold) = IRegistry(registry)
+            .getCollateralValueAndLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+
+        //ToDo: For trusted protocols, already pass usedMargin with the call -> avoid additional hop back to trusted protocol to fetch already open debt
+        success = collateralValue >= getUsedMargin() + amount;
+
+        // Can safely cast to uint16 since liquidationThreshold is maximal 10000
+        if (success) vault.liqThres = uint16(liquidationThreshold);
     }
 
     /**
@@ -264,7 +268,7 @@ contract Vault {
      * @return success Boolean indicating if there the margin position is successfully decreased.
      * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
      */
-    function decreaseMarginPosition(address baseCurrency, uint256) public onlyAuthorized view returns (bool success) {
+    function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
         success = baseCurrency == vault.baseCurrency;
     }
 
