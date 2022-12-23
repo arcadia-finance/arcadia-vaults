@@ -948,8 +948,8 @@ contract PricingLogicTest is MainRegistryTest {
                 && liquidationThreshold >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
         );
 
-        uint256 ethValueInUsd = Constants.WAD * uint64(rateEthToUsd_) / 10 ** Constants.oracleEthToUsdDecimals * amountEth
-            / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.usdDecimals);
+        uint256 ethValueInUsd = Constants.WAD * uint64(rateEthToUsd_) / 10 ** Constants.oracleEthToUsdDecimals
+            * amountEth / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.usdDecimals);
         vm.assume(ethValueInUsd > 0);
 
         PricingModule.RiskVarInput[] memory riskVarsInput = new PricingModule.RiskVarInput[](1);
