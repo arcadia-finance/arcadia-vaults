@@ -198,12 +198,15 @@ contract Vault {
      * @param protocol The contract address of the trusted application.
      * @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
      * @dev Currently only one trusted protocol can be set.
+     * @dev Only open margin accounts for protocols you trust!
+     * The protocol has significant authorisation: use margin (-> trigger liquidation)
      */
     function openTrustedMarginAccount(address protocol) public onlyOwner {
         require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
-        (bool success, address baseCurrency, address liquidator_) = ITrustedProtocol(protocol).openMarginAccount();
+        (bool success, address baseCurrency, address liquidator_) =
+            ITrustedProtocol(protocol).openMarginAccount(vaultVersion);
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
         liquidator = liquidator_;
@@ -211,7 +214,6 @@ contract Vault {
         if (vault.baseCurrency != baseCurrency) {
             _setBaseCurrency(baseCurrency);
         }
-        IERC20(baseCurrency).approve(protocol, type(uint256).max);
         isTrustedProtocolSet = true;
         allowed[protocol] = true;
     }
@@ -369,7 +371,13 @@ contract Vault {
         require(
             //ToDo: check on usedMargin?
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, uint128(usedMargin), vault.liqThres, baseCurrencyIdentifier
+                address(this),
+                life,
+                liquidationKeeper,
+                owner,
+                uint128(usedMargin),
+                vault.liqThres,
+                baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );

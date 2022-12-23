@@ -53,7 +53,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
 
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
-
+        pool.addVaultVersion(1);
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
@@ -448,7 +448,6 @@ contract MarginAccountSettingsTest is vaultTests {
         assertEq(vault_.trustedProtocol(), address(pool));
         (, baseCurrency) = vault_.vault();
         assertEq(baseCurrency, address(dai));
-        assertEq(dai.allowance(address(vault_), address(pool)), type(uint256).max);
         assertTrue(vault_.isTrustedProtocolSet());
         assertTrue(vault_.allowed(address(pool)));
     }
@@ -470,7 +469,6 @@ contract MarginAccountSettingsTest is vaultTests {
         assertEq(vault_.trustedProtocol(), address(pool));
         (, baseCurrency) = vault_.vault();
         assertEq(baseCurrency, address(dai));
-        assertEq(dai.allowance(address(vault_), address(pool)), type(uint256).max);
         assertTrue(vault_.isTrustedProtocolSet());
         assertTrue(vault_.allowed(address(pool)));
     }

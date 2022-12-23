@@ -204,7 +204,8 @@ contract VaultV2 {
         require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
-        (bool success, address baseCurrency, address liquidator_) = ITrustedProtocol(protocol).openMarginAccount();
+        (bool success, address baseCurrency, address liquidator_) =
+            ITrustedProtocol(protocol).openMarginAccount(vaultVersion);
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
         liquidator = liquidator_;
@@ -370,7 +371,13 @@ contract VaultV2 {
         require(
             //ToDo: check on usedMargin?
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, uint128(usedMargin), vault.liqThres, baseCurrencyIdentifier
+                address(this),
+                life,
+                liquidationKeeper,
+                owner,
+                uint128(usedMargin),
+                vault.liqThres,
+                baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );

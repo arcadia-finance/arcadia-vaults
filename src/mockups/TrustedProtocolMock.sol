@@ -11,7 +11,7 @@ import {TrustedProtocol} from "../../lib/arcadia-lending/src/TrustedProtocol.sol
 contract TrustedProtocolMock is TrustedProtocol {
     constructor() TrustedProtocol() {}
 
-    function openMarginAccount()
+    function openMarginAccount(uint256)
         external
         pure
         override
