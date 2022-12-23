@@ -378,7 +378,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getUsedMargin();
+        uint256 openDebt = proxy.getUsedMargin();
 
         vm.prank(liquidityProvider);
         dai.transfer(vaultOwner, openDebt - amountCredit);
@@ -419,7 +419,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getUsedMargin();
+        uint256 openDebt = proxy.getUsedMargin();
         uint256 balanceBefore = dai.balanceOf(vaultOwner);
 
         vm.startPrank(vaultOwner);
@@ -462,7 +462,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getUsedMargin();
+        uint256 openDebt = proxy.getUsedMargin();
         vm.assume(toRepay < openDebt);
 
         vm.prank(vaultOwner);

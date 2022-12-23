@@ -254,7 +254,8 @@ contract Vault {
         (uint256 collateralValue, uint256 liquidationThreshold) = IRegistry(registry)
             .getCollateralValueAndLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
 
-        //ToDo: For trusted protocols, already pass usedMargin with the call -> avoid additional hop back to trusted protocol to fetch already open debt
+        // Check that the collateral value is bigger than the sum  of the already used margin and the increase
+        // ToDo: For trusted protocols, already pass usedMargin with the call -> avoid additional hop back to trusted protocol to fetch already open debt
         success = collateralValue >= getUsedMargin() + amount;
 
         // Can safely cast to uint16 since liquidationThreshold is maximal 10000
@@ -310,8 +311,8 @@ contract Vault {
      * @dev Currently only one trusted application (Arcadia Lending) can open a margin account.
      * The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
      */
-    function getUsedMargin() public returns (uint128 usedMargin) {
-        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)); // ToDo: Check if cast is safe
+    function getUsedMargin() public view returns (uint256 usedMargin) {
+        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this));
     }
 
     /**
@@ -320,7 +321,7 @@ contract Vault {
      * @dev The free margin is denominated in the baseCurrency of the proxy vault,
      * with an equal number of decimals as the base currency.
      */
-    function getFreeMargin() public returns (uint256 freeMargin) {
+    function getFreeMargin() public view returns (uint256 freeMargin) {
         uint256 collateralValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
 
@@ -347,7 +348,7 @@ contract Vault {
     function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
         //gas: 35 gas cheaper to not take debt into memory
         uint256 totalValue = getVaultValue(vault.baseCurrency);
-        uint128 openDebt = getUsedMargin();
+        uint256 usedMargin = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
 
@@ -355,17 +356,20 @@ contract Vault {
             //gas: cannot overflow unless totalValue is
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
-            //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = uint256(vault.liqThres) * uint256(openDebt);
         }
+        //ToDo: move to unchecked?
+        //gas: cannot realisticly overflow: usedMargin will be always smaller than uint128.
+        // so uint128 * uint8 << uint256
+        rightHand = usedMargin * vault.liqThres;
 
         require(leftHand < rightHand, "V_LV: This vault is healthy");
 
         uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(vault.baseCurrency);
 
         require(
+            //ToDo: check on usedMargin?
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, openDebt, vault.liqThres, baseCurrencyIdentifier
+                address(this), life, liquidationKeeper, owner, uint128(usedMargin), vault.liqThres, baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );

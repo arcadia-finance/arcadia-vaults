@@ -22,7 +22,7 @@ contract TrustedProtocolMock is TrustedProtocol {
         liquidator_ = address(0);
     }
 
-    function getOpenPosition(address) external pure override returns (uint128 openPosition) {
+    function getOpenPosition(address) external pure override returns (uint256 openPosition) {
         openPosition = 0;
     }
 }
