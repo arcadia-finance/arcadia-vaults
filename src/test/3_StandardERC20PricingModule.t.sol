@@ -45,7 +45,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
             })
         );
 
-        standardERC20PricingModule = new StandardERC20PricingModuleExtended( //ToDo: remove extension
+        standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -53,7 +53,11 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_NonOwnerAddsAsset(address unprivilegedAddress_) public {
+    /*///////////////////////////////////////////////////////////////
+                        ASSET MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    function testRevert_addAsset_NonOwner(address unprivilegedAddress_) public {
         // Given: unprivilegedAddress_ is not creatorAddress
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
@@ -65,7 +69,17 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_OwnerAddsAssetWithMoreThan18Decimals() public {
+    function testRevert_addAsset_OverwriteExistingAsset() public {
+        // Given: All necessary contracts deployed on setup
+        vm.startPrank(creatorAddress);
+        // When: creatorAddress calls addAsset twice
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        vm.expectRevert("PM20_AA: already added");
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        vm.stopPrank();
+    }
+
+    function testRevert_addAsset_MoreThan18Decimals() public {
         vm.prank(tokenCreatorAddress);
         eth = new ERC20Mock("ETH Mock", "mETH", 19);
 
@@ -77,7 +91,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
+    function testSuccess_addAsset_EmptyListRiskVariables() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with empty list credit ratings
@@ -86,9 +100,16 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
 
         // Then: address(eth) should be inPricingModule
         assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
+        assertEq(standardERC20PricingModule.assetsInPricingModule(0), address(eth));
+        (uint64 assetUnit, address[] memory oracles) = standardERC20PricingModule.getAssetInformation(address(eth));
+        assertEq(assetUnit, 10 ** uint8(Constants.ethDecimals));
+        for (uint256 i; i < oracleEthToUsdArr.length; i++) {
+            assertEq(oracles[i], oracleEthToUsdArr[i]);
+        }
+        assertTrue(standardERC20PricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
+    function testSuccess_addAsset_NonFullListRiskVariables() public {
         // Turn this into invalid uint16
         vm.startPrank(creatorAddress);
         // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
@@ -108,7 +129,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
+    function testSuccess_addAsset_FullListRiskVariables() public {
         // Given:
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with full list credit ratings
@@ -119,15 +140,38 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
     }
 
-    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
-        // Given: All necessary contracts deployed on setup
-        vm.startPrank(creatorAddress);
-        // When: creatorAddress calls addAsset twice
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
-        vm.expectRevert("PM20_AA: already added");
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+    function testRevert_setOracles_NonOwner(address unprivilegedAddress_, address asset) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Ownable: caller is not the owner");
+        standardERC20PricingModule.setOracles(asset, new address[](0));
         vm.stopPrank();
     }
+
+    function testRevert_setOracles_AssetUnknown(address asset) public {
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM20_SO: asset unknown");
+        standardERC20PricingModule.setOracles(asset, new address[](0));
+        vm.stopPrank();
+    }
+
+    function testSuccess_setOracles() public {
+        stdstore.target(address(standardERC20PricingModule)).sig(standardERC20PricingModule.inPricingModule.selector)
+            .with_key(address(eth)).checked_write(true);
+
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr);
+
+        (, address[] memory oracles) = standardERC20PricingModule.getAssetInformation(address(eth));
+        for (uint256 i; i < oracleEthToUsdArr.length; i++) {
+            assertEq(oracles[i], oracleEthToUsdArr[i]);
+        }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     function testSuccess_isWhiteListed_Positive() public {
         // Given: All necessary contracts deployed on setup
@@ -147,6 +191,10 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // Then: isWhiteListed for randomAsset should return false
         assertTrue(!standardERC20PricingModule.isWhiteListed(randomAsset, 0));
     }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
@@ -270,7 +318,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testRevert_getValue_ReturnValueOverflow(uint256 rateEthToUsdNew, uint256 amountEth) public {
+    function testRevert_getValue_Overflow(uint256 rateEthToUsdNew, uint256 amountEth) public {
         // Given: rateEthToUsdNew is lower than equal to max int256 value and max uint256 value divided by Constants.WAD and bigger than zero
         vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
         vm.assume(rateEthToUsdNew <= type(uint256).max / Constants.WAD);

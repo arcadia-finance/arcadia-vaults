@@ -59,17 +59,25 @@ abstract contract PricingModule is Ownable {
 
     /**
      * @notice A Pricing Module must always be initialised with the address of the Main-Registry and the Oracle-Hub
-     * @param _mainRegistry The address of the Main-registry
-     * @param _oracleHub The address of the Oracle-Hub
+     * @param mainRegistry_ The address of the Main-registry
+     * @param oracleHub_ The address of the Oracle-Hub
+     * @param riskManager_ The address of the Risk Manager
      */
-    constructor(address _mainRegistry, address _oracleHub, address _riskManager) {
-        mainRegistry = _mainRegistry;
-        oracleHub = _oracleHub;
-        riskManager = _riskManager;
+    constructor(address mainRegistry_, address oracleHub_, address riskManager_) {
+        mainRegistry = mainRegistry_;
+        oracleHub = oracleHub_;
+        riskManager = riskManager_;
     }
 
-    function setRiskManager(address _riskManager) external onlyRiskManager {
-        riskManager = _riskManager;
+    /*///////////////////////////////////////////////////////////////
+                    RISK MANAGER MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Sets a new Risk Manager
+     * @param riskManager_ The address of the new Risk Manager
+     */
+    function setRiskManager(address riskManager_) external onlyRiskManager {
+        riskManager = riskManager_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -81,8 +89,15 @@ abstract contract PricingModule is Ownable {
      * @return A boolean, indicating if the asset passed as input is whitelisted
      * @dev For tokens without Id (for instance ERC20 tokens), the Id should be set to 0
      */
-    function isWhiteListed(address, uint256) external view virtual returns (bool) {
-        return false;
+    function isWhiteListed(address, uint256) external view virtual returns (bool) {}
+
+    /**
+     * @notice Adds an asset back to the white-list
+     * @param assetAddress The token address of the asset that needs to be added back to the white-list
+     */
+    function addToWhiteList(address assetAddress) external onlyOwner {
+        require(inPricingModule[assetAddress], "APM_ATWL: UNKNOWN_ASSET");
+        isAssetAddressWhiteListed[assetAddress] = true;
     }
 
     /**
@@ -90,17 +105,8 @@ abstract contract PricingModule is Ownable {
      * @param assetAddress The token address of the asset that needs to be removed from the white-list
      */
     function removeFromWhiteList(address assetAddress) external onlyOwner {
-        require(inPricingModule[assetAddress], "Asset not known in Pricing Module");
+        require(inPricingModule[assetAddress], "APM_RFWL: UNKNOWN_ASSET");
         isAssetAddressWhiteListed[assetAddress] = false;
-    }
-
-    /**
-     * @notice Adds an asset back to the white-list
-     * @param assetAddress The token address of the asset that needs to be added back to the white-list
-     */
-    function addToWhiteList(address assetAddress) external onlyOwner {
-        require(inPricingModule[assetAddress], "Asset not known in Pricing Module");
-        isAssetAddressWhiteListed[assetAddress] = true;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -119,6 +125,10 @@ abstract contract PricingModule is Ownable {
      */
     function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) {}
 
+    /*///////////////////////////////////////////////////////////////
+                    RISK VARIABLES MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Returns the risk variable arrays of an asset
      * @param asset The address of the asset
@@ -131,9 +141,13 @@ abstract contract PricingModule is Ownable {
         );
     }
 
+    /**
+     * @notice Sets the risk variables for a batch of assets.
+     * @param riskVarInputs An array of risk variable inputs for the assets.
+     * @dev Risk variable are variables with decimal by 100
+     * @dev Can only be called by the Risk Manager
+     */
     function setBatchRiskVariables(RiskVarInput[] memory riskVarInputs) public virtual onlyRiskManager {
-        // Check: Valid length of arrays
-
         uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
         uint256 riskVarInputsLength = riskVarInputs.length;
 

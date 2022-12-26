@@ -65,11 +65,15 @@ contract OracleHubTest is Test {
         oracleHub = new OracleHub();
     }
 
+    /*///////////////////////////////////////////////////////////////
+                          ORACLE MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
     function testSuccess_addOracle_Owner(uint64 oracleEthToUsdUnit) public {
         // Given: oracleEthToUsdUnit is less than equal to 1 ether
         vm.assume(oracleEthToUsdUnit <= 10 ** 18);
-        vm.startPrank(creatorAddress);
         // When: creatorAddress addOracle with OracleInformation
+        vm.prank(creatorAddress);
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleEthToUsdUnit,
@@ -84,10 +88,24 @@ contract OracleHubTest is Test {
 
         // Then: oracleEthToUsd should return true to inOracleHub
         assertTrue(oracleHub.inOracleHub(address(oracleEthToUsd)));
-        vm.stopPrank();
+        (
+            uint64 oracleUnit,
+            uint8 baseAssetBaseCurrency,
+            bool baseAssetIsBaseCurrency,
+            string memory quoteAsset,
+            string memory baseAsset,
+            ,
+            address quoteAssetAddress
+        ) = oracleHub.oracleToOracleInformation(address(oracleEthToUsd));
+        assertEq(oracleUnit, oracleEthToUsdUnit);
+        assertEq(baseAssetBaseCurrency, uint8(Constants.UsdBaseCurrency));
+        assertEq(baseAssetIsBaseCurrency, true);
+        assertEq(quoteAsset, "ETH");
+        assertEq(baseAsset, "USD");
+        assertEq(quoteAssetAddress, address(eth));
     }
 
-    function testRevert_addOracle_OwnerOverwritesOracle() public {
+    function testRevert_addOracle_OverwriteOracle() public {
         vm.startPrank(creatorAddress);
         // Given: creatorAddress addOracle with OracleInformation
         oracleHub.addOracle(
@@ -103,8 +121,8 @@ contract OracleHubTest is Test {
         );
         // When: creatorAddress addOracle
 
-        // Then: addOracle should revert with "Oracle already in oracle-hub"
-        vm.expectRevert("Oracle already in oracle-hub");
+        // Then: addOracle should revert with "OH_AO: Oracle not unique"
+        vm.expectRevert("OH_AO: Oracle not unique");
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
@@ -140,13 +158,13 @@ contract OracleHubTest is Test {
         vm.stopPrank();
     }
 
-    function testRevert_addOracle_OwnerAddsOracleBigOracleUnit(uint64 oracleEthToUsdUnit) public {
+    function testRevert_addOracle_BigOracleUnit(uint64 oracleEthToUsdUnit) public {
         // Given: oracleEthToUsdUnit is bigger than 1 ether
         vm.assume(oracleEthToUsdUnit > 10 ** 18);
         // When: creatorAddress addOracle
         vm.startPrank(creatorAddress);
-        // Then: addOracle should revert with "Oracle can have maximal 18 decimals"
-        vm.expectRevert("Oracle can have maximal 18 decimals");
+        // Then: addOracle should revert with "OH_AO: Maximal 18 decimals"
+        vm.expectRevert("OH_AO: Maximal 18 decimals");
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: oracleEthToUsdUnit,
@@ -215,13 +233,35 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesSnxToUsd);
     }
 
+    function testRevert_checkOracleSequence_MoreThanThreeOracles() public {
+        vm.startPrank(creatorAddress);
+        // Given: creatorAddress addOracle with OracleInformation for SNX-ETH
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleSnxToEthDecimals),
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracle: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        vm.stopPrank();
+        // When: address 4 is oraclesSequence
+        address[] memory oraclesSequence = new address[](4);
+        // Then: checkOracleSequence should revert with "OH_COS: Max 3 Oracles"
+        vm.expectRevert("OH_COS: Max 3 Oracles");
+        oracleHub.checkOracleSequence(oraclesSequence);
+    }
+
     function testRevert_checkOracleSequence_UnknownOracle() public {
         // Given: oraclesLinkToUsd index 0 equal to
         oraclesLinkToUsd[0] = address(oracleLinkToUsd);
         // When: checkOracleSequence
 
-        // Then: checkOracleSequence with oraclesSnxToUsd should revert with "Unknown oracle"
-        vm.expectRevert("Unknown oracle");
+        // Then: checkOracleSequence with oraclesSnxToUsd should revert with "OH_COS: Unknown Oracle"
+        vm.expectRevert("OH_COS: Unknown Oracle");
         oracleHub.checkOracleSequence(oraclesSnxToUsd);
     }
 
@@ -254,8 +294,8 @@ contract OracleHubTest is Test {
         // When: oraclesSnxToUsd index 0 is oracleSnxToUsd, oraclesSnxToUsd index 1 is oracleLinkToUsd
         oraclesSnxToUsd[0] = address(oracleSnxToEth);
         oraclesSnxToUsd[1] = address(oracleLinkToUsd);
-        // Then: checkOracleSequence for oraclesSnxToUsd should revert with "qAsset doesnt match with bAsset of prev oracle"
-        vm.expectRevert("qAsset doesnt match with bAsset of prev oracle");
+        // Then: checkOracleSequence for oraclesSnxToUsd should revert with "OH_COS: No Match qAsset and bAsset"
+        vm.expectRevert("OH_COS: No Match qAsset and bAsset");
         oracleHub.checkOracleSequence(oraclesSnxToUsd);
     }
 
@@ -276,31 +316,48 @@ contract OracleHubTest is Test {
         vm.stopPrank();
         // When: oraclesSnxToEth index 0 is oracleSnxToEth
         oraclesSnxToEth[0] = address(oracleSnxToEth);
-        // Then: checkOracleSequence for oraclesSnxToEth should revert with "Last oracle does not have USD as bAsset"
-        vm.expectRevert("Last oracle does not have USD as bAsset");
+        // Then: checkOracleSequence for oraclesSnxToEth should revert with "OH_COS: Last bAsset not USD"
+        vm.expectRevert("OH_COS: Last bAsset not USD");
         oracleHub.checkOracleSequence(oraclesSnxToEth);
     }
 
-    function testRevert_checkOracleSequence_MoreThanThreeOracles() public {
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    function testRevert_getRate_NegativeRate(int256 rateEthToUsd) public {
+        // Given: oracleEthToUsdDecimals less than equal to 18, rateEthToUsd less than equal to max uint256 value,
+        // rateEthToUsd is less than max uint256 value divided by WAD
+        vm.assume(rateEthToUsd < 0);
+
         vm.startPrank(creatorAddress);
-        // Given: creatorAddress addOracle with OracleInformation for SNX-ETH
+        // When: creatorAddress addOracle with OracleInformation for ETH-USD, oracleOwner transmit rateEthToUsd
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthDecimals),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
-                oracle: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracle: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
                 baseAssetIsBaseCurrency: true
             })
         );
         vm.stopPrank();
-        // When: address 4 is oraclesSequence
-        address[] memory oraclesSequence = new address[](4);
-        // Then: checkOracleSequence should revert with "Oracle seq. cant be longer than 3"
-        vm.expectRevert("Oracle seq. cant be longer than 3");
-        oracleHub.checkOracleSequence(oraclesSequence);
+
+        vm.startPrank(oracleOwner);
+        oracleEthToUsd.transmit(rateEthToUsd);
+        vm.stopPrank();
+
+        oraclesEthToUsd[0] = address(oracleEthToUsd);
+
+        vm.expectRevert("OH_GR: Negative Rate");
+        oracleHub.getRate(oraclesEthToUsd, Constants.UsdBaseCurrency);
+    }
+
+    function testRevert_getRate_NoUsdOrBaseCurrencyOracle() public {
+        vm.expectRevert("OH_GR: No bAsset in USD or bCurr");
+        oracleHub.getRate(new address[](0), Constants.UsdBaseCurrency);
     }
 
     function testSuccess_getRate_BaseCurrencyIsUsdForSingleOracle(uint256 rateEthToUsd, uint8 oracleEthToUsdDecimals)

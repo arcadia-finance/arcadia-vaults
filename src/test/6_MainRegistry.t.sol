@@ -29,7 +29,7 @@ abstract contract MainRegistryTest is DeployArcadiaVaults {
             })
         );
 
-        standardERC20PricingModule = new StandardERC20PricingModuleExtended(
+        standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
             address(oracleHub)
         );
@@ -57,11 +57,14 @@ contract DeploymentTest is MainRegistryTest {
         // Given: All necessary contracts deployed on setup
         // When:
         // Then: baseCurrencyLabel should return "USD"
-        (,,,, string memory baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
+        (,, address assetaddress,, string memory baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
+        assertEq(assetaddress, address(0));
         assertTrue(StringHelpers.compareStrings("USD", baseCurrencyLabel));
+        assertEq(mainRegistry.assetToBaseCurrency(address(0)), 0);
+        assertEq(mainRegistry.baseCurrencies(0), address(0));
     }
 
-    function testSuccess_deployment_BaseCurrencyCounterIsZero() public {
+    function testSuccess_deployment_BaseCurrencyCounterIsOne() public {
         // Given: All necessary contracts deployed on setup
         // When:
         // Then: baseCurrencyCounter should return 1
@@ -302,34 +305,13 @@ contract AssetManagementTest is MainRegistryTest {
     }
 
     function testSuccess_addAsset_EmptyListRiskVariables() public {
-        // When: standardERC20PricingModule calls addAsset with input of address(eth), emptyListUint16, emptyListUint16
+        // When: standardERC20PricingModule calls addAsset with input of address(eth)
         vm.startPrank(address(standardERC20PricingModule));
         mainRegistry.addAsset(address(eth));
         vm.stopPrank();
 
         // Then: inMainRegistry for address(eth) should return true
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
-    }
-
-    function testSuccess_addAsset_FullListRiskVariables() public {
-        // Given: collateralFactors index 0, 1 and 2 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0, 1 and 2 is DEFAULT_LIQUIDATION_THRESHOLD
-        uint16 collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        uint16[] memory collateralFactors = new uint16[](3);
-        collateralFactors[0] = collFactor;
-        collateralFactors[1] = collFactor;
-        collateralFactors[2] = collFactor;
-        uint16[] memory liquidationThresholds = new uint16[](3);
-        liquidationThresholds[0] = liqTresh;
-        liquidationThresholds[1] = liqTresh;
-        liquidationThresholds[2] = liqTresh;
-
-        vm.startPrank(address(standardERC20PricingModule));
-        // When: address(standardERC20PricingModule) calls addAsset
-        mainRegistry.addAsset(address(eth));
-        vm.stopPrank();
-
-        // Then:
     }
 
     function testSuccess_addAsset_OverwriteAssetPositive() public {
@@ -925,7 +907,7 @@ contract PricingLogicTest is MainRegistryTest {
         assetAmounts[1] = 10 ** Constants.linkDecimals;
         assetAmounts[2] = 1;
 
-        RiskModule.AssetValueRisk[] memory actualValuesPerAsset =
+        RiskModule.AssetValueAndRiskVariables[] memory actualValuesPerAsset =
             mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
 
         uint256 ethValueInEth = assetAmounts[0];

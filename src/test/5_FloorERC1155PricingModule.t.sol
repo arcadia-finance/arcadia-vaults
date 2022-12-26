@@ -53,7 +53,11 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_NonOwnerAddsAsset(address unprivilegedAddress_) public {
+    /*///////////////////////////////////////////////////////////////
+                        ASSET MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    function testRevert_addAsset_NonOwner(address unprivilegedAddress_) public {
         // Given: unprivilegedAddress_ is not creatorAddress
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
@@ -66,7 +70,27 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithEmptyListRiskVariables() public {
+    function testRevert_addAsset_OverwriteExistingAsset() public {
+        // Given: All necessary contracts deployed on setup
+        vm.startPrank(creatorAddress);
+        // When: creatorAddress calls addAsset twice
+        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput);
+        vm.expectRevert("PM1155_AA: already added");
+        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput);
+        vm.stopPrank();
+
+        // Then: inPricingModule for address(interleave) should return true
+        assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
+        assertEq(floorERC1155PricingModule.assetsInPricingModule(0), address(interleave));
+        (uint256 id, address[] memory oracles) = floorERC1155PricingModule.getAssetInformation(address(interleave));
+        assertEq(id, 1);
+        for (uint256 i; i < oracleInterleaveToEthEthToUsd.length; i++) {
+            assertEq(oracles[i], oracleInterleaveToEthEthToUsd[i]);
+        }
+        assertTrue(floorERC1155PricingModule.isAssetAddressWhiteListed(address(interleave)));
+    }
+
+    function testSuccess_addAsset_EmptyListRiskVariables() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with empty list credit ratings
@@ -77,7 +101,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
+    function testSuccess_addAsset_NonFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
         // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
@@ -94,7 +118,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
-    function testSuccess_addAsset_OwnerAddsAssetWithFullListRiskVariables() public {
+    function testSuccess_addAsset_FullListRiskVariables() public {
         // Given: collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with full list credit ratings
@@ -105,18 +129,38 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
-    function testRevert_addAsset_OwnerOverwritesExistingAsset() public {
-        // Given: All necessary contracts deployed on setup
-        vm.startPrank(creatorAddress);
-        // When: creatorAddress calls addAsset twice
-        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput);
-        vm.expectRevert("PM1155_AA: already added");
-        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput);
-        vm.stopPrank();
+    function testRevert_setOracles_NonOwner(address unprivilegedAddress_, address asset) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
 
-        // Then: inPricingModule for address(interleave) should return true
-        assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Ownable: caller is not the owner");
+        floorERC1155PricingModule.setOracles(asset, new address[](0));
+        vm.stopPrank();
     }
+
+    function testRevert_setOracles_AssetUnknown(address asset) public {
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM1155_SO: asset unknown");
+        floorERC1155PricingModule.setOracles(asset, new address[](0));
+        vm.stopPrank();
+    }
+
+    function testSuccess_setOracles() public {
+        stdstore.target(address(floorERC1155PricingModule)).sig(floorERC1155PricingModule.inPricingModule.selector)
+            .with_key(address(interleave)).checked_write(true);
+
+        vm.prank(creatorAddress);
+        floorERC1155PricingModule.setOracles(address(interleave), oracleInterleaveToEthEthToUsd);
+
+        (, address[] memory oracles) = floorERC1155PricingModule.getAssetInformation(address(interleave));
+        for (uint256 i; i < oracleInterleaveToEthEthToUsd.length; i++) {
+            assertEq(oracles[i], oracleInterleaveToEthEthToUsd[i]);
+        }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
     function testSuccess_isWhiteListed_Positive() public {
         // Given: All necessary contracts deployed on setup
@@ -148,6 +192,10 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         // Then: isWhiteListed for address(interlave) should return false
         assertTrue(!floorERC1155PricingModule.isWhiteListed(address(interleave), id));
     }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountInterleave) public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
@@ -270,7 +318,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         assertEq(actualValueInBaseCurrency, expectedValueInBaseCurrency);
     }
 
-    function testRevert_getValue_ReturnValueOverflow(uint256 amountInterleave, uint256 rateInterleaveToEthNew) public {
+    function testRevert_getValue_Overflow(uint256 amountInterleave, uint256 rateInterleaveToEthNew) public {
         // Given: rateInterleaveToEthNew is lower than equal to max int256 value and max uint256 value divided by Constants.WAD and bigger than zero
         vm.assume(rateInterleaveToEthNew <= uint256(type(int256).max));
         vm.assume(rateInterleaveToEthNew <= type(uint256).max / Constants.WAD);

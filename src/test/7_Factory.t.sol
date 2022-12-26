@@ -311,6 +311,66 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
+    function testRevert_setNewVaultInfo_OwnerSetsNewVaultWithInfoMissingBaseCurrencyInMainRegistry(
+        address newAssetAddress,
+        address logic
+    ) public {
+        vm.assume(logic != address(0));
+        vm.assume(newAssetAddress != address(0));
+        assertEq(false, factory.newVaultInfoSet());
+
+        vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
+                assetAddress: newAssetAddress,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+            })
+        );
+
+        mainRegistry2 = new MainRegistry(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
+                assetAddress: 0x0000000000000000000000000000000000000000,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
+            })
+        );
+        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
+        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
+        vm.stopPrank();
+
+        assertEq(false, factory.newVaultInfoSet());
+    }
+
+    function testRevert_setNewVaultInfo_OwnerSetsNewVaultInfoWithDifferentBaseCurrencyInMainRegistry(
+        address randomAssetAddress,
+        address logic
+    ) public {
+        vm.assume(logic != address(0));
+        vm.assume(randomAssetAddress != address(0));
+        assertEq(false, factory.newVaultInfoSet());
+
+        vm.startPrank(creatorAddress);
+        mainRegistry2 = new MainRegistry(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
+                assetAddress: randomAssetAddress,
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "USD",
+                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
+            })
+        );
+        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
+        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
+        vm.stopPrank();
+
+        assertEq(false, factory.newVaultInfoSet());
+    }
+
     function testSuccess_setNewVaultInfo_OwnerSetsVaultInfoForFirstTime(address mainRegistry_, address logic) public {
         vm.assume(logic != address(0));
 
@@ -346,66 +406,6 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.prank(creatorAddress);
         factory.setNewVaultInfo(address(mainRegistry), logic, Constants.upgradeProof1To2);
         assertTrue(factory.newVaultInfoSet());
-    }
-
-    function testRevert_setNewVaultInfo_OwnerSetsNewVaultInfoWithDifferentBaseCurrencyInMainRegistry(
-        address randomAssetAddress,
-        address logic
-    ) public {
-        vm.assume(logic != address(0));
-        vm.assume(randomAssetAddress != address(0));
-        assertEq(false, factory.newVaultInfoSet());
-
-        vm.startPrank(creatorAddress);
-        mainRegistry2 = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: randomAssetAddress,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
-        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
-        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
-        vm.stopPrank();
-
-        assertEq(false, factory.newVaultInfoSet());
-    }
-
-    function testRevert_setNewVaultInfo_OwnerSetsNewVaultWithInfoMissingBaseCurrencyInMainRegistry(
-        address newAssetAddress,
-        address logic
-    ) public {
-        vm.assume(logic != address(0));
-        vm.assume(newAssetAddress != address(0));
-        assertEq(false, factory.newVaultInfoSet());
-
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: newAssetAddress,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
-        );
-
-        mainRegistry2 = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
-        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
-        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
-        vm.stopPrank();
-
-        assertEq(false, factory.newVaultInfoSet());
     }
 
     function testSuccess_setNewVaultInfo_OwnerSetsNewVaultWithIdenticalBaseCurrenciesInMainRegistry(
@@ -539,15 +539,17 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(1, factory.latestVaultVersion());
     }
 
-    function testSuccess_blockVaultVersion(uint16 vaultVersion) public {
+    function testRevert_blockVaultVersion_NonOwner(uint16 vaultVersion, address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
         uint256 currentVersion = factory.latestVaultVersion();
         vm.assume(vaultVersion <= currentVersion);
         vm.assume(vaultVersion != 0);
 
-        vm.prank(creatorAddress);
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Ownable: caller is not the owner");
         factory.blockVaultVersion(vaultVersion);
-
-        assertTrue(factory.vaultVersionBlocked(vaultVersion));
+        vm.stopPrank();
     }
 
     function testRevert_blockVaultVersion_BlockNonExistingVaultVersion(uint16 vaultVersion) public {
@@ -560,17 +562,15 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_blockVaultVersion_ByNonOwner(uint16 vaultVersion, address unprivilegedAddress_) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
+    function testSuccess_blockVaultVersion(uint16 vaultVersion) public {
         uint256 currentVersion = factory.latestVaultVersion();
         vm.assume(vaultVersion <= currentVersion);
         vm.assume(vaultVersion != 0);
 
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(creatorAddress);
         factory.blockVaultVersion(vaultVersion);
-        vm.stopPrank();
+
+        assertTrue(factory.vaultVersionBlocked(vaultVersion));
     }
 
     /*///////////////////////////////////////////////////////////////
