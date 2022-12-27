@@ -92,7 +92,7 @@ contract Factory is ERC721, Ownable {
         require(canUpgrade, "FTR_UVV: Cannot upgrade to this version");
 
         address newImplementation = vaultDetails[version].logic;
-
+        //TODO: add registry update to the vault
         IVault(vault).upgradeVault(newImplementation, version);
     }
 

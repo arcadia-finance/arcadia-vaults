@@ -87,9 +87,9 @@ contract EndToEndTest is DeployArcadiaVaults {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        uint256 expectedValue = (((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) * collFactor) / 100
+        uint256 expectedValue = (((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) * collFactor_) / 100
             / 10 ** (18 - Constants.daiDecimals);
         uint256 actualValue = proxy.getFreeMargin();
 
@@ -97,16 +97,16 @@ contract EndToEndTest is DeployArcadiaVaults {
     }
 
     function testSuccess_borrow_AllowCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth > 0);
-        vm.assume(uint256(amountCredit) * collFactor < type(uint128).max); //prevent overflow in takecredit with absurd values
+        vm.assume(uint256(amountCredit) * collFactor_ < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -119,15 +119,15 @@ contract EndToEndTest is DeployArcadiaVaults {
 
     function testRevert_borrow_NotAllowTooMuchCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(uint256(amountCredit) * collFactor < type(uint128).max); //prevent overflow in takecredit with absurd values
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(uint256(amountCredit) * collFactor_ < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit > maxCredit);
 
@@ -153,11 +153,11 @@ contract EndToEndTest is DeployArcadiaVaults {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.daiDecimals))
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -193,11 +193,11 @@ contract EndToEndTest is DeployArcadiaVaults {
         uint128 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint128 amountCredit = uint128(
             (
                 ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                    * collFactor
+                    * collFactor_
             ) / 100
         );
         vm.assume(amountCredit > 0);
@@ -222,13 +222,13 @@ contract EndToEndTest is DeployArcadiaVaults {
     ) public {
         vm.assume(amountEth > 0);
         vm.assume(newPrice * 10 ** Constants.oracleEthToUsdDecimals > rateEthToUsd);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor); //prevent overflow in takecredit with absurd values
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -245,7 +245,7 @@ contract EndToEndTest is DeployArcadiaVaults {
         uint256 newValueOfOneEth = (Constants.WAD * newRateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         uint256 expectedAvailableCredit = (
             ((newValueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100 - amountCredit;
 
         uint256 actualAvailableCredit = proxy.getFreeMargin();
@@ -255,8 +255,8 @@ contract EndToEndTest is DeployArcadiaVaults {
 
     function testRevert_withdraw_OpenDebtIsTooLarge(uint128 amountEth, uint128 amountEthWithdrawal) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
         vm.assume(amountEth >= amountEthWithdrawal);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -288,8 +288,8 @@ contract EndToEndTest is DeployArcadiaVaults {
         uint128 amountCredit
     ) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
         vm.assume(amountEth >= amountEthWithdrawal);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -325,15 +325,15 @@ contract EndToEndTest is DeployArcadiaVaults {
         uint16 blocksToRoll
     ) public {
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -359,15 +359,15 @@ contract EndToEndTest is DeployArcadiaVaults {
 
     function testSuccess_repay_ExactDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll) public {
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -397,15 +397,15 @@ contract EndToEndTest is DeployArcadiaVaults {
     {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -443,15 +443,15 @@ contract EndToEndTest is DeployArcadiaVaults {
     ) public {
         // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 

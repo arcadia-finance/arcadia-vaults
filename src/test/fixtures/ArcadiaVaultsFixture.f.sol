@@ -77,7 +77,11 @@ contract DeployArcadiaVaults is Test {
     address[] public oracleWmaycToUsdArr = new address[](1);
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
 
-    uint16[] emptyListUint16 = new uint16[](0);
+    uint16 public collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+    uint16 public liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+
+    PricingModule.RiskVarInput[] emptyRiskVarInput;
+    PricingModule.RiskVarInput[] riskVars;
 
     // FIXTURES
     ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
@@ -263,9 +267,7 @@ contract DeployArcadiaVaults is Test {
                 baseCurrencyToUsdOracle: address(oracleDaiToUsd),
                 baseCurrencyLabel: "DAI",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
+            })
         );
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -274,9 +276,7 @@ contract DeployArcadiaVaults is Test {
                 baseCurrencyToUsdOracle: address(oracleEthToUsd),
                 baseCurrencyLabel: "ETH",
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
+            })
         );
 
         standardERC20PricingModule = new StandardERC20PricingModule(
@@ -296,54 +296,40 @@ contract DeployArcadiaVaults is Test {
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
 
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
+        riskVars.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 0,
+                asset: address(0),
+                collateralFactor: collFactor,
+                liquidationThreshold: liqTresh
+            })
         );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
+        riskVars.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 1,
+                asset: address(0),
+                collateralFactor: collFactor,
+                liquidationThreshold: liqTresh
+            })
         );
-        standardERC20PricingModule.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleSnxToEthEthToUsd,
-                assetUnit: uint64(10 ** Constants.snxDecimals),
-                assetAddress: address(snx)
-            }),
-            emptyListUint16,
-            emptyListUint16
+        riskVars.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 2,
+                asset: address(0),
+                collateralFactor: collFactor,
+                liquidationThreshold: liqTresh
+            })
         );
 
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
+        PricingModule.RiskVarInput[] memory riskVars_ = riskVars;
 
-        floorERC1155PricingModule.setAssetInformation(
-            FloorERC1155PricingModule.AssetInformation({
-                oracleAddresses: oracleInterleaveToEthEthToUsd,
-                id: 1,
-                assetAddress: address(interleave)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, riskVars_);
+
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars_);
+
+        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, riskVars_);
 
         vault = new Vault();
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);

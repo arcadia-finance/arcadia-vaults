@@ -8,6 +8,7 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./interfaces/IChainLinkData.sol";
+import {StringHelpers} from "./utils/StringHelpers.sol";
 import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
 
 /**
@@ -21,6 +22,7 @@ import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
  */
 contract OracleHub is Ownable {
     using FixedPointMathLib for uint256;
+    using StringHelpers for string;
 
     mapping(address => bool) public inOracleHub;
     mapping(address => OracleInformation) public oracleToOracleInformation;
@@ -60,8 +62,8 @@ contract OracleHub is Ownable {
      */
     function addOracle(OracleInformation calldata oracleInformation) external onlyOwner {
         address oracle = oracleInformation.oracle;
-        require(!inOracleHub[oracle], "Oracle already in oracle-hub");
-        require(oracleInformation.oracleUnit <= 1000000000000000000, "Oracle can have maximal 18 decimals");
+        require(!inOracleHub[oracle], "OH_AO: Oracle not unique");
+        require(oracleInformation.oracleUnit <= 1000000000000000000, "OH_AO: Maximal 18 decimals");
         inOracleHub[oracle] = true;
         oracleToOracleInformation[oracle] = oracleInformation;
     }
@@ -77,22 +79,22 @@ contract OracleHub is Ownable {
      */
     function checkOracleSequence(address[] memory oracles) external view {
         uint256 oracleAdressesLength = oracles.length;
-        require(oracleAdressesLength <= 3, "Oracle seq. cant be longer than 3");
+        require(oracleAdressesLength <= 3, "OH_COS: Max 3 Oracles");
         for (uint256 i; i < oracleAdressesLength;) {
-            require(inOracleHub[oracles[i]], "Unknown oracle");
+            require(inOracleHub[oracles[i]], "OH_COS: Unknown Oracle");
             if (i > 0) {
                 require(
-                    _compareStrings(
+                    StringHelpers.compareStrings(
                         oracleToOracleInformation[oracles[i - 1]].baseAsset,
                         oracleToOracleInformation[oracles[i]].quoteAsset
                     ),
-                    "qAsset doesnt match with bAsset of prev oracle"
+                    "OH_COS: No Match qAsset and bAsset"
                 );
             }
             if (i == oracleAdressesLength - 1) {
                 require(
-                    _compareStrings(oracleToOracleInformation[oracles[i]].baseAsset, "USD"),
-                    "Last oracle does not have USD as bAsset"
+                    StringHelpers.compareStrings(oracleToOracleInformation[oracles[i]].baseAsset, "USD"),
+                    "OH_COS: Last bAsset not USD"
                 );
             }
             unchecked {
@@ -142,7 +144,7 @@ contract OracleHub is Ownable {
         for (uint256 i; i < oraclesLength;) {
             oracleAddressAtIndex = oracles[i];
             (, tempRate,,,) = IChainLinkData(oracleAddressAtIndex).latestRoundData();
-            require(tempRate >= 0, "Negative oracle price");
+            require(tempRate >= 0, "OH_GR: Negative Rate");
 
             rate = rate.mulDivDown(uint256(tempRate), oracleToOracleInformation[oracleAddressAtIndex].oracleUnit);
 
@@ -163,24 +165,6 @@ contract OracleHub is Ownable {
             }
         }
         //Since all series of oracles must end with USD, it should be impossible to arrive at this point
-        revert("No oracle with USD or baseCurrency as bAsset");
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        HELPER FUNCTIONS
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Checks if two input strings are identical, if so returns true
-     * @param a The first string to be compared
-     * @param b The second string to be compared
-     * @return result Boolean that returns true if both input strings are equal, and false if both strings are different
-     */
-    function _compareStrings(string memory a, string memory b) internal pure returns (bool result) {
-        if (bytes(a).length != bytes(b).length) {
-            return false;
-        } else {
-            result = keccak256(bytes(a)) == keccak256(bytes(b));
-        }
+        revert("OH_GR: No bAsset in USD or bCurr");
     }
 }
