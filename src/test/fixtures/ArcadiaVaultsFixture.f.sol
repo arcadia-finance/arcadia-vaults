@@ -323,9 +323,9 @@ contract DeployArcadiaVaults is Test {
 
         PricingModule.RiskVarInput[] memory riskVars_ = riskVars;
 
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_);
-        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, riskVars_);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, riskVars_, type(uint248).max);
 
         floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars_);
 

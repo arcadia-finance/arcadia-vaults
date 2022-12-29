@@ -421,7 +421,7 @@ contract Vault {
             "V_D: Length mismatch"
         );
 
-        require(IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "V_D: Not all assets whitelisted");
+        require(IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts), "V_D: Not all assets whitelisted");
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {

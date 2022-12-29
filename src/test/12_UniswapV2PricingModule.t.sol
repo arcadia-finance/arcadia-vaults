@@ -252,7 +252,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         (address token0, address token1) = uniswapV2PricingModule.assetToInformation(address(pairSnxEth));
         assertEq(token0, address(snx));
         assertEq(token1, address(eth));
-        assertTrue(uniswapV2PricingModule.isAssetAddressWhiteListed(address(pairSnxEth)));
+        assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth),0));
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
@@ -742,7 +742,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
                 baseAssetIsBaseCurrency: true
             })
         );
-        standardERC20PricingModule.addAsset(address(token), oracleTokenToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(token), oracleTokenToUsdArr, emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
     }
 }

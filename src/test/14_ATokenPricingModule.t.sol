@@ -70,7 +70,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(aTokenPricingModule));
 
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
     }
 
@@ -131,7 +131,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleEthToUsdArr.length; i++) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
-        assertTrue(aTokenPricingModule.isAssetAddressWhiteListed(address(aEth)));
+        assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {
@@ -232,7 +232,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         aSnx = new ATokenMock(address(snx), "aSNX Mock", "maSNX", uint8(Constants.snxDecimals));
 
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
         aTokenPricingModule.addAsset(address(aSnx), emptyRiskVarInput);
         vm.stopPrank();
 
@@ -258,7 +258,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         aLink = new ATokenMock(address(link), "aLINK Mock", "maLINK", uint8(Constants.linkDecimals));
 
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
         aTokenPricingModule.addAsset(address(aLink), emptyRiskVarInput);
         vm.stopPrank();
 

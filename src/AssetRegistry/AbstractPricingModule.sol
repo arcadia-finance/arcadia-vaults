@@ -29,7 +29,7 @@ abstract contract PricingModule is Ownable {
     address[] public assetsInPricingModule;
 
     mapping(address => bool) public inPricingModule;
-    mapping(address => bool) public isAssetAddressWhiteListed;
+    mapping(address => WhiteListed) public isAssetAddressWhiteListed;
     mapping(address => mapping(uint256 => RiskVars)) public assetRiskVars;
 
     //struct with input variables necessary to avoid stack to deep error
@@ -38,6 +38,11 @@ abstract contract PricingModule is Ownable {
         uint256 assetId;
         uint256 assetAmount;
         uint256 baseCurrency;
+    }
+
+    struct WhiteListed {
+        bool isWhiteListed;
+        uint248 maxExposure;
     }
 
     struct RiskVars {
@@ -97,7 +102,7 @@ abstract contract PricingModule is Ownable {
      */
     function addToWhiteList(address assetAddress) external onlyOwner {
         require(inPricingModule[assetAddress], "APM_ATWL: UNKNOWN_ASSET");
-        isAssetAddressWhiteListed[assetAddress] = true;
+        isAssetAddressWhiteListed[assetAddress].isWhiteListed = true;
     }
 
     /**
@@ -106,7 +111,7 @@ abstract contract PricingModule is Ownable {
      */
     function removeFromWhiteList(address assetAddress) external onlyOwner {
         require(inPricingModule[assetAddress], "APM_RFWL: UNKNOWN_ASSET");
-        isAssetAddressWhiteListed[assetAddress] = false;
+        isAssetAddressWhiteListed[assetAddress].isWhiteListed = false;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -202,5 +207,9 @@ abstract contract PricingModule is Ownable {
         );
 
         assetRiskVars[asset][basecurrency] = riskVars;
+    }
+
+    function setExposureOfAsset(address asset, uint256 maxExposure) public onlyOwner {
+        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
     }
 }

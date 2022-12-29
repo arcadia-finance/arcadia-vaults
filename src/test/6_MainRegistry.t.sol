@@ -166,8 +166,8 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
     function testSuccess_addBaseCurrency() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
 
         // When: creatorAddress calls addBaseCurrency
         mainRegistry.addBaseCurrency(
@@ -397,7 +397,7 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testSuccess_batchIsWhiteListed_AllAssetsWhiteListed() public {
         // Given: creatorAddress calls addAsset on standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
         floorERC721PricingModule.addAsset(
             address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput
         );
@@ -419,7 +419,7 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testRevert_batchIsWhiteListed_NonEqualInputLists() public {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
         floorERC721PricingModule.addAsset(
             address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput
         );
@@ -441,7 +441,7 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testSuccess_batchIsWhiteListed_SingleAssetNotWhitelisted() public {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
         floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput);
         vm.stopPrank();
 
@@ -461,7 +461,7 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testSuccess_batchIsWhiteListed_AssetNotInMainregistry() public {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
         floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput);
         vm.stopPrank();
 
@@ -481,8 +481,8 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testSuccess_getWhiteList_MultipleAssets() public {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
-        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
         floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput);
 
         vm.stopPrank();
@@ -501,8 +501,8 @@ contract WhiteListLogicTest is MainRegistryTest {
     function testSuccess_getWhiteList_RemovalOfAsset() public {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule, calls removeFromWhiteList and addToWhiteList for address(snx)
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
-        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
         floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput);
 
         standardERC20PricingModule.removeFromWhiteList(address(snx));
@@ -550,8 +550,8 @@ contract PricingLogicTest is MainRegistryTest {
         );
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
 
         floorERC721PricingModule.addAsset(
             address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput
@@ -589,7 +589,7 @@ contract PricingLogicTest is MainRegistryTest {
             "mLINK",
             linkDecimals
         );
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -645,7 +645,7 @@ contract PricingLogicTest is MainRegistryTest {
             "LINK Mock",
             "mLINK",
             linkDecimals);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);

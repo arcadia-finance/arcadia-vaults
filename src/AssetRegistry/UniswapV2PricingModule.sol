@@ -94,7 +94,7 @@ contract UniswapV2PricingModule is PricingModule {
         assetToInformation[asset].token1 = token1;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset] = true;
+        isAssetAddressWhiteListed[asset].isWhiteListed = true;
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -111,7 +111,7 @@ contract UniswapV2PricingModule is PricingModule {
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
     function isWhiteListed(address asset, uint256) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[asset]) {
+        if (isAssetAddressWhiteListed[asset].isWhiteListed) {
             return true;
         }
 

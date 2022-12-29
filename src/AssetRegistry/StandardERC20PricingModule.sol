@@ -49,7 +49,7 @@ contract StandardERC20PricingModule is PricingModule {
      * @dev The assets are added in the Main-Registry as well.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars) external onlyOwner {
+    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint256 maxExposure) external onlyOwner {
         //View function, reverts in OracleHub if sequence is not correct
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
@@ -64,7 +64,9 @@ contract StandardERC20PricingModule is PricingModule {
         assetToInformation[asset].oracles = oracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset] = true;
+
+        isAssetAddressWhiteListed[asset].isWhiteListed = true;
+        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -102,12 +104,17 @@ contract StandardERC20PricingModule is PricingModule {
      * @dev Since ERC20 tokens have no Id, the Id should be set to 0
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address asset, uint256) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[asset]) {
+    function isWhiteListed(address asset, uint256) public view override returns (bool) {
+        if (isAssetAddressWhiteListed[asset].isWhiteListed) {
             return true;
         }
 
         return false;
+    }
+
+    function processDeposit(address asset, uint256, uint256 amount) external returns (bool success) {
+        isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
+        return isWhiteListed(asset, 0);
     }
 
     /*///////////////////////////////////////////////////////////////

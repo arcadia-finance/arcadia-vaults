@@ -11,6 +11,9 @@ interface IRegistry {
         external
         view
         returns (bool);
+    function batchProcessDeposit(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata amounts)
+        external
+        returns (bool);
 
     function getTotalValue(
         address[] calldata _assetAddresses,

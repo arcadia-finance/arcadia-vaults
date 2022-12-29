@@ -171,6 +171,29 @@ contract MainRegistry is Ownable {
         return true;
     }
 
+    function batchProcessDeposit(address[] calldata _assetAddresses, uint256[] calldata _assetIds, uint256[] calldata amounts)
+        public
+        returns (bool)
+    {
+        uint256 addressesLength = _assetAddresses.length;
+        require(addressesLength == _assetIds.length && addressesLength == amounts.length, "LENGTH_MISMATCH");
+
+        address assetAddress;
+        for (uint256 i; i < addressesLength;) {
+            assetAddress = _assetAddresses[i];
+            if (!inMainRegistry[assetAddress]) {
+                return false;
+            } else if (!IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, _assetIds[i], amounts[i])) {
+                return false;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        return true;
+    }
+
     /* ///////////////////////////////////////////////////////////////
                         WHITE LIST LOGIC
     /////////////////////////////////////////////////////////////// */

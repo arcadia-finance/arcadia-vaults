@@ -87,7 +87,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleInterleaveToEthEthToUsd.length; i++) {
             assertEq(oracles[i], oracleInterleaveToEthEthToUsd[i]);
         }
-        assertTrue(floorERC1155PricingModule.isAssetAddressWhiteListed(address(interleave)));
+        assertTrue(floorERC1155PricingModule.isWhiteListed(address(interleave), 0));
     }
 
     function testSuccess_addAsset_EmptyListRiskVariables() public {

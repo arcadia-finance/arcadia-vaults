@@ -67,7 +67,7 @@ contract FloorERC721PricingModule is PricingModule {
         assetToInformation[asset].oracles = oracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset] = true;
+        isAssetAddressWhiteListed[asset].isWhiteListed = true;
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -111,7 +111,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
     function isWhiteListed(address asset, uint256 assetId) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[asset]) {
+        if (isAssetAddressWhiteListed[asset].isWhiteListed) {
             if (isIdInRange(asset, assetId)) {
                 return true;
             }

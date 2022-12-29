@@ -114,14 +114,16 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         ).checked_write(true);
 
         // And: asset is not white listed
-        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(asset));
+        (bool isWhiteListed,) = abstractPricingModule.isAssetAddressWhiteListed(asset);
+        assertTrue(!isWhiteListed);
 
         // When: creatorAddress adds asset to the white list
         vm.prank(creatorAddress);
         abstractPricingModule.addToWhiteList(asset);
 
         // Then: asset is white listed
-        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(asset));
+        (isWhiteListed,) = abstractPricingModule.isAssetAddressWhiteListed(asset);
+        assertTrue(isWhiteListed);
     }
 
     function testSuccess_addToWhiteList_WhiteListedAsset(address asset) public {
@@ -139,7 +141,8 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         abstractPricingModule.addToWhiteList(asset);
 
         // Then: asset is white listed
-        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(asset));
+        (bool isWhiteListed,) = abstractPricingModule.isAssetAddressWhiteListed(asset);
+        assertTrue(isWhiteListed);
     }
 
     function testRevert_removeFromWhiteList_NonOwner(address asset, address unprivilegedAddress_) public {
@@ -172,14 +175,16 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         ).checked_write(true);
 
         // And: asset is not white listed
-        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(asset));
+        (bool isWhiteListed,) = abstractPricingModule.isAssetAddressWhiteListed(asset);
+        assertTrue(!isWhiteListed);
 
         // When: creatorAddress removes asset from the white list
         vm.prank(creatorAddress);
         abstractPricingModule.removeFromWhiteList(asset);
 
         // Then: asset is not white listed
-        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(asset));
+        (isWhiteListed,) = abstractPricingModule.isAssetAddressWhiteListed(asset);
+        assertTrue(!isWhiteListed);
     }
 
     function testSuccess_removeFromWhiteList_WhiteListedAsset(address asset) public {
@@ -197,7 +202,8 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         abstractPricingModule.removeFromWhiteList(asset);
 
         // Then: asset is not white listed
-        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(asset));
+        (bool isWhiteListed,) = abstractPricingModule.isAssetAddressWhiteListed(asset);
+        assertTrue(!isWhiteListed);
     }
 
     /*///////////////////////////////////////////////////////////////

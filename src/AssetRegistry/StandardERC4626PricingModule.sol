@@ -75,7 +75,7 @@ contract StandardERC4626PricingModule is PricingModule {
         assetToInformation[asset].underlyingAssetOracles = underlyingAssetOracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset] = true;
+        isAssetAddressWhiteListed[asset].isWhiteListed = true;
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -121,7 +121,7 @@ contract StandardERC4626PricingModule is PricingModule {
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
     function isWhiteListed(address assetAddress, uint256) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[assetAddress]) {
+        if (isAssetAddressWhiteListed[assetAddress].isWhiteListed) {
             return true;
         }
 

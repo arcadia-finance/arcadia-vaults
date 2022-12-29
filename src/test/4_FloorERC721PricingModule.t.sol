@@ -104,7 +104,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleWbaycToEthEthToUsd.length; i++) {
             assertEq(oracles[i], oracleWbaycToEthEthToUsd[i]);
         }
-        assertTrue(floorERC721PricingModule.isAssetAddressWhiteListed(address(bayc)));
+        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 0));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {

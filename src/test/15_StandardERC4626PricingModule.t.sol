@@ -70,7 +70,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(standardERC4626PricingModule));
 
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
     }
 
@@ -132,7 +132,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleEthToUsdArr.length; i++) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
-        assertTrue(standardERC4626PricingModule.isAssetAddressWhiteListed(address(ybEth)));
+        assertTrue(standardERC4626PricingModule.isWhiteListed(address(ybEth), 0));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {
@@ -240,7 +240,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         ybSnx = new ERC4626Mock(snx, "ybSNX Mock", "mybSNX", uint8(Constants.snxDecimals));
 
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
         standardERC4626PricingModule.addAsset(address(ybSnx), emptyRiskVarInput);
         vm.stopPrank();
 
@@ -273,7 +273,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         ybLink = new ERC4626Mock(link, "ybLINK Mock", "mybLINK", uint8(Constants.linkDecimals));
 
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
         standardERC4626PricingModule.addAsset(address(ybLink), emptyRiskVarInput);
         vm.stopPrank();
 
