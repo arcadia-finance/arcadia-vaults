@@ -213,7 +213,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         //Then: addAsset reverts with "Ownable: caller is not the owner"
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("Ownable: caller is not the owner");
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
     }
 
@@ -223,20 +223,20 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         //Then: addAsset reverts with "Ownable: caller is not the owner"
         vm.startPrank(creatorAddress);
         vm.expectRevert("PMUV2_AA: NOT_WHITELISTED");
-        uniswapV2PricingModule.addAsset(address(pairSafemoonEth), emptyRiskVarInput);
+        uniswapV2PricingModule.addAsset(address(pairSafemoonEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
     }
 
     function testRevert_addAsset_OverwriteExistingAsset() public {
         //Given: asset is added to pricing module
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint248).max);
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
 
         //When: creator adds asset again
         vm.prank(creatorAddress);
         vm.expectRevert("PMUV2_AA: already added");
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint248).max);
     }
 
     function testSuccess_addAsset_EmptyListCreditRatings() public {
@@ -244,7 +244,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
 
         //When: creator adds a new asset
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint248).max);
 
         //Then: Asset is added to the Pricing Module
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
@@ -267,7 +267,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         //When: creator adds a new asset
         //Then: addAsset reverts with "APM_SRV: LENGTH_MISMATCH"
         vm.startPrank(creatorAddress);
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), riskVars_);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), riskVars_, type(uint248).max);
         vm.stopPrank();
 
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
@@ -277,7 +277,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         //Given: The number of credit ratings equals the number of baseCurrencies
         //When: creator adds a new asset
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), riskVars);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), riskVars, type(uint248).max);
 
         //Then: Asset is added to the Pricing Module
         assertTrue(uniswapV2PricingModule.inPricingModule(address(pairSnxEth)));
@@ -297,7 +297,7 @@ contract WhiteListManagement is UniswapV2PricingModuleTest {
 
         //When: pairSnxEth is added to the pricing module
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint248).max);
 
         //Then: pairSnxEth is white-listed
         assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth), 0));
@@ -611,7 +611,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             deployToken(oracleSnxToUsd, _snxDecimals, _oracleSnxToUsdDecimals, _rateSnxToUsd, "SNX", oracleSnxToUsdArr);
         pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint248).max);
 
         // Mint LP
         vm.assume(uint256(amountSnx) * amountEth > pairSnxEth.MINIMUM_LIQUIDITY()); //min liquidity in uniswap pool
@@ -658,7 +658,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             deployToken(oracleSnxToUsd, _snxDecimals, _oracleSnxToUsdDecimals, _rateSnxToUsd, "SNX", oracleSnxToUsdArr);
         pairSnxEth = UniswapV2PairMock(uniswapV2Factory.createPair(address(snx), address(eth)));
         vm.prank(creatorAddress);
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput);
+        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint248).max);
 
         // Mint a variable amount of balanced LP, for a given amountSnx
         vm.assume(

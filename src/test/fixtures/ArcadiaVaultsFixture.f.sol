@@ -327,9 +327,9 @@ contract DeployArcadiaVaults is Test {
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_, type(uint248).max);
         standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, riskVars_, type(uint248).max);
 
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars_);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars_, type(uint248).max);
 
-        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, riskVars_);
+        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, riskVars_, type(uint248).max);
 
         vault = new Vault();
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);

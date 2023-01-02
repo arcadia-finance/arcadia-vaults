@@ -76,7 +76,7 @@ contract UniswapV2PricingModule is PricingModule {
      * @dev The assets are added in the Main-Registry as well.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(address asset, RiskVarInput[] calldata riskVars) external onlyOwner {
+    function addAsset(address asset, RiskVarInput[] calldata riskVars, uint256 maxExposure) external onlyOwner {
         address token0 = IUniswapV2Pair(asset).token0();
         address token1 = IUniswapV2Pair(asset).token1();
 
@@ -95,6 +95,8 @@ contract UniswapV2PricingModule is PricingModule {
         _setRiskVariablesForAsset(asset, riskVars);
 
         isAssetAddressWhiteListed[asset].isWhiteListed = true;
+        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
+
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -110,7 +112,7 @@ contract UniswapV2PricingModule is PricingModule {
      * @dev Since Uniswap V2 LP tokens (ERC20) have no Id, the Id should be set to 0
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address asset, uint256) external view override returns (bool) {
+    function isWhiteListed(address asset, uint256) public view override returns (bool) {
         if (isAssetAddressWhiteListed[asset].isWhiteListed) {
             return true;
         }
@@ -118,6 +120,10 @@ contract UniswapV2PricingModule is PricingModule {
         return false;
     }
 
+    function processDeposit(address asset, uint256, uint256 amount) external returns (bool success) {
+        isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
+        return isWhiteListed(asset, 0);
+    }
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/

@@ -57,7 +57,7 @@ contract StandardERC4626PricingModule is PricingModule {
      * @dev The assets are added in the Main-Registry as well.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(address asset, RiskVarInput[] calldata riskVars) external onlyOwner {
+    function addAsset(address asset, RiskVarInput[] calldata riskVars, uint256 maxExposure) external onlyOwner {
         uint256 assetUnit = 10 ** IERC4626(asset).decimals();
         address underlyingAsset = address(IERC4626(asset).asset());
 
@@ -76,6 +76,8 @@ contract StandardERC4626PricingModule is PricingModule {
         _setRiskVariablesForAsset(asset, riskVars);
 
         isAssetAddressWhiteListed[asset].isWhiteListed = true;
+        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
+
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -120,12 +122,17 @@ contract StandardERC4626PricingModule is PricingModule {
      * @dev Since ERC4626 tokens have no Id, the Id should be set to 0
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address assetAddress, uint256) external view override returns (bool) {
+    function isWhiteListed(address assetAddress, uint256) public view override returns (bool) {
         if (isAssetAddressWhiteListed[assetAddress].isWhiteListed) {
             return true;
         }
 
         return false;
+    }
+
+    function processDeposit(address asset, uint256, uint256 amount) external returns (bool success) {
+        isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
+        return isWhiteListed(asset, 0);
     }
 
     /*///////////////////////////////////////////////////////////////

@@ -92,7 +92,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("Ownable: caller is not the owner");
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
     }
 
@@ -104,22 +104,22 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("PMAT_AA: Decimals don't match");
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
     }
 
     function testRevert_addAsset_OverwriteExistingAsset() public {
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
 
         vm.expectRevert("PMAT_AA: already added");
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
     }
 
     function testSuccess_addAsset_EmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
@@ -144,7 +144,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
             liquidationThreshold: liqTresh
         });
 
-        aTokenPricingModule.addAsset(address(aEth), riskVars_);
+        aTokenPricingModule.addAsset(address(aEth), riskVars_, type(uint248).max);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
@@ -152,7 +152,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_addAsset_FullListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), riskVars);
+        aTokenPricingModule.addAsset(address(aEth), riskVars, type(uint248).max);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
@@ -167,7 +167,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_syncOracles(address sender) public {
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
 
         //Given: oracle sequence of underlying asset is modified
         standardERC20PricingModule.setOracles(address(eth), oracleLinkToUsdArr);
@@ -189,7 +189,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     function testSuccess_isWhiteListed_Positive() public {
         vm.startPrank(creatorAddress);
 
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
@@ -206,7 +206,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     function testSuccess_getValue_ReturnUsdValueWhenBaseCurrencyIsUsd(uint128 amountEth) public {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
@@ -233,7 +233,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
         vm.startPrank(creatorAddress);
         standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
-        aTokenPricingModule.addAsset(address(aSnx), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aSnx), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = 0;
@@ -259,7 +259,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
         vm.startPrank(creatorAddress);
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
-        aTokenPricingModule.addAsset(address(aLink), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aLink), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (amountLink * rateLinkToUsd * Constants.WAD)
@@ -297,7 +297,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (
@@ -336,7 +336,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput);
+        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({

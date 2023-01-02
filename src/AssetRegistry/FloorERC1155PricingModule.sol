@@ -46,7 +46,7 @@ contract FloorERC1155PricingModule is PricingModule {
      * @dev Risk variable are variables with 2 decimals precision
      * @dev The assets are added in the Main-Registry as well.
      */
-    function addAsset(address asset, uint256 id, address[] calldata oracles, RiskVarInput[] calldata riskVars)
+    function addAsset(address asset, uint256 id, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint256 maxExposure)
         external
         onlyOwner
     {
@@ -62,6 +62,8 @@ contract FloorERC1155PricingModule is PricingModule {
         _setRiskVariablesForAsset(asset, riskVars);
 
         isAssetAddressWhiteListed[asset].isWhiteListed = true;
+        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
+
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -98,7 +100,7 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param assetId The Id of the asset
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address assetAddress, uint256 assetId) external view override returns (bool) {
+    function isWhiteListed(address assetAddress, uint256 assetId) public view override returns (bool) {
         if (isAssetAddressWhiteListed[assetAddress].isWhiteListed) {
             if (assetId == assetToInformation[assetAddress].id) {
                 return true;
@@ -106,6 +108,11 @@ contract FloorERC1155PricingModule is PricingModule {
         }
 
         return false;
+    }
+
+    function processDeposit(address asset, uint256 assetId, uint256 amount) external returns (bool success) {
+        isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
+        return isWhiteListed(asset, assetId);
     }
 
     /*///////////////////////////////////////////////////////////////

@@ -53,7 +53,8 @@ contract FloorERC721PricingModule is PricingModule {
         uint256 idRangeStart,
         uint256 idRangeEnd,
         address[] calldata oracles,
-        RiskVarInput[] calldata riskVars
+        RiskVarInput[] calldata riskVars,
+        uint256 maxExposure
     ) external onlyOwner {
         //View function, reverts in OracleHub if sequence is not correct
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
@@ -68,6 +69,7 @@ contract FloorERC721PricingModule is PricingModule {
         _setRiskVariablesForAsset(asset, riskVars);
 
         isAssetAddressWhiteListed[asset].isWhiteListed = true;
+        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -110,7 +112,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param assetId The Id of the asset
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address asset, uint256 assetId) external view override returns (bool) {
+    function isWhiteListed(address asset, uint256 assetId) public view override returns (bool) {
         if (isAssetAddressWhiteListed[asset].isWhiteListed) {
             if (isIdInRange(asset, assetId)) {
                 return true;
@@ -118,6 +120,11 @@ contract FloorERC721PricingModule is PricingModule {
         }
 
         return false;
+    }
+
+    function processDeposit(address asset, uint256 assetId, uint256 amount) external returns (bool success) {
+        isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
+        return isWhiteListed(asset, assetId);
     }
 
     /**
