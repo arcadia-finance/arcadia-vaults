@@ -32,7 +32,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
-        pool.addVaultVersion(1);
+        pool.setVaultVersion(1, true);
         DataTypes.InterestRateConfiguration memory config = DataTypes.InterestRateConfiguration({
             baseRate: Constants.interestRate,
             highSlope: Constants.interestRate,

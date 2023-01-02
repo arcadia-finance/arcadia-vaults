@@ -56,7 +56,7 @@ contract VaultV2Test is DeployArcadiaVaults {
 
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
-        pool.addVaultVersion(1);
+        pool.setVaultVersion(1, true);
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
