@@ -134,6 +134,10 @@ contract ATokenPricingModule is PricingModule {
         return isWhiteListed(asset, 0);
     }
 
+    function processWithdrawal(address asset, uint256 amount) external onlyMainReg {
+        isAssetAddressWhiteListed[asset].maxExposure += uint248(amount);
+    }
+
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/

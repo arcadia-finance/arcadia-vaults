@@ -62,6 +62,11 @@ abstract contract PricingModule is Ownable {
         _;
     }
 
+    modifier onlyMainReg() {
+        require(msg.sender == mainRegistry, "APM: ONLY_MAIN_REGISTRY");
+        _;
+    }
+
     /**
      * @notice A Pricing Module must always be initialised with the address of the Main-Registry and the Oracle-Hub
      * @param mainRegistry_ The address of the Main-registry

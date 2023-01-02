@@ -199,6 +199,23 @@ contract MainRegistry is Ownable {
         return true;
     }
 
+    function processWithrawal(address[] calldata _assetAddresses, uint256[] calldata amounts) public returns (bool) {
+        uint256 addressesLength = _assetAddresses.length;
+
+        address assetAddress;
+        for (uint256 i; i < addressesLength;) {
+            assetAddress = _assetAddresses[i];
+
+            IPricingModule(assetToPricingModule[assetAddress]).processWithrawal(assetAddress, amounts[i]);
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        return true;
+    }
+
     /* ///////////////////////////////////////////////////////////////
                         WHITE LIST LOGIC
     /////////////////////////////////////////////////////////////// */

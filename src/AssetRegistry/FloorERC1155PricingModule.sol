@@ -117,6 +117,10 @@ contract FloorERC1155PricingModule is PricingModule {
         return isWhiteListed(asset, assetId);
     }
 
+    function processWithdrawal(address asset, uint256 amount) external onlyMainReg {
+        isAssetAddressWhiteListed[asset].maxExposure += uint248(amount);
+    }
+
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/

@@ -114,9 +114,13 @@ contract StandardERC20PricingModule is PricingModule {
         return false;
     }
 
-    function processDeposit(address asset, uint256, uint256 amount) external returns (bool success) {
+    function processDeposit(address asset, uint256, uint256 amount) external onlyMainReg returns (bool success) {
         isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
         return isWhiteListed(asset, 0);
+    }
+
+    function processWithdrawal(address asset, uint256 amount) external onlyMainReg {
+        isAssetAddressWhiteListed[asset].maxExposure += uint248(amount);
     }
 
     /*///////////////////////////////////////////////////////////////

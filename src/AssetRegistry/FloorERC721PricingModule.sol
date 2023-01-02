@@ -127,6 +127,10 @@ contract FloorERC721PricingModule is PricingModule {
         return isWhiteListed(asset, assetId);
     }
 
+    function processWithdrawal(address asset, uint256 amount) external onlyMainReg {
+        isAssetAddressWhiteListed[asset].maxExposure += uint248(amount);
+    }
+
     /**
      * @notice Checks if the Id for a given token is in the range for which there exists a price feed
      * @param asset The address of the asset

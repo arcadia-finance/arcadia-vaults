@@ -481,6 +481,8 @@ contract Vault {
             "V_W: Length mismatch"
         );
 
+        IRegistry(registry).processWithrawal(assetAddresses, assetAmounts);
+
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
                 _withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
