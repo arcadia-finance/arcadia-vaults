@@ -252,7 +252,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         (address token0, address token1) = uniswapV2PricingModule.assetToInformation(address(pairSnxEth));
         assertEq(token0, address(snx));
         assertEq(token1, address(eth));
-        assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth),0));
+        assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth), 0));
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {

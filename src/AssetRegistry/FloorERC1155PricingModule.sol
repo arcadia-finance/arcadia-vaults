@@ -46,10 +46,13 @@ contract FloorERC1155PricingModule is PricingModule {
      * @dev Risk variable are variables with 2 decimals precision
      * @dev The assets are added in the Main-Registry as well.
      */
-    function addAsset(address asset, uint256 id, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint256 maxExposure)
-        external
-        onlyOwner
-    {
+    function addAsset(
+        address asset,
+        uint256 id,
+        address[] calldata oracles,
+        RiskVarInput[] calldata riskVars,
+        uint256 maxExposure
+    ) external onlyOwner {
         //View function, reverts in OracleHub if sequence is not correct
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
@@ -63,7 +66,6 @@ contract FloorERC1155PricingModule is PricingModule {
 
         isAssetAddressWhiteListed[asset].isWhiteListed = true;
         isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
-
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);

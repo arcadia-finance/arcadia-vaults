@@ -442,7 +442,9 @@ contract WhiteListLogicTest is MainRegistryTest {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
-        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
+        floorERC721PricingModule.addAsset(
+            address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint248).max
+        );
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(eth), index 1 is address(bayc) and assetIds index 0 is 0, index 1 is 10000
@@ -462,7 +464,9 @@ contract WhiteListLogicTest is MainRegistryTest {
         // Given: creatorAddress calls addAsset for standardERC20PricingModule and floorERC721PricingModule
         vm.startPrank(creatorAddress);
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
-        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
+        floorERC721PricingModule.addAsset(
+            address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint248).max
+        );
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(safemoon), index 1 is address(bayc) and assetIds index 0 is 0, index 1 is 0
@@ -483,7 +487,9 @@ contract WhiteListLogicTest is MainRegistryTest {
         vm.startPrank(creatorAddress);
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
         standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
-        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
+        floorERC721PricingModule.addAsset(
+            address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint248).max
+        );
 
         vm.stopPrank();
 
@@ -503,7 +509,9 @@ contract WhiteListLogicTest is MainRegistryTest {
         vm.startPrank(creatorAddress);
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
         standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
-        floorERC721PricingModule.addAsset(address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint248).max);
+        floorERC721PricingModule.addAsset(
+            address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint248).max
+        );
 
         standardERC20PricingModule.removeFromWhiteList(address(snx));
         standardERC20PricingModule.addToWhiteList(address(snx));

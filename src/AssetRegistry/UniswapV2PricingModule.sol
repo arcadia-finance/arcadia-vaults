@@ -97,7 +97,6 @@ contract UniswapV2PricingModule is PricingModule {
         isAssetAddressWhiteListed[asset].isWhiteListed = true;
         isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
 
-
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
     }

@@ -181,7 +181,9 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
             })
         );
 
-        floorERC721PricingModule.addAsset(address(mayc), 0, type(uint256).max, oracleWmaycToUsdArr, riskVars, type(uint248).max);
+        floorERC721PricingModule.addAsset(
+            address(mayc), 0, type(uint256).max, oracleWmaycToUsdArr, riskVars, type(uint248).max
+        );
         floorERC1155PricingModule.addAsset(
             address(genericStoreFront), 1, oracleGenericStoreFrontToEthEthToUsd, riskVars, type(uint248).max
         );

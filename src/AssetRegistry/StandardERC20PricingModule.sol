@@ -49,7 +49,10 @@ contract StandardERC20PricingModule is PricingModule {
      * @dev The assets are added in the Main-Registry as well.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint256 maxExposure) external onlyOwner {
+    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint256 maxExposure)
+        external
+        onlyOwner
+    {
         //View function, reverts in OracleHub if sequence is not correct
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
@@ -63,7 +66,6 @@ contract StandardERC20PricingModule is PricingModule {
         assetToInformation[asset].assetUnit = uint64(assetUnit); //Can safely cast to uint64, we previously checked it is smaller than 10e18
         assetToInformation[asset].oracles = oracles;
         _setRiskVariablesForAsset(asset, riskVars);
-
 
         isAssetAddressWhiteListed[asset].isWhiteListed = true;
         isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
