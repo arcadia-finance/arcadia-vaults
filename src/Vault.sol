@@ -240,8 +240,6 @@ contract Vault {
      * @param baseCurrency The Base-currency in which the margin position is denominated
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
-     * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
-     * @dev Since increasing margin position is financial activity, liquidation threshold update is done here.
      */
     function increaseMarginPosition(address baseCurrency, uint256 amount)
         public
