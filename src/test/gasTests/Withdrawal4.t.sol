@@ -51,7 +51,7 @@ contract gasWithdrawal4_2ERC202ERC721 is GasTestFixture {
         proxy.getVaultValue(0x0000000000000000000000000000000000000000);
     }
 
-    function testGetRemainingValue() public {
+    function testGetRemainingValue() public view {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             proxy.generateAssetData();
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, 0);

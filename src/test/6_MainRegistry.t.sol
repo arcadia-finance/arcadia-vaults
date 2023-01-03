@@ -924,10 +924,59 @@ contract PricingLogicTest is MainRegistryTest {
         expectedListOfValuesPerAsset[2] = baycValueInEth;
 
         uint256[] memory actualListOfValuesPerAsset = new uint256[](3);
-        for (uint256 i; i < actualValuesPerAsset.length; i++) {
+        for (uint256 i; i < actualValuesPerAsset.length; ++i) {
             actualListOfValuesPerAsset[i] = actualValuesPerAsset[i].valueInBaseCurrency;
         }
         // Then: expectedListOfValuesPerAsset array should be equal to actualListOfValuesPerAsset
         assertTrue(CompareArrays.compareArrays(expectedListOfValuesPerAsset, actualListOfValuesPerAsset));
+    }
+
+    function testSuccess_getCollateralValueAndLiquidationThreshold(
+        int64 rateEthToUsd_,
+        uint64 amountEth,
+        uint16 collateralFactor,
+        uint16 liquidationThreshold
+    ) public {
+        vm.assume(collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
+        vm.assume(rateEthToUsd_ > 0);
+
+        vm.prank(oracleOwner);
+        oracleEthToUsd.transmit(rateEthToUsd_);
+
+        vm.assume(
+            liquidationThreshold <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
+                && liquidationThreshold >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
+        );
+
+        uint256 ethValueInUsd = Constants.WAD * uint64(rateEthToUsd_) / 10 ** Constants.oracleEthToUsdDecimals
+            * amountEth / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.usdDecimals);
+        vm.assume(ethValueInUsd > 0);
+
+        PricingModule.RiskVarInput[] memory riskVarsInput = new PricingModule.RiskVarInput[](1);
+        riskVarsInput[0].asset = address(eth);
+        riskVarsInput[0].baseCurrency = uint8(Constants.UsdBaseCurrency);
+        riskVarsInput[0].collateralFactor = collateralFactor;
+        riskVarsInput[0].liquidationThreshold = liquidationThreshold;
+
+        vm.startPrank(creatorAddress);
+        standardERC20PricingModule.setBatchRiskVariables(riskVarsInput);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountEth;
+
+        (uint256 actualCollateralValue, uint256 actualLiquidationThreshold) =
+            mainRegistry.getCollateralValueAndLiquidationThreshold(assetAddresses, assetIds, assetAmounts, address(0));
+
+        uint256 expectedCollateralValue = ethValueInUsd * collateralFactor / 100;
+        uint256 expectedLiquidationThreshold = liquidationThreshold;
+
+        assertEq(expectedCollateralValue, actualCollateralValue);
+        assertEq(expectedLiquidationThreshold, actualLiquidationThreshold);
     }
 }
