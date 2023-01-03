@@ -66,7 +66,7 @@ library RiskModule {
             liquidationThreshold256 +=
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].liqThreshold;
             unchecked {
-                i++;
+                ++i;
             }
         }
         require(totalValue > 0, "RM_CWLT: DIVIDE_BY_ZERO");
@@ -100,7 +100,7 @@ library RiskModule {
             liquidationThreshold +=
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].liqThreshold;
             unchecked {
-                i++;
+                ++i;
             }
         }
         require(totalValue > 0, "RM_CCFALT: DIVIDE_BY_ZERO");

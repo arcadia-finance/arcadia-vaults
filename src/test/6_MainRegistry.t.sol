@@ -924,7 +924,7 @@ contract PricingLogicTest is MainRegistryTest {
         expectedListOfValuesPerAsset[2] = baycValueInEth;
 
         uint256[] memory actualListOfValuesPerAsset = new uint256[](3);
-        for (uint256 i; i < actualValuesPerAsset.length; i++) {
+        for (uint256 i; i < actualValuesPerAsset.length; ++i) {
             actualListOfValuesPerAsset[i] = actualValuesPerAsset[i].valueInBaseCurrency;
         }
         // Then: expectedListOfValuesPerAsset array should be equal to actualListOfValuesPerAsset

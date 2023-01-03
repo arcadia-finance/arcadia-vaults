@@ -209,7 +209,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
         assetTypes = new uint256[](tokenIds.length);
 
         uint256 tokenIdToWorkWith;
-        for (uint256 i; i < tokenIds.length; i++) {
+        for (uint256 i; i < tokenIds.length; ++i) {
             tokenIdToWorkWith = tokenIds[i];
             while (bayc.ownerOf(tokenIdToWorkWith) != address(0)) {
                 tokenIdToWorkWith++;
@@ -739,7 +739,7 @@ contract AssetManagementTest is vaultTests {
         vm.assume((addrLen != idLen && addrLen != amountLen && addrLen != typesLen));
 
         address[] memory assetAddresses = new address[](addrLen);
-        for (uint256 i; i < addrLen; i++) {
+        for (uint256 i; i < addrLen; ++i) {
             assetAddresses[i] = address(uint160(i));
         }
 
@@ -1026,7 +1026,7 @@ contract AssetManagementTest is vaultTests {
         vm.assume((addrLen != idLen && addrLen != amountLen && addrLen != typesLen));
 
         address[] memory assetAddresses = new address[](addrLen);
-        for (uint256 i; i < addrLen; i++) {
+        for (uint256 i; i < addrLen; ++i) {
             assetAddresses[i] = address(uint160(i));
         }
 
@@ -1127,7 +1127,7 @@ contract AssetManagementTest is vaultTests {
         address[] memory withdrawalAddresses = new address[](amountsWithdrawn);
         uint256[] memory withdrawalAmounts = new uint256[](amountsWithdrawn);
         uint256[] memory withdrawalTypes = new uint256[](amountsWithdrawn);
-        for (uint256 i; i < amountsWithdrawn; i++) {
+        for (uint256 i; i < amountsWithdrawn; ++i) {
             withdrawalIds[i] = assetIds[i];
             withdrawalAddresses[i] = address(bayc);
             withdrawalAmounts[i] = 1;
@@ -1226,7 +1226,7 @@ contract AssetManagementTest is vaultTests {
         address[] memory withdrawalAddresses = new address[](randomAmounts);
         uint256[] memory withdrawalAmounts = new uint256[](randomAmounts);
         uint256[] memory withdrawalTypes = new uint256[](randomAmounts);
-        for (uint256 i; i < randomAmounts; i++) {
+        for (uint256 i; i < randomAmounts; ++i) {
             withdrawalIds[i] = assetIds[i];
             withdrawalAddresses[i] = address(bayc);
             withdrawalAmounts[i] = 1;

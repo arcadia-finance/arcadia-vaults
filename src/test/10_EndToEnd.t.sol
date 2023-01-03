@@ -528,7 +528,7 @@ contract EndToEndTest is DeployArcadiaVaults {
         assetTypes = new uint256[](tokenIds.length);
 
         uint256 tokenIdToWorkWith;
-        for (uint256 i; i < tokenIds.length; i++) {
+        for (uint256 i; i < tokenIds.length; ++i) {
             tokenIdToWorkWith = tokenIds[i];
             while (token.ownerOf(tokenIdToWorkWith) != address(0)) {
                 tokenIdToWorkWith++;
