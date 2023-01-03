@@ -19,9 +19,9 @@ contract Proxy {
 
     event Upgraded(address indexed implementation);
 
-    constructor(address _logic) payable {
-        getAddressSlot(_IMPLEMENTATION_SLOT).value = _logic;
-        emit Upgraded(_logic);
+    constructor(address logic) payable {
+        _getAddressSlot(_IMPLEMENTATION_SLOT).value = logic;
+        emit Upgraded(logic);
     }
 
     /**
@@ -47,7 +47,7 @@ contract Proxy {
     /**
      * @dev Returns an `AddressSlot` with member `value` located at `slot`.
      */
-    function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
+    function _getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
         assembly {
             r.slot := slot
         }
@@ -57,7 +57,7 @@ contract Proxy {
      * @dev Returns the implementation address.
      */
     function _implementation() internal view returns (address) {
-        return getAddressSlot(_IMPLEMENTATION_SLOT).value;
+        return _getAddressSlot(_IMPLEMENTATION_SLOT).value;
     }
 
     /*///////////////////////////////////////////////////////////////

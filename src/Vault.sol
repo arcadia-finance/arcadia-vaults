@@ -47,7 +47,7 @@ contract Vault {
 
     address public owner;
     address public liquidator;
-    address public registryAddress;
+    address public registry;
     address public trustedProtocol;
 
     address[] public erc20Stored;
@@ -77,7 +77,7 @@ contract Vault {
      * @dev Throws if called by any account other than the factory adress.
      */
     modifier onlyFactory() {
-        require(msg.sender == IMainRegistry(registryAddress).factoryAddress(), "VL: You are not the factory");
+        require(msg.sender == IMainRegistry(registry).factoryAddress(), "V: You are not the factory");
         _;
     }
 
@@ -85,7 +85,7 @@ contract Vault {
      * @dev Throws if called by any account other than an authorised adress.
      */
     modifier onlyAuthorized() {
-        require(allowed[msg.sender], "VL: You are not authorized");
+        require(allowed[msg.sender], "V: You are not authorized");
         _;
     }
 
@@ -93,7 +93,7 @@ contract Vault {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner, "VL: You are not the owner");
+        require(msg.sender == owner, "V: You are not the owner");
         _;
     }
 
@@ -109,16 +109,16 @@ contract Vault {
      * Therefore everything is initialised through an init function.
      * This function will only be called (once) in the same transaction as the proxy vault creation through the factory.
      * Costly function (156k gas)
-     * @param _owner The tx.origin: the sender of the 'createVault' on the factory
-     * @param _registryAddress The 'beacon' contract to which should be looked at for external logic.
-     * @param _vaultVersion The version of the vault logic.
+     * @param owner_ The tx.origin: the sender of the 'createVault' on the factory
+     * @param registry_ The 'beacon' contract to which should be looked at for external logic.
+     * @param vaultVersion_ The version of the vault logic.
      */
-    function initialize(address _owner, address _registryAddress, uint16 _vaultVersion) external payable {
+    function initialize(address owner_, address registry_, uint16 vaultVersion_) external payable {
         require(vaultVersion == 0, "V_I: Already initialized!");
-        require(_vaultVersion != 0, "V_I: Invalid vault version");
-        owner = _owner;
-        registryAddress = _registryAddress;
-        vaultVersion = _vaultVersion;
+        require(vaultVersion_ != 0, "V_I: Invalid vault version");
+        owner = owner_;
+        registry = registry_;
+        vaultVersion = vaultVersion_;
     }
 
     /**
@@ -126,7 +126,7 @@ contract Vault {
      */
     function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
         vaultVersion = newVersion;
-        getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
+        _getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
 
         emit Upgraded(newImplementation);
     }
@@ -134,7 +134,7 @@ contract Vault {
     /**
      * @dev Returns an `AddressSlot` with member `value` located at `slot`.
      */
-    function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
+    function _getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
         assembly {
             r.slot := slot
         }
@@ -153,7 +153,7 @@ contract Vault {
      */
     function transferOwnership(address newOwner) public onlyFactory {
         if (newOwner == address(0)) {
-            revert("New owner cannot be zero address upon liquidation");
+            revert("V_TO: INVALID_RECIPIENT");
         }
         _transferOwnership(newOwner);
     }
@@ -182,13 +182,13 @@ contract Vault {
 
     /**
      * @notice Internal function: sets baseCurrency.
-     * @param _baseCurrency the new baseCurrency for the vault.
+     * @param baseCurrency_ the new baseCurrency for the vault.
      * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
      */
-    function _setBaseCurrency(address _baseCurrency) private {
-        require(getUsedMargin() == 0, "VL_SBC: Can't change baseCurrency when Used Margin > 0");
-        require(IMainRegistry(registryAddress).isBaseCurrency(_baseCurrency), "VL_SBC: baseCurrency not found");
-        vault.baseCurrency = _baseCurrency; //Change this to where ever it is going to be actually set
+    function _setBaseCurrency(address baseCurrency_) private {
+        require(getUsedMargin() == 0, "V_SBC: Can't change baseCurrency when Used Margin > 0");
+        require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
+        vault.baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -255,9 +255,8 @@ contract Vault {
         // Update the vault values
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
-        );
+        vault.liqThres =
+            IRegistry(registry).getLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -274,9 +273,8 @@ contract Vault {
         // Update the vault values
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres = IRegistry(registryAddress).getLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
-        );
+        vault.liqThres =
+            IRegistry(registry).getLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -289,7 +287,7 @@ contract Vault {
     function getVaultValue(address baseCurrency) public view returns (uint256 vaultValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vaultValue = IRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        vaultValue = IRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -307,7 +305,7 @@ contract Vault {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         collateralValue =
-            IRegistry(registryAddress).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+            IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -368,7 +366,7 @@ contract Vault {
 
         require(leftHand < rightHand, "V_LV: This vault is healthy");
 
-        uint8 baseCurrencyIdentifier = IRegistry(registryAddress).assetToBaseCurrency(vault.baseCurrency);
+        uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(vault.baseCurrency);
 
         require(
             ILiquidator(liquidator).startAuction(
@@ -422,12 +420,10 @@ contract Vault {
         require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
                 && assetAddressesLength == assetTypes.length,
-            "Length mismatch"
+            "V_D: Length mismatch"
         );
 
-        require(
-            IRegistry(registryAddress).batchIsWhiteListed(assetAddresses, assetIds), "Not all assets are whitelisted!"
-        );
+        require(IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "V_D: Not all assets whitelisted");
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
@@ -437,7 +433,7 @@ contract Vault {
             } else if (assetTypes[i] == 2) {
                 _depositERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
-                require(false, "Unknown asset type");
+                require(false, "V_D: Unknown asset type");
             }
             unchecked {
                 ++i;
@@ -481,7 +477,7 @@ contract Vault {
         require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
                 && assetAddressesLength == assetTypes.length,
-            "Length mismatch"
+            "V_W: Length mismatch"
         );
 
         for (uint256 i; i < assetAddressesLength;) {
@@ -492,7 +488,7 @@ contract Vault {
             } else if (assetTypes[i] == 2) {
                 _withdrawERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
-                require(false, "Unknown asset type");
+                require(false, "V_W: Unknown asset type");
             }
             unchecked {
                 ++i;
@@ -511,12 +507,12 @@ contract Vault {
      * After successful transfer, the function checks whether the same asset has been deposited.
      * This check is done using a loop: writing it in a mapping vs extra loops is in favor of extra loops in this case.
      * If the address has not yet been seen, the ERC20 token address is stored.
-     * @param _from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
+     * @param from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
      * @param ERC20Address The asset address that should be transferred.
      * @param amount The amount of ERC20 tokens to be transferred.
      */
-    function _depositERC20(address _from, address ERC20Address, uint256 amount) private {
-        require(IERC20(ERC20Address).transferFrom(_from, address(this), amount), "Transfer from failed");
+    function _depositERC20(address from, address ERC20Address, uint256 amount) private {
+        require(IERC20(ERC20Address).transferFrom(from, address(this), amount), "Transfer from failed");
 
         uint256 erc20StoredLength = erc20Stored.length;
         for (uint256 i; i < erc20StoredLength;) {
@@ -537,12 +533,12 @@ contract Vault {
      * @dev Used for all tokens types = 1. Note the transferFrom. No amounts are given since ERC721 are one-off's.
      * After successful transfer, the function pushes the ERC721 address to the stored token and stored ID array.
      * This may cause duplicates in the ERC721 stored addresses array, but this is intended.
-     * @param _from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
+     * @param from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
      * @param ERC721Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
      */
-    function _depositERC721(address _from, address ERC721Address, uint256 id) private {
-        IERC721(ERC721Address).transferFrom(_from, address(this), id);
+    function _depositERC721(address from, address ERC721Address, uint256 id) private {
+        IERC721(ERC721Address).transferFrom(from, address(this), id);
 
         erc721Stored.push(ERC721Address);
         //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
@@ -555,13 +551,13 @@ contract Vault {
      * After successful transfer, the function checks whether the combination of address & ID has already been stored.
      * If not, the function pushes the new address and ID to the stored arrays.
      * This may cause duplicates in the ERC1155 stored addresses array, but this is intended.
-     * @param _from The Address the tokens should be taken from. This address must have pre-approved the proxy vault.
+     * @param from The Address the tokens should be taken from. This address must have pre-approved the proxy vault.
      * @param ERC1155Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
      * @param amount The amount of ERC1155 tokens to be transferred.
      */
-    function _depositERC1155(address _from, address ERC1155Address, uint256 id, uint256 amount) private {
-        IERC1155(ERC1155Address).safeTransferFrom(_from, address(this), id, amount, "");
+    function _depositERC1155(address from, address ERC1155Address, uint256 id, uint256 amount) private {
+        IERC1155(ERC1155Address).safeTransferFrom(from, address(this), id, amount, "");
 
         bool addrSeen;
 

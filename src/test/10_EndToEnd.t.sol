@@ -6,274 +6,39 @@
  */
 pragma solidity >0.8.10;
 
-import "../../lib/forge-std/src/Test.sol";
+import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import "../Factory.sol";
-import "../Proxy.sol";
-import "../Vault.sol";
-import {ERC20Mock} from "../mockups/ERC20SolmateMock.sol";
-import "../mockups/ERC721SolmateMock.sol";
-import "../mockups/ERC1155SolmateMock.sol";
-import "../AssetRegistry/MainRegistry.sol";
-import "../AssetRegistry/FloorERC721PricingModule.sol";
-import "../AssetRegistry/StandardERC20PricingModule.sol";
-import "../AssetRegistry/FloorERC1155PricingModule.sol";
-import "../Liquidator.sol";
-import "../OracleHub.sol";
-import "../utils/Constants.sol";
-import "../mockups/ArcadiaOracle.sol";
-import "./fixtures/ArcadiaOracleFixture.f.sol";
-
-import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
+import {LendingPool, DebtToken, ERC20, DataTypes} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
-contract EndToEndTest is Test {
+contract EndToEndTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
-
-    Factory private factory;
-    Vault private vault;
-    Vault private proxy;
-    address private proxyAddr;
-    ERC20Mock private dai;
-    ERC20Mock private eth;
-    ERC20Mock private snx;
-    ERC20Mock private link;
-    ERC20Mock private safemoon;
-    ERC721Mock private bayc;
-    ERC721Mock private mayc;
-    ERC721Mock private dickButs;
-    ERC20Mock private wbayc;
-    ERC20Mock private wmayc;
-    ERC1155Mock private interleave;
-    OracleHub private oracleHub;
-    ArcadiaOracle private oracleDaiToUsd;
-    ArcadiaOracle private oracleEthToUsd;
-    ArcadiaOracle private oracleLinkToUsd;
-    ArcadiaOracle private oracleSnxToEth;
-    ArcadiaOracle private oracleWbaycToEth;
-    ArcadiaOracle private oracleWmaycToUsd;
-    ArcadiaOracle private oracleInterleaveToEth;
-    MainRegistry private mainRegistry;
-    StandardERC20PricingModule private standardERC20Registry;
-    FloorERC721PricingModule private floorERC721PricingModule;
-    FloorERC1155PricingModule private floorERC1155PricingModule;
-    Liquidator private liquidator;
 
     LendingPool pool;
     Tranche tranche;
     DebtToken debt;
 
-    address private creatorAddress = address(1);
-    address private tokenCreatorAddress = address(2);
-    address private oracleOwner = address(3);
-    address private unprivilegedAddress = address(4);
-    address private vaultOwner = address(6);
-    address private liquidityProvider = address(7);
-
-    uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
-    uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
-    uint256 rateLinkToUsd = 20 * 10 ** Constants.oracleLinkToUsdDecimals;
-    uint256 rateSnxToEth = 1600000000000000;
-    uint256 rateWbaycToEth = 85 * 10 ** Constants.oracleWbaycToEthDecimals;
-    uint256 rateWmaycToUsd = 50000 * 10 ** Constants.oracleWmaycToUsdDecimals;
-    uint256 rateInterleaveToEth = 1 * 10 ** (Constants.oracleInterleaveToEthDecimals - 2);
-
-    address[] public oracleDaiToUsdArr = new address[](1);
-    address[] public oracleEthToUsdArr = new address[](1);
-    address[] public oracleLinkToUsdArr = new address[](1);
-    address[] public oracleSnxToEthEthToUsd = new address[](2);
-    address[] public oracleWbaycToEthEthToUsd = new address[](2);
-    address[] public oracleWmaycToUsdArr = new address[](1);
-    address[] public oracleInterleaveToEthEthToUsd = new address[](2);
-
-    uint16[] emptyListUint16 = new uint16[](0);
-
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
-    // FIXTURES
-    ArcadiaOracleFixture arcadiaOracleFixture = new ArcadiaOracleFixture(oracleOwner);
-
     //this is a before
-    constructor() {
-        vm.startPrank(tokenCreatorAddress);
-
-        dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
-        eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        eth.mint(tokenCreatorAddress, 200000 * 10 ** Constants.ethDecimals);
-
-        snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
-        snx.mint(tokenCreatorAddress, 200000 * 10 ** Constants.snxDecimals);
-
-        link = new ERC20Mock(
-            "LINK Mock",
-            "mLINK",
-            uint8(Constants.linkDecimals)
-        );
-        link.mint(tokenCreatorAddress, 200000 * 10 ** Constants.linkDecimals);
-
-        safemoon = new ERC20Mock(
-            "Safemoon Mock",
-            "mSFMN",
-            uint8(Constants.safemoonDecimals)
-        );
-        safemoon.mint(tokenCreatorAddress, 200000 * 10 ** Constants.safemoonDecimals);
-
-        bayc = new ERC721Mock("BAYC Mock", "mBAYC");
-        bayc.mint(tokenCreatorAddress, 0);
-        bayc.mint(tokenCreatorAddress, 1);
-        bayc.mint(tokenCreatorAddress, 2);
-        bayc.mint(tokenCreatorAddress, 3);
-
-        mayc = new ERC721Mock("MAYC Mock", "mMAYC");
-        mayc.mint(tokenCreatorAddress, 0);
-
-        dickButs = new ERC721Mock("DickButs Mock", "mDICK");
-        dickButs.mint(tokenCreatorAddress, 0);
-
-        wbayc = new ERC20Mock(
-            "wBAYC Mock",
-            "mwBAYC",
-            uint8(Constants.wbaycDecimals)
-        );
-        wbayc.mint(tokenCreatorAddress, 100000 * 10 ** Constants.wbaycDecimals);
-
-        interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
-        interleave.mint(tokenCreatorAddress, 1, 100000);
-
-        vm.stopPrank();
-
-        vm.prank(creatorAddress);
-        oracleHub = new OracleHub();
-
-        oracleDaiToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleDaiToUsdDecimals), "DAI / USD");
-        oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
-        oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
-        oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
-        oracleWbaycToEth =
-            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
-        oracleWmaycToUsd =
-            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WBAYC / USD");
-        oracleInterleaveToEth =
-            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
-
+    constructor() DeployArcadiaVaults() {
         vm.startPrank(creatorAddress);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "ETH",
-                baseAsset: "USD",
-                oracleAddress: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
-            })
+        liquidator = new Liquidator(
+            address(factory),
+            address(mainRegistry)
         );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "LINK",
-                baseAsset: "USD",
-                oracleAddress: address(oracleLinkToUsd),
-                quoteAssetAddress: address(link),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "WBAYC",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleWbaycToEth),
-                quoteAssetAddress: address(wbayc),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "WMAYC",
-                baseAsset: "USD",
-                oracleAddress: address(oracleWmaycToUsd),
-                quoteAssetAddress: address(wmayc),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "INTERLEAVE",
-                baseAsset: "ETH",
-                oracleAddress: address(oracleInterleaveToEth),
-                quoteAssetAddress: address(interleave),
-                baseAssetIsBaseCurrency: true
-            })
-        );
-        vm.stopPrank();
+        liquidator.setFactory(address(factory));
 
-        vm.startPrank(tokenCreatorAddress);
-        eth.transfer(vaultOwner, 100000 * 10 ** Constants.ethDecimals);
-        link.transfer(vaultOwner, 100000 * 10 ** Constants.linkDecimals);
-        snx.transfer(vaultOwner, 100000 * 10 ** Constants.snxDecimals);
-        safemoon.transfer(vaultOwner, 100000 * 10 ** Constants.safemoonDecimals);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 1);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 2);
-        bayc.transferFrom(tokenCreatorAddress, vaultOwner, 3);
-        mayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
-        dickButs.transferFrom(tokenCreatorAddress, vaultOwner, 0);
-        interleave.safeTransferFrom(
-            tokenCreatorAddress,
-            vaultOwner,
-            1,
-            100000,
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        eth.transfer(unprivilegedAddress, 1000 * 10 ** Constants.ethDecimals);
-        vm.stopPrank();
-
-        oracleDaiToUsdArr[0] = address(oracleDaiToUsd);
-
-        oracleEthToUsdArr[0] = address(oracleEthToUsd);
-
-        oracleLinkToUsdArr[0] = address(oracleLinkToUsd);
-
-        oracleSnxToEthEthToUsd[0] = address(oracleSnxToEth);
-        oracleSnxToEthEthToUsd[1] = address(oracleEthToUsd);
-
-        oracleWbaycToEthEthToUsd[0] = address(oracleWbaycToEth);
-        oracleWbaycToEthEthToUsd[1] = address(oracleEthToUsd);
-
-        oracleWmaycToUsdArr[0] = address(oracleWmaycToUsd);
-
-        oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
-        oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
-
-        vm.prank(creatorAddress);
-        factory = new Factory();
-
-        vm.startPrank(tokenCreatorAddress);
-        dai.mint(liquidityProvider, type(uint256).max);
-        vm.stopPrank();
-
-        vm.startPrank(creatorAddress);
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.updateInterestRate(5 * 10 ** 16); //5% with 18 decimals precision
+        pool.setLiquidator(address(liquidator));
+        DataTypes.InterestRateConfiguration memory config = DataTypes.InterestRateConfiguration({
+            baseRate: Constants.interestRate,
+            highSlope: Constants.interestRate,
+            lowSlope: Constants.interestRate,
+            utilisationThreshold: Constants.utilisationThreshold
+        });
+        pool.setInterestConfig(config);
 
         debt = DebtToken(address(pool));
 
@@ -290,120 +55,6 @@ contract EndToEndTest is Test {
 
     //this is a before each
     function setUp() public {
-        //emit log_named_address("oracleEthToUsdArr[0]", oracleEthToUsdArr[0]);
-
-        vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
-
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-
-        standardERC20Registry = new StandardERC20PricingModule(
-            address(mainRegistry),
-            address(oracleHub)
-        );
-        floorERC721PricingModule = new FloorERC721PricingModule(
-            address(mainRegistry),
-            address(oracleHub)
-        );
-        floorERC1155PricingModule = new FloorERC1155PricingModule(
-            address(mainRegistry),
-            address(oracleHub)
-        );
-
-        mainRegistry.addPricingModule(address(standardERC20Registry));
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        mainRegistry.addPricingModule(address(floorERC1155PricingModule));
-
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleEthToUsdArr,
-                assetUnit: uint64(10 ** Constants.ethDecimals),
-                assetAddress: address(eth)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleLinkToUsdArr,
-                assetUnit: uint64(10 ** Constants.linkDecimals),
-                assetAddress: address(link)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-        standardERC20Registry.setAssetInformation(
-            StandardERC20PricingModule.AssetInformation({
-                oracleAddresses: oracleSnxToEthEthToUsd,
-                assetUnit: uint64(10 ** Constants.snxDecimals),
-                assetAddress: address(snx)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-
-        floorERC721PricingModule.setAssetInformation(
-            FloorERC721PricingModule.AssetInformation({
-                oracleAddresses: oracleWbaycToEthEthToUsd,
-                idRangeStart: 0,
-                idRangeEnd: type(uint256).max,
-                assetAddress: address(bayc)
-            }),
-            emptyListUint16,
-            emptyListUint16
-        );
-
-        liquidator = new Liquidator(
-            0x0000000000000000000000000000000000000000,
-            address(mainRegistry)
-        );
-        vm.stopPrank();
-
-        vm.startPrank(vaultOwner);
-        vault = new Vault();
-        vm.stopPrank();
-
-        vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
-        factory.confirmNewVaultInfo();
-        pool.setLiquidator(address(liquidator));
-        liquidator.setFactory(address(factory));
-        mainRegistry.setFactory(address(factory));
-        mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-
-        vm.startPrank(tokenCreatorAddress);
-        vm.stopPrank();
-
         vm.prank(vaultOwner);
         proxyAddr = factory.createVault(
             uint256(
@@ -416,16 +67,6 @@ contract EndToEndTest is Test {
             0
         );
         proxy = Vault(proxyAddr);
-
-        vm.startPrank(oracleOwner);
-        oracleDaiToUsd.transmit(int256(rateDaiToUsd));
-        oracleEthToUsd.transmit(int256(rateEthToUsd));
-        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-        oracleSnxToEth.transmit(int256(rateSnxToEth));
-        oracleWbaycToEth.transmit(int256(rateWbaycToEth));
-        oracleWmaycToUsd.transmit(int256(rateWmaycToUsd));
-        oracleInterleaveToEth.transmit(int256(rateInterleaveToEth));
-        vm.stopPrank();
 
         vm.startPrank(vaultOwner);
         proxy.openTrustedMarginAccount(address(pool));
@@ -446,9 +87,9 @@ contract EndToEndTest is Test {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        uint256 expectedValue = (((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) * collFactor) / 100
+        uint256 expectedValue = (((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) * collFactor_) / 100
             / 10 ** (18 - Constants.daiDecimals);
         uint256 actualValue = proxy.getFreeMargin();
 
@@ -456,16 +97,16 @@ contract EndToEndTest is Test {
     }
 
     function testSuccess_borrow_AllowCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth > 0);
-        vm.assume(uint256(amountCredit) * collFactor < type(uint128).max); //prevent overflow in takecredit with absurd values
+        vm.assume(uint256(amountCredit) * collFactor_ < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -478,15 +119,15 @@ contract EndToEndTest is Test {
 
     function testRevert_borrow_NotAllowTooMuchCreditAfterDeposit(uint128 amountEth, uint128 amountCredit) public {
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(uint256(amountCredit) * collFactor < type(uint128).max); //prevent overflow in takecredit with absurd values
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(uint256(amountCredit) * collFactor_ < type(uint128).max); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit > maxCredit);
 
@@ -504,8 +145,7 @@ contract EndToEndTest is Test {
         uint32 amountOfBlocksToRoll
     ) public {
         vm.assume(amountEth > 0);
-
-        uint64 _yearlyInterestRate = pool.interestRate();
+        uint256 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
         uint128 exponent = (uint128(amountOfBlocksToRoll) * 1e18) / uint128(pool.YEARLY_BLOCKS());
         vm.assume(amountCredit < type(uint128).max / LogExpMath.pow(base, exponent));
@@ -513,11 +153,11 @@ contract EndToEndTest is Test {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
 
         depositERC20InVault(eth, amountEth, vaultOwner);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.daiDecimals))
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -526,7 +166,7 @@ contract EndToEndTest is Test {
         vm.stopPrank();
 
         _yearlyInterestRate = pool.interestRate();
-        base = 1e18 + _yearlyInterestRate;
+        base = 1e18 + uint128(_yearlyInterestRate);
 
         uint256 debtAtStart = proxy.getUsedMargin();
 
@@ -553,11 +193,11 @@ contract EndToEndTest is Test {
         uint128 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         uint128 amountCredit = uint128(
             (
                 ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                    * collFactor
+                    * collFactor_
             ) / 100
         );
         vm.assume(amountCredit > 0);
@@ -583,13 +223,13 @@ contract EndToEndTest is Test {
         vm.assume(amountEth > 0);
 
         vm.assume(newPrice * 10 ** Constants.oracleEthToUsdDecimals > rateEthToUsd);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor); //prevent overflow in takecredit with absurd values
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_); //prevent overflow in takecredit with absurd values
         uint256 valueOfOneEth = uint128((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -606,7 +246,7 @@ contract EndToEndTest is Test {
         uint256 newValueOfOneEth = (Constants.WAD * newRateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         uint256 expectedAvailableCredit = (
             ((newValueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100 - amountCredit;
 
         uint256 actualAvailableCredit = proxy.getFreeMargin();
@@ -616,8 +256,8 @@ contract EndToEndTest is Test {
 
     function testRevert_withdraw_OpenDebtIsTooLarge(uint128 amountEth, uint128 amountEthWithdrawal) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
         vm.assume(amountEth >= amountEthWithdrawal);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -649,8 +289,8 @@ contract EndToEndTest is Test {
         uint128 amountCredit
     ) public {
         vm.assume(amountEth > 0 && amountEthWithdrawal > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
         vm.assume(amountEth >= amountEthWithdrawal);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
@@ -686,15 +326,15 @@ contract EndToEndTest is Test {
         uint16 blocksToRoll
     ) public {
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -703,15 +343,14 @@ contract EndToEndTest is Test {
         vm.prank(vaultOwner);
         pool.borrow(amountCredit, address(proxy), vaultOwner);
 
-        uint64 _yearlyInterestRate = pool.interestRate();
+        uint256 _yearlyInterestRate = pool.interestRate();
 
         uint256 balanceBefore = debt.totalAssets();
 
         vm.roll(block.number + blocksToRoll);
-        pool.syncInterests();
         uint256 balanceAfter = debt.totalAssets();
 
-        uint128 base = _yearlyInterestRate + 10 ** 18;
+        uint128 base = uint128(_yearlyInterestRate) + 10 ** 18;
         uint128 exponent = uint128((uint128(blocksToRoll) * 10 ** 18) / pool.YEARLY_BLOCKS());
         uint128 expectedDebt = uint128((amountCredit * (LogExpMath.pow(base, exponent))) / 10 ** 18);
         uint128 unrealisedDebt = expectedDebt - amountCredit;
@@ -721,15 +360,15 @@ contract EndToEndTest is Test {
 
     function testSuccess_repay_ExactDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll) public {
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -759,15 +398,15 @@ contract EndToEndTest is Test {
     {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -805,15 +444,15 @@ contract EndToEndTest is Test {
     ) public {
         // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
         vm.assume(amountEth > 0);
-        uint16 collFactor = mainRegistry.DEFAULT_COLLATERAL_FACTOR();
-        vm.assume(amountEth < type(uint128).max / collFactor);
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        vm.assume(amountEth < type(uint128).max / collFactor_);
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
         uint256 maxCredit = (
             ((valueOfOneEth * amountEth) / 10 ** Constants.ethDecimals) / 10 ** (18 - Constants.daiDecimals)
-                * collFactor
+                * collFactor_
         ) / 100;
         vm.assume(amountCredit <= maxCredit);
 
@@ -829,8 +468,8 @@ contract EndToEndTest is Test {
 
         vm.prank(vaultOwner);
         pool.repay(toRepay, address(proxy));
-        uint64 _yearlyInterestRate = pool.interestRate();
-        uint128 base = _yearlyInterestRate + 10 ** 18;
+        uint256 _yearlyInterestRate = pool.interestRate();
+        uint128 base = uint128(_yearlyInterestRate) + 10 ** 18;
         uint128 exponent = uint128((uint128(blocksToRoll) * 10 ** 18) / pool.YEARLY_BLOCKS());
         uint128 expectedDebt = uint128((amountCredit * (LogExpMath.pow(base, exponent))) / 10 ** 18) - toRepay;
 
@@ -838,7 +477,7 @@ contract EndToEndTest is Test {
 
         vm.roll(block.number + uint256(blocksToRoll));
         _yearlyInterestRate = pool.interestRate();
-        base = _yearlyInterestRate + 10 ** 18;
+        base = uint128(_yearlyInterestRate) + 10 ** 18;
         exponent = uint128((uint128(blocksToRoll) * 10 ** 18) / pool.YEARLY_BLOCKS());
         expectedDebt = uint128((expectedDebt * (LogExpMath.pow(base, exponent))) / 10 ** 18);
 

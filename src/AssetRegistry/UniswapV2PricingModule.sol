@@ -44,7 +44,7 @@ contract UniswapV2PricingModule is PricingModule {
      * @param _uniswapV2Factory The factory for Uniswap V2 pairs
      */
     constructor(address _mainRegistry, address _oracleHub, address _uniswapV2Factory, address _erc20PricingModule)
-        PricingModule(_mainRegistry, _oracleHub)
+        PricingModule(_mainRegistry, _oracleHub, msg.sender)
     {
         uniswapV2Factory = _uniswapV2Factory;
         erc20PricingModule = _erc20PricingModule;
@@ -66,45 +66,38 @@ contract UniswapV2PricingModule is PricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Adds a new asset to the UniswapV2PricingModule, or overwrites an existing asset.
-     * @param assetAddress Contract address of the Uniswap V2 Liquidity pair
-     * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
-     * the number of baseCurrencies added to the Main Registry,or the list must have length 0.
-     * If the list has length zero, the risk variables of the baseCurrency for all assets
-     * is initiated as default (safest lowest rating).
+     * @notice Adds a new asset to the UniswapV2PricingModule.
+     * @param asset The contract address of the asset
+     * @param riskVars An array of Risk Variables for the asset
+     * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.
+     * If no risk variables are provided, the asset is added with the risk variables set to zero, meaning it can't be used as collateral.
+     * @dev RiskVarInput.asset can be zero as it is not taken into account.
      * @dev Risk variable are variables with 2 decimals precision
-     * @dev The assets are added/overwritten in the Main-Registry as well.
-     *      By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     *      (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
-     *      This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
-     *      assets are no longer updatable.
+     * @dev The assets are added in the Main-Registry as well.
+     * @dev Assets can't have more than 18 decimals.
      */
-    function setAssetInformation(
-        address assetAddress,
-        uint16[] calldata assetCollateralFactors,
-        uint16[] calldata assetLiquidationThresholds
-    ) external onlyOwner {
-        AssetInformation memory assetInformation;
-
-        assetInformation.token0 = IUniswapV2Pair(assetAddress).token0();
-        assetInformation.token1 = IUniswapV2Pair(assetAddress).token1();
+    function addAsset(address asset, RiskVarInput[] calldata riskVars) external onlyOwner {
+        address token0 = IUniswapV2Pair(asset).token0();
+        address token1 = IUniswapV2Pair(asset).token1();
 
         address[] memory tokens = new address[](2);
-        tokens[0] = assetInformation.token0;
-        tokens[1] = assetInformation.token1;
+        tokens[0] = token0;
+        tokens[1] = token1;
 
-        require(IMainRegistry(mainRegistry).batchIsWhiteListed(tokens, new uint256[](2)), "UV2_SAI: NOT_WHITELISTED");
+        require(IMainRegistry(mainRegistry).batchIsWhiteListed(tokens, new uint256[](2)), "PMUV2_AA: NOT_WHITELISTED");
 
-        if (!inPricingModule[assetAddress]) {
-            inPricingModule[assetAddress] = true;
-            assetsInPricingModule.push(assetAddress);
-        }
+        require(!inPricingModule[asset], "PMUV2_AA: already added");
+        inPricingModule[asset] = true;
+        assetsInPricingModule.push(asset);
 
-        assetToInformation[assetAddress] = assetInformation;
-        isAssetAddressWhiteListed[assetAddress] = true;
-        IMainRegistry(mainRegistry).addAsset(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
+        assetToInformation[asset].token0 = token0;
+        assetToInformation[asset].token1 = token1;
+        _setRiskVariablesForAsset(asset, riskVars);
+
+        isAssetAddressWhiteListed[asset] = true;
+
+        //Will revert in MainRegistry if asset can't be added
+        IMainRegistry(mainRegistry).addAsset(asset);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -113,12 +106,12 @@ contract UniswapV2PricingModule is PricingModule {
 
     /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
-     * @param assetAddress The address of the asset
+     * @param asset The address of the asset
      * @dev Since Uniswap V2 LP tokens (ERC20) have no Id, the Id should be set to 0
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address assetAddress, uint256) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[assetAddress]) {
+    function isWhiteListed(address asset, uint256) external view override returns (bool) {
+        if (isAssetAddressWhiteListed[asset]) {
             return true;
         }
 
@@ -132,12 +125,14 @@ contract UniswapV2PricingModule is PricingModule {
     /**
      * @notice Returns the value of a Uniswap V2 LP-token
      * @param getValueInput A Struct with all the information neccessary to get the value of an asset
-     * - assetAddress: The contract address of the LP-token
+     * - asset: The contract address of the LP-token
      * - assetId: Since ERC20 tokens have no Id, the Id should be set to 0
      * - assetAmount: The Amount of tokens, ERC20 tokens can have any Decimals precision smaller than 18.
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
+     * @dev trustedUsdPriceToken cannot realisticly overflow, requires unit price of a token with 0 decimals (worst case),
+     * to be bigger than $1,16 * 10^41
      * @dev The UniswapV2PricingModule will always return the value in valueInUsd,
      * valueInBaseCurrency will always be 0
      * @dev If the asset is not first added to PricingModule this function will return value 0 without throwing an error.
@@ -148,22 +143,22 @@ contract UniswapV2PricingModule is PricingModule {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInBaseCurrency)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
     {
         // To calculate the liquidity value after arbitrage, what matters is the ratio of the price of token0 compared to the price of token1
         // Hence we need to use a trusted external price for an equal amount of tokens,
         // we use for both tokens the USD price of 1 WAD (10**18) to guarantee precision.
-        (uint256 trustedUsdPriceToken0,) = PricingModule(erc20PricingModule).getValue(
+        (uint256 trustedUsdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
             GetValueInput({
-                assetAddress: assetToInformation[getValueInput.assetAddress].token0,
+                asset: assetToInformation[getValueInput.asset].token0,
                 assetId: 0,
                 assetAmount: FixedPointMathLib.WAD,
                 baseCurrency: 0
             })
         );
-        (uint256 trustedUsdPriceToken1,) = PricingModule(erc20PricingModule).getValue(
+        (uint256 trustedUsdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
             GetValueInput({
-                assetAddress: assetToInformation[getValueInput.assetAddress].token1,
+                asset: assetToInformation[getValueInput.asset].token1,
                 assetId: 0,
                 assetAmount: FixedPointMathLib.WAD,
                 baseCurrency: 0
@@ -172,14 +167,17 @@ contract UniswapV2PricingModule is PricingModule {
 
         //
         (uint256 token0Amount, uint256 token1Amount) = _getTrustedTokenAmounts(
-            getValueInput.assetAddress, trustedUsdPriceToken0, trustedUsdPriceToken1, getValueInput.assetAmount
+            getValueInput.asset, trustedUsdPriceToken0, trustedUsdPriceToken1, getValueInput.assetAmount
         );
         // trustedUsdPriceToken0 is the value of token0 in USD with 18 decimals precision for 1 WAD of tokens,
         // we need to recalculate to find the value of the actual amount of underlying token0 in the liquidity position.
         valueInUsd = FixedPointMathLib.mulDivDown(token0Amount, trustedUsdPriceToken0, FixedPointMathLib.WAD)
             + FixedPointMathLib.mulDivDown(token1Amount, trustedUsdPriceToken1, FixedPointMathLib.WAD);
 
-        return (valueInUsd, 0);
+        collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;
+
+        return (valueInUsd, 0, collFactor, liqThreshold);
     }
 
     /**
@@ -210,7 +208,7 @@ contract UniswapV2PricingModule is PricingModule {
         uint256 totalSupply = IUniswapV2Pair(pair).totalSupply();
 
         // this also checks that totalSupply > 0
-        require(totalSupply >= liquidityAmount && liquidityAmount > 0, "UV2_GV: LIQUIDITY_AMOUNT");
+        require(totalSupply >= liquidityAmount && liquidityAmount > 0, "UV2_GTTA: LIQUIDITY_AMOUNT");
 
         (uint256 reserve0, uint256 reserve1) = _getTrustedReserves(pair, trustedPriceToken0, trustedPriceToken1);
 
@@ -238,7 +236,7 @@ contract UniswapV2PricingModule is PricingModule {
         // The untrusted reserves from the pair, these can be manipulated!!!
         (reserve0, reserve1,) = IUniswapV2Pair(pair).getReserves();
 
-        require(reserve0 > 0 && reserve1 > 0, "UV2_GV: ZERO_PAIR_RESERVES");
+        require(reserve0 > 0 && reserve1 > 0, "UV2_GTR: ZERO_PAIR_RESERVES");
 
         // Compute how much to swap to balance the pool with externally observed trusted prices
         (bool token0ToToken1, uint256 amountIn) =

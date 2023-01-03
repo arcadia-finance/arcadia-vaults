@@ -8,10 +8,10 @@ import "../interfaces/IAToken.sol";
 contract ATokenMock is ERC20 {
     address public uToken;
 
-    constructor(address _uToken, string memory name, string memory symbol)
-        ERC20(name, symbol, ERC20(_uToken).decimals())
+    constructor(address uToken_, string memory name_, string memory symbol_, uint8 decimals_)
+        ERC20(name_, symbol_, decimals_)
     {
-        uToken = _uToken;
+        uToken = uToken_;
     }
 
     function UNDERLYING_ASSET_ADDRESS() external view returns (address) {

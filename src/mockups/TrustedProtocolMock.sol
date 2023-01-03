@@ -4,17 +4,25 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
-import "../interfaces/ITrustedProtocol.sol";
-import "./ERC4626SolmateMock.sol";
+import {TrustedProtocol} from "../../lib/arcadia-lending/src/TrustedProtocol.sol";
 
-contract TrustedProtocolMock is MockERC4626 {
-    constructor(ERC20 _underlying, string memory _name, string memory _symbol)
-        MockERC4626(_underlying, _name, _symbol)
-    {}
+contract TrustedProtocolMock is TrustedProtocol {
+    constructor() TrustedProtocol() {}
 
-    function getOpenPosition(address vault) external view returns (uint128 openPosition) {
-        openPosition = uint128(maxWithdraw(vault));
+    function openMarginAccount()
+        external
+        pure
+        override
+        returns (bool success, address baseCurrency, address liquidator_)
+    {
+        success = false;
+        baseCurrency = address(0);
+        liquidator_ = address(0);
+    }
+
+    function getOpenPosition(address) external pure override returns (uint128 openPosition) {
+        openPosition = 0;
     }
 }
