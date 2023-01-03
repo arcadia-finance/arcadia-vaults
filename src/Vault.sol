@@ -481,8 +481,6 @@ contract Vault {
             "V_W: Length mismatch"
         );
 
-        IRegistry(registry).processWithrawal(assetAddresses, assetAmounts);
-
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
                 _withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
@@ -497,6 +495,8 @@ contract Vault {
                 ++i;
             }
         }
+
+        require(IRegistry(registry).processWithrawal(assetAddresses, assetAmounts), "V_W: Withdrawal failed");
 
         uint256 usedMargin = getUsedMargin();
         if (usedMargin != 0) {

@@ -26,7 +26,7 @@ interface IPricingModule {
 
     function isWhiteListed(address, uint256) external view returns (bool);
     function processDeposit(address, uint256, uint256) external returns (bool);
-    function processWithrawal(address, uint256) external returns (bool);
+    function processWithdrawal(address, uint256) external;
 
     function getValue(GetValueInput memory) external view returns (uint256, uint256, uint256, uint256);
 }

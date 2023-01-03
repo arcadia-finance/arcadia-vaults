@@ -58,6 +58,11 @@ contract MainRegistry is Ownable {
         _;
     }
 
+    modifier onlyVault() {
+        require(IFactory(factoryAddress).isVault(msg.sender), "Caller is not a Vault.");
+        _;
+    }
+
     /**
      * @notice The Main Registry must always be initialised with the BaseCurrency USD
      * @dev Since the BaseCurrency USD has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
@@ -175,7 +180,7 @@ contract MainRegistry is Ownable {
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
         uint256[] calldata amounts
-    ) public returns (bool) {
+    ) public onlyVault returns (bool) {
         uint256 addressesLength = _assetAddresses.length;
         require(addressesLength == _assetIds.length && addressesLength == amounts.length, "LENGTH_MISMATCH");
 
@@ -199,15 +204,14 @@ contract MainRegistry is Ownable {
         return true;
     }
 
-    function processWithrawal(address[] calldata _assetAddresses, uint256[] calldata amounts) public returns (bool) {
+    function processWithrawal(address[] calldata _assetAddresses, uint256[] calldata amounts) public onlyVault returns (bool) {
         uint256 addressesLength = _assetAddresses.length;
 
         address assetAddress;
         for (uint256 i; i < addressesLength;) {
             assetAddress = _assetAddresses[i];
 
-            IPricingModule(assetToPricingModule[assetAddress]).processWithrawal(assetAddress, amounts[i]);
-
+            IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(assetAddress, amounts[i]);
             unchecked {
                 ++i;
             }
