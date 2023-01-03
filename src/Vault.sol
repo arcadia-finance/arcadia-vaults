@@ -229,6 +229,7 @@ contract Vault {
 
         isTrustedProtocolSet = false;
         allowed[trustedProtocol] = false;
+        vault.liqThres = 0;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -263,14 +264,20 @@ contract Vault {
     }
 
     /**
-     * @notice Can be called by authorised applications to close or decrease a margin position.
-     * @param baseCurrency The Base-currency in which the margin position is denominated.
-     * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
-     * @return success Boolean indicating if there the margin position is successfully decreased.
-     * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
+     * @notice Can be called by vault owner to sync the Liquidation Treshhold.
+     * @dev Vault Owners can always voluntary update the Liquidation Treshhold on a voluntary basis.
+     * They can in practice anyway refinance DeFi loans (eg. with flashloans) if conditions
+     * would become more favourable, hence we foresee a gas efficient function.
      */
-    function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
-        success = baseCurrency == vault.baseCurrency;
+    function syncLiquidationThreshold() external onlyOwner {
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            generateAssetData();
+        (, uint256 liquidationThreshold) = IRegistry(registry).getCollateralValueAndLiquidationThreshold(
+            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
+        );
+
+        // Can safely cast to uint16 since liquidationThreshold is maximal 10000
+        vault.liqThres = uint16(liquidationThreshold);
     }
 
     /**

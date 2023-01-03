@@ -199,6 +199,8 @@ contract VaultV2 {
      * @param protocol The contract address of the trusted application.
      * @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
      * @dev Currently only one trusted protocol can be set.
+     * @dev Only open margin accounts for protocols you trust!
+     * The protocol has significant authorisation: use margin (-> trigger liquidation)
      */
     function openTrustedMarginAccount(address protocol) public onlyOwner {
         require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
@@ -213,7 +215,6 @@ contract VaultV2 {
         if (vault.baseCurrency != baseCurrency) {
             _setBaseCurrency(baseCurrency);
         }
-        IERC20(baseCurrency).approve(protocol, type(uint256).max);
         isTrustedProtocolSet = true;
         allowed[protocol] = true;
     }
@@ -229,6 +230,7 @@ contract VaultV2 {
 
         isTrustedProtocolSet = false;
         allowed[trustedProtocol] = false;
+        vault.liqThres = 0;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -240,8 +242,6 @@ contract VaultV2 {
      * @param baseCurrency The Base-currency in which the margin position is denominated
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
-     * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
-     * @dev Since increasing margin position is financial activity, liquidation threshold update is done here.
      */
     function increaseMarginPosition(address baseCurrency, uint256 amount)
         public
@@ -265,14 +265,20 @@ contract VaultV2 {
     }
 
     /**
-     * @notice Can be called by authorised applications to close or decrease a margin position.
-     * @param baseCurrency The Base-currency in which the margin position is denominated.
-     * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
-     * @return success Boolean indicating if there the margin position is successfully decreased.
-     * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
+     * @notice Can be called by vault owner to sync the Liquidation Treshhold.
+     * @dev Vault Owners can always voluntary update the Liquidation Treshhold on a voluntary basis.
+     * They can in practice anyway refinance DeFi loans (eg. with flashloans) if conditions
+     * would become more favourable, hence we foresee a gas efficient function.
      */
-    function decreaseMarginPosition(address baseCurrency, uint256) public view onlyAuthorized returns (bool success) {
-        success = baseCurrency == vault.baseCurrency;
+    function syncLiquidationThreshold() external onlyOwner {
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            generateAssetData();
+        (, uint256 liquidationThreshold) = IRegistry(registry).getCollateralValueAndLiquidationThreshold(
+            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
+        );
+
+        // Can safely cast to uint16 since liquidationThreshold is maximal 10000
+        vault.liqThres = uint16(liquidationThreshold);
     }
 
     /**
