@@ -164,7 +164,7 @@ abstract contract PricingModule is Ownable {
             );
 
             unchecked {
-                i++;
+                ++i;
             }
         }
     }
@@ -187,7 +187,7 @@ abstract contract PricingModule is Ownable {
             );
 
             unchecked {
-                i++;
+                ++i;
             }
         }
     }

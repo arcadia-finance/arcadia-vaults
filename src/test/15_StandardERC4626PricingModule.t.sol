@@ -129,7 +129,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
             standardERC4626PricingModule.getAssetInformation(address(ybEth));
         assertEq(assetUnit, 10 ** uint8(Constants.ethDecimals));
         assertEq(underlyingAsset, address(eth));
-        for (uint256 i; i < oracleEthToUsdArr.length; i++) {
+        for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
         assertTrue(standardERC4626PricingModule.isAssetAddressWhiteListed(address(ybEth)));
@@ -178,7 +178,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         standardERC4626PricingModule.syncOracles(address(ybEth));
 
         (,, address[] memory oracles) = standardERC4626PricingModule.getAssetInformation(address(ybEth));
-        for (uint256 i; i < oracleLinkToUsdArr.length; i++) {
+        for (uint256 i; i < oracleLinkToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleLinkToUsdArr[i]);
         }
     }

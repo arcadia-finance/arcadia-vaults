@@ -33,7 +33,7 @@ library RiskModule {
     /**
      * @notice Calculate the weighted collateral value given the assets
      * @param valuesAndRiskVarPerAsset The list of corresponding monetary values of each asset address.
-     * @return collateralValue is the weighted collateral value of the given assets
+     * @return collateralValue The collateral value of the given assets
      */
     function calculateWeightedCollateralValue(AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset)
         public
@@ -46,7 +46,7 @@ library RiskModule {
                 ++i;
             }
         }
-        collateralValue = collateralValue / RiskConstants.VARIABLE_DECIMAL;
+        collateralValue = collateralValue / RiskConstants.RISK_VARIABLES_UNIT;
     }
 
     /**
@@ -66,7 +66,7 @@ library RiskModule {
             liquidationThreshold256 +=
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].liqThreshold;
             unchecked {
-                i++;
+                ++i;
             }
         }
         require(totalValue > 0, "RM_CWLT: DIVIDE_BY_ZERO");
@@ -76,6 +76,38 @@ library RiskModule {
         // so liquidationThreshold will be in line with the liqThres_x, ... , liqThres_n
         unchecked {
             liquidationThreshold = uint16(liquidationThreshold256 / totalValue);
+        }
+    }
+
+    /**
+     * @notice Calculates the collateral value and weighted liquidation threshold given the assets
+     * @param valuesAndRiskVarPerAsset A list of structs with the values and risk variables of each asset address:
+     * - valueInBaseCurrency: The value of the asset denominated in baseCurrency with 18 decimals precision
+     * - collFactor: The Collateral factor or haircut of the asset, to discount the MTM value, 2 decimals precision
+     * - liqThreshold: The Liquidation Threshhold of the asset, 2 decimals precision
+     * @return collateralValue The collateral value of the given assets
+     * @return liquidationThreshold The weighted liquidation threshold of the given assets
+     */
+    function calculateCollateralValueAndLiquidationThreshold(
+        AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset
+    ) public pure returns (uint256 collateralValue, uint256 liquidationThreshold) {
+        uint256 totalValue;
+        for (uint256 i; i < valuesAndRiskVarPerAsset.length;) {
+            totalValue += valuesAndRiskVarPerAsset[i].valueInBaseCurrency;
+
+            collateralValue += valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].collFactor;
+
+            liquidationThreshold +=
+                valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].liqThreshold;
+            unchecked {
+                ++i;
+            }
+        }
+        require(totalValue > 0, "RM_CCFALT: DIVIDE_BY_ZERO");
+
+        unchecked {
+            collateralValue = collateralValue / RiskConstants.RISK_VARIABLES_UNIT;
+            liquidationThreshold = liquidationThreshold / totalValue;
         }
     }
 }
