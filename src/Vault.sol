@@ -241,6 +241,8 @@ contract Vault {
      * @param baseCurrency The Base-currency in which the margin position is denominated
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
+     * @dev The Liquidation Threshold will automatically be updated on every increase of margin,
+     * but not automatically on a decrease of margin (since this derisks the vault).
      */
     function increaseMarginPosition(address baseCurrency, uint256 amount)
         public
