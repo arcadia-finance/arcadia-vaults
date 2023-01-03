@@ -182,7 +182,7 @@ contract MainRegistry is Ownable {
         uint256[] calldata amounts
     ) public onlyVault returns (bool) {
         uint256 addressesLength = _assetAddresses.length;
-        require(addressesLength == _assetIds.length && addressesLength == amounts.length, "LENGTH_MISMATCH");
+        require(addressesLength == _assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
         address assetAddress;
         for (uint256 i; i < addressesLength;) {
