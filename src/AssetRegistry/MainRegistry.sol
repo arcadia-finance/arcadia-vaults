@@ -204,7 +204,11 @@ contract MainRegistry is Ownable {
         return true;
     }
 
-    function processWithrawal(address[] calldata _assetAddresses, uint256[] calldata amounts) public onlyVault returns (bool) {
+    function processWithrawal(address[] calldata _assetAddresses, uint256[] calldata amounts)
+        public
+        onlyVault
+        returns (bool)
+    {
         uint256 addressesLength = _assetAddresses.length;
 
         address assetAddress;
