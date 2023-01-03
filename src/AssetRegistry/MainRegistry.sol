@@ -492,7 +492,7 @@ contract MainRegistry is Ownable {
         uint256[] calldata assetAmounts,
         address baseCurrency
     ) public view returns (uint256 collateralValue, uint256 liquidationThreshold) {
-        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
+        //No need to check that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 
