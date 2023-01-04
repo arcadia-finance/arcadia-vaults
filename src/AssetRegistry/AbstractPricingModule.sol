@@ -214,7 +214,6 @@ abstract contract PricingModule is Ownable {
         assetRiskVars[asset][basecurrency] = riskVars;
     }
 
-
     /**
      * @notice Set the maximum exposure for an asset
      * @param asset The address of the asset

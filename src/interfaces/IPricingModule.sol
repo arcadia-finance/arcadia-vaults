@@ -19,7 +19,6 @@ interface IPricingModule {
         uint248 maxExposure;
     }
 
-
     function getAssetInformation(address asset) external view returns (uint64, address, address[] memory);
 
     function setRiskVariablesForAsset(

@@ -176,14 +176,13 @@ contract MainRegistry is Ownable {
         return true;
     }
 
-
     /**
      * @notice Batch process multiple assets
      * @param _assetAddresses An array of addresses of the assets
      * @param _assetIds An array of asset ids
      * @param amounts An array of amounts to be deposited
      * @return A boolean indicating whether the batch process was successful
-     * @dev processDeposit in the pricing module checks whehter 
+     * @dev processDeposit in the pricing module checks whehter
      *    it's allowlisted and updates the maxExposure
      */
     function batchProcessDeposit(
@@ -233,42 +232,6 @@ contract MainRegistry is Ownable {
             assetAddress = _assetAddresses[i];
 
             IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(assetAddress, amounts[i]);
-            unchecked {
-                ++i;
-            }
-        }
-
-        return true;
-    }
-
-    /* ///////////////////////////////////////////////////////////////
-                        WHITE LIST LOGIC
-    /////////////////////////////////////////////////////////////// */
-
-    /**
-     * @notice Checks for a list of tokens and a list of corresponding IDs if all tokens are white-listed
-     * @param _assetAddresses The list of token addresses that needs to be checked
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @return A boolean, indicating of all assets passed as input are whitelisted
-     */
-    function batchIsWhiteListed(address[] calldata _assetAddresses, uint256[] calldata _assetIds)
-        public
-        view
-        returns (bool)
-    {
-        uint256 addressesLength = _assetAddresses.length;
-        require(addressesLength == _assetIds.length, "LENGTH_MISMATCH");
-
-        address assetAddress;
-        for (uint256 i; i < addressesLength;) {
-            assetAddress = _assetAddresses[i];
-            if (!inMainRegistry[assetAddress]) {
-                return false;
-            } else if (!IPricingModule(assetToPricingModule[assetAddress]).isWhiteListed(assetAddress, _assetIds[i])) {
-                return false;
-            }
             unchecked {
                 ++i;
             }

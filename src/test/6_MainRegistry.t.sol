@@ -361,7 +361,21 @@ contract AssetManagementTest is MainRegistryTest {
 
         assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
     }
+
+    function testSuccess_deposit_ExposureDecreases(uint128 amount) public {
+
+        (, uint256 maxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
+        vm.startPrank(address(vault));
+
+        mainRegistry.batchProcessDeposit
+        
+    }
+    //batchprocessdeposit success
+    //batchprocessdeposit fail on length
+    //batchprocessdeposit higher than max exposure
+    //batchprocessdeposit asset removed from whitelist, still exposure left
 }
+
 
 /* ///////////////////////////////////////////////////////////////
                         PRICING LOGIC
