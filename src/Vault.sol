@@ -437,10 +437,7 @@ contract Vault {
             "V_D: Length mismatch"
         );
 
-        require(
-            IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts),
-            "V_D: Deposit failed"
-        );
+        require(IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts), "V_D: Deposit failed");
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {

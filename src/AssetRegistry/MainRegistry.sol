@@ -199,9 +199,7 @@ contract MainRegistry is Ownable {
             if (!inMainRegistry[assetAddress]) {
                 return false;
             } else if (
-                !IPricingModule(assetToPricingModule[assetAddress]).processDeposit(
-                    assetAddress, assetIds[i], amounts[i]
-                )
+                !IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, assetIds[i], amounts[i])
             ) {
                 return false;
             }

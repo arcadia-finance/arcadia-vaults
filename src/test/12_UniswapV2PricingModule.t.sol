@@ -291,7 +291,6 @@ contract WhiteListManagement is UniswapV2PricingModuleTest {
     function setUp() public override {
         super.setUp();
     }
-
 }
 
 /*///////////////////////////////////////////////////////////////

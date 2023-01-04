@@ -406,9 +406,8 @@ contract AssetManagementTest is MainRegistryTest {
     }
 
     function testSuccess_deposit_ExposureDecreases(uint128 amount) public {
-
         (, uint256 maxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
-        
+
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
 
@@ -429,7 +428,6 @@ contract AssetManagementTest is MainRegistryTest {
     }
 
     function testSuccess_deposit_ExposureDecreasesMultipleAssets(uint128 amountEth, uint128 amountLink) public {
-
         (, uint256 maxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
         (, uint256 maxExposure2) = standardERC20PricingModule.isAssetAddressWhiteListed(address(link));
 
@@ -449,7 +447,6 @@ contract AssetManagementTest is MainRegistryTest {
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
 
-
         (, uint256 newMaxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
         (, uint256 newMaxExposure2) = standardERC20PricingModule.isAssetAddressWhiteListed(address(link));
         uint256 expectednewMaxExposure = maxExposure - amountEth;
@@ -460,7 +457,6 @@ contract AssetManagementTest is MainRegistryTest {
     }
 
     function testSuccess_deposit_exposureToZero(uint248 amount) public {
-
         vm.prank(creatorAddress);
         standardERC20PricingModule.setExposureOfAsset(address(eth), amount);
 
@@ -477,13 +473,11 @@ contract AssetManagementTest is MainRegistryTest {
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
 
-
         (, uint256 newMaxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
         uint256 expectednewMaxExposure = 0;
 
         assertEq(newMaxExposure, expectednewMaxExposure);
     }
-
 
     function testRevert_deposit_exposureNotSufficient(uint248 newMaxExposure, uint248 amount) public {
         vm.assume(newMaxExposure < amount);
@@ -504,7 +498,6 @@ contract AssetManagementTest is MainRegistryTest {
         vm.expectRevert(stdError.arithmeticError);
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
-
     }
 
     function testRevert_deposit_lengthMismatch() public {
@@ -523,8 +516,6 @@ contract AssetManagementTest is MainRegistryTest {
         vm.expectRevert("MR_BPD: LENGTH_MISMATCH");
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
-
-
     }
 
     function testSuccess_withdraw_ExposureIncreases(uint128 amount, uint248 newMaxExposure) public {
@@ -534,7 +525,7 @@ contract AssetManagementTest is MainRegistryTest {
         standardERC20PricingModule.setExposureOfAsset(address(eth), newMaxExposure);
 
         (, uint256 maxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
-        
+
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
 
@@ -555,7 +546,6 @@ contract AssetManagementTest is MainRegistryTest {
     }
 
     function testSuccess_depositWithdraw_exposureToAndFromZero(uint248 amountDeposit, uint248 amountWithdrawn) public {
-
         vm.prank(creatorAddress);
         standardERC20PricingModule.setExposureOfAsset(address(eth), amountDeposit);
 
@@ -586,11 +576,8 @@ contract AssetManagementTest is MainRegistryTest {
         (, newMaxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
 
         assertEq(newMaxExposure, amountWithdrawn);
-
     }
-
 }
-
 
 /* ///////////////////////////////////////////////////////////////
                         PRICING LOGIC
