@@ -494,7 +494,7 @@ contract Vault {
             "V_W: Length mismatch"
         );
 
-        require(IRegistry(registry).processWithdrawal(assetAddresses, assetAmounts), "V_W: Withdrawal failed");
+        IRegistry(registry).processWithdrawal(assetAddresses, assetAmounts); //can't return false as it will revert in pricing module
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {

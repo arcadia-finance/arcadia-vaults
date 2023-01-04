@@ -1237,6 +1237,29 @@ contract AssetManagementTest is vaultTests {
         vm.stopPrank();
     }
 
+    function testRevert_withdraw_MoreThanMaxExposure(uint256 amountWithdraw, uint248 maxExposure) public {
+        vm.assume(amountWithdraw > maxExposure);
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setExposureOfAsset(address(eth), maxExposure);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountWithdraw;
+
+        uint256[] memory assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert(stdError.arithmeticError);
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
     function testRevert_withdraw_ERC20UnsufficientCollateral(
         uint8 baseAmountDeposit,
         uint24 baseAmountCredit,
