@@ -176,6 +176,16 @@ contract MainRegistry is Ownable {
         return true;
     }
 
+
+    /**
+     * @notice Batch process multiple assets
+     * @param _assetAddresses An array of addresses of the assets
+     * @param _assetIds An array of asset ids
+     * @param amounts An array of amounts to be deposited
+     * @return A boolean indicating whether the batch process was successful
+     * @dev processDeposit in the pricing module checks whehter 
+     *    it's allowlisted and updates the maxExposure
+     */
     function batchProcessDeposit(
         address[] calldata _assetAddresses,
         uint256[] calldata _assetIds,
@@ -204,6 +214,13 @@ contract MainRegistry is Ownable {
         return true;
     }
 
+    /**
+     * @notice Process a withdrawal for different assets
+     * @param _assetAddresses An array of addresses of the assets
+     * @param amounts An array of amounts to be withdrawn
+     * @return A boolean indicating whether the process was successful
+     * @dev processWithdrawal in the pricing module updates the maxExposure
+     */
     function processWithrawal(address[] calldata _assetAddresses, uint256[] calldata amounts)
         public
         onlyVault

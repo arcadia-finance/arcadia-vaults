@@ -1055,6 +1055,7 @@ contract AssetManagementTest is vaultTests {
 
     function testRevert_withdraw_UnknownAssetType(uint256 assetType) public {
         vm.assume(assetType >= 3);
+        depositEthInVault(5, vaultOwner);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);

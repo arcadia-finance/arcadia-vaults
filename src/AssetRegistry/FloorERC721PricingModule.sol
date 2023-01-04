@@ -42,6 +42,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param idRangeEnd: The id of the last NFT of the collection
      * @param oracles An array of addresses of oracle contracts, to price the asset in USD
      * @param riskVars An array of Risk Variables for the asset
+     * @param maxExposure The maximum exposure of the asset in its own decimals
      * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.
      * If no risk variables are provided, the asset is added with the risk variables set to zero, meaning it can't be used as collateral.
      * @dev RiskVarInput.asset can be zero as it is not taken into account.

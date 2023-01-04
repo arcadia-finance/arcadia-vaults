@@ -423,7 +423,7 @@ contract Vault {
 
         require(
             IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts),
-            "V_D: Not all assets whitelisted"
+            "V_D: Not whitelisted or maxExposure reached"
         );
 
         for (uint256 i; i < assetAddressesLength;) {
@@ -481,6 +481,8 @@ contract Vault {
             "V_W: Length mismatch"
         );
 
+        require(IRegistry(registry).processWithrawal(assetAddresses, assetAmounts), "V_W: Withdrawal failed");
+
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
                 _withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
@@ -495,8 +497,6 @@ contract Vault {
                 ++i;
             }
         }
-
-        require(IRegistry(registry).processWithrawal(assetAddresses, assetAmounts), "V_W: Withdrawal failed");
 
         uint256 usedMargin = getUsedMargin();
         if (usedMargin != 0) {

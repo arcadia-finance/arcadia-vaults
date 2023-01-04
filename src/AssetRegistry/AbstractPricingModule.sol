@@ -29,7 +29,7 @@ abstract contract PricingModule is Ownable {
     address[] public assetsInPricingModule;
 
     mapping(address => bool) public inPricingModule;
-    mapping(address => WhiteListed) public isAssetAddressWhiteListed;
+    mapping(address => DepositAllowance) public isAssetAddressWhiteListed;
     mapping(address => mapping(uint256 => RiskVars)) public assetRiskVars;
 
     //struct with input variables necessary to avoid stack to deep error
@@ -40,7 +40,7 @@ abstract contract PricingModule is Ownable {
         uint256 baseCurrency;
     }
 
-    struct WhiteListed {
+    struct DepositAllowance {
         bool isWhiteListed;
         uint248 maxExposure;
     }
@@ -214,7 +214,14 @@ abstract contract PricingModule is Ownable {
         assetRiskVars[asset][basecurrency] = riskVars;
     }
 
-    function setExposureOfAsset(address asset, uint256 maxExposure) public onlyOwner {
+
+    /**
+     * @notice Set the maximum exposure for an asset
+     * @param asset The address of the asset
+     * @param maxExposure The maximum exposure for the asset
+     * @dev This function can only be called by the contract owner. It sets the maximum exposure for the given asset in the isAssetAddressWhiteListed mapping.
+     */
+    function setExposureOfAsset(address asset, uint256 maxExposure) public onlyRiskManager {
         isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
     }
 }
