@@ -422,7 +422,7 @@ contract VaultV2 {
             "V_D: Length mismatch"
         );
 
-        require(IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "V_D: Not all assets whitelisted");
+        require(IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "V_D: Deposit failed");
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {

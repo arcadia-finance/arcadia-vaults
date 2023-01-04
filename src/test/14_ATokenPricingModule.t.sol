@@ -186,19 +186,6 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
                         WHITE LIST MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
-    function testSuccess_isWhiteListed_Positive() public {
-        vm.startPrank(creatorAddress);
-
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint248).max);
-        vm.stopPrank();
-
-        assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
-    }
-
-    function testSuccess_isWhiteListed_Negative(address randomAsset) public {
-        assertTrue(!aTokenPricingModule.isWhiteListed(randomAsset, 0));
-    }
-
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/

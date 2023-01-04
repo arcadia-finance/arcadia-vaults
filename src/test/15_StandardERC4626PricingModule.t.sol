@@ -187,19 +187,6 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
                         WHITE LIST MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
-    function testSuccess_isWhiteListed_Positive() public {
-        vm.startPrank(creatorAddress);
-
-        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, type(uint248).max);
-        vm.stopPrank();
-
-        assertTrue(standardERC4626PricingModule.isWhiteListed(address(ybEth), 0));
-    }
-
-    function testSuccess_isWhiteListed_Negative(address randomAsset) public {
-        assertTrue(!standardERC4626PricingModule.isWhiteListed(randomAsset, 0));
-    }
-
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/

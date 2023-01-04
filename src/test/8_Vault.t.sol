@@ -786,7 +786,7 @@ contract AssetManagementTest is vaultTests {
         assetTypes[0] = 0;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_D: Not all assets whitelisted");
+        vm.expectRevert("V_D: Deposit failed");
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
@@ -811,7 +811,7 @@ contract AssetManagementTest is vaultTests {
         assetTypes[0] = 1;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_D: Not all assets whitelisted");
+        vm.expectRevert("V_D: Deposit failed");
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }

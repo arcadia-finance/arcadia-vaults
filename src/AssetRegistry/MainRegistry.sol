@@ -220,7 +220,7 @@ contract MainRegistry is Ownable {
      * @return A boolean indicating whether the process was successful
      * @dev processWithdrawal in the pricing module updates the maxExposure
      */
-    function processWithrawal(address[] calldata _assetAddresses, uint256[] calldata amounts)
+    function processWithdrawal(address[] calldata _assetAddresses, uint256[] calldata amounts)
         public
         onlyVault
         returns (bool)

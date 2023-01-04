@@ -101,20 +101,6 @@ contract StandardERC20PricingModule is PricingModule {
                         WHITE LIST MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
-    /**
-     * @notice Checks for a token address and the corresponding Id if it is white-listed
-     * @param asset The address of the asset
-     * @dev Since ERC20 tokens have no Id, the Id should be set to 0
-     * @return A boolean, indicating if the asset passed as input is whitelisted
-     */
-    function isWhiteListed(address asset, uint256) public view override returns (bool) {
-        if (isAssetAddressWhiteListed[asset].isWhiteListed) {
-            return true;
-        }
-
-        return false;
-    }
-
     function processDeposit(address asset, uint256, uint256 amount) external onlyMainReg returns (bool success) {
         isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
         return isWhiteListed(asset, 0);

@@ -222,7 +222,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         //When: creator adds a new asset
         //Then: addAsset reverts with "Ownable: caller is not the owner"
         vm.startPrank(creatorAddress);
-        vm.expectRevert("PMUV2_AA: NOT_WHITELISTED");
+        vm.expectRevert("PMUV2_AA: TOKENO_NOT_WHITELISTED");
         uniswapV2PricingModule.addAsset(address(pairSafemoonEth), emptyRiskVarInput, type(uint248).max);
         vm.stopPrank();
     }
@@ -292,25 +292,6 @@ contract WhiteListManagement is UniswapV2PricingModuleTest {
         super.setUp();
     }
 
-    function testSuccess_isWhiteListed_Positive() public {
-        //Given: All contracts are deployed
-
-        //When: pairSnxEth is added to the pricing module
-        vm.prank(creatorAddress);
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint248).max);
-
-        //Then: pairSnxEth is white-listed
-        assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth), 0));
-    }
-
-    function testSuccess_isWhiteListed_Negative(address randomAsset) public {
-        //Given: All contracts are deployed
-
-        //When: randomAsset is not added to the pricing module
-
-        //Then: pairSnxEth is not white-listed
-        assertTrue(!uniswapV2PricingModule.isWhiteListed(randomAsset, 0));
-    }
 }
 
 /*///////////////////////////////////////////////////////////////

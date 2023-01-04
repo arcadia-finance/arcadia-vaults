@@ -95,13 +95,6 @@ abstract contract PricingModule is Ownable {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Checks for a token address and the corresponding Id, if it is white-listed
-     * @return A boolean, indicating if the asset passed as input is whitelisted
-     * @dev For tokens without Id (for instance ERC20 tokens), the Id should be set to 0
-     */
-    function isWhiteListed(address, uint256) external view virtual returns (bool) {}
-
-    /**
      * @notice Adds an asset back to the white-list
      * @param assetAddress The token address of the asset that needs to be added back to the white-list
      */
@@ -117,6 +110,16 @@ abstract contract PricingModule is Ownable {
     function removeFromWhiteList(address assetAddress) external onlyOwner {
         require(inPricingModule[assetAddress], "APM_RFWL: UNKNOWN_ASSET");
         isAssetAddressWhiteListed[assetAddress].isWhiteListed = false;
+    }
+
+    /**
+     * @notice Checks for a token address and the corresponding Id if it is white-listed
+     * @param asset The address of the asset
+     * @dev For assets without Id (ERC20, ERC4626...), the Id should be set to 0
+     * @return A boolean, indicating if the asset passed as input is whitelisted
+     */
+    function isWhiteListed(address asset, uint256) public view virtual returns (bool) {
+        return isAssetAddressWhiteListed[asset].isWhiteListed;
     }
 
     /*///////////////////////////////////////////////////////////////

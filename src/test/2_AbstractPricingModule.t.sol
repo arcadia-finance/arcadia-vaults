@@ -206,6 +206,30 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         assertTrue(!isWhiteListed);
     }
 
+    function testSuccess_isWhiteListed_Positive(address asset) public {
+        // Given: asset is in the pricing module
+        stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.inPricingModule.selector).with_key(
+            asset
+        ).checked_write(true);
+
+        // And: asset is white listed
+        stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.isAssetAddressWhiteListed.selector)
+            .with_key(asset).checked_write(true);
+
+        // When: isWhiteListed(asset, 0) is called
+        // Then: It should return true
+        assertTrue(abstractPricingModule.isWhiteListed(asset, 0));
+    }
+
+    function testSuccess_isWhiteListed_Negative(address asset) public {
+        // Given: All necessary contracts deployed on setup
+        // And: asset is non whitelisted
+
+        // When: isWhiteListed(asset, 0) is called
+        // Then: It should return false
+        assertTrue(!abstractPricingModule.isWhiteListed(asset, 0));
+    }
+
     /*///////////////////////////////////////////////////////////////
                     RISK VARIABLES MANAGEMENT
     ///////////////////////////////////////////////////////////////*/

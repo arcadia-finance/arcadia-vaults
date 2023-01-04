@@ -173,25 +173,6 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
                         WHITE LIST MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
-    function testSuccess_isWhiteListed_Positive() public {
-        // Given: All necessary contracts deployed on setup
-        vm.startPrank(creatorAddress);
-        // When: creatorAddress calls addAsset
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
-        vm.stopPrank();
-
-        // Then: address(eth) should return true on isWhiteListed
-        assertTrue(standardERC20PricingModule.isWhiteListed(address(eth), 0));
-    }
-
-    function testSuccess_isWhiteListed_Negative(address randomAsset) public {
-        // Given: All necessary contracts deployed on setup
-        // When: input is randomAsset
-
-        // Then: isWhiteListed for randomAsset should return false
-        assertTrue(!standardERC20PricingModule.isWhiteListed(randomAsset, 0));
-    }
-
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/

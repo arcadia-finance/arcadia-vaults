@@ -423,7 +423,7 @@ contract Vault {
 
         require(
             IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts),
-            "V_D: Not whitelisted or maxExposure reached"
+            "V_D: Deposit failed"
         );
 
         for (uint256 i; i < assetAddressesLength;) {
@@ -481,7 +481,7 @@ contract Vault {
             "V_W: Length mismatch"
         );
 
-        require(IRegistry(registry).processWithrawal(assetAddresses, assetAmounts), "V_W: Withdrawal failed");
+        require(IRegistry(registry).processWithdrawal(assetAddresses, assetAmounts), "V_W: Withdrawal failed");
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
