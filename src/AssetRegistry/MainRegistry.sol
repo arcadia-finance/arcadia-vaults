@@ -277,33 +277,6 @@ contract MainRegistry is Ownable {
         return true;
     }
 
-    /**
-     * @notice returns a list of all white-listed token addresses
-     * @dev Function is not gas-optimsed and not intended to be called by other smart contracts
-     * @return whiteList A list of all white listed token Adresses
-     */
-    function getWhiteList() external view returns (address[] memory whiteList) {
-        uint256 maxLength = assetsInMainRegistry.length;
-        whiteList = new address[](maxLength);
-
-        address assetAddress;
-        uint256 counter = 0;
-        for (uint256 i; i < maxLength;) {
-            assetAddress = assetsInMainRegistry[i];
-            if (IPricingModule(assetToPricingModule[assetAddress]).isAssetAddressWhiteListed(assetAddress)) {
-                whiteList[counter] = assetAddress;
-                unchecked {
-                    ++counter;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        return whiteList;
-    }
-
     /* ///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     /////////////////////////////////////////////////////////////// */
