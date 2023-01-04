@@ -242,6 +242,8 @@ contract VaultV2 {
      * @param baseCurrency The Base-currency in which the margin position is denominated
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
+     * @dev The Liquidation Threshold will automatically be updated on every increase of margin,
+     * but not automatically on a decrease of margin (since this derisks the vault).
      */
     function increaseMarginPosition(address baseCurrency, uint256 amount)
         public
@@ -436,7 +438,7 @@ contract VaultV2 {
             "V_D: Length mismatch"
         );
 
-        require(IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "V_D: Deposit failed");
+        require(IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts), "V_D: Deposit failed");
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
@@ -492,6 +494,8 @@ contract VaultV2 {
                 && assetAddressesLength == assetTypes.length,
             "V_W: Length mismatch"
         );
+
+        IRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //can't return false as it will revert in pricing module
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {

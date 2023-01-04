@@ -92,24 +92,11 @@ contract UniswapV2PricingModule is PricingModule {
         assetToInformation[asset].token1 = token1;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset].isWhiteListed = true;
-        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
+        require(maxExposure <= type(uint128).max, "PMUV2_AA: Max Exposure not in limits");
+        exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        WHITE LIST MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
-
-    function processDeposit(address asset, uint256, uint256 amount) external returns (bool success) {
-        isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
-        return isWhiteListed(asset, 0);
-    }
-
-    function processWithdrawal(address asset, uint256 amount) external onlyMainReg {
-        isAssetAddressWhiteListed[asset].maxExposure += uint248(amount);
     }
 
     /*///////////////////////////////////////////////////////////////

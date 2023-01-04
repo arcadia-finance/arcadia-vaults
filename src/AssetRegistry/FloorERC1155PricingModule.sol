@@ -65,8 +65,8 @@ contract FloorERC1155PricingModule is PricingModule {
         assetToInformation[asset].oracles = oracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset].isWhiteListed = true;
-        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
+        require(maxExposure <= type(uint128).max, "PM1155_AA: Max Exposure not in limits");
+        exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -99,13 +99,13 @@ contract FloorERC1155PricingModule is PricingModule {
 
     /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
-     * @param assetAddress The address of the asset
+     * @param asset The address of the asset
      * @param assetId The Id of the asset
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address assetAddress, uint256 assetId) public view override returns (bool) {
-        if (isAssetAddressWhiteListed[assetAddress].isWhiteListed) {
-            if (assetId == assetToInformation[assetAddress].id) {
+    function isWhiteListed(address asset, uint256 assetId) public view override returns (bool) {
+        if (exposure[asset].maxExposure != 0) {
+            if (assetId == assetToInformation[asset].id) {
                 return true;
             }
         }
@@ -113,13 +113,29 @@ contract FloorERC1155PricingModule is PricingModule {
         return false;
     }
 
-    function processDeposit(address asset, uint256 assetId, uint256 amount) external returns (bool success) {
-        isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
-        return isWhiteListed(asset, assetId);
-    }
+    /*///////////////////////////////////////////////////////////////
+                    RISK VARIABLES MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
-    function processWithdrawal(address asset, uint256 amount) external onlyMainReg {
-        isAssetAddressWhiteListed[asset].maxExposure += uint248(amount);
+    /**
+     * @notice Processes the deposit of a token address and the corresponding Id if it is white-listed
+     * @param asset The address of the asset
+     * @param assetId The Id of the asset
+     * @param amount the amount of ERC1155 tokens
+     * @return success A boolean, indicating if the asset passed as input is whitelisted
+     * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
+     */
+    function processDeposit(address asset, uint256 assetId, uint256 amount)
+        external
+        override
+        onlyMainReg
+        returns (bool success)
+    {
+        success = isWhiteListed(asset, assetId);
+        if (success) {
+            exposure[asset].exposure += uint128(amount);
+            require(exposure[asset].exposure <= exposure[asset].maxExposure, "PM1155_PD: Exposure not in limits");
+        }
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -129,7 +145,7 @@ contract FloorERC1155PricingModule is PricingModule {
     /**
      * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency
      * @param getValueInput A Struct with all the information neccessary to get the value of an asset
-     * - assetAddress: The contract address of the asset
+     * - asset: The contract address of the asset
      * - assetId: The Id of the asset
      * - assetAmount: The Amount of tokens
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed

@@ -494,7 +494,7 @@ contract Vault {
             "V_W: Length mismatch"
         );
 
-        IRegistry(registry).processWithdrawal(assetAddresses, assetAmounts); //can't return false as it will revert in pricing module
+        IRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //can't return false as it will revert in pricing module
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {

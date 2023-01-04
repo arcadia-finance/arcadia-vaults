@@ -68,8 +68,8 @@ contract StandardERC20PricingModule is PricingModule {
         assetToInformation[asset].oracles = oracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset].isWhiteListed = true;
-        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
+        require(maxExposure <= type(uint128).max, "PM20_AA: Max Exposure not in limits");
+        exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -95,19 +95,6 @@ contract StandardERC20PricingModule is PricingModule {
      */
     function getAssetInformation(address asset) external view returns (uint64, address[] memory) {
         return (assetToInformation[asset].assetUnit, assetToInformation[asset].oracles);
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        WHITE LIST MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
-
-    function processDeposit(address asset, uint256, uint256 amount) external onlyMainReg returns (bool success) {
-        isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
-        return isWhiteListed(asset, 0);
-    }
-
-    function processWithdrawal(address asset, uint256 amount) external onlyMainReg {
-        isAssetAddressWhiteListed[asset].maxExposure += uint248(amount);
     }
 
     /*///////////////////////////////////////////////////////////////

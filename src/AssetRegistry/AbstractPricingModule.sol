@@ -29,7 +29,7 @@ abstract contract PricingModule is Ownable {
     address[] public assetsInPricingModule;
 
     mapping(address => bool) public inPricingModule;
-    mapping(address => DepositAllowance) public isAssetAddressWhiteListed;
+    mapping(address => Exposure) public exposure;
     mapping(address => mapping(uint256 => RiskVars)) public assetRiskVars;
 
     //struct with input variables necessary to avoid stack to deep error
@@ -40,9 +40,9 @@ abstract contract PricingModule is Ownable {
         uint256 baseCurrency;
     }
 
-    struct DepositAllowance {
-        bool isWhiteListed;
-        uint248 maxExposure;
+    struct Exposure {
+        uint128 maxExposure;
+        uint128 exposure;
     }
 
     struct RiskVars {
@@ -95,31 +95,13 @@ abstract contract PricingModule is Ownable {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Adds an asset back to the white-list
-     * @param assetAddress The token address of the asset that needs to be added back to the white-list
-     */
-    function addToWhiteList(address assetAddress) external onlyOwner {
-        require(inPricingModule[assetAddress], "APM_ATWL: UNKNOWN_ASSET");
-        isAssetAddressWhiteListed[assetAddress].isWhiteListed = true;
-    }
-
-    /**
-     * @notice Removes an asset from the white-list
-     * @param assetAddress The token address of the asset that needs to be removed from the white-list
-     */
-    function removeFromWhiteList(address assetAddress) external onlyOwner {
-        require(inPricingModule[assetAddress], "APM_RFWL: UNKNOWN_ASSET");
-        isAssetAddressWhiteListed[assetAddress].isWhiteListed = false;
-    }
-
-    /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
      * @param asset The address of the asset
      * @dev For assets without Id (ERC20, ERC4626...), the Id should be set to 0
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
     function isWhiteListed(address asset, uint256) public view virtual returns (bool) {
-        return isAssetAddressWhiteListed[asset].isWhiteListed;
+        return exposure[asset].maxExposure != 0;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -221,9 +203,42 @@ abstract contract PricingModule is Ownable {
      * @notice Set the maximum exposure for an asset
      * @param asset The address of the asset
      * @param maxExposure The maximum exposure for the asset
-     * @dev This function can only be called by the contract owner. It sets the maximum exposure for the given asset in the isAssetAddressWhiteListed mapping.
+     * @dev This function can only be called by the contract owner. It sets the maximum exposure for the given asset in the exposure mapping.
      */
-    function setExposureOfAsset(address asset, uint256 maxExposure) public onlyRiskManager {
-        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
+    function setExposureOfAsset(address asset, uint256 maxExposure) public virtual onlyRiskManager {
+        require(maxExposure <= type(uint128).max, "APM_SEA: Max Exposure not in limits");
+        exposure[asset].maxExposure = uint128(maxExposure);
+    }
+
+    /**
+     * @notice Processes the deposit of tokens if it is white-listed
+     * @param asset The address of the asset
+     * param assetId The Id of the asset where applicable
+     * @param amount the amount of tokens
+     * @return success A boolean, indicating if the asset passed as input is whitelisted and the exposure has been updated
+     * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
+     */
+    function processDeposit(address asset, uint256, uint256 amount)
+        external
+        virtual
+        onlyMainReg
+        returns (bool success)
+    {
+        exposure[asset].exposure += uint128(amount);
+
+        //ToDo: revert or return false? Now it's not consistent with processWithdrawal
+        require(exposure[asset].exposure <= exposure[asset].maxExposure, "APM_PD: Exposure not in limits");
+
+        return true;
+    }
+
+    /**
+     * @notice Processes the withdrawal of tokens to increase the maxExposure
+     * @param asset The address of the asset
+     * @param amount the amount of tokens
+     * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens will ever be deposited
+     */
+    function processWithdrawal(address asset, uint256 amount) external virtual onlyMainReg {
+        exposure[asset].exposure -= uint128(amount);
     }
 }

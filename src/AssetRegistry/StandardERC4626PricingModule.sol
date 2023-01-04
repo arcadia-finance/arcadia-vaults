@@ -76,8 +76,8 @@ contract StandardERC4626PricingModule is PricingModule {
         assetToInformation[asset].underlyingAssetOracles = underlyingAssetOracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset].isWhiteListed = true;
-        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
+        require(maxExposure <= type(uint128).max, "PM4626_AA: Max Exposure not in limits");
+        exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -110,19 +110,6 @@ contract StandardERC4626PricingModule is PricingModule {
             assetToInformation[asset].underlyingAsset,
             assetToInformation[asset].underlyingAssetOracles
         );
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        WHITE LIST MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
-
-    function processDeposit(address asset, uint256, uint256 amount) external returns (bool success) {
-        isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
-        return isWhiteListed(asset, 0);
-    }
-
-    function processWithdrawal(address asset, uint256 amount) external onlyMainReg {
-        isAssetAddressWhiteListed[asset].maxExposure += uint248(amount);
     }
 
     /*///////////////////////////////////////////////////////////////

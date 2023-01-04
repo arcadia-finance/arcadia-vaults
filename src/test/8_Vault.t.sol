@@ -1237,7 +1237,7 @@ contract AssetManagementTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testRevert_withdraw_MoreThanMaxExposure(uint256 amountWithdraw, uint248 maxExposure) public {
+    function testRevert_withdraw_MoreThanMaxExposure(uint256 amountWithdraw, uint128 maxExposure) public {
         vm.assume(amountWithdraw > maxExposure);
         vm.prank(creatorAddress);
         standardERC20PricingModule.setExposureOfAsset(address(eth), maxExposure);

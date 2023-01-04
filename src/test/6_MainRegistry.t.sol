@@ -166,8 +166,8 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
     function testSuccess_addBaseCurrency() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
 
         // When: creatorAddress calls addBaseCurrency
         mainRegistry.addBaseCurrency(
@@ -286,8 +286,8 @@ contract AssetManagementTest is MainRegistryTest {
 
         PricingModule.RiskVarInput[] memory riskVars_ = riskVars;
 
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_, type(uint248).max);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_, type(uint128).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_, type(uint128).max);
 
         mainRegistry.setFactory(address(factory));
         vm.stopPrank();
@@ -360,6 +360,28 @@ contract AssetManagementTest is MainRegistryTest {
         assertTrue(mainRegistry.inMainRegistry(address(eth)));
     }
 
+    function testRevert_addAsset_OverwriteAssetNegative() public {
+        // Given: creatorAddress calls addPricingModule and setAssetsToNonUpdatable,
+        vm.startPrank(creatorAddress);
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
+        mainRegistry.setAssetsToNonUpdatable();
+        vm.stopPrank();
+
+        // When: standardERC20PricingModule has eth added as asset
+
+        // Then: assetToPricingModule for address(eth) should return address(standardERC20PricingModule)
+        assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
+
+        vm.startPrank(address(floorERC721PricingModule));
+        // When: floorERC721PricingModule calls addAsset
+        // Then: addAsset should revert with "MR_AA: Asset not updatable"
+        vm.expectRevert("MR_AA: Asset not updatable");
+        mainRegistry.addAsset(address(eth));
+        vm.stopPrank();
+
+        assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
+    }
+
     function testSuccess_addAsset_OverwriteAssetPositive() public {
         // Given: creatorAddress calls addPricingModule for floorERC721PricingModule, standardERC20PricingModule calls addAsset
         vm.startPrank(creatorAddress);
@@ -383,30 +405,8 @@ contract AssetManagementTest is MainRegistryTest {
         assertEq(address(floorERC721PricingModule), mainRegistry.assetToPricingModule(address(eth)));
     }
 
-    function testRevert_addAsset_OverwriteAssetNegative() public {
-        // Given: creatorAddress calls addPricingModule and setAssetsToNonUpdatable,
-        vm.startPrank(creatorAddress);
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        mainRegistry.setAssetsToNonUpdatable();
-        vm.stopPrank();
-
-        // When: standardERC20PricingModule has eth added as asset
-
-        // Then: assetToPricingModule for address(eth) should return address(standardERC20PricingModule)
-        assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
-
-        vm.startPrank(address(floorERC721PricingModule));
-        // When: floorERC721PricingModule calls addAsset
-        // Then: addAsset should revert with "MR_AA: Asset not updatable"
-        vm.expectRevert("MR_AA: Asset not updatable");
-        mainRegistry.addAsset(address(eth));
-        vm.stopPrank();
-
-        assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
-    }
-
-    function testSuccess_deposit_ExposureDecreases(uint128 amount) public {
-        (, uint256 maxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
+    function testRevert_batchProcessDeposit_NonVault(address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != proxyAddr);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -415,92 +415,15 @@ contract AssetManagementTest is MainRegistryTest {
         assetIds[0] = 0;
 
         uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount;
+        assetAmounts[0] = 1;
 
-        vm.startPrank(proxyAddr);
-        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
-        vm.stopPrank();
-
-        (, uint256 newMaxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
-        uint256 expectednewMaxExposure = maxExposure - amount;
-
-        assertEq(newMaxExposure, expectednewMaxExposure);
-    }
-
-    function testSuccess_deposit_ExposureDecreasesMultipleAssets(uint128 amountEth, uint128 amountLink) public {
-        (, uint256 maxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
-        (, uint256 maxExposure2) = standardERC20PricingModule.isAssetAddressWhiteListed(address(link));
-
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(link);
-
-        uint256[] memory assetIds = new uint256[](2);
-        assetIds[0] = 0;
-        assetIds[1] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](2);
-        assetAmounts[0] = amountEth;
-        assetAmounts[1] = amountLink;
-
-        vm.startPrank(proxyAddr);
-        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
-        vm.stopPrank();
-
-        (, uint256 newMaxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
-        (, uint256 newMaxExposure2) = standardERC20PricingModule.isAssetAddressWhiteListed(address(link));
-        uint256 expectednewMaxExposure = maxExposure - amountEth;
-        uint256 expectednewMaxExposure2 = maxExposure2 - amountLink;
-
-        assertEq(newMaxExposure, expectednewMaxExposure);
-        assertEq(newMaxExposure2, expectednewMaxExposure2);
-    }
-
-    function testSuccess_deposit_exposureToZero(uint248 amount) public {
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.setExposureOfAsset(address(eth), amount);
-
-        address[] memory assetAddresses = new address[](1);
-        assetAddresses[0] = address(eth);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount;
-
-        vm.startPrank(proxyAddr);
-        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
-        vm.stopPrank();
-
-        (, uint256 newMaxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
-        uint256 expectednewMaxExposure = 0;
-
-        assertEq(newMaxExposure, expectednewMaxExposure);
-    }
-
-    function testRevert_deposit_exposureNotSufficient(uint248 newMaxExposure, uint248 amount) public {
-        vm.assume(newMaxExposure < amount);
-
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.setExposureOfAsset(address(eth), newMaxExposure);
-
-        address[] memory assetAddresses = new address[](1);
-        assetAddresses[0] = address(eth);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount;
-
-        vm.startPrank(proxyAddr);
-        vm.expectRevert(stdError.arithmeticError);
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Caller is not a Vault.");
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
-    function testRevert_deposit_lengthMismatch() public {
+    function testRevert_batchProcessDeposit_lengthMismatch() public {
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(dai);
@@ -518,13 +441,11 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
-    function testSuccess_withdraw_ExposureIncreases(uint128 amount, uint248 newMaxExposure) public {
-        vm.assume(newMaxExposure < type(uint248).max - amount);
+    function testRevert_batchProcessDeposit_exposureNotSufficient(uint128 newMaxExposure, uint128 amount) public {
+        vm.assume(newMaxExposure < amount);
 
         vm.prank(creatorAddress);
         standardERC20PricingModule.setExposureOfAsset(address(eth), newMaxExposure);
-
-        (, uint256 maxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -536,18 +457,83 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amount;
 
         vm.startPrank(proxyAddr);
-        mainRegistry.processWithdrawal(assetAddresses, assetAmounts);
+        vm.expectRevert("APM_PD: Exposure not in limits");
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
-
-        (, newMaxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
-        uint256 expectednewMaxExposure = maxExposure + amount;
-
-        assertEq(newMaxExposure, expectednewMaxExposure);
     }
 
-    function testSuccess_depositWithdraw_exposureToAndFromZero(uint248 amountDeposit, uint248 amountWithdrawn) public {
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.setExposureOfAsset(address(eth), amountDeposit);
+    function testSuccess_batchProcessDeposit_SingleAsset(uint128 amount) public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount;
+
+        vm.prank(proxyAddr);
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+
+        (, uint128 exposure) = standardERC20PricingModule.exposure(address(eth));
+
+        assertEq(exposure, amount);
+    }
+
+    function testSuccess_batchProcessDeposit_MultipleAssets(uint128 amountEth, uint128 amountLink) public {
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(link);
+
+        uint256[] memory assetIds = new uint256[](2);
+        assetIds[0] = 0;
+        assetIds[1] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](2);
+        assetAmounts[0] = amountEth;
+        assetAmounts[1] = amountLink;
+
+        vm.prank(proxyAddr);
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+
+        (, uint256 exposureEth) = standardERC20PricingModule.exposure(address(eth));
+        (, uint256 exposureLink) = standardERC20PricingModule.exposure(address(link));
+
+        assertEq(exposureEth, amountEth);
+        assertEq(exposureLink, amountLink);
+    }
+
+    function testRevert_batchProcessWithdrawal_NonVault(address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != proxyAddr);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 1;
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Caller is not a Vault.");
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        vm.stopPrank();
+    }
+
+    function testRevert_batchProcessWithdrawal_lengthMismatch() public {
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(dai);
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 1000;
+
+        vm.startPrank(proxyAddr);
+        vm.expectRevert("MR_BPW: LENGTH_MISMATCH");
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        vm.stopPrank();
+    }
+
+    function testSuccess_batchProcessWithdrawal(uint128 amountDeposited, uint128 amountWithdrawn) public {
+        vm.assume(amountDeposited >= amountWithdrawn);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -556,26 +542,23 @@ contract AssetManagementTest is MainRegistryTest {
         assetIds[0] = 0;
 
         uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amountDeposit;
+        assetAmounts[0] = amountDeposited;
 
-        vm.startPrank(proxyAddr);
+        vm.prank(proxyAddr);
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
-        vm.stopPrank();
 
-        (, uint256 newMaxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
-        uint256 expectednewMaxExposure = 0;
+        (, uint256 exposure) = standardERC20PricingModule.exposure(address(eth));
 
-        assertEq(newMaxExposure, expectednewMaxExposure);
+        assertEq(exposure, amountDeposited);
 
         assetAmounts[0] = amountWithdrawn;
 
-        vm.startPrank(proxyAddr);
-        mainRegistry.processWithdrawal(assetAddresses, assetAmounts);
-        vm.stopPrank();
+        vm.prank(proxyAddr);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
 
-        (, newMaxExposure) = standardERC20PricingModule.isAssetAddressWhiteListed(address(eth));
+        (, exposure) = standardERC20PricingModule.exposure(address(eth));
 
-        assertEq(newMaxExposure, amountWithdrawn);
+        assertEq(exposure, amountDeposited - amountWithdrawn);
     }
 }
 
@@ -607,11 +590,11 @@ contract PricingLogicTest is MainRegistryTest {
         );
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint248).max);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
 
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint248).max
+            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
         vm.stopPrank();
     }
@@ -646,7 +629,7 @@ contract PricingLogicTest is MainRegistryTest {
             "mLINK",
             linkDecimals
         );
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
@@ -702,7 +685,7 @@ contract PricingLogicTest is MainRegistryTest {
             "LINK Mock",
             "mLINK",
             linkDecimals);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint248).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);

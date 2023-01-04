@@ -14,7 +14,7 @@ interface IPricingModule {
         uint256 baseCurrency;
     }
 
-    struct DepositAllowance {
+    struct Exposure {
         bool isWhiteListed;
         uint248 maxExposure;
     }
@@ -27,7 +27,7 @@ interface IPricingModule {
         uint16[] memory liquidationThresholds
     ) external;
 
-    function isAssetAddressWhiteListed(address) external view returns (bool, uint248);
+    function exposure(address) external view returns (bool, uint248);
 
     function isWhiteListed(address, uint256) external view returns (bool);
     function processDeposit(address, uint256, uint256) external returns (bool);

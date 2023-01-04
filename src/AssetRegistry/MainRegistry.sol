@@ -216,14 +216,15 @@ contract MainRegistry is Ownable {
      * @param assetAddresses An array of addresses of the assets
      * @param amounts An array of amounts to be withdrawn
      * @return A boolean indicating whether the process was successful
-     * @dev processWithdrawal in the pricing module updates the maxExposure
+     * @dev batchProcessWithdrawal in the pricing module updates the maxExposure
      */
-    function processWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
+    function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
         public
         onlyVault
         returns (bool)
     {
         uint256 addressesLength = assetAddresses.length;
+        require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
 
         address assetAddress;
         for (uint256 i; i < addressesLength;) {

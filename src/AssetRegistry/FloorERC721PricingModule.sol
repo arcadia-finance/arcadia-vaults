@@ -69,8 +69,8 @@ contract FloorERC721PricingModule is PricingModule {
         assetToInformation[asset].oracles = oracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset].isWhiteListed = true;
-        isAssetAddressWhiteListed[asset].maxExposure = uint248(maxExposure);
+        require(maxExposure <= type(uint128).max, "PM721_AA: Max Exposure not in limits");
+        exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -114,22 +114,13 @@ contract FloorERC721PricingModule is PricingModule {
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
     function isWhiteListed(address asset, uint256 assetId) public view override returns (bool) {
-        if (isAssetAddressWhiteListed[asset].isWhiteListed) {
+        if (exposure[asset].maxExposure != 0) {
             if (isIdInRange(asset, assetId)) {
                 return true;
             }
         }
 
         return false;
-    }
-
-    function processDeposit(address asset, uint256 assetId, uint256 amount) external returns (bool success) {
-        isAssetAddressWhiteListed[asset].maxExposure -= uint248(amount);
-        return isWhiteListed(asset, assetId);
-    }
-
-    function processWithdrawal(address asset, uint256 amount) external onlyMainReg {
-        isAssetAddressWhiteListed[asset].maxExposure += uint248(amount);
     }
 
     /**
@@ -144,6 +135,39 @@ contract FloorERC721PricingModule is PricingModule {
         } else {
             return false;
         }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                    RISK VARIABLES MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Processes the deposit of a token address and the corresponding Id if it is white-listed
+     * @param asset The address of the asset
+     * @param assetId The Id of the asset
+     * @return success A boolean, indicating if the asset passed as input is whitelisted
+     * @dev amount of a deposit in ERC721 pricing module is always 1
+     */
+    function processDeposit(address asset, uint256 assetId, uint256)
+        external
+        override
+        onlyMainReg
+        returns (bool success)
+    {
+        success = isWhiteListed(asset, assetId);
+        if (success) {
+            exposure[asset].exposure += 1;
+            require(exposure[asset].exposure <= exposure[asset].maxExposure, "PM721_PD: Exposure not in limits");
+        }
+    }
+
+    /**
+     * @notice Processes the withdrawal of tokens to increase the maxExposure
+     * @param asset The address of the asset
+     * @dev amount of a deposit in ERC721 pricing module is always 1
+     */
+    function processWithdrawal(address asset, uint256) external override onlyMainReg {
+        exposure[asset].exposure -= 1;
     }
 
     /*///////////////////////////////////////////////////////////////

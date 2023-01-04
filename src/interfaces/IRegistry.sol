@@ -54,5 +54,5 @@ interface IRegistry {
 
     function assetToBaseCurrency(address baseCurrency) external view returns (uint8 baseCurrencyIdentifier);
 
-    function processWithdrawal(address[] calldata, uint256[] calldata) external returns (bool);
+    function batchProcessWithdrawal(address[] calldata, uint256[] calldata) external returns (bool);
 }
