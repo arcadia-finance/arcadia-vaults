@@ -103,7 +103,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         assertEq(standardERC20PricingModule.assetsInPricingModule(0), address(eth));
         (uint64 assetUnit, address[] memory oracles) = standardERC20PricingModule.getAssetInformation(address(eth));
         assertEq(assetUnit, 10 ** uint8(Constants.ethDecimals));
-        for (uint256 i; i < oracleEthToUsdArr.length; i++) {
+        for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
         assertTrue(standardERC20PricingModule.isWhiteListed(address(eth), 0));
@@ -164,7 +164,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr);
 
         (, address[] memory oracles) = standardERC20PricingModule.getAssetInformation(address(eth));
-        for (uint256 i; i < oracleEthToUsdArr.length; i++) {
+        for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
     }

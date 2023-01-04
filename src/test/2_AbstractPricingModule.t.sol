@@ -352,7 +352,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
             type(uint256).max
         );
 
-        for (uint256 i; i < riskVarInputs_.length; i++) {
+        for (uint256 i; i < riskVarInputs_.length; ++i) {
             riskVarInputs_.push(riskVarInputs[i]);
             vm.assume(riskVarInputs_[i].collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
             vm.assume(
@@ -364,7 +364,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         abstractPricingModule.setBatchRiskVariables(riskVarInputs_);
 
-        for (uint256 i; i < riskVarInputs_.length; i++) {
+        for (uint256 i; i < riskVarInputs_.length; ++i) {
             (uint16 collateralFactor, uint16 liquidationThreshold) =
                 abstractPricingModule.getRiskVariables(riskVarInputs_[i].asset, riskVarInputs_[i].baseCurrency);
             assertEq(collateralFactor, riskVarInputs_[i].collateralFactor);
@@ -399,7 +399,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
             type(uint256).max
         );
 
-        for (uint256 i; i < riskVarInputs.length; i++) {
+        for (uint256 i; i < riskVarInputs.length; ++i) {
             riskVarInputs_.push(riskVarInputs[i]);
             vm.assume(riskVarInputs[i].collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
             vm.assume(
@@ -411,7 +411,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         abstractPricingModule.setRiskVariablesForAsset(asset, riskVarInputs_);
 
-        for (uint256 i; i < riskVarInputs.length; i++) {
+        for (uint256 i; i < riskVarInputs.length; ++i) {
             (uint16 collateralFactor, uint16 liquidationThreshold) =
                 abstractPricingModule.getRiskVariables(asset, riskVarInputs[i].baseCurrency);
             assertEq(collateralFactor, riskVarInputs[i].collateralFactor);

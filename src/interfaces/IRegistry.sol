@@ -18,47 +18,39 @@ interface IRegistry {
     ) external returns (bool);
 
     function getTotalValue(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
+        address baseCurrency
+    ) external view returns (uint256);
+
+    function getTotalValue(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
         uint256 baseCurrency
     ) external view returns (uint256);
 
     function getCollateralValue(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
         address baseCurrency
-    ) external view returns (uint256);
-
-    function getCollateralFactor(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
-        address baseCurrency
-    ) external view returns (uint16);
-
-    function getLiquidationValue(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
-        uint256 baseCurrency,
-        uint256 openDebt
     ) external view returns (uint256);
 
     function getLiquidationThreshold(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
         address baseCurrency
     ) external view returns (uint16);
 
-    function getTotalValue(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
+    function getCollateralValueAndLiquidationThreshold(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
         address baseCurrency
-    ) external view returns (uint256);
+    ) external view returns (uint256, uint256);
 
     function assetToBaseCurrency(address baseCurrency) external view returns (uint8 baseCurrencyIdentifier);
 

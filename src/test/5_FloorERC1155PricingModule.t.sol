@@ -90,7 +90,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         assertEq(floorERC1155PricingModule.assetsInPricingModule(0), address(interleave));
         (uint256 id, address[] memory oracles) = floorERC1155PricingModule.getAssetInformation(address(interleave));
         assertEq(id, 1);
-        for (uint256 i; i < oracleInterleaveToEthEthToUsd.length; i++) {
+        for (uint256 i; i < oracleInterleaveToEthEthToUsd.length; ++i) {
             assertEq(oracles[i], oracleInterleaveToEthEthToUsd[i]);
         }
         assertTrue(floorERC1155PricingModule.isWhiteListed(address(interleave), 1));
@@ -165,7 +165,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         floorERC1155PricingModule.setOracles(address(interleave), oracleInterleaveToEthEthToUsd);
 
         (, address[] memory oracles) = floorERC1155PricingModule.getAssetInformation(address(interleave));
-        for (uint256 i; i < oracleInterleaveToEthEthToUsd.length; i++) {
+        for (uint256 i; i < oracleInterleaveToEthEthToUsd.length; ++i) {
             assertEq(oracles[i], oracleInterleaveToEthEthToUsd[i]);
         }
     }

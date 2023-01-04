@@ -128,7 +128,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
             aTokenPricingModule.getAssetInformation(address(aEth));
         assertEq(assetUnit, 10 ** uint8(Constants.ethDecimals));
         assertEq(underlyingAsset, address(eth));
-        for (uint256 i; i < oracleEthToUsdArr.length; i++) {
+        for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
         assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
@@ -177,7 +177,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         aTokenPricingModule.syncOracles(address(aEth));
 
         (,, address[] memory oracles) = aTokenPricingModule.getAssetInformation(address(aEth));
-        for (uint256 i; i < oracleLinkToUsdArr.length; i++) {
+        for (uint256 i; i < oracleLinkToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleLinkToUsdArr[i]);
         }
     }

@@ -43,7 +43,7 @@ contract gasWithdrawal3_1ERC201ERC721 is GasTestFixture {
         proxy.getVaultValue(0x0000000000000000000000000000000000000000);
     }
 
-    function testGetRemainingValue_1_ERC20_1_ERC721() public {
+    function testGetRemainingValue_1_ERC20_1_ERC721() public view {
         proxy.getFreeMargin();
     }
 

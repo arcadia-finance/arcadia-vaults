@@ -101,7 +101,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
             floorERC721PricingModule.getAssetInformation(address(bayc));
         assertEq(idRangeStart, 0);
         assertEq(idRangeEnd, type(uint256).max);
-        for (uint256 i; i < oracleWbaycToEthEthToUsd.length; i++) {
+        for (uint256 i; i < oracleWbaycToEthEthToUsd.length; ++i) {
             assertEq(oracles[i], oracleWbaycToEthEthToUsd[i]);
         }
         assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 0));
@@ -165,7 +165,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         floorERC721PricingModule.setOracles(address(bayc), oracleWbaycToEthEthToUsd);
 
         (,, address[] memory oracles) = floorERC721PricingModule.getAssetInformation(address(bayc));
-        for (uint256 i; i < oracleWbaycToEthEthToUsd.length; i++) {
+        for (uint256 i; i < oracleWbaycToEthEthToUsd.length; ++i) {
             assertEq(oracles[i], oracleWbaycToEthEthToUsd[i]);
         }
     }
