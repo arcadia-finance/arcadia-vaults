@@ -462,6 +462,24 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
+    function testRevert_batchProcessDeposit_AssetNotInMainreg(address asset) public {
+        vm.assume(!mainRegistry.inMainRegistry(asset));
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = asset;
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 1;
+
+        vm.startPrank(proxyAddr);
+        vm.expectRevert("MR_BPD: Asset not in mainreg");
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+    }
+
     function testSuccess_batchProcessDeposit_SingleAsset(uint128 amount) public {
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
