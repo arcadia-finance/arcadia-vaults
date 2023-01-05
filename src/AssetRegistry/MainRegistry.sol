@@ -195,11 +195,9 @@ contract MainRegistry is Ownable {
         address assetAddress;
         for (uint256 i; i < addressesLength;) {
             assetAddress = assetAddresses[i];
-            if (!inMainRegistry[assetAddress]) {
-                require(false, "MR_BPD: Asset not in mainreg");
-            } else {
-                IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, assetIds[i], amounts[i]);
-            }
+
+            require(inMainRegistry[assetAddress], "MR_BPD: Asset not in mainreg");
+            IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, assetIds[i], amounts[i]);
 
             unchecked {
                 ++i;
