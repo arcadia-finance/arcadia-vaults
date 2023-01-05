@@ -256,14 +256,15 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_processDeposit_Negative(uint256 assetId) public {
+    function testRevert_processDeposit_WrongID(uint256 assetId) public {
         vm.assume(assetId > 0); //Not in range
         vm.prank(creatorAddress);
         floorERC721PricingModule.addAsset(address(bayc), 0, 0, oracleWbaycToEthEthToUsd, riskVars, 1);
 
-        vm.prank(address(mainRegistry));
-        bool success = floorERC721PricingModule.processDeposit(address(bayc), assetId, 1);
-        assertTrue(!success);
+        vm.startPrank(address(mainRegistry));
+        vm.expectRevert("PM721_PD: ID not allowed");
+        floorERC721PricingModule.processDeposit(address(bayc), assetId, 1);
+        vm.stopPrank();
 
         (, uint128 actualExposure) = floorERC721PricingModule.exposure(address(bayc));
         assertEq(actualExposure, 0);
@@ -274,8 +275,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, 1);
 
         vm.prank(address(mainRegistry));
-        bool success = floorERC721PricingModule.processDeposit(address(bayc), assetId, 1);
-        assertTrue(success);
+        floorERC721PricingModule.processDeposit(address(bayc), assetId, 1);
 
         (, uint128 actualExposure) = floorERC721PricingModule.exposure(address(bayc));
         assertEq(actualExposure, 1);

@@ -360,8 +360,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         abstractPricingModule.setExposure(asset, exposure, maxExposure);
 
         vm.prank(address(mainRegistry));
-        bool success = abstractPricingModule.processDeposit(address(asset), 0, amount);
-        assertTrue(success);
+        abstractPricingModule.processDeposit(address(asset), 0, amount);
 
         (, uint128 actualExposure) = abstractPricingModule.exposure(address(asset));
         uint128 expectedExposure = exposure + amount;

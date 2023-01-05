@@ -122,20 +122,13 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param asset The address of the asset
      * @param assetId The Id of the asset
      * @param amount the amount of ERC1155 tokens
-     * @return success A boolean, indicating if the asset passed as input is whitelisted
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
      */
-    function processDeposit(address asset, uint256 assetId, uint256 amount)
-        external
-        override
-        onlyMainReg
-        returns (bool success)
-    {
-        success = isWhiteListed(asset, assetId);
-        if (success) {
-            exposure[asset].exposure += uint128(amount);
-            require(exposure[asset].exposure <= exposure[asset].maxExposure, "PM1155_PD: Exposure not in limits");
-        }
+    function processDeposit(address asset, uint256 assetId, uint256 amount) external override onlyMainReg {
+        require(assetId == assetToInformation[asset].id, "PM1155_PD: ID not allowed");
+
+        exposure[asset].exposure += uint128(amount);
+        require(exposure[asset].exposure <= exposure[asset].maxExposure, "PM1155_PD: Exposure not in limits");
     }
 
     /*///////////////////////////////////////////////////////////////

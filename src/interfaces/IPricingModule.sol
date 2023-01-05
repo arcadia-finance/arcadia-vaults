@@ -22,10 +22,8 @@ interface IPricingModule {
         uint16[] memory liquidationThresholds
     ) external;
 
-    function exposure(address) external view returns (bool, uint248);
-
     function isWhiteListed(address, uint256) external view returns (bool);
-    function processDeposit(address, uint256, uint256) external returns (bool);
+    function processDeposit(address, uint256, uint256) external;
     function processWithdrawal(address, uint256) external;
 
     function getValue(GetValueInput memory) external view returns (uint256, uint256, uint256, uint256);

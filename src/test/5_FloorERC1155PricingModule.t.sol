@@ -250,16 +250,17 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_processDeposit_Negative(uint256 assetId, uint128 amount) public {
+    function testRevert_processDeposit_WrongID(uint256 assetId, uint128 amount) public {
         vm.assume(assetId > 0); //Wrong Id
         vm.prank(creatorAddress);
         floorERC1155PricingModule.addAsset(
             address(interleave), 0, oracleInterleaveToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
 
-        vm.prank(address(mainRegistry));
-        bool success = floorERC1155PricingModule.processDeposit(address(interleave), assetId, amount);
-        assertTrue(!success);
+        vm.startPrank(address(mainRegistry));
+        vm.expectRevert("PM1155_PD: ID not allowed");
+        floorERC1155PricingModule.processDeposit(address(interleave), assetId, amount);
+        vm.stopPrank();
 
         (, uint128 actualExposure) = floorERC1155PricingModule.exposure(address(interleave));
         assertEq(actualExposure, 0);
@@ -272,8 +273,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         );
 
         vm.prank(address(mainRegistry));
-        bool success = floorERC1155PricingModule.processDeposit(address(interleave), 1, amount);
-        assertTrue(success);
+        floorERC1155PricingModule.processDeposit(address(interleave), 1, amount);
 
         (, uint128 actualExposure) = floorERC1155PricingModule.exposure(address(interleave));
         assertEq(actualExposure, amount);

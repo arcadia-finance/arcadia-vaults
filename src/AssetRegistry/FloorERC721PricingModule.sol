@@ -145,20 +145,13 @@ contract FloorERC721PricingModule is PricingModule {
      * @notice Processes the deposit of a token address and the corresponding Id if it is white-listed
      * @param asset The address of the asset
      * @param assetId The Id of the asset
-     * @return success A boolean, indicating if the asset passed as input is whitelisted
      * @dev amount of a deposit in ERC721 pricing module is always 1
      */
-    function processDeposit(address asset, uint256 assetId, uint256)
-        external
-        override
-        onlyMainReg
-        returns (bool success)
-    {
-        success = isIdInRange(asset, assetId);
-        if (success) {
-            exposure[asset].exposure += 1;
-            require(exposure[asset].exposure <= exposure[asset].maxExposure, "PM721_PD: Exposure not in limits");
-        }
+    function processDeposit(address asset, uint256 assetId, uint256) external override onlyMainReg {
+        require(isIdInRange(asset, assetId), "PM721_PD: ID not allowed");
+
+        exposure[asset].exposure += 1;
+        require(exposure[asset].exposure <= exposure[asset].maxExposure, "PM721_PD: Exposure not in limits");
     }
 
     /**

@@ -215,21 +215,12 @@ abstract contract PricingModule is Ownable {
      * @param asset The address of the asset
      * param assetId The Id of the asset where applicable
      * @param amount the amount of tokens
-     * @return success A boolean, indicating if the asset passed as input is whitelisted and the exposure has been updated
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
      */
-    function processDeposit(address asset, uint256, uint256 amount)
-        external
-        virtual
-        onlyMainReg
-        returns (bool success)
-    {
+    function processDeposit(address asset, uint256, uint256 amount) external virtual onlyMainReg {
         exposure[asset].exposure += uint128(amount);
 
-        //ToDo: revert or return false? Now it's not consistent with processWithdrawal
         require(exposure[asset].exposure <= exposure[asset].maxExposure, "APM_PD: Exposure not in limits");
-
-        return true;
     }
 
     /**
