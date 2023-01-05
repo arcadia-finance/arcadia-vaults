@@ -154,7 +154,7 @@ contract FloorERC721PricingModule is PricingModule {
         onlyMainReg
         returns (bool success)
     {
-        success = isWhiteListed(asset, assetId);
+        success = isIdInRange(asset, assetId);
         if (success) {
             exposure[asset].exposure += 1;
             require(exposure[asset].exposure <= exposure[asset].maxExposure, "PM721_PD: Exposure not in limits");

@@ -198,11 +198,10 @@ contract MainRegistry is Ownable {
             assetAddress = assetAddresses[i];
             if (!inMainRegistry[assetAddress]) {
                 return false;
-            } else if (
-                !IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, assetIds[i], amounts[i])
-            ) {
-                return false;
+            } else {
+                IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, assetIds[i], amounts[i]);
             }
+
             unchecked {
                 ++i;
             }
@@ -231,6 +230,7 @@ contract MainRegistry is Ownable {
             assetAddress = assetAddresses[i];
 
             IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(assetAddress, amounts[i]);
+            
             unchecked {
                 ++i;
             }
