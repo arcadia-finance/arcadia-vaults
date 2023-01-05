@@ -230,7 +230,7 @@ contract MainRegistry is Ownable {
             assetAddress = assetAddresses[i];
 
             IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(assetAddress, amounts[i]);
-            
+
             unchecked {
                 ++i;
             }
