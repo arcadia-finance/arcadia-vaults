@@ -58,6 +58,11 @@ contract MainRegistry is Ownable {
         _;
     }
 
+    modifier onlyVault() {
+        require(IFactory(factoryAddress).isVault(msg.sender), "Caller is not a Vault.");
+        _;
+    }
+
     /**
      * @notice The Main Registry must always be initialised with the BaseCurrency USD
      * @dev Since the BaseCurrency USD has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
@@ -171,67 +176,55 @@ contract MainRegistry is Ownable {
         return true;
     }
 
-    /* ///////////////////////////////////////////////////////////////
-                        WHITE LIST LOGIC
-    /////////////////////////////////////////////////////////////// */
-
     /**
-     * @notice Checks for a list of tokens and a list of corresponding IDs if all tokens are white-listed
-     * @param assetAddresses The list of token addresses that needs to be checked
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @return A boolean, indicating of all assets passed as input are whitelisted
+     * @notice Batch process multiple assets
+     * @param assetAddresses An array of addresses of the assets
+     * @param assetIds An array of asset ids
+     * @param amounts An array of amounts to be deposited
+     * @dev processDeposit in the pricing module checks whehter
+     *    it's allowlisted and updates the maxExposure
      */
-    function batchIsWhiteListed(address[] calldata assetAddresses, uint256[] calldata assetIds)
-        public
-        view
-        returns (bool)
-    {
+    function batchProcessDeposit(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata amounts
+    ) public onlyVault {
         uint256 addressesLength = assetAddresses.length;
-        require(addressesLength == assetIds.length, "LENGTH_MISMATCH");
+        require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
         address assetAddress;
         for (uint256 i; i < addressesLength;) {
             assetAddress = assetAddresses[i];
-            if (!inMainRegistry[assetAddress]) {
-                return false;
-            } else if (!IPricingModule(assetToPricingModule[assetAddress]).isWhiteListed(assetAddress, assetIds[i])) {
-                return false;
-            }
+
+            require(inMainRegistry[assetAddress], "MR_BPD: Asset not in mainreg");
+            IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, assetIds[i], amounts[i]);
+
             unchecked {
                 ++i;
             }
         }
-
-        return true;
     }
 
     /**
-     * @notice returns a list of all white-listed token addresses
-     * @dev Function is not gas-optimsed and not intended to be called by other smart contracts
-     * @return whiteList A list of all white listed token Adresses
+     * @notice Process a withdrawal for different assets
+     * @param assetAddresses An array of addresses of the assets
+     * @param amounts An array of amounts to be withdrawn
+     * @dev batchProcessWithdrawal in the pricing module updates the maxExposure
      */
-    function getWhiteList() external view returns (address[] memory whiteList) {
-        uint256 maxLength = assetsInMainRegistry.length;
-        whiteList = new address[](maxLength);
+    function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts) public onlyVault {
+        uint256 addressesLength = assetAddresses.length;
+        require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
 
         address assetAddress;
-        uint256 counter = 0;
-        for (uint256 i; i < maxLength;) {
-            assetAddress = assetsInMainRegistry[i];
-            if (IPricingModule(assetToPricingModule[assetAddress]).isAssetAddressWhiteListed(assetAddress)) {
-                whiteList[counter] = assetAddress;
-                unchecked {
-                    ++counter;
-                }
-            }
+        for (uint256 i; i < addressesLength;) {
+            assetAddress = assetAddresses[i];
+
+            IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(assetAddress, amounts[i]);
+
             unchecked {
                 ++i;
             }
         }
-
-        return whiteList;
     }
 
     /* ///////////////////////////////////////////////////////////////

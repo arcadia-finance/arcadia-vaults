@@ -323,18 +323,21 @@ contract DeployArcadiaVaults is Test {
 
         PricingModule.RiskVarInput[] memory riskVars_ = riskVars;
 
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_);
-        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, riskVars_);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_, type(uint128).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_, type(uint128).max);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, riskVars_, type(uint128).max);
 
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars_);
+        floorERC721PricingModule.addAsset(
+            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars_, type(uint128).max
+        );
 
-        floorERC1155PricingModule.addAsset(address(interleave), 1, oracleInterleaveToEthEthToUsd, riskVars_);
+        floorERC1155PricingModule.addAsset(
+            address(interleave), 1, oracleInterleaveToEthEthToUsd, riskVars_, type(uint128).max
+        );
 
         vault = new Vault();
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
-        mainRegistry.setFactory(address(factory));
         mainRegistry.setFactory(address(factory));
         vm.stopPrank();
     }

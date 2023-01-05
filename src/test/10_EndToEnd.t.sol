@@ -463,8 +463,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         vm.roll(block.number + blocksToRoll);
 
-        uint256 openDebt = proxy.getUsedMargin();
-        vm.assume(toRepay < openDebt);
+        vm.assume(toRepay < amountCredit);
 
         vm.prank(vaultOwner);
         pool.repay(toRepay, address(proxy));

@@ -42,6 +42,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param idRangeEnd: The id of the last NFT of the collection
      * @param oracles An array of addresses of oracle contracts, to price the asset in USD
      * @param riskVars An array of Risk Variables for the asset
+     * @param maxExposure The maximum exposure of the asset in its own decimals
      * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.
      * If no risk variables are provided, the asset is added with the risk variables set to zero, meaning it can't be used as collateral.
      * @dev RiskVarInput.asset can be zero as it is not taken into account.
@@ -53,7 +54,8 @@ contract FloorERC721PricingModule is PricingModule {
         uint256 idRangeStart,
         uint256 idRangeEnd,
         address[] calldata oracles,
-        RiskVarInput[] calldata riskVars
+        RiskVarInput[] calldata riskVars,
+        uint256 maxExposure
     ) external onlyOwner {
         //View function, reverts in OracleHub if sequence is not correct
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
@@ -67,7 +69,8 @@ contract FloorERC721PricingModule is PricingModule {
         assetToInformation[asset].oracles = oracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset] = true;
+        require(maxExposure <= type(uint128).max, "PM721_AA: Max Exposure not in limits");
+        exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -110,8 +113,8 @@ contract FloorERC721PricingModule is PricingModule {
      * @param assetId The Id of the asset
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address asset, uint256 assetId) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[asset]) {
+    function isWhiteListed(address asset, uint256 assetId) public view override returns (bool) {
+        if (exposure[asset].maxExposure != 0) {
             if (isIdInRange(asset, assetId)) {
                 return true;
             }
@@ -132,6 +135,32 @@ contract FloorERC721PricingModule is PricingModule {
         } else {
             return false;
         }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                    RISK VARIABLES MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Processes the deposit of a token address and the corresponding Id if it is white-listed
+     * @param asset The address of the asset
+     * @param assetId The Id of the asset
+     * @dev amount of a deposit in ERC721 pricing module is always 1
+     */
+    function processDeposit(address asset, uint256 assetId, uint256) external override onlyMainReg {
+        require(isIdInRange(asset, assetId), "PM721_PD: ID not allowed");
+
+        exposure[asset].exposure += 1;
+        require(exposure[asset].exposure <= exposure[asset].maxExposure, "PM721_PD: Exposure not in limits");
+    }
+
+    /**
+     * @notice Processes the withdrawal of tokens to increase the maxExposure
+     * @param asset The address of the asset
+     * @dev amount of a deposit in ERC721 pricing module is always 1
+     */
+    function processWithdrawal(address asset, uint256) external override onlyMainReg {
+        exposure[asset].exposure -= 1;
     }
 
     /*///////////////////////////////////////////////////////////////

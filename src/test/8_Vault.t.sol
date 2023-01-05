@@ -948,7 +948,7 @@ contract AssetManagementTest is vaultTests {
         assetTypes[0] = 0;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_D: Not all assets whitelisted");
+        vm.expectRevert("MR_BPD: Asset not in mainreg");
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
@@ -973,7 +973,7 @@ contract AssetManagementTest is vaultTests {
         assetTypes[0] = 1;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_D: Not all assets whitelisted");
+        vm.expectRevert("MR_BPD: Asset not in mainreg");
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
@@ -1217,6 +1217,7 @@ contract AssetManagementTest is vaultTests {
 
     function testRevert_withdraw_UnknownAssetType(uint256 assetType) public {
         vm.assume(assetType >= 3);
+        depositEthInVault(5, vaultOwner);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -1232,6 +1233,29 @@ contract AssetManagementTest is vaultTests {
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_W: Unknown asset type");
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+    function testRevert_withdraw_MoreThanMaxExposure(uint256 amountWithdraw, uint128 maxExposure) public {
+        vm.assume(amountWithdraw > maxExposure);
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setExposureOfAsset(address(eth), maxExposure);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountWithdraw;
+
+        uint256[] memory assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert(stdError.arithmeticError);
         vault_.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }

@@ -42,6 +42,7 @@ contract StandardERC20PricingModule is PricingModule {
      * @param asset The contract address of the asset
      * @param oracles An array of addresses of oracle contracts, to price the asset in USD
      * @param riskVars An array of Risk Variables for the asset
+     * @param maxExposure The maximum exposure of the asset in its own decimals
      * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.
      * If no risk variables are provided, the asset is added with the risk variables set to zero, meaning it can't be used as collateral.
      * @dev RiskVarInput.asset can be zero as it is not taken into account.
@@ -49,7 +50,10 @@ contract StandardERC20PricingModule is PricingModule {
      * @dev The assets are added in the Main-Registry as well.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars) external onlyOwner {
+    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint256 maxExposure)
+        external
+        onlyOwner
+    {
         //View function, reverts in OracleHub if sequence is not correct
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
@@ -64,7 +68,8 @@ contract StandardERC20PricingModule is PricingModule {
         assetToInformation[asset].oracles = oracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        isAssetAddressWhiteListed[asset] = true;
+        require(maxExposure <= type(uint128).max, "PM20_AA: Max Exposure not in limits");
+        exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -90,24 +95,6 @@ contract StandardERC20PricingModule is PricingModule {
      */
     function getAssetInformation(address asset) external view returns (uint64, address[] memory) {
         return (assetToInformation[asset].assetUnit, assetToInformation[asset].oracles);
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        WHITE LIST MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Checks for a token address and the corresponding Id if it is white-listed
-     * @param asset The address of the asset
-     * @dev Since ERC20 tokens have no Id, the Id should be set to 0
-     * @return A boolean, indicating if the asset passed as input is whitelisted
-     */
-    function isWhiteListed(address asset, uint256) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[asset]) {
-            return true;
-        }
-
-        return false;
     }
 
     /*///////////////////////////////////////////////////////////////
