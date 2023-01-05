@@ -213,10 +213,7 @@ contract MainRegistry is Ownable {
      * @param amounts An array of amounts to be withdrawn
      * @dev batchProcessWithdrawal in the pricing module updates the maxExposure
      */
-    function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
-        public
-        onlyVault
-    {
+    function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts) public onlyVault {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
 
