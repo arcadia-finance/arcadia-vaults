@@ -181,7 +181,6 @@ contract MainRegistry is Ownable {
      * @param assetAddresses An array of addresses of the assets
      * @param assetIds An array of asset ids
      * @param amounts An array of amounts to be deposited
-     * @return A boolean indicating whether the batch process was successful
      * @dev processDeposit in the pricing module checks whehter
      *    it's allowlisted and updates the maxExposure
      */
@@ -189,7 +188,7 @@ contract MainRegistry is Ownable {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) public onlyVault returns (bool) {
+    ) public onlyVault {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
@@ -197,7 +196,7 @@ contract MainRegistry is Ownable {
         for (uint256 i; i < addressesLength;) {
             assetAddress = assetAddresses[i];
             if (!inMainRegistry[assetAddress]) {
-                return false;
+                require(false, "MR_BPD: Asset not in mainreg");
             } else {
                 IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, assetIds[i], amounts[i]);
             }
@@ -206,21 +205,17 @@ contract MainRegistry is Ownable {
                 ++i;
             }
         }
-
-        return true;
     }
 
     /**
      * @notice Process a withdrawal for different assets
      * @param assetAddresses An array of addresses of the assets
      * @param amounts An array of amounts to be withdrawn
-     * @return A boolean indicating whether the process was successful
      * @dev batchProcessWithdrawal in the pricing module updates the maxExposure
      */
     function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
         public
         onlyVault
-        returns (bool)
     {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
@@ -235,8 +230,6 @@ contract MainRegistry is Ownable {
                 ++i;
             }
         }
-
-        return true;
     }
 
     /* ///////////////////////////////////////////////////////////////

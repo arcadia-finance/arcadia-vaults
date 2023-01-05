@@ -15,7 +15,7 @@ interface IRegistry {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) external returns (bool);
+    ) external;
 
     function getTotalValue(
         address[] calldata assetAddresses,
@@ -54,5 +54,5 @@ interface IRegistry {
 
     function assetToBaseCurrency(address baseCurrency) external view returns (uint8 baseCurrencyIdentifier);
 
-    function batchProcessWithdrawal(address[] calldata, uint256[] calldata) external returns (bool);
+    function batchProcessWithdrawal(address[] calldata, uint256[] calldata) external;
 }

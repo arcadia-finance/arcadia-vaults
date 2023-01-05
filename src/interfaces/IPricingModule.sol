@@ -14,11 +14,6 @@ interface IPricingModule {
         uint256 baseCurrency;
     }
 
-    struct Exposure {
-        bool isWhiteListed;
-        uint248 maxExposure;
-    }
-
     function getAssetInformation(address asset) external view returns (uint64, address, address[] memory);
 
     function setRiskVariablesForAsset(
