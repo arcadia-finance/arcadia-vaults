@@ -32,6 +32,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
+        pool.setVaultVersion(1, true);
         DataTypes.InterestRateConfiguration memory config = DataTypes.InterestRateConfiguration({
             baseRate: Constants.interestRate,
             highSlope: Constants.interestRate,
@@ -379,7 +380,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getUsedMargin();
+        uint256 openDebt = proxy.getUsedMargin();
 
         vm.prank(liquidityProvider);
         dai.transfer(vaultOwner, openDebt - amountCredit);
@@ -420,7 +421,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getUsedMargin();
+        uint256 openDebt = proxy.getUsedMargin();
         uint256 balanceBefore = dai.balanceOf(vaultOwner);
 
         vm.startPrank(vaultOwner);
@@ -463,8 +464,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         vm.roll(block.number + blocksToRoll);
 
-        uint128 openDebt = proxy.getUsedMargin();
-        vm.assume(toRepay < openDebt);
+        vm.assume(toRepay < amountCredit);
 
         vm.prank(vaultOwner);
         pool.repay(toRepay, address(proxy));
@@ -528,7 +528,7 @@ contract EndToEndTest is DeployArcadiaVaults {
         assetTypes = new uint256[](tokenIds.length);
 
         uint256 tokenIdToWorkWith;
-        for (uint256 i; i < tokenIds.length; i++) {
+        for (uint256 i; i < tokenIds.length; ++i) {
             tokenIdToWorkWith = tokenIds[i];
             while (token.ownerOf(tokenIdToWorkWith) != address(0)) {
                 tokenIdToWorkWith++;

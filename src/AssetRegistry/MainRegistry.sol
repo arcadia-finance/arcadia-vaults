@@ -60,6 +60,11 @@ contract MainRegistry is Ownable {
         _;
     }
 
+    modifier onlyVault() {
+        require(IFactory(factoryAddress).isVault(msg.sender), "Caller is not a Vault.");
+        _;
+    }
+
     /**
      * @notice The Main Registry must always be initialised with the BaseCurrency USD
      * @dev Since the BaseCurrency USD has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
@@ -173,67 +178,55 @@ contract MainRegistry is Ownable {
         return true;
     }
 
-    /* ///////////////////////////////////////////////////////////////
-                        WHITE LIST LOGIC
-    /////////////////////////////////////////////////////////////// */
-
     /**
-     * @notice Checks for a list of tokens and a list of corresponding IDs if all tokens are white-listed
-     * @param _assetAddresses The list of token addresses that needs to be checked
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @return A boolean, indicating of all assets passed as input are whitelisted
+     * @notice Batch process multiple assets
+     * @param assetAddresses An array of addresses of the assets
+     * @param assetIds An array of asset ids
+     * @param amounts An array of amounts to be deposited
+     * @dev processDeposit in the pricing module checks whehter
+     *    it's allowlisted and updates the maxExposure
      */
-    function batchIsWhiteListed(address[] calldata _assetAddresses, uint256[] calldata _assetIds)
-        public
-        view
-        returns (bool)
-    {
-        uint256 addressesLength = _assetAddresses.length;
-        require(addressesLength == _assetIds.length, "LENGTH_MISMATCH");
+    function batchProcessDeposit(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata amounts
+    ) public onlyVault {
+        uint256 addressesLength = assetAddresses.length;
+        require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
         address assetAddress;
         for (uint256 i; i < addressesLength;) {
-            assetAddress = _assetAddresses[i];
-            if (!inMainRegistry[assetAddress]) {
-                return false;
-            } else if (!IPricingModule(assetToPricingModule[assetAddress]).isWhiteListed(assetAddress, _assetIds[i])) {
-                return false;
-            }
+            assetAddress = assetAddresses[i];
+
+            require(inMainRegistry[assetAddress], "MR_BPD: Asset not in mainreg");
+            IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, assetIds[i], amounts[i]);
+
             unchecked {
                 ++i;
             }
         }
-
-        return true;
     }
 
     /**
-     * @notice returns a list of all white-listed token addresses
-     * @dev Function is not gas-optimsed and not intended to be called by other smart contracts
-     * @return whiteList A list of all white listed token Adresses
+     * @notice Process a withdrawal for different assets
+     * @param assetAddresses An array of addresses of the assets
+     * @param amounts An array of amounts to be withdrawn
+     * @dev batchProcessWithdrawal in the pricing module updates the maxExposure
      */
-    function getWhiteList() external view returns (address[] memory whiteList) {
-        uint256 maxLength = assetsInMainRegistry.length;
-        whiteList = new address[](maxLength);
+    function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts) public onlyVault {
+        uint256 addressesLength = assetAddresses.length;
+        require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
 
         address assetAddress;
-        uint256 counter = 0;
-        for (uint256 i; i < maxLength;) {
-            assetAddress = assetsInMainRegistry[i];
-            if (IPricingModule(assetToPricingModule[assetAddress]).isAssetAddressWhiteListed(assetAddress)) {
-                whiteList[counter] = assetAddress;
-                unchecked {
-                    ++counter;
-                }
-            }
+        for (uint256 i; i < addressesLength;) {
+            assetAddress = assetAddresses[i];
+
+            IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(assetAddress, amounts[i]);
+
             unchecked {
                 ++i;
             }
         }
-
-        return whiteList;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -242,48 +235,47 @@ contract MainRegistry is Ownable {
 
     /**
      * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @param assetAddresses The List of token addresses of the assets
+     * @param assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency The contract address of the BaseCurrency
      * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
      */
     function getTotalValue(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
         address baseCurrency
     ) public view returns (uint256 valueInBaseCurrency) {
-        valueInBaseCurrency =
-            getTotalValue(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
+        valueInBaseCurrency = getTotalValue(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
 
     /**
      * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @param assetAddresses The List of token addresses of the assets
+     * @param assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency An identifier (uint256) of the BaseCurrency
      * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
      * @dev ToDo: value sum unchecked. Cannot overflow on 1e18 decimals
      */
     function getTotalValue(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
         uint256 baseCurrency
     ) public view returns (uint256 valueInBaseCurrency) {
         uint256 valueInUsd;
 
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
 
-        uint256 assetAddressesLength = _assetAddresses.length;
+        uint256 assetAddressesLength = assetAddresses.length;
         require(
-            assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
+            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
             "MR_GTV: LENGTH_MISMATCH"
         );
         IPricingModule.GetValueInput memory getValueInput;
@@ -293,17 +285,17 @@ contract MainRegistry is Ownable {
         uint256 tempValueInUsd;
         uint256 tempValueInBaseCurrency;
         for (uint256 i; i < assetAddressesLength;) {
-            assetAddress = _assetAddresses[i];
+            assetAddress = assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GTV: Unknown asset");
 
             getValueInput.assetAddress = assetAddress;
-            getValueInput.assetId = _assetIds[i];
-            getValueInput.assetAmount = _assetAmounts[i];
+            getValueInput.assetId = assetIds[i];
+            getValueInput.assetAmount = assetAmounts[i];
 
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
                 valueInBaseCurrency = valueInBaseCurrency
-                    + _assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //_assetAmounts can have a variable decimal precision -> bring to 18 decimals
+                    + assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //assetAmounts can have a variable decimal precision -> bring to 18 decimals
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
                 (tempValueInUsd, tempValueInBaseCurrency,,) =
@@ -333,45 +325,45 @@ contract MainRegistry is Ownable {
 
     /**
      * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @param assetAddresses The List of token addresses of the assets
+     * @param assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency The contract address of the BaseCurrency
      * @return valuesAndRiskVarPerAsset The list of values per assets denominated in BaseCurrency
      */
     function getListOfValuesPerAsset(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
         address baseCurrency
     ) public view returns (RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset) {
         valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, assetToBaseCurrency[baseCurrency]);
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
 
     /**
      * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @param assetAddresses The List of token addresses of the assets
+     * @param assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency An identifier (uint256) of the BaseCurrency
      * @return valuesAndRiskVarPerAsset The list of values per assets denominated in BaseCurrency
      */
     function getListOfValuesPerAsset(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
         uint256 baseCurrency
     ) public view returns (RiskModule.AssetValueAndRiskVariables[] memory) {
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
 
-        uint256 assetAddressesLength = _assetAddresses.length;
+        uint256 assetAddressesLength = assetAddresses.length;
         require(
-            assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
+            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
             "MR_GLV: LENGTH_MISMATCH"
         );
         IPricingModule.GetValueInput memory getValueInput;
@@ -384,16 +376,16 @@ contract MainRegistry is Ownable {
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             new RiskModule.AssetValueAndRiskVariables[](assetAddressesLength);
         for (uint256 i; i < assetAddressesLength;) {
-            assetAddress = _assetAddresses[i];
+            assetAddress = assetAddresses[i];
             require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
 
             getValueInput.assetAddress = assetAddress;
-            getValueInput.assetId = _assetIds[i];
-            getValueInput.assetAmount = _assetAmounts[i];
+            getValueInput.assetId = assetIds[i];
+            getValueInput.assetAmount = assetAmounts[i];
 
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
-                valuesAndRiskVarPerAsset[i].valueInBaseCurrency = _assetAmounts[i];
+                valuesAndRiskVarPerAsset[i].valueInBaseCurrency = assetAmounts[i];
             } else {
                 (
                     tempValueInUsd,
@@ -433,57 +425,74 @@ contract MainRegistry is Ownable {
 
     /**
      * @notice Calculate the collateralValue given the asset details in given baseCurrency
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @param assetAddresses The List of token addresses of the assets
+     * @param assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency An address of the BaseCurrency contract
      * @return collateralValue Collateral value of the given assets denominated in BaseCurrency.
      */
 
     function getCollateralValue(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
         address baseCurrency
     ) public view returns (uint256 collateralValue) {
-        uint256 assetAddressesLength = _assetAddresses.length;
-
-        require(
-            assetAddressesLength == _assetIds.length && assetAddressesLength == _assetAmounts.length,
-            "MR_GCV: LENGTH_MISMATCH"
-        );
-        uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
+        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
+
         collateralValue = RiskModule.calculateWeightedCollateralValue(valuesAndRiskVarPerAsset);
     }
 
     /**
      * @notice Calculate the liquidation threshold given the asset details in given baseCurrency
-     * @param _assetAddresses The List of token addresses of the assets
-     * @param _assetIds The list of corresponding token Ids that needs to be checked
+     * @param assetAddresses The List of token addresses of the assets
+     * @param assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param _assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency An (address) of the BaseCurrency contract
      * @return liquidationThreshold of the given assets
      */
     function getLiquidationThreshold(
-        address[] calldata _assetAddresses,
-        uint256[] calldata _assetIds,
-        uint256[] calldata _assetAmounts,
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
         address baseCurrency
     ) public view returns (uint256 liquidationThreshold) {
-        require(
-            _assetAddresses.length == _assetIds.length && _assetAddresses.length == _assetAmounts.length,
-            "MR_GCF: LENGTH_MISMATCH"
-        );
-        uint256 baseCurrencyInd = assetToBaseCurrency[baseCurrency];
+        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(_assetAddresses, _assetIds, _assetAmounts, baseCurrencyInd);
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
+
         liquidationThreshold = RiskModule.calculateWeightedLiquidationThreshold(valuesAndRiskVarPerAsset);
+    }
+
+    /**
+     * @notice Calculate the liquidation threshold given the asset details in given baseCurrency
+     * @param assetAddresses The List of token addresses of the assets
+     * @param assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     * for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency An (address) of the BaseCurrency contract
+     * @return collateralValue Collateral value of the given assets denominated in BaseCurrency.
+     * @return liquidationThreshold of the given assets
+     */
+    function getCollateralValueAndLiquidationThreshold(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
+        address baseCurrency
+    ) public view returns (uint256 collateralValue, uint256 liquidationThreshold) {
+        //No need to check that all arrays are of equal length, already done in getListOfValuesPerAsset()
+        RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
+
+        (collateralValue, liquidationThreshold) =
+            RiskModule.calculateCollateralValueAndLiquidationThreshold(valuesAndRiskVarPerAsset);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -491,5 +500,6 @@ contract MainRegistry is Ownable {
     /////////////////////////////////////////////////////////////// */
     function setAllowedAction(address action, bool allowed) public onlyOwner {
         isActionAllowlisted[action] = allowed;
+
     }
 }

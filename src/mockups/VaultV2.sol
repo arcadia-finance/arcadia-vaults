@@ -199,12 +199,15 @@ contract VaultV2 {
      * @param protocol The contract address of the trusted application.
      * @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
      * @dev Currently only one trusted protocol can be set.
+     * @dev Only open margin accounts for protocols you trust!
+     * The protocol has significant authorisation: use margin (-> trigger liquidation)
      */
     function openTrustedMarginAccount(address protocol) public onlyOwner {
         require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
-        (bool success, address baseCurrency, address liquidator_) = ITrustedProtocol(protocol).openMarginAccount();
+        (bool success, address baseCurrency, address liquidator_) =
+            ITrustedProtocol(protocol).openMarginAccount(vaultVersion);
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
         liquidator = liquidator_;
@@ -212,7 +215,6 @@ contract VaultV2 {
         if (vault.baseCurrency != baseCurrency) {
             _setBaseCurrency(baseCurrency);
         }
-        IERC20(baseCurrency).approve(protocol, type(uint256).max);
         isTrustedProtocolSet = true;
         allowed[protocol] = true;
     }
@@ -228,6 +230,7 @@ contract VaultV2 {
 
         isTrustedProtocolSet = false;
         allowed[trustedProtocol] = false;
+        vault.liqThres = 0;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -235,12 +238,12 @@ contract VaultV2 {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Can be called by authorised applications to open or increase a margin position.
+     * @notice Can be called by authorised applications to increase a margin position.
      * @param baseCurrency The Base-currency in which the margin position is denominated
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
-     * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
-     * @dev Since increasing margin position is financial activity, liquidation threshold update is done here.
+     * @dev The Liquidation Threshold will automatically be updated on every increase of margin,
+     * but not automatically on a decrease of margin (since this derisks the vault).
      */
     function increaseMarginPosition(address baseCurrency, uint256 amount)
         public
@@ -248,32 +251,36 @@ contract VaultV2 {
         returns (bool success)
     {
         if (baseCurrency != vault.baseCurrency) {
-            _setBaseCurrency(baseCurrency);
+            return false;
         }
-        success = getFreeMargin() >= amount;
-        // Update the vault values
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres =
-            IRegistry(registry).getLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+        (uint256 collateralValue, uint256 liquidationThreshold) = IRegistry(registry)
+            .getCollateralValueAndLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+
+        // Check that the collateral value is bigger than the sum  of the already used margin and the increase
+        // ToDo: For trusted protocols, already pass usedMargin with the call -> avoid additional hop back to trusted protocol to fetch already open debt
+        success = collateralValue >= getUsedMargin() + amount;
+
+        // Can safely cast to uint16 since liquidationThreshold is maximal 10000
+        if (success) vault.liqThres = uint16(liquidationThreshold);
     }
 
     /**
-     * @notice Can be called by authorised applications to close or decrease a margin position.
-     * @param baseCurrency The Base-currency in which the margin position is denominated.
-     * @dev All values expressed in the base currency of the vault with same number of decimals as the base currency.
-     * @return success Boolean indicating if there the margin position is successfully decreased.
-     * @dev Since decreasing margin position is financial activity, liquidation threshold update is done here.
-     * @dev ToDo: Function mainly necessary for integration with untrusted protocols, which is not yet implemnted.
+     * @notice Can be called by vault owner to sync the Liquidation Treshhold.
+     * @dev Vault Owners can always voluntary update the Liquidation Treshhold on a voluntary basis.
+     * They can in practice anyway refinance DeFi loans (eg. with flashloans) if conditions
+     * would become more favourable, hence we foresee a gas efficient function.
      */
-    function decreaseMarginPosition(address baseCurrency, uint256) public onlyAuthorized returns (bool success) {
-        success = baseCurrency == vault.baseCurrency;
-
-        // Update the vault values
+    function syncLiquidationThreshold() external onlyOwner {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vault.liqThres =
-            IRegistry(registry).getLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+        (, uint256 liquidationThreshold) = IRegistry(registry).getCollateralValueAndLiquidationThreshold(
+            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
+        );
+
+        // Can safely cast to uint16 since liquidationThreshold is maximal 10000
+        vault.liqThres = uint16(liquidationThreshold);
     }
 
     /**
@@ -314,8 +321,8 @@ contract VaultV2 {
      * @dev Currently only one trusted application (Arcadia Lending) can open a margin account.
      * The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
      */
-    function getUsedMargin() public returns (uint128 usedMargin) {
-        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)); // ToDo: Check if cast is safe
+    function getUsedMargin() public view returns (uint256 usedMargin) {
+        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this));
     }
 
     /**
@@ -324,7 +331,7 @@ contract VaultV2 {
      * @dev The free margin is denominated in the baseCurrency of the proxy vault,
      * with an equal number of decimals as the base currency.
      */
-    function getFreeMargin() public returns (uint256 freeMargin) {
+    function getFreeMargin() public view returns (uint256 freeMargin) {
         uint256 collateralValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
 
@@ -351,7 +358,7 @@ contract VaultV2 {
     function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
         //gas: 35 gas cheaper to not take debt into memory
         uint256 totalValue = getVaultValue(vault.baseCurrency);
-        uint128 openDebt = getUsedMargin();
+        uint256 usedMargin = getUsedMargin();
         uint256 leftHand;
         uint256 rightHand;
 
@@ -359,17 +366,26 @@ contract VaultV2 {
             //gas: cannot overflow unless totalValue is
             //higher than 1.15 * 10**57 * 10**18 decimals
             leftHand = totalValue * 100;
-            //gas: cannot overflow: uint8 * uint128 << uint256
-            rightHand = uint256(vault.liqThres) * uint256(openDebt);
         }
+        //ToDo: move to unchecked?
+        //gas: cannot realisticly overflow: usedMargin will be always smaller than uint128.
+        // so uint128 * uint8 << uint256
+        rightHand = usedMargin * vault.liqThres;
 
         require(leftHand < rightHand, "V_LV: This vault is healthy");
 
         uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(vault.baseCurrency);
 
         require(
+            //ToDo: check on usedMargin?
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, openDebt, vault.liqThres, baseCurrencyIdentifier
+                address(this),
+                life,
+                liquidationKeeper,
+                owner,
+                uint128(usedMargin),
+                vault.liqThres,
+                baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );
@@ -422,7 +438,7 @@ contract VaultV2 {
             "V_D: Length mismatch"
         );
 
-        require(IRegistry(registry).batchIsWhiteListed(assetAddresses, assetIds), "V_D: Not all assets whitelisted");
+        IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
@@ -478,6 +494,8 @@ contract VaultV2 {
                 && assetAddressesLength == assetTypes.length,
             "V_W: Length mismatch"
         );
+
+        IRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //can't return false as it will revert in pricing module
 
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {

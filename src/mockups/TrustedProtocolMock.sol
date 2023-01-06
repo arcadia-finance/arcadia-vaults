@@ -11,7 +11,7 @@ import {TrustedProtocol} from "../../lib/arcadia-lending/src/TrustedProtocol.sol
 contract TrustedProtocolMock is TrustedProtocol {
     constructor() TrustedProtocol() {}
 
-    function openMarginAccount()
+    function openMarginAccount(uint256)
         external
         pure
         override
@@ -22,7 +22,7 @@ contract TrustedProtocolMock is TrustedProtocol {
         liquidator_ = address(0);
     }
 
-    function getOpenPosition(address) external pure override returns (uint128 openPosition) {
+    function getOpenPosition(address) external pure override returns (uint256 openPosition) {
         openPosition = 0;
     }
 }

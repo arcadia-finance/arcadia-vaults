@@ -65,7 +65,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
 
         // Then: addAsset should revert with "Ownable: caller is not the owner"
         vm.expectRevert("Ownable: caller is not the owner");
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
     }
 
@@ -73,9 +73,9 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset twice
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.expectRevert("PM20_AA: already added");
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
     }
 
@@ -84,10 +84,20 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         eth = new ERC20Mock("ETH Mock", "mETH", 19);
 
         // When: creatorAddress calls addAsset with 19 decimals
-        // Then: addAsset should revert with "SSR_SAI: Maximal 18 decimals"
+        // Then: addAsset should revert with "PM20_AA: Maximal 18 decimals"
         vm.startPrank(creatorAddress);
         vm.expectRevert("PM20_AA: Maximal 18 decimals");
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+        vm.stopPrank();
+    }
+
+    function testRevert_addAsset_ExposureNotInLimits() public {
+        // Given: All necessary contracts deployed on setup
+        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
+        // Then: addAsset should revert with "PM20_AA: Max Exposure not in limits"
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM20_AA: Max Exposure not in limits");
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, uint256(type(uint128).max) + 1);
         vm.stopPrank();
     }
 
@@ -95,7 +105,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with empty list credit ratings
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
         // Then: address(eth) should be inPricingModule
@@ -103,10 +113,10 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         assertEq(standardERC20PricingModule.assetsInPricingModule(0), address(eth));
         (uint64 assetUnit, address[] memory oracles) = standardERC20PricingModule.getAssetInformation(address(eth));
         assertEq(assetUnit, 10 ** uint8(Constants.ethDecimals));
-        for (uint256 i; i < oracleEthToUsdArr.length; i++) {
+        for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
-        assertTrue(standardERC20PricingModule.isAssetAddressWhiteListed(address(eth)));
+        assertTrue(standardERC20PricingModule.isWhiteListed(address(eth), 0));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {
@@ -123,7 +133,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // When: creatorAddress calls addAsset with wrong number of credits
 
         // Then: addAsset should add asset
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_, type(uint128).max);
         vm.stopPrank();
 
         assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
@@ -133,7 +143,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // Given:
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with full list credit ratings
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
         vm.stopPrank();
 
         // Then: address(eth) should be inPricingModule
@@ -164,32 +174,9 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr);
 
         (, address[] memory oracles) = standardERC20PricingModule.getAssetInformation(address(eth));
-        for (uint256 i; i < oracleEthToUsdArr.length; i++) {
+        for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        WHITE LIST MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
-
-    function testSuccess_isWhiteListed_Positive() public {
-        // Given: All necessary contracts deployed on setup
-        vm.startPrank(creatorAddress);
-        // When: creatorAddress calls addAsset
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
-        vm.stopPrank();
-
-        // Then: address(eth) should return true on isWhiteListed
-        assertTrue(standardERC20PricingModule.isWhiteListed(address(eth), 0));
-    }
-
-    function testSuccess_isWhiteListed_Negative(address randomAsset) public {
-        // Given: All necessary contracts deployed on setup
-        // When: input is randomAsset
-
-        // Then: isWhiteListed for randomAsset should return false
-        assertTrue(!standardERC20PricingModule.isWhiteListed(randomAsset, 0));
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -200,7 +187,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         //Does not test on overflow, test to check if function correctly returns value in USD
         vm.startPrank(creatorAddress);
         // Given: creatorAddress calls addAsset, expectedValueInBaseCurrency is zero
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (amountEth * rateEthToUsd * Constants.WAD)
@@ -226,7 +213,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         // Given: creatorAddress calls addAsset, expectedValueInUsd is zero
-        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = 0;
@@ -252,7 +239,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency
         vm.startPrank(creatorAddress);
         // Given: creatorAddress calls addAsset, expectedValueInBaseCurrency is zero
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (amountLink * rateLinkToUsd * Constants.WAD)
@@ -295,7 +282,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
         uint256 expectedValueInUsd = (
@@ -334,7 +321,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
         PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({

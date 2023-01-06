@@ -53,7 +53,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
 
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
-
+        pool.setVaultVersion(1, true);
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
@@ -209,7 +209,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
         assetTypes = new uint256[](tokenIds.length);
 
         uint256 tokenIdToWorkWith;
-        for (uint256 i; i < tokenIds.length; i++) {
+        for (uint256 i; i < tokenIds.length; ++i) {
             tokenIdToWorkWith = tokenIds[i];
             while (bayc.ownerOf(tokenIdToWorkWith) != address(0)) {
                 tokenIdToWorkWith++;
@@ -448,7 +448,6 @@ contract MarginAccountSettingsTest is vaultTests {
         assertEq(vault_.trustedProtocol(), address(pool));
         (, baseCurrency) = vault_.vault();
         assertEq(baseCurrency, address(dai));
-        assertEq(dai.allowance(address(vault_), address(pool)), type(uint256).max);
         assertTrue(vault_.isTrustedProtocolSet());
         assertTrue(vault_.allowed(address(pool)));
     }
@@ -470,7 +469,6 @@ contract MarginAccountSettingsTest is vaultTests {
         assertEq(vault_.trustedProtocol(), address(pool));
         (, baseCurrency) = vault_.vault();
         assertEq(baseCurrency, address(dai));
-        assertEq(dai.allowance(address(vault_), address(pool)), type(uint256).max);
         assertTrue(vault_.isTrustedProtocolSet());
         assertTrue(vault_.allowed(address(pool)));
     }
@@ -481,6 +479,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.startPrank(nonOwner);
         vm.expectRevert("V: You are not the owner");
         vault_.closeTrustedMarginAccount();
+        vm.stopPrank();
     }
 
     function testRevert_closeTrustedMarginAccount_NonSetTrustedMarginAccount() public {
@@ -514,18 +513,168 @@ contract MarginAccountSettingsTest is vaultTests {
 
         assertTrue(!vault_.isTrustedProtocolSet());
         assertTrue(!vault_.allowed(address(pool)));
+        (uint16 liqThres,) = vault_.vault();
+        assertEq(liqThres, 0);
     }
 }
 
 /* ///////////////////////////////////////////////////////////////
                     MARGIN REQUIREMENTS
 /////////////////////////////////////////////////////////////// */
-//ToDo: increaseMarginPosition, decreaseMarginPosition, getCollateralValue
 contract MarginRequirementsTest is vaultTests {
+    using stdStorage for StdStorage;
+
     function setUp() public override {
         super.setUp();
         deployFactory();
         openMarginAccount();
+    }
+
+    function testRevert_increaseMarginPosition_NonAuthorized(address unprivilegedAddress_, uint256 marginIncrease)
+        public
+    {
+        vm.assume(unprivilegedAddress_ != address(pool));
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("V: You are not authorized");
+        vault_.increaseMarginPosition(address(dai), marginIncrease);
+        vm.stopPrank();
+    }
+
+    function testSuccess_increaseMarginPosition_DifferentBaseCurrency(address baseCurrency, uint256 marginIncrease)
+        public
+    {
+        vm.prank(address(pool));
+        bool success = vault_.increaseMarginPosition(baseCurrency, marginIncrease);
+        assertTrue(!success);
+
+        (uint16 actualLiqThres,) = vault_.vault();
+        assertEq(0, actualLiqThres);
+    }
+
+    function testSuccess_increaseMarginPosition_InsufficientMargin(
+        uint8 depositAmount,
+        uint128 marginIncrease,
+        uint128 usedMargin,
+        uint8 collFac,
+        uint8 liqThres
+    ) public {
+        // Given: Risk Factors for basecurrency are set
+        vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
+        vm.assume(
+            liqThres <= RiskConstants.MAX_LIQUIDATION_THRESHOLD && liqThres >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
+        );
+        PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
+        riskVars_[0] = PricingModule.RiskVarInput({
+            baseCurrency: uint8(Constants.DaiBaseCurrency),
+            asset: address(eth),
+            collateralFactor: collFac,
+            liquidationThreshold: liqThres
+        });
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setBatchRiskVariables(riskVars_);
+
+        // And: Vault has already used margin
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+
+        // And: Eth is deposited in the Vault
+        depositEthInVault(depositAmount, vaultOwner);
+
+        // And: There is insufficient Collateral to take more margin
+        uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
+            * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
+        vm.assume(collateralValue < uint256(usedMargin) + marginIncrease);
+        vm.assume(depositAmount > 0); // Devision by 0
+
+        // When: An Authorised protocol tries to take more margin against the vault
+        vm.prank(address(pool));
+        bool success = vault_.increaseMarginPosition(address(dai), marginIncrease);
+
+        // Then: The action is not succesfull
+        assertTrue(!success);
+
+        // And: Liquidation Threshold is not updated
+        (uint16 actualLiqThres,) = vault_.vault();
+        assertEq(0, actualLiqThres);
+    }
+
+    function testSuccess_increaseMarginPosition_SufficientMargin(
+        uint8 depositAmount,
+        uint128 marginIncrease,
+        uint128 usedMargin,
+        uint8 collFac,
+        uint8 liqThres
+    ) public {
+        // Given: Risk Factors for basecurrency are set
+        vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
+        vm.assume(
+            liqThres <= RiskConstants.MAX_LIQUIDATION_THRESHOLD && liqThres >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
+        );
+        PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
+        riskVars_[0] = PricingModule.RiskVarInput({
+            baseCurrency: uint8(Constants.DaiBaseCurrency),
+            asset: address(eth),
+            collateralFactor: collFac,
+            liquidationThreshold: liqThres
+        });
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setBatchRiskVariables(riskVars_);
+
+        // And: Vault has already used margin
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+
+        // And: Eth is deposited in the Vault
+        depositEthInVault(depositAmount, vaultOwner);
+
+        // And: There is sufficient Collateral to take more margin
+        uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
+            * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
+        vm.assume(collateralValue >= uint256(usedMargin) + marginIncrease);
+        vm.assume(depositAmount > 0); // Devision by 0
+
+        // When: An Authorised protocol tries to take more margin against the vault
+        vm.prank(address(pool));
+        bool success = vault_.increaseMarginPosition(address(dai), marginIncrease);
+
+        // Then: The action is succesfull
+        assertTrue(success);
+
+        // And: Liquidation Threshold is updated
+        (uint16 actualLiqThres,) = vault_.vault();
+        assertEq(liqThres, actualLiqThres);
+    }
+
+    function testRevert_syncLiquidationThreshold_NonOwner(address nonOwner) public {
+        vm.assume(nonOwner != vaultOwner);
+
+        vm.startPrank(nonOwner);
+        vm.expectRevert("V: You are not the owner");
+        vault_.syncLiquidationThreshold();
+        vm.stopPrank();
+    }
+
+    function testSuccess_syncLiquidationThreshold(uint8 depositAmount, uint8 liqThres) public {
+        vm.assume(depositAmount > 0);
+        depositEthInVault(depositAmount, vaultOwner);
+
+        vm.assume(
+            liqThres <= RiskConstants.MAX_LIQUIDATION_THRESHOLD && liqThres >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
+        );
+        PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
+        riskVars_[0] = PricingModule.RiskVarInput({
+            baseCurrency: uint8(Constants.DaiBaseCurrency),
+            asset: address(eth),
+            collateralFactor: RiskConstants.DEFAULT_COLLATERAL_FACTOR,
+            liquidationThreshold: liqThres
+        });
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setBatchRiskVariables(riskVars_);
+
+        vm.prank(vaultOwner);
+        vault_.syncLiquidationThreshold();
+
+        (uint16 actualLiqThres,) = vault_.vault();
+        assertEq(liqThres, actualLiqThres);
     }
 
     function testSuccess_getVaultValue(uint8 depositAmount) public {
@@ -552,9 +701,22 @@ contract MarginRequirementsTest is vaultTests {
         assertLt(gasStart - gasAfter, 200000);
     }
 
-    function testSuccess_getUsedMargin_ZeroInitially() public {
-        uint256 openDebt = vault_.getUsedMargin();
-        assertEq(openDebt, 0);
+    function testSuccess_getCollateralValue(uint8 depositAmount) public {
+        depositEthInVault(depositAmount, vaultOwner);
+
+        uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+        uint256 expectedValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
+            * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFactor_ / 100;
+
+        uint256 actualValue = vault_.getCollateralValue();
+
+        assertEq(expectedValue, actualValue);
+    }
+
+    function testSuccess_getUsedMargin(uint256 usedMargin) public {
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+
+        assertEq(usedMargin, vault_.getUsedMargin());
     }
 
     function testSuccess_getFreeMargin_ZeroInitially() public {
@@ -741,7 +903,7 @@ contract AssetManagementTest is vaultTests {
         vm.assume((addrLen != idLen && addrLen != amountLen && addrLen != typesLen));
 
         address[] memory assetAddresses = new address[](addrLen);
-        for (uint256 i; i < addrLen; i++) {
+        for (uint256 i; i < addrLen; ++i) {
             assetAddresses[i] = address(uint160(i));
         }
 
@@ -786,7 +948,7 @@ contract AssetManagementTest is vaultTests {
         assetTypes[0] = 0;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_D: Not all assets whitelisted");
+        vm.expectRevert("MR_BPD: Asset not in mainreg");
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
@@ -811,7 +973,7 @@ contract AssetManagementTest is vaultTests {
         assetTypes[0] = 1;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_D: Not all assets whitelisted");
+        vm.expectRevert("MR_BPD: Asset not in mainreg");
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
@@ -1028,7 +1190,7 @@ contract AssetManagementTest is vaultTests {
         vm.assume((addrLen != idLen && addrLen != amountLen && addrLen != typesLen));
 
         address[] memory assetAddresses = new address[](addrLen);
-        for (uint256 i; i < addrLen; i++) {
+        for (uint256 i; i < addrLen; ++i) {
             assetAddresses[i] = address(uint160(i));
         }
 
@@ -1055,6 +1217,7 @@ contract AssetManagementTest is vaultTests {
 
     function testRevert_withdraw_UnknownAssetType(uint256 assetType) public {
         vm.assume(assetType >= 3);
+        depositEthInVault(5, vaultOwner);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -1070,6 +1233,29 @@ contract AssetManagementTest is vaultTests {
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_W: Unknown asset type");
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+    function testRevert_withdraw_MoreThanMaxExposure(uint256 amountWithdraw, uint128 maxExposure) public {
+        vm.assume(amountWithdraw > maxExposure);
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setExposureOfAsset(address(eth), maxExposure);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountWithdraw;
+
+        uint256[] memory assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert(stdError.arithmeticError);
         vault_.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
@@ -1129,7 +1315,7 @@ contract AssetManagementTest is vaultTests {
         address[] memory withdrawalAddresses = new address[](amountsWithdrawn);
         uint256[] memory withdrawalAmounts = new uint256[](amountsWithdrawn);
         uint256[] memory withdrawalTypes = new uint256[](amountsWithdrawn);
-        for (uint256 i; i < amountsWithdrawn; i++) {
+        for (uint256 i; i < amountsWithdrawn; ++i) {
             withdrawalIds[i] = assetIds[i];
             withdrawalAddresses[i] = address(bayc);
             withdrawalAmounts[i] = 1;
@@ -1228,7 +1414,7 @@ contract AssetManagementTest is vaultTests {
         address[] memory withdrawalAddresses = new address[](randomAmounts);
         uint256[] memory withdrawalAmounts = new uint256[](randomAmounts);
         uint256[] memory withdrawalTypes = new uint256[](randomAmounts);
-        for (uint256 i; i < randomAmounts; i++) {
+        for (uint256 i; i < randomAmounts; ++i) {
             withdrawalIds[i] = assetIds[i];
             withdrawalAddresses[i] = address(bayc);
             withdrawalAmounts[i] = 1;
