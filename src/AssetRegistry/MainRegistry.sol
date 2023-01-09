@@ -24,6 +24,8 @@ import {RiskModule} from "../RiskModule.sol";
 contract MainRegistry is Ownable {
     using FixedPointMathLib for uint256;
 
+    address immutable _this;
+
     bool public assetsUpdatable = true;
 
     uint256 public baseCurrencyCounter;
@@ -63,6 +65,11 @@ contract MainRegistry is Ownable {
         _;
     }
 
+    modifier noDelegate() {
+        require(address(this) == _this, "Delegate calls not allowed.");
+        _;
+    }
+
     /**
      * @notice The Main Registry must always be initialised with the BaseCurrency USD
      * @dev Since the BaseCurrency USD has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
@@ -74,6 +81,7 @@ contract MainRegistry is Ownable {
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      */
     constructor(BaseCurrencyInformation memory baseCurrencyInformation) {
+        _this = address(this);
         //Main registry must be initialised with usd
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
@@ -188,7 +196,7 @@ contract MainRegistry is Ownable {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) public onlyVault {
+    ) public onlyVault noDelegate {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
@@ -211,7 +219,11 @@ contract MainRegistry is Ownable {
      * @param amounts An array of amounts to be withdrawn
      * @dev batchProcessWithdrawal in the pricing module updates the maxExposure
      */
-    function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts) public onlyVault {
+    function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
+        public
+        onlyVault
+        noDelegate
+    {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
 
