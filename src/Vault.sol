@@ -16,6 +16,8 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILendingPool.sol";
 import "./interfaces/ITrustedProtocol.sol";
+import "./interfaces/IActionBase.sol";
+import {actionAssetsData} from "./actions/utils/ActionData.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -781,6 +783,40 @@ contract Vault {
                 ++k;
             }
         }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                    ASSET MANAGEMENT LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyOwner {
+        require(IMainRegistry(registry).isActionAllowlisted(actionHandler), "VL_VMA: Action is not allowlisted");
+
+        (actionAssetsData memory outgoing, actionAssetsData memory incoming) =
+            abi.decode(actionData, (actionAssetsData, actionAssetsData));
+
+        // withdraw to actionHandler
+        for (uint256 i; i < outgoing.assets.length;) {
+            outgoing.preActionBalances[i] = IERC20(outgoing.assets[i]).balanceOf(address(this));
+            _withdrawERC20(actionHandler, outgoing.assets[i], outgoing.assetAmounts[i]);
+            unchecked {
+                ++i;
+            }
+        }
+
+        // execute Action
+        incoming = IActionBase(actionHandler).executeAction(address(this), actionData);
+
+        // deposit from actionHandler into vault
+        for (uint256 i; i < incoming.assets.length;) {
+            _depositERC20(actionHandler, incoming.assets[i], incoming.assetAmounts[i]);
+            unchecked {
+                ++i;
+            }
+        }
+        uint256 collValue = getCollateralValue();
+        uint256 usedMargin = getUsedMargin();
+        require(collValue > usedMargin, "UV2_SWAP: coll. value postAction too low");
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
