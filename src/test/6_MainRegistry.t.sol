@@ -1122,6 +1122,8 @@ contract DelegateTest is MainRegistryTest {
             )
         );
         vm.stopPrank();
+
+        success; //avoid warning
     }
 
     function testSuccess_batchProcessWithdrawal_directCall(uint128 amountLink) public {
@@ -1171,5 +1173,7 @@ contract DelegateTest is MainRegistryTest {
             )
         );
         vm.stopPrank();
+
+        success; //avoid warning
     }
 }
