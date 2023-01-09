@@ -589,15 +589,13 @@ contract AssetManagementTest is MainRegistryTest {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amountLink;
 
-        (, uint128 oldExposure) = standardERC20PricingModule.exposure(address(link));
-
         vm.startPrank(proxyAddr);
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
 
         (, uint128 newExposure) = standardERC20PricingModule.exposure(address(link));
 
-        assertEq(newExposure, oldExposure + amountLink);
+        assertEq(newExposure, amountLink);
     }
 
     function testRevert_batchProcessDeposit_delegateCall(uint128 amountLink) public {
@@ -635,15 +633,9 @@ contract AssetManagementTest is MainRegistryTest {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amountLink;
 
-        (, uint128 oldExposure) = standardERC20PricingModule.exposure(address(link));
-
         vm.startPrank(proxyAddr);
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
-
-        (, uint128 newExposure) = standardERC20PricingModule.exposure(address(link));
-
-        assertEq(newExposure, oldExposure + amountLink);
 
         vm.startPrank(proxyAddr);
         mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
@@ -651,7 +643,7 @@ contract AssetManagementTest is MainRegistryTest {
 
         (, uint128 endExposure) = standardERC20PricingModule.exposure(address(link));
 
-        assertEq(endExposure, oldExposure);
+        assertEq(endExposure, 0);
     }
 
     function testRevert_batchProcessWithdrawal_delegateCall(uint128 amountLink) public {
