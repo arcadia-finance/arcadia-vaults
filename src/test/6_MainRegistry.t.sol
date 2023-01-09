@@ -521,6 +521,50 @@ contract AssetManagementTest is MainRegistryTest {
         assertEq(exposureLink, amountLink);
     }
 
+    function testSuccess_batchProcessDeposit_directCall(uint128 amountLink) public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        vm.startPrank(proxyAddr);
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+
+        (, uint128 newExposure) = standardERC20PricingModule.exposure(address(link));
+
+        assertEq(newExposure, amountLink);
+    }
+
+    function testRevert_batchProcessDeposit_delegateCall(uint128 amountLink) public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        vm.startPrank(proxyAddr);
+        vm.expectRevert("Delegate calls not allowed.");
+        (bool success,) = address(mainRegistry).delegatecall(
+            abi.encodeWithSignature(
+                "batchProcessDeposit(address[] calldata,uint256[] calldata,uint256[] calldata)",
+                assetAddresses,
+                assetIds,
+                assetAmounts
+            )
+        );
+        vm.stopPrank();
+
+        success; //avoid warning
+    }
+
     function testRevert_batchProcessWithdrawal_NonVault(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != proxyAddr);
 
@@ -577,50 +621,6 @@ contract AssetManagementTest is MainRegistryTest {
         (, exposure) = standardERC20PricingModule.exposure(address(eth));
 
         assertEq(exposure, amountDeposited - amountWithdrawn);
-    }
-
-    function testSuccess_batchProcessDeposit_directCall(uint128 amountLink) public {
-        address[] memory assetAddresses = new address[](1);
-        assetAddresses[0] = address(link);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amountLink;
-
-        vm.startPrank(proxyAddr);
-        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
-        vm.stopPrank();
-
-        (, uint128 newExposure) = standardERC20PricingModule.exposure(address(link));
-
-        assertEq(newExposure, amountLink);
-    }
-
-    function testRevert_batchProcessDeposit_delegateCall(uint128 amountLink) public {
-        address[] memory assetAddresses = new address[](1);
-        assetAddresses[0] = address(link);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amountLink;
-
-        vm.startPrank(proxyAddr);
-        vm.expectRevert("Delegate calls not allowed.");
-        (bool success,) = address(mainRegistry).delegatecall(
-            abi.encodeWithSignature(
-                "batchProcessDeposit(address[] calldata,uint256[] calldata,uint256[] calldata)",
-                assetAddresses,
-                assetIds,
-                assetAmounts
-            )
-        );
-        vm.stopPrank();
-
-        success; //avoid warning
     }
 
     function testSuccess_batchProcessWithdrawal_directCall(uint128 amountLink) public {
