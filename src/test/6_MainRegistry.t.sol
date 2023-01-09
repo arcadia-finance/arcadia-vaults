@@ -1038,3 +1038,138 @@ contract PricingLogicTest is MainRegistryTest {
         assertEq(expectedLiquidationThreshold, actualLiquidationThreshold);
     }
 }
+
+contract DelegateTest is MainRegistryTest {
+    function setUp() public override {
+        super.setUp();
+
+        vm.startPrank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
+                assetAddress: address(eth),
+                baseCurrencyToUsdOracle: address(oracleEthToUsd),
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+            })
+        );
+        mainRegistry.addPricingModule(address(standardERC20PricingModule));
+        mainRegistry.addPricingModule(address(floorERC721PricingModule));
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
+
+        floorERC721PricingModule.addAsset(
+            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+        );
+
+        mainRegistry.setFactory(address(factory));
+
+        vm.stopPrank();
+
+        vm.startPrank(vaultOwner);
+        proxyAddr = factory.createVault(uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender))), 1);
+        vm.stopPrank();
+    }
+
+    function testSuccess_batchProcessDeposit_directCall(uint128 amountLink) public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        (, uint128 oldExposure) = standardERC20PricingModule.exposure(address(link));
+
+        vm.startPrank(proxyAddr);
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+
+        (, uint128 newExposure) = standardERC20PricingModule.exposure(address(link));
+
+        assertEq(newExposure, oldExposure + amountLink);
+    }
+
+    function testRevert_batchProcessDeposit_delegateCall(uint128 amountLink) public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        vm.startPrank(proxyAddr);
+        vm.expectRevert("Delegate calls not allowed.");
+        (bool success,) = address(mainRegistry).delegatecall(
+            abi.encodeWithSignature(
+                "batchProcessDeposit(address[] calldata,uint256[] calldata,uint256[] calldata)",
+                assetAddresses,
+                assetIds,
+                assetAmounts
+            )
+        );
+        vm.stopPrank();
+    }
+
+    function testSuccess_batchProcessWithdrawal_directCall(uint128 amountLink) public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        (, uint128 oldExposure) = standardERC20PricingModule.exposure(address(link));
+
+        vm.startPrank(proxyAddr);
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+
+        (, uint128 newExposure) = standardERC20PricingModule.exposure(address(link));
+
+        assertEq(newExposure, oldExposure + amountLink);
+
+        vm.startPrank(proxyAddr);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        vm.stopPrank();
+
+        (, uint128 endExposure) = standardERC20PricingModule.exposure(address(link));
+
+        assertEq(endExposure, oldExposure);
+    }
+
+    function testRevert_batchProcessWithdrawal_delegateCall(uint128 amountLink) public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        vm.startPrank(proxyAddr);
+        vm.expectRevert("Delegate calls not allowed.");
+        (bool success,) = address(mainRegistry).delegatecall(
+            abi.encodeWithSignature(
+                "batchProcessWithdrawal(address[] calldata,uint256[] calldata)", assetAddresses, assetAmounts
+            )
+        );
+        vm.stopPrank();
+    }
+}
