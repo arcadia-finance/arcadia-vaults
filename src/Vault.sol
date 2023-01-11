@@ -113,7 +113,7 @@ contract Vault {
      * @param registry_ The 'beacon' contract to which should be looked at for external logic.
      * @param vaultVersion_ The version of the vault logic.
      */
-    function initialize(address owner_, address registry_, uint16 vaultVersion_) external payable {
+    function initialize(address owner_, address registry_, uint16 vaultVersion_) external {
         require(vaultVersion == 0, "V_I: Already initialized!");
         require(vaultVersion_ != 0, "V_I: Invalid vault version");
         owner = owner_;
@@ -430,7 +430,7 @@ contract Vault {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    ) external payable onlyOwner {
+    ) external onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
@@ -439,16 +439,27 @@ contract Vault {
             "V_D: Length mismatch"
         );
 
+        _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+    }
+
+    function _deposit(
+        address[] memory assetAddresses,
+        uint256[] memory assetIds,
+        uint256[] memory assetAmounts,
+        uint256[] memory assetTypes,
+        address from
+    ) internal {
         //reverts in mainregistry if invalid input
         IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
+        uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
-                _depositERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
+                _depositERC20(from, assetAddresses[i], assetAmounts[i]);
             } else if (assetTypes[i] == 1) {
-                _depositERC721(msg.sender, assetAddresses[i], assetIds[i]);
+                _depositERC721(from, assetAddresses[i], assetIds[i]);
             } else if (assetTypes[i] == 2) {
-                _depositERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+                _depositERC1155(from, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
                 require(false, "V_D: Unknown asset type");
             }
@@ -488,7 +499,7 @@ contract Vault {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    ) external payable onlyOwner {
+    ) external onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
@@ -497,26 +508,37 @@ contract Vault {
             "V_W: Length mismatch"
         );
 
+        _withdraw(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+
+        uint256 usedMargin = getUsedMargin();
+        if (usedMargin != 0) {
+            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
+        }
+    }
+
+    function _withdraw(
+        address[] memory assetAddresses,
+        uint256[] memory assetIds,
+        uint256[] memory assetAmounts,
+        uint256[] memory assetTypes,
+        address to
+    ) internal {
         IRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //reverts in mainregistry if invalid input
 
+        uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
-                _withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
+                _withdrawERC20(to, assetAddresses[i], assetAmounts[i]);
             } else if (assetTypes[i] == 1) {
-                _withdrawERC721(msg.sender, assetAddresses[i], assetIds[i]);
+                _withdrawERC721(to, assetAddresses[i], assetIds[i]);
             } else if (assetTypes[i] == 2) {
-                _withdrawERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+                _withdrawERC1155(to, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
                 require(false, "V_W: Unknown asset type");
             }
             unchecked {
                 ++i;
             }
-        }
-
-        uint256 usedMargin = getUsedMargin();
-        if (usedMargin != 0) {
-            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }
 
@@ -792,28 +814,18 @@ contract Vault {
     function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyOwner {
         require(IMainRegistry(registry).isActionAllowlisted(actionHandler), "VL_VMA: Action is not allowlisted");
 
-        (actionAssetsData memory outgoing, actionAssetsData memory incoming) =
-            abi.decode(actionData, (actionAssetsData, actionAssetsData));
+        (actionAssetsData memory outgoing, actionAssetsData memory incoming,,) =
+            abi.decode(actionData, (actionAssetsData, actionAssetsData, address[], bytes[]));
 
         // withdraw to actionHandler
-        for (uint256 i; i < outgoing.assets.length;) {
-            outgoing.preActionBalances[i] = IERC20(outgoing.assets[i]).balanceOf(address(this));
-            _withdrawERC20(actionHandler, outgoing.assets[i], outgoing.assetAmounts[i]);
-            unchecked {
-                ++i;
-            }
-        }
+        _withdraw(outgoing.assets, outgoing.assetAmounts, outgoing.assetIds, outgoing.assetTypes, actionHandler);
 
         // execute Action
         incoming = IActionBase(actionHandler).executeAction(address(this), actionData);
 
         // deposit from actionHandler into vault
-        for (uint256 i; i < incoming.assets.length;) {
-            _depositERC20(actionHandler, incoming.assets[i], incoming.assetAmounts[i]);
-            unchecked {
-                ++i;
-            }
-        }
+        _deposit(incoming.assets, incoming.assetAmounts, incoming.assetIds, incoming.assetTypes, actionHandler);
+
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
         require(collValue > usedMargin, "UV2_SWAP: coll. value postAction too low");
@@ -825,5 +837,9 @@ contract Vault {
 
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) public pure returns (bytes4) {
         return this.onERC1155Received.selector;
+    }
+
+    fallback() external {
+        revert();
     }
 }
