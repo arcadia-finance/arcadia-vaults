@@ -45,6 +45,8 @@ contract VaultV2 {
     uint16 public vaultVersion;
     uint256 public life;
 
+    address public baseCurrency;
+
     address public owner;
     address public liquidator;
     address public registry;
@@ -62,13 +64,6 @@ contract VaultV2 {
     struct AddressSlot {
         address value;
     }
-
-    struct VaultInfo {
-        uint16 liqThres; //2 decimals precision (factor 100)
-        address baseCurrency;
-    }
-
-    VaultInfo public vault;
 
     event Upgraded(address indexed implementation);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -174,10 +169,10 @@ contract VaultV2 {
 
     /**
      * @notice Sets the baseCurrency of a vault.
-     * @param baseCurrency the new baseCurrency for the vault.
+     * @param baseCurrency_ the new baseCurrency for the vault.
      */
-    function setBaseCurrency(address baseCurrency) public onlyAuthorized {
-        _setBaseCurrency(baseCurrency);
+    function setBaseCurrency(address baseCurrency_) public onlyAuthorized {
+        _setBaseCurrency(baseCurrency_);
     }
 
     /**
@@ -188,7 +183,7 @@ contract VaultV2 {
     function _setBaseCurrency(address baseCurrency_) private {
         require(getUsedMargin() == 0, "V_SBC: Can't change baseCurrency when Used Margin > 0");
         require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
-        vault.baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
+        baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -207,14 +202,14 @@ contract VaultV2 {
         require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
-        (bool success, address baseCurrency, address liquidator_) =
+        (bool success, address baseCurrency_, address liquidator_) =
             ITrustedProtocol(protocol).openMarginAccount(vaultVersion);
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
         liquidator = liquidator_;
         trustedProtocol = protocol;
-        if (vault.baseCurrency != baseCurrency) {
-            _setBaseCurrency(baseCurrency);
+        if (baseCurrency != baseCurrency_) {
+            _setBaseCurrency(baseCurrency_);
         }
         isTrustedProtocolSet = true;
         allowed[protocol] = true;
@@ -231,7 +226,6 @@ contract VaultV2 {
 
         isTrustedProtocolSet = false;
         allowed[trustedProtocol] = false;
-        vault.liqThres = 0;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -240,19 +234,19 @@ contract VaultV2 {
 
     /**
      * @notice Can be called by authorised applications to increase a margin position.
-     * @param baseCurrency The Base-currency in which the margin position is denominated
+     * @param baseCurrency_ The Base-currency in which the margin position is denominated
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
      * @dev The Liquidation Threshold will automatically be updated on every increase of margin,
      * but not automatically on a decrease of margin (since this derisks the vault).
      */
-    function increaseMarginPosition(address baseCurrency, uint256 amount)
+    function increaseMarginPosition(address baseCurrency_, uint256 amount)
         public
         onlyAuthorized
         view
         returns (bool success)
     {
-        if (baseCurrency != vault.baseCurrency) {
+        if (baseCurrency_ != baseCurrency) {
             return false;
         }
 
@@ -265,13 +259,13 @@ contract VaultV2 {
      * @notice Returns the total value of the vault in a specific baseCurrency
      * @dev Fetches all stored assets with their amounts on the proxy vault.
      * Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
-     * @param baseCurrency The asset to return the value in.
+     * @param baseCurrency_ The asset to return the value in.
      * @return vaultValue Total value stored on the vault, expressed in baseCurrency.
      */
-    function getVaultValue(address baseCurrency) public view returns (uint256 vaultValue) {
+    function getVaultValue(address baseCurrency_) public view returns (uint256 vaultValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vaultValue = IRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        vaultValue = IRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency_);
     }
 
     /**
@@ -289,7 +283,7 @@ contract VaultV2 {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         collateralValue =
-            IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+            IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -307,7 +301,7 @@ contract VaultV2 {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         liquidationValue =
-            IRegistry(registry).getLiquidationValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+            IRegistry(registry).getLiquidationValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -355,7 +349,7 @@ contract VaultV2 {
 
         require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");
 
-        uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(vault.baseCurrency);
+        uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(baseCurrency);
 
         require(
             //ToDo: check on usedMargin?

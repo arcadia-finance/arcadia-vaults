@@ -23,23 +23,20 @@ contract VaultV2Test is DeployArcadiaVaults {
     Tranche tranche;
     DebtToken debt;
 
-    struct VaultInfo {
-        uint16 collateralFactor;
-        uint16 liqThres;
-        address baseCurrency;
-    }
-
     struct Checks {
+        bool isTrustedProtocolSet;
+        uint16 vaultVersion;
+        uint256 life;
+        address baseCurrency;
+        address owner;
+        address liquidator;
+        address registry;
+        address trustedProtocol;
         address erc20Stored;
         address erc721Stored;
         address erc1155Stored;
         uint256 erc721TokenIds;
         uint256 erc1155TokenIds;
-        address registry;
-        address trustedProtocol;
-        uint256 life;
-        address owner;
-        VaultInfo vaultVar;
     }
 
     // EVENTS
@@ -321,19 +318,19 @@ contract VaultV2Test is DeployArcadiaVaults {
 
     function createCompareStruct() public view returns (Checks memory) {
         Checks memory checks;
-        VaultInfo memory vaultVar;
 
+        checks.isTrustedProtocolSet = proxy.isTrustedProtocolSet();
+        checks.baseCurrency = proxy.baseCurrency();
+        checks.life = proxy.life();
+        checks.owner = proxy.owner();
+        checks.liquidator = proxy.liquidator();
+        checks.registry = proxy.registry();
+        checks.trustedProtocol = proxy.trustedProtocol();
         checks.erc20Stored = proxy.erc20Stored(0); //ToDo; improve for whole list
         checks.erc721Stored = proxy.erc721Stored(0);
         checks.erc1155Stored = proxy.erc1155Stored(0);
         checks.erc721TokenIds = proxy.erc721TokenIds(0);
         checks.erc1155TokenIds = proxy.erc1155TokenIds(0);
-        checks.registry = proxy.registry();
-        checks.trustedProtocol = proxy.trustedProtocol();
-        checks.life = proxy.life();
-        checks.owner = proxy.owner();
-        (vaultVar.liqThres, vaultVar.baseCurrency) = proxy.vault();
-        checks.vaultVar = vaultVar;
 
         return checks;
     }
