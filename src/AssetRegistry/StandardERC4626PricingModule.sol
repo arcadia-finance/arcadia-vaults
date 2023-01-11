@@ -138,7 +138,7 @@ contract StandardERC4626PricingModule is PricingModule {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collateralFactor, uint256 liquidationFactor)
     {
         uint256 rateInUsd;
         uint256 rateInBaseCurrency;
@@ -155,7 +155,7 @@ contract StandardERC4626PricingModule is PricingModule {
             valueInUsd = assetAmount.mulDivDown(rateInUsd, assetToInformation[getValueInput.asset].assetUnit);
         }
 
-        collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
-        liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;
+        collateralFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liquidationFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationFactor;
     }
 }

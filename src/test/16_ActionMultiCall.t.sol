@@ -12,7 +12,6 @@ import {ActionMultiCall} from "../actions/MultiCall.sol";
 import "../actions/utils/ActionData.sol";
 
 contract ActionMultiCallTest is DeployArcadiaVaults {
-
     ActionMultiCall public action;
 
     function setUp() public {
@@ -30,7 +29,8 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
             assetIds: new uint256[](0),
             assetAmounts: new uint256[](0),
             assetTypes: new uint256[](0),
-            preActionBalances: new uint256[](0)});
+            preActionBalances: new uint256[](0)
+        });
 
         assetData.assets[0] = address(dai);
 
@@ -43,5 +43,4 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
 
         return action.executeAction(address(0), callData);
     }
-
 }

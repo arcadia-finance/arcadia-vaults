@@ -24,7 +24,7 @@ contract VaultV2Test is DeployArcadiaVaults {
     DebtToken debt;
 
     struct VaultInfo {
-        uint16 collFactor;
+        uint16 collateralFactor;
         uint16 liqThres;
         address baseCurrency;
     }

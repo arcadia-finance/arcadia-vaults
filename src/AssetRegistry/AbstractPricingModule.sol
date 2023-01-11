@@ -47,14 +47,14 @@ abstract contract PricingModule is Ownable {
 
     struct RiskVars {
         uint16 collateralFactor;
-        uint16 liquidationThreshold;
+        uint16 liquidationFactor;
     }
 
     struct RiskVarInput {
         address asset;
         uint8 baseCurrency;
         uint16 collateralFactor;
-        uint16 liquidationThreshold;
+        uint16 liquidationFactor;
     }
 
     modifier onlyRiskManager() {
@@ -128,12 +128,11 @@ abstract contract PricingModule is Ownable {
      * @notice Returns the risk variable arrays of an asset
      * @param asset The address of the asset
      * @return assetCollateralFactors The array of collateral factors for the asset
-     * @return assetLiquidationThresholds The array of liquidation thresholds for the asset
+     * @return assetLiquidationFactors The array of liquidation thresholds for the asset
      */
     function getRiskVariables(address asset, uint256 baseCurrency) public view virtual returns (uint16, uint16) {
-        return (
-            assetRiskVars[asset][baseCurrency].collateralFactor, assetRiskVars[asset][baseCurrency].liquidationThreshold
-        );
+        return
+            (assetRiskVars[asset][baseCurrency].collateralFactor, assetRiskVars[asset][baseCurrency].liquidationFactor);
     }
 
     /**
@@ -154,7 +153,7 @@ abstract contract PricingModule is Ownable {
                 riskVarInputs[i].baseCurrency,
                 RiskVars({
                     collateralFactor: riskVarInputs[i].collateralFactor,
-                    liquidationThreshold: riskVarInputs[i].liquidationThreshold
+                    liquidationFactor: riskVarInputs[i].liquidationFactor
                 })
             );
 
@@ -177,7 +176,7 @@ abstract contract PricingModule is Ownable {
                 riskVarInputs[i].baseCurrency,
                 RiskVars({
                     collateralFactor: riskVarInputs[i].collateralFactor,
-                    liquidationThreshold: riskVarInputs[i].liquidationThreshold
+                    liquidationFactor: riskVarInputs[i].liquidationFactor
                 })
             );
 
@@ -190,11 +189,7 @@ abstract contract PricingModule is Ownable {
     function _setRiskVariables(address asset, uint256 basecurrency, RiskVars memory riskVars) internal virtual {
         require(riskVars.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR, "APM_SRV: Coll.Fact not in limits");
 
-        require(
-            riskVars.liquidationThreshold <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
-                && riskVars.liquidationThreshold >= RiskConstants.MIN_LIQUIDATION_THRESHOLD,
-            "APM_SRV: Liq.Thres not in limits"
-        );
+        require(riskVars.liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR, "APM_SRV: Liq.Thres not in limits");
 
         assetRiskVars[asset][basecurrency] = riskVars;
     }

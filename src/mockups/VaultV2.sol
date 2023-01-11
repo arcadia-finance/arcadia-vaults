@@ -15,8 +15,9 @@ import "../interfaces/ILiquidator.sol";
 import "../interfaces/IRegistry.sol";
 import "../interfaces/IMainRegistry.sol";
 import "../interfaces/ILendingPool.sol";
-
 import "../interfaces/ITrustedProtocol.sol";
+import "../interfaces/IActionBase.sol";
+import {actionAssetsData} from "../actions/utils/ActionData.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -112,7 +113,7 @@ contract VaultV2 {
      * @param registry_ The 'beacon' contract to which should be looked at for external logic.
      * @param vaultVersion_ The version of the vault logic.
      */
-    function initialize(address owner_, address registry_, uint16 vaultVersion_) external payable {
+    function initialize(address owner_, address registry_, uint16 vaultVersion_) external {
         require(vaultVersion == 0, "V_I: Already initialized!");
         require(vaultVersion_ != 0, "V_I: Invalid vault version");
         owner = owner_;
@@ -248,39 +249,16 @@ contract VaultV2 {
     function increaseMarginPosition(address baseCurrency, uint256 amount)
         public
         onlyAuthorized
+        view
         returns (bool success)
     {
         if (baseCurrency != vault.baseCurrency) {
             return false;
         }
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
-        (uint256 collateralValue, uint256 liquidationThreshold) = IRegistry(registry)
-            .getCollateralValueAndLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
 
         // Check that the collateral value is bigger than the sum  of the already used margin and the increase
         // ToDo: For trusted protocols, already pass usedMargin with the call -> avoid additional hop back to trusted protocol to fetch already open debt
-        success = collateralValue >= getUsedMargin() + amount;
-
-        // Can safely cast to uint16 since liquidationThreshold is maximal 10000
-        if (success) vault.liqThres = uint16(liquidationThreshold);
-    }
-
-    /**
-     * @notice Can be called by vault owner to sync the Liquidation Treshhold.
-     * @dev Vault Owners can always voluntary update the Liquidation Treshhold on a voluntary basis.
-     * They can in practice anyway refinance DeFi loans (eg. with flashloans) if conditions
-     * would become more favourable, hence we foresee a gas efficient function.
-     */
-    function syncLiquidationThreshold() external onlyOwner {
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
-        (, uint256 liquidationThreshold) = IRegistry(registry).getCollateralValueAndLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
-        );
-
-        // Can safely cast to uint16 since liquidationThreshold is maximal 10000
-        vault.liqThres = uint16(liquidationThreshold);
+        success = getCollateralValue() >= getUsedMargin() + amount;
     }
 
     /**
@@ -301,7 +279,7 @@ contract VaultV2 {
      * @return collateralValue The collateral value, returned in the decimals of the base currency.
      * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
      * @dev The collateral value of the vault is equal to the spot value of the underlying assets,
-     * discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
+     * discounted by a haircut (the collateral factor). Since the value of
      * collateralised assets can fluctuate, the haircut guarantees that the vault
      * remains over-collateralised with a high confidence level (99,9%+). The size of the
      * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
@@ -312,6 +290,24 @@ contract VaultV2 {
             generateAssetData();
         collateralValue =
             IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+    }
+
+    /**
+     * @notice Calculates the total liquidation value of the vault.
+     * @return liquidationValue The liquidation value, returned in the decimals of the base currency.
+     * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+     * @dev The liquidation value of the vault is equal to the spot value of the underlying assets,
+     * discounted by a haircut (the liquidation factor).
+     * The liquidation value takes into account that not the full value of the assets can go towards
+     * repaying the debt, but only a fraction of it, the remaining value is lost due to:
+     * slippage while liquidating the assets, fees for the auction initiator, gas fees and
+     * a penalty to the protocol.
+     */
+    function getLiquidationValue() public view returns (uint256 liquidationValue) {
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            generateAssetData();
+        liquidationValue =
+            IRegistry(registry).getLiquidationValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
     }
 
     /**
@@ -350,42 +346,21 @@ contract VaultV2 {
      * @dev Requires an unhealthy vault (value / debt < liqThres).
      * Starts the vault auction on the liquidator contract.
      * Increases the life of the vault to indicate a liquidation has happened.
-     * Sets debtInfo todo: needed?
      * Transfers ownership of the proxy vault to the liquidator!
-     * @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
+     * @param liquidationKeeper Address of the keeper who initiated the liquidation process.
      * @return success Boolean returning if the liquidation process is successfully started.
      */
     function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
-        //gas: 35 gas cheaper to not take debt into memory
-        uint256 totalValue = getVaultValue(vault.baseCurrency);
         uint256 usedMargin = getUsedMargin();
-        uint256 leftHand;
-        uint256 rightHand;
 
-        unchecked {
-            //gas: cannot overflow unless totalValue is
-            //higher than 1.15 * 10**57 * 10**18 decimals
-            leftHand = totalValue * 100;
-        }
-        //ToDo: move to unchecked?
-        //gas: cannot realisticly overflow: usedMargin will be always smaller than uint128.
-        // so uint128 * uint8 << uint256
-        rightHand = usedMargin * vault.liqThres;
-
-        require(leftHand < rightHand, "V_LV: This vault is healthy");
+        require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");
 
         uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(vault.baseCurrency);
 
         require(
             //ToDo: check on usedMargin?
             ILiquidator(liquidator).startAuction(
-                address(this),
-                life,
-                liquidationKeeper,
-                owner,
-                uint128(usedMargin),
-                vault.liqThres,
-                baseCurrencyIdentifier
+                address(this), life, liquidationKeeper, owner, uint128(usedMargin), baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );
@@ -429,7 +404,7 @@ contract VaultV2 {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    ) external payable onlyOwner {
+    ) external onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
@@ -438,15 +413,27 @@ contract VaultV2 {
             "V_D: Length mismatch"
         );
 
+        _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+    }
+
+    function _deposit(
+        address[] memory assetAddresses,
+        uint256[] memory assetIds,
+        uint256[] memory assetAmounts,
+        uint256[] memory assetTypes,
+        address from
+    ) internal {
+        //reverts in mainregistry if invalid input
         IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
+        uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
-                _depositERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
+                _depositERC20(from, assetAddresses[i], assetAmounts[i]);
             } else if (assetTypes[i] == 1) {
-                _depositERC721(msg.sender, assetAddresses[i], assetIds[i]);
+                _depositERC721(from, assetAddresses[i], assetIds[i]);
             } else if (assetTypes[i] == 2) {
-                _depositERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+                _depositERC1155(from, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
                 require(false, "V_D: Unknown asset type");
             }
@@ -486,7 +473,7 @@ contract VaultV2 {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    ) external payable onlyOwner {
+    ) external onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
@@ -495,26 +482,37 @@ contract VaultV2 {
             "V_W: Length mismatch"
         );
 
-        IRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //can't return false as it will revert in pricing module
+        _withdraw(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
 
+        uint256 usedMargin = getUsedMargin();
+        if (usedMargin != 0) {
+            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
+        }
+    }
+
+    function _withdraw(
+        address[] memory assetAddresses,
+        uint256[] memory assetIds,
+        uint256[] memory assetAmounts,
+        uint256[] memory assetTypes,
+        address to
+    ) internal {
+        IRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //reverts in mainregistry if invalid input
+
+        uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
-                _withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
+                _withdrawERC20(to, assetAddresses[i], assetAmounts[i]);
             } else if (assetTypes[i] == 1) {
-                _withdrawERC721(msg.sender, assetAddresses[i], assetIds[i]);
+                _withdrawERC721(to, assetAddresses[i], assetIds[i]);
             } else if (assetTypes[i] == 2) {
-                _withdrawERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+                _withdrawERC1155(to, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
                 require(false, "V_W: Unknown asset type");
             }
             unchecked {
                 ++i;
             }
-        }
-
-        uint256 usedMargin = getUsedMargin();
-        if (usedMargin != 0) {
-            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }
 
@@ -783,12 +781,40 @@ contract VaultV2 {
         }
     }
 
+    /*///////////////////////////////////////////////////////////////
+                    ASSET MANAGEMENT LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyOwner {
+        require(IMainRegistry(registry).isActionAllowlisted(actionHandler), "VL_VMA: Action is not allowlisted");
+
+        (actionAssetsData memory outgoing, actionAssetsData memory incoming,,) =
+            abi.decode(actionData, (actionAssetsData, actionAssetsData, address[], bytes[]));
+
+        // withdraw to actionHandler
+        _withdraw(outgoing.assets, outgoing.assetAmounts, outgoing.assetIds, outgoing.assetTypes, actionHandler);
+
+        // execute Action
+        incoming = IActionBase(actionHandler).executeAction(address(this), actionData);
+
+        // deposit from actionHandler into vault
+        _deposit(incoming.assets, incoming.assetAmounts, incoming.assetIds, incoming.assetTypes, actionHandler);
+
+        uint256 collValue = getCollateralValue();
+        uint256 usedMargin = getUsedMargin();
+        require(collValue > usedMargin, "UV2_SWAP: coll. value postAction too low");
+    }
+
     function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
         return this.onERC721Received.selector;
     }
 
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) public pure returns (bytes4) {
         return this.onERC1155Received.selector;
+    }
+
+    fallback() external {
+        revert();
     }
 
     function returnFive() external pure returns (uint256) {

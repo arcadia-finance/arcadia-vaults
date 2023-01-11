@@ -124,7 +124,7 @@ contract UniswapV2PricingModule is PricingModule {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collateralFactor, uint256 liquidationFactor)
     {
         // To calculate the liquidity value after arbitrage, what matters is the ratio of the price of token0 compared to the price of token1
         // Hence we need to use a trusted external price for an equal amount of tokens,
@@ -155,10 +155,10 @@ contract UniswapV2PricingModule is PricingModule {
         valueInUsd = FixedPointMathLib.mulDivDown(token0Amount, trustedUsdPriceToken0, FixedPointMathLib.WAD)
             + FixedPointMathLib.mulDivDown(token1Amount, trustedUsdPriceToken1, FixedPointMathLib.WAD);
 
-        collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
-        liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;
+        collateralFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liquidationFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationFactor;
 
-        return (valueInUsd, 0, collFactor, liqThreshold);
+        return (valueInUsd, 0, collateralFactor, liquidationFactor);
     }
 
     /**

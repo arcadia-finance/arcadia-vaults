@@ -45,7 +45,6 @@ contract Liquidator is Ownable {
     struct auctionInformation {
         uint128 openDebt;
         uint128 startBlock;
-        uint16 liqThres;
         uint8 baseCurrency;
         uint128 assetPaid;
         bool stopped;
@@ -121,7 +120,6 @@ contract Liquidator is Ownable {
      * @param liquidationKeeper the keeper who triggered the auction. Gets a reward!
      * @param originalOwner the original owner of this vault, at `life`.
      * @param openDebt the open debt taken by `originalOwner` at `life`.
-     * @param liqThres the liquidation threshold of the vault, in factor 100.
      * @param baseCurrency the baseCurrency in which the vault is denominated.
      * @return success auction has started -> true.
      */
@@ -131,7 +129,6 @@ contract Liquidator is Ownable {
         address liquidationKeeper,
         address originalOwner,
         uint128 openDebt,
-        uint16 liqThres,
         uint8 baseCurrency
     ) public elevated returns (bool success) {
         require(auctionInfo[vaultAddress][life].startBlock == 0, "Liquidation already ongoing");
@@ -142,7 +139,6 @@ contract Liquidator is Ownable {
         auctionInfo[vaultAddress][life].liquidationKeeper = liquidationKeeper;
         auctionInfo[vaultAddress][life].originalOwner = originalOwner;
         auctionInfo[vaultAddress][life].openDebt = openDebt;
-        auctionInfo[vaultAddress][life].liqThres = liqThres;
         auctionInfo[vaultAddress][life].baseCurrency = baseCurrency;
 
         return true;
@@ -168,9 +164,8 @@ contract Liquidator is Ownable {
             return (0, 0, false);
         }
 
-        uint256 startPrice = (auctionInfo[vaultAddress][life].openDebt * auctionInfo[vaultAddress][life].liqThres) / 100;
-        uint256 surplusPrice =
-            (auctionInfo[vaultAddress][life].openDebt * (auctionInfo[vaultAddress][life].liqThres - 100)) / 100;
+        uint256 startPrice = (auctionInfo[vaultAddress][life].openDebt * 150) / 100;
+        uint256 surplusPrice = (auctionInfo[vaultAddress][life].openDebt * (150 - 100)) / 100;
         uint256 priceDecrease = (surplusPrice * (block.number - auctionInfo[vaultAddress][life].startBlock))
             / (hourlyBlocks * breakevenTime);
 

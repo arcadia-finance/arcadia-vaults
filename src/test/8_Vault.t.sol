@@ -561,15 +561,13 @@ contract MarginRequirementsTest is vaultTests {
     ) public {
         // Given: Risk Factors for basecurrency are set
         vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
-        vm.assume(
-            liqThres <= RiskConstants.MAX_LIQUIDATION_THRESHOLD && liqThres >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
-        );
+        vm.assume(liqThres <= RiskConstants.MAX_LIQUIDATION_FACTOR && liqThres >= RiskConstants.MIN_LIQUIDATION_FACTOR);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
         riskVars_[0] = PricingModule.RiskVarInput({
             baseCurrency: uint8(Constants.DaiBaseCurrency),
             asset: address(eth),
             collateralFactor: collFac,
-            liquidationThreshold: liqThres
+            liquidationFactor: liqThres
         });
         vm.prank(creatorAddress);
         standardERC20PricingModule.setBatchRiskVariables(riskVars_);
@@ -607,15 +605,13 @@ contract MarginRequirementsTest is vaultTests {
     ) public {
         // Given: Risk Factors for basecurrency are set
         vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
-        vm.assume(
-            liqThres <= RiskConstants.MAX_LIQUIDATION_THRESHOLD && liqThres >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
-        );
+        vm.assume(liqThres <= RiskConstants.MAX_LIQUIDATION_FACTOR && liqThres >= RiskConstants.MIN_LIQUIDATION_FACTOR);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
         riskVars_[0] = PricingModule.RiskVarInput({
             baseCurrency: uint8(Constants.DaiBaseCurrency),
             asset: address(eth),
             collateralFactor: collFac,
-            liquidationThreshold: liqThres
+            liquidationFactor: liqThres
         });
         vm.prank(creatorAddress);
         standardERC20PricingModule.setBatchRiskVariables(riskVars_);
@@ -638,43 +634,6 @@ contract MarginRequirementsTest is vaultTests {
 
         // Then: The action is succesfull
         assertTrue(success);
-
-        // And: Liquidation Threshold is updated
-        (uint16 actualLiqThres,) = vault_.vault();
-        assertEq(liqThres, actualLiqThres);
-    }
-
-    function testRevert_syncLiquidationThreshold_NonOwner(address nonOwner) public {
-        vm.assume(nonOwner != vaultOwner);
-
-        vm.startPrank(nonOwner);
-        vm.expectRevert("V: You are not the owner");
-        vault_.syncLiquidationThreshold();
-        vm.stopPrank();
-    }
-
-    function testSuccess_syncLiquidationThreshold(uint8 depositAmount, uint8 liqThres) public {
-        vm.assume(depositAmount > 0);
-        depositEthInVault(depositAmount, vaultOwner);
-
-        vm.assume(
-            liqThres <= RiskConstants.MAX_LIQUIDATION_THRESHOLD && liqThres >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
-        );
-        PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
-        riskVars_[0] = PricingModule.RiskVarInput({
-            baseCurrency: uint8(Constants.DaiBaseCurrency),
-            asset: address(eth),
-            collateralFactor: RiskConstants.DEFAULT_COLLATERAL_FACTOR,
-            liquidationThreshold: liqThres
-        });
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.setBatchRiskVariables(riskVars_);
-
-        vm.prank(vaultOwner);
-        vault_.syncLiquidationThreshold();
-
-        (uint16 actualLiqThres,) = vault_.vault();
-        assertEq(liqThres, actualLiqThres);
     }
 
     function testSuccess_getVaultValue(uint8 depositAmount) public {
@@ -699,6 +658,18 @@ contract MarginRequirementsTest is vaultTests {
         uint256 gasAfter = gasleft();
         emit log_int(int256(gasStart - gasAfter));
         assertLt(gasStart - gasAfter, 200000);
+    }
+
+    function testSuccess_getLiquidationValue(uint8 depositAmount) public {
+        depositEthInVault(depositAmount, vaultOwner);
+
+        uint16 liqFactor_ = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
+        uint256 expectedValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
+            * depositAmount / 10 ** (18 - Constants.daiDecimals) * liqFactor_ / 100;
+
+        uint256 actualValue = vault_.getLiquidationValue();
+
+        assertEq(expectedValue, actualValue);
     }
 
     function testSuccess_getCollateralValue(uint8 depositAmount) public {

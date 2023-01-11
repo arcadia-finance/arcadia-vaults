@@ -6,8 +6,8 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/IERC1155.sol";
 
 contract ActionMultiCall {
-
     event log(uint256 value);
+
     function executeAction(address, bytes calldata actionData) external returns (actionAssetsData memory) {
         emit log(1);
         (, actionAssetsData memory incoming, address[] memory to, bytes[] memory data) =
