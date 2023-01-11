@@ -30,4 +30,6 @@ interface IMainRegistry {
     function isBaseCurrency(address) external view returns (bool);
 
     function baseCurrencies(uint256) external view returns (address);
+
+    function isActionAllowlisted(address) external view returns (bool);
 }
