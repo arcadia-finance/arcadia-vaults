@@ -123,9 +123,6 @@ contract Liquidator is Ownable {
      * @param baseCurrency the baseCurrency in which the vault is denominated.
      * @param trustedCreditor The account or contract that is owed the debt.
      * @return success auction has started -> true.
-     * @dev Creditor is a trusted contract set in the Vault.
-     * @dev After an auction is successfully started, interest acrual should stop.
-     * This must be implemented by trustedCreditor
      */
     function startAuction(
         uint256 life,
@@ -144,10 +141,6 @@ contract Liquidator is Ownable {
         auctionInfo[msg.sender][life].baseCurrency = baseCurrency;
         auctionInfo[msg.sender][life].trustedCreditor = trustedCreditor;
         success = true;
-
-        //Function called on the contract of the creditor to notify that a vault (msg.sender)
-        //is being liquidated and trigger any necessary logic on the trustedCreditor
-        ILendingPool(trustedCreditor).liquidateVault(msg.sender, openDebt);
     }
 
     function calcLiquidationInitiatorReward(uint128 openDebt) public view returns (uint256 keeperReward) {

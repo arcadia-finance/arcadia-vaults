@@ -391,40 +391,40 @@ contract BaseCurrencyLogicTest is vaultTests {
 contract MarginAccountSettingsTest is vaultTests {
     using stdStorage for StdStorage;
 
-    TrustedCreditorMock trustedProtocol;
+    TrustedCreditorMock trustedCreditor;
 
     function setUp() public override {
         super.setUp();
         deployFactory();
     }
 
-    function testRevert_openTrustedMarginAccount_NonOwner(address unprivilegedAddress_, address trustedProtocol_)
+    function testRevert_openTrustedMarginAccount_NonOwner(address unprivilegedAddress_, address trustedCreditor_)
         public
     {
         vm.assume(unprivilegedAddress_ != vaultOwner);
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("V: You are not the owner");
-        vault_.openTrustedMarginAccount(trustedProtocol_);
+        vault_.openTrustedMarginAccount(trustedCreditor_);
         vm.stopPrank();
     }
 
-    function testRevert_openTrustedMarginAccount_AlreadySet(address trustedProtocol_) public {
+    function testRevert_openTrustedMarginAccount_AlreadySet(address trustedCreditor_) public {
         vm.prank(vaultOwner);
         vault_.openTrustedMarginAccount(address(pool));
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_OMA: ALREADY SET");
-        vault_.openTrustedMarginAccount(trustedProtocol_);
+        vault_.openTrustedMarginAccount(trustedCreditor_);
         vm.stopPrank();
     }
 
     function testRevert_openTrustedMarginAccount_OpeningMarginAccountFails() public {
-        trustedProtocol = new TrustedCreditorMock();
+        trustedCreditor = new TrustedCreditorMock();
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_OMA: OPENING ACCOUNT REVERTED");
-        vault_.openTrustedMarginAccount(address(trustedProtocol));
+        vault_.openTrustedMarginAccount(address(trustedCreditor));
         vm.stopPrank();
     }
 
@@ -435,7 +435,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vault_.openTrustedMarginAccount(address(pool));
 
         assertEq(vault_.liquidator(), address(liquidator));
-        assertEq(vault_.trustedProtocol(), address(pool));
+        assertEq(vault_.trustedCreditor(), address(pool));
         assertEq(vault_.baseCurrency(), address(dai));
         assertTrue(vault_.isTrustedCreditorSet());
         assertTrue(vault_.allowed(address(pool)));
@@ -450,7 +450,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vault_.openTrustedMarginAccount(address(pool));
 
         assertEq(vault_.liquidator(), address(liquidator));
-        assertEq(vault_.trustedProtocol(), address(pool));
+        assertEq(vault_.trustedCreditor(), address(pool));
         assertEq(vault_.baseCurrency(), address(dai));
         assertTrue(vault_.isTrustedCreditorSet());
         assertTrue(vault_.allowed(address(pool)));
@@ -769,10 +769,10 @@ contract LiquidationLogicTest is vaultTests {
         openMarginAccount();
     }
 
-    function testSuccess_liquidate_NewOwnerIsLiquidator(address liquidationKeeper) public {
+    function testSuccess_liquidate_NewOwnerIsLiquidator(address liquidationInitiator) public {
         vm.assume(
-            liquidationKeeper != address(this) && liquidationKeeper != address(0)
-                && liquidationKeeper != address(factory)
+            liquidationInitiator != address(this) && liquidationInitiator != address(0)
+                && liquidationInitiator != address(factory)
         );
 
         uint256 slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
@@ -788,20 +788,20 @@ contract LiquidationLogicTest is vaultTests {
         loc = bytes32(slot);
         vm.store(address(debt), loc, addDebt);
 
-        vm.startPrank(liquidationKeeper);
+        vm.startPrank(liquidationInitiator);
         factory.liquidate(address(vault_));
         vm.stopPrank();
 
         assertEq(vault_.owner(), address(liquidator));
     }
 
-    function testRevert_liquidateVault_NonFactory(address liquidationKeeper) public {
-        vm.assume(liquidationKeeper != address(factory));
+    function testRevert_liquidateVault_NonFactory(address liquidationInitiator) public {
+        vm.assume(liquidationInitiator != address(factory));
 
         assertEq(vault_.owner(), vaultOwner);
 
         vm.expectRevert("V: You are not the factory");
-        vault_.liquidateVault(liquidationKeeper);
+        vault_.liquidateVault(liquidationInitiator);
 
         assertEq(vault_.owner(), vaultOwner);
     }

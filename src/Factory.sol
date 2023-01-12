@@ -285,7 +285,7 @@ contract Factory is ERC721, Ownable {
      * @notice Internal function used to start the liquidation of a vault.
      * @dev
      * @param vault Vault that needs to get liquidated.
-     * @param sender The msg.sender of the liquidator. Also the 'keeper'
+     * @param sender The msg.sender of the liquidation initiator.
      */
     function _liquidate(address vault, address sender) internal {
         (bool success, address liquidator) = IVault(vault).liquidateVault(sender);
