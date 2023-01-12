@@ -8,7 +8,7 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {TrustedProtocolMock} from "../mockups/TrustedProtocolMock.sol";
+import {TrustedCreditorMock} from "../mockups/TrustedCreditorMock.sol";
 import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
@@ -391,7 +391,7 @@ contract BaseCurrencyLogicTest is vaultTests {
 contract MarginAccountSettingsTest is vaultTests {
     using stdStorage for StdStorage;
 
-    TrustedProtocolMock trustedProtocol;
+    TrustedCreditorMock trustedProtocol;
 
     function setUp() public override {
         super.setUp();
@@ -420,7 +420,7 @@ contract MarginAccountSettingsTest is vaultTests {
     }
 
     function testRevert_openTrustedMarginAccount_OpeningMarginAccountFails() public {
-        trustedProtocol = new TrustedProtocolMock();
+        trustedProtocol = new TrustedCreditorMock();
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_OMA: OPENING ACCOUNT REVERTED");
@@ -437,7 +437,7 @@ contract MarginAccountSettingsTest is vaultTests {
         assertEq(vault_.liquidator(), address(liquidator));
         assertEq(vault_.trustedProtocol(), address(pool));
         assertEq(vault_.baseCurrency(), address(dai));
-        assertTrue(vault_.isTrustedProtocolSet());
+        assertTrue(vault_.isTrustedCreditorSet());
         assertTrue(vault_.allowed(address(pool)));
     }
 
@@ -452,7 +452,7 @@ contract MarginAccountSettingsTest is vaultTests {
         assertEq(vault_.liquidator(), address(liquidator));
         assertEq(vault_.trustedProtocol(), address(pool));
         assertEq(vault_.baseCurrency(), address(dai));
-        assertTrue(vault_.isTrustedProtocolSet());
+        assertTrue(vault_.isTrustedCreditorSet());
         assertTrue(vault_.allowed(address(pool)));
     }
 
@@ -494,7 +494,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.prank(vaultOwner);
         vault_.closeTrustedMarginAccount();
 
-        assertTrue(!vault_.isTrustedProtocolSet());
+        assertTrue(!vault_.isTrustedCreditorSet());
         assertTrue(!vault_.allowed(address(pool)));
     }
 }

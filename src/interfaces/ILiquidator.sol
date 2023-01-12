@@ -8,11 +8,11 @@ pragma solidity >=0.4.22 <0.9.0;
 
 interface ILiquidator {
     function startAuction(
-        address vaultAddress,
         uint256 life,
         address liquidationKeeper,
         address originalOwner,
         uint128 openDebt,
-        uint8 baseCurrency
+        address baseCurrency,
+        address trustedCreditor
     ) external returns (bool);
 }

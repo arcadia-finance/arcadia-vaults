@@ -15,7 +15,7 @@ import "./interfaces/ILiquidator.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILendingPool.sol";
-import "./interfaces/ITrustedProtocol.sol";
+import "./interfaces/ITrustedCreditor.sol";
 import "./interfaces/IActionBase.sol";
 import {actionAssetsData} from "./actions/utils/ActionData.sol";
 
@@ -40,7 +40,7 @@ contract Vault {
      */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
-    bool public isTrustedProtocolSet;
+    bool public isTrustedCreditorSet;
 
     uint16 public vaultVersion;
     uint256 public life;
@@ -199,11 +199,11 @@ contract Vault {
      * The protocol has significant authorisation: use margin (-> trigger liquidation)
      */
     function openTrustedMarginAccount(address protocol) public onlyOwner {
-        require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
+        require(!isTrustedCreditorSet, "V_OMA: ALREADY SET");
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
         (bool success, address baseCurrency_, address liquidator_) =
-            ITrustedProtocol(protocol).openMarginAccount(vaultVersion);
+            ITrustedCreditor(protocol).openMarginAccount(vaultVersion);
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
         liquidator = liquidator_;
@@ -211,7 +211,7 @@ contract Vault {
         if (baseCurrency != baseCurrency_) {
             _setBaseCurrency(baseCurrency_);
         }
-        isTrustedProtocolSet = true;
+        isTrustedCreditorSet = true;
         allowed[protocol] = true;
     }
 
@@ -221,10 +221,10 @@ contract Vault {
      * @dev Currently only one trusted protocol can be set.
      */
     function closeTrustedMarginAccount() public onlyOwner {
-        require(isTrustedProtocolSet, "V_CMA: NOT SET");
-        require(ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
+        require(isTrustedCreditorSet, "V_CMA: NOT SET");
+        require(ITrustedCreditor(trustedProtocol).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
 
-        isTrustedProtocolSet = false;
+        isTrustedCreditorSet = false;
         allowed[trustedProtocol] = false;
     }
 
@@ -242,8 +242,8 @@ contract Vault {
      */
     function increaseMarginPosition(address baseCurrency_, uint256 amount)
         public
-        onlyAuthorized
         view
+        onlyAuthorized
         returns (bool success)
     {
         if (baseCurrency_ != baseCurrency) {
@@ -282,8 +282,7 @@ contract Vault {
     function getCollateralValue() public view returns (uint256 collateralValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        collateralValue =
-            IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        collateralValue = IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -300,8 +299,7 @@ contract Vault {
     function getLiquidationValue() public view returns (uint256 liquidationValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        liquidationValue =
-            IRegistry(registry).getLiquidationValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        liquidationValue = IRegistry(registry).getLiquidationValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -312,7 +310,7 @@ contract Vault {
      * The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
      */
     function getUsedMargin() public view returns (uint256 usedMargin) {
-        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this));
+        usedMargin = ITrustedCreditor(trustedProtocol).getOpenPosition(address(this));
     }
 
     /**
@@ -349,12 +347,9 @@ contract Vault {
 
         require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");
 
-        uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(baseCurrency);
-
         require(
-            //ToDo: check on usedMargin?
             ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, uint128(usedMargin), baseCurrencyIdentifier
+                life, liquidationKeeper, owner, uint128(usedMargin), baseCurrency, trustedProtocol
             ),
             "V_LV: Failed to start auction!"
         );
