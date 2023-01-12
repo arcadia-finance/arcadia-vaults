@@ -814,17 +814,17 @@ contract Vault {
     function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyOwner {
         require(IMainRegistry(registry).isActionAllowlisted(actionHandler), "VL_VMA: Action is not allowlisted");
 
-        (actionAssetsData memory outgoing, actionAssetsData memory incoming,,) =
+        (actionAssetsData memory outgoing,,,) =
             abi.decode(actionData, (actionAssetsData, actionAssetsData, address[], bytes[]));
 
         // withdraw to actionHandler
-        _withdraw(outgoing.assets, outgoing.assetAmounts, outgoing.assetIds, outgoing.assetTypes, actionHandler);
+        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
 
         // execute Action
-        incoming = IActionBase(actionHandler).executeAction(address(this), actionData);
+        actionAssetsData memory incoming = IActionBase(actionHandler).executeAction(address(this), actionData);
 
         // deposit from actionHandler into vault
-        _deposit(incoming.assets, incoming.assetAmounts, incoming.assetIds, incoming.assetTypes, actionHandler);
+        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);
 
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();

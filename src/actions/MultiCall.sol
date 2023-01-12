@@ -1,4 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+/**
+ * Created by Arcadia Finance
+ * https://www.arcadia.finance
+ *
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 pragma solidity >0.8.13;
 
 import "../actions/utils/ActionData.sol";
@@ -7,12 +12,9 @@ import "../interfaces/IERC1155.sol";
 
 contract ActionMultiCall {
 
-    event log(uint256 value);
     function executeAction(address, bytes calldata actionData) external returns (actionAssetsData memory) {
-        emit log(1);
         (, actionAssetsData memory incoming, address[] memory to, bytes[] memory data) =
             abi.decode(actionData, (actionAssetsData, actionAssetsData, address[], bytes[]));
-        emit log(2);
 
         uint256 callLength = to.length;
 

@@ -43,6 +43,8 @@ contract MainRegistry is Ownable {
     mapping(address => address) public assetToPricingModule;
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
 
+    mapping(address => bool) public isActionAllowlisted;
+
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
         uint64 baseCurrencyUnitCorrection;
@@ -503,5 +505,13 @@ contract MainRegistry is Ownable {
 
         (collateralValue, liquidationThreshold) =
             RiskModule.calculateCollateralValueAndLiquidationThreshold(valuesAndRiskVarPerAsset);
+    }
+
+    /* ///////////////////////////////////////////////////////////////
+                    ACTION ALLOWLIST SETTERS
+    /////////////////////////////////////////////////////////////// */
+    function setAllowedAction(address action, bool allowed) public onlyOwner {
+        isActionAllowlisted[action] = allowed;
+
     }
 }
