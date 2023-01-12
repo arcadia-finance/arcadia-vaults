@@ -24,7 +24,7 @@ contract VaultV2Test is DeployArcadiaVaults {
     DebtToken debt;
 
     struct Checks {
-        bool isTrustedProtocolSet;
+        bool isTrustedCreditorSet;
         uint16 vaultVersion;
         uint256 life;
         address baseCurrency;
@@ -319,7 +319,7 @@ contract VaultV2Test is DeployArcadiaVaults {
     function createCompareStruct() public view returns (Checks memory) {
         Checks memory checks;
 
-        checks.isTrustedProtocolSet = proxy.isTrustedProtocolSet();
+        checks.isTrustedCreditorSet = proxy.isTrustedCreditorSet();
         checks.baseCurrency = proxy.baseCurrency();
         checks.life = proxy.life();
         checks.owner = proxy.owner();

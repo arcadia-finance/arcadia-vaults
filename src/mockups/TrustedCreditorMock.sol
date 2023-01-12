@@ -6,10 +6,12 @@
  */
 pragma solidity ^0.8.13;
 
-import {TrustedProtocol} from "../../lib/arcadia-lending/src/TrustedProtocol.sol";
+import {TrustedCreditor} from "../../lib/arcadia-lending/src/TrustedCreditor.sol";
 
-contract TrustedProtocolMock is TrustedProtocol {
-    constructor() TrustedProtocol() {}
+contract TrustedCreditorMock is TrustedCreditor {
+    constructor() TrustedCreditor() {}
+
+    function liquidateVault(address, uint256) public override {}
 
     function openMarginAccount(uint256)
         external
