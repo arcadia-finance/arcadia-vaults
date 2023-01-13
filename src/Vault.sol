@@ -343,7 +343,11 @@ contract Vault {
      * @dev After an auction is successfully started, interest acrual should stop.
      * This must be implemented by trustedCreditor
      */
-    function liquidateVault(address liquidationInitiator) public onlyFactory returns (bool success, address liquidator_) {
+    function liquidateVault(address liquidationInitiator)
+        public
+        onlyFactory
+        returns (bool success, address liquidator_)
+    {
         uint256 usedMargin = getUsedMargin();
 
         require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");

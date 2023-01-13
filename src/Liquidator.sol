@@ -171,8 +171,8 @@ contract Liquidator is Ownable {
 
         uint256 startPrice = (auctionInfo[vaultAddress].openDebt * 150) / 100;
         uint256 surplusPrice = (auctionInfo[vaultAddress].openDebt * (150 - 100)) / 100;
-        uint256 priceDecrease = (surplusPrice * (block.number - auctionInfo[vaultAddress].startBlock))
-            / (hourlyBlocks * breakevenTime);
+        uint256 priceDecrease =
+            (surplusPrice * (block.number - auctionInfo[vaultAddress].startBlock)) / (hourlyBlocks * breakevenTime);
 
         totalPrice;
         if (priceDecrease > startPrice) {
