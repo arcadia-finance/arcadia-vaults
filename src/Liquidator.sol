@@ -28,8 +28,10 @@ contract Liquidator is Ownable {
     address public reserveFund;
     address public protocolTreasury;
 
-    mapping(address => mapping(uint256 => auctionInformation)) public auctionInfo;
+    mapping(address => auctionInformation) public auctionInfo;
     mapping(address => mapping(uint256 => uint256)) public claimableBitmap;
+
+    mapping(address => mapping(address => uint256)) public openClaims;
 
     claimRatios public claimRatio;
 
@@ -48,7 +50,6 @@ contract Liquidator is Ownable {
         uint128 assetPaid;
         bool stopped;
         address baseCurrency;
-        address liquidationInitiator;
         address originalOwner;
         address trustedCreditor;
     }
@@ -116,7 +117,6 @@ contract Liquidator is Ownable {
 
     /**
      * @notice Starts an auction of a vault. Called by the vault itself.
-     * @param life the life of the vault represents the amount of times a vault has been liquidated.
      * @param liquidationInitiator the keeper who triggered the auction. Gets a reward!
      * @param originalOwner the original owner of this vault, at `life`.
      * @param openDebt the open debt taken by `originalOwner` at `life`.
@@ -125,26 +125,28 @@ contract Liquidator is Ownable {
      * @return success auction has started -> true.
      */
     function startAuction(
-        uint256 life,
         address liquidationInitiator,
         address originalOwner,
         uint128 openDebt,
         address baseCurrency,
         address trustedCreditor
     ) public elevated returns (bool success) {
-        require(auctionInfo[msg.sender][life].startBlock == 0, "Liquidation already ongoing");
+        require(auctionInfo[msg.sender].startBlock == 0, "Liquidation already ongoing");
 
-        auctionInfo[msg.sender][life].startBlock = uint128(block.number);
-        auctionInfo[msg.sender][life].liquidationInitiator = liquidationInitiator;
-        auctionInfo[msg.sender][life].originalOwner = originalOwner;
-        auctionInfo[msg.sender][life].openDebt = openDebt;
-        auctionInfo[msg.sender][life].baseCurrency = baseCurrency;
-        auctionInfo[msg.sender][life].trustedCreditor = trustedCreditor;
+        auctionInfo[msg.sender].startBlock = uint128(block.number);
+        auctionInfo[msg.sender].originalOwner = originalOwner;
+        auctionInfo[msg.sender].openDebt = openDebt;
+        auctionInfo[msg.sender].baseCurrency = baseCurrency;
+        auctionInfo[msg.sender].trustedCreditor = trustedCreditor;
+
+        openClaims[liquidationInitiator][baseCurrency] += calcLiquidationInitiatorReward(openDebt);
+
         success = true;
     }
 
     function calcLiquidationInitiatorReward(uint128 openDebt) public view returns (uint256 keeperReward) {
         //Calculate liquidationInitiator as the minimum between a percentage of a position capped by a certain amount
+        //ToDo: How are we going to cap the max?
         keeperReward = openDebt * claimRatio.liquidationInitiator / 100;
     }
 
@@ -152,25 +154,24 @@ contract Liquidator is Ownable {
      * @notice Function to check what the current price of the vault being auctioned of is.
      * @dev Returns whether the vault is on sale or not. Always check the forSale bool!
      * @param vaultAddress the vaultAddress.
-     * @param life the life of the vault for which the price has to be fetched.
      * @return totalPrice the total price for which the vault can be purchased.
      * @return baseCurrency the baseCurrency in which the vault (and totalPrice) is denominaetd.
      * @return forSale returns false when the vault is not for sale.
      */
-    function getPriceOfVault(address vaultAddress, uint256 life)
+    function getPriceOfVault(address vaultAddress)
         public
         view
         returns (uint256 totalPrice, address baseCurrency, bool forSale)
     {
-        forSale = !(auctionInfo[vaultAddress][life].stopped) && auctionInfo[vaultAddress][life].startBlock > 0;
+        forSale = !(auctionInfo[vaultAddress].stopped) && auctionInfo[vaultAddress].startBlock > 0;
 
         if (!forSale) {
             return (0, address(0), false);
         }
 
-        uint256 startPrice = (auctionInfo[vaultAddress][life].openDebt * 150) / 100;
-        uint256 surplusPrice = (auctionInfo[vaultAddress][life].openDebt * (150 - 100)) / 100;
-        uint256 priceDecrease = (surplusPrice * (block.number - auctionInfo[vaultAddress][life].startBlock))
+        uint256 startPrice = (auctionInfo[vaultAddress].openDebt * 150) / 100;
+        uint256 surplusPrice = (auctionInfo[vaultAddress].openDebt * (150 - 100)) / 100;
+        uint256 priceDecrease = (surplusPrice * (block.number - auctionInfo[vaultAddress].startBlock))
             / (hourlyBlocks * breakevenTime);
 
         totalPrice;
@@ -181,26 +182,25 @@ contract Liquidator is Ownable {
             totalPrice = startPrice - priceDecrease;
         }
 
-        return (totalPrice, auctionInfo[vaultAddress][life].baseCurrency, forSale);
+        return (totalPrice, auctionInfo[vaultAddress].baseCurrency, forSale);
     }
 
     /**
      * @notice Function a user calls to buy the vault during the auction process. This ends the auction process
      * @dev Ensure the vault is for sale before calling this function.
      * @param vaultAddress the vaultAddress of the vault the user want to buy.
-     * @param life the life of the vault for which the price has to be fetched.
      */
-    function buyVault(address vaultAddress, uint256 life) public {
-        (uint256 priceOfVault,, bool forSale) = getPriceOfVault(vaultAddress, life);
+    function buyVault(address vaultAddress) public {
+        (uint256 priceOfVault,, bool forSale) = getPriceOfVault(vaultAddress);
 
         require(forSale, "LQ_BV: Not for sale");
 
-        address trustedCreditor = auctionInfo[vaultAddress][life].trustedCreditor;
-        address asset = auctionInfo[vaultAddress][life].baseCurrency;
+        address trustedCreditor = auctionInfo[vaultAddress].trustedCreditor;
+        address asset = auctionInfo[vaultAddress].baseCurrency;
 
         require(IERC20(asset).transferFrom(msg.sender, address(this), priceOfVault), "LQ_BV: transfer failed");
 
-        uint256 openDebt = auctionInfo[vaultAddress][life].openDebt;
+        uint256 openDebt = auctionInfo[vaultAddress].openDebt;
         claimRatios memory ratios = claimRatio;
         uint256 keeperReward = openDebt * ratios.liquidationInitiator / 100;
 
@@ -219,47 +219,22 @@ contract Liquidator is Ownable {
             //protocolReward = surplus > protocolReward ? protocolReward  : surplus;
         }
 
-        auctionInfo[vaultAddress][life].assetPaid = uint128(priceOfVault);
-        auctionInfo[vaultAddress][life].stopped = true;
+        auctionInfo[vaultAddress].assetPaid = uint128(priceOfVault);
+        auctionInfo[vaultAddress].stopped = true;
+        //ToDo: set all auction information to 0?
 
         IFactory(factory).safeTransferFrom(address(this), msg.sender, IFactory(factory).vaultIndex(vaultAddress));
-    }
-
-    /**
-     * @notice Function to buy only a certain asset of a vault in the liquidation process
-     * @param assetAddresses the vaultAddress
-     * @param assetIds the vaultAddress
-     * @param assetAmounts the vaultAddress
-     * //todo
-     */
-    function buyPart(address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
-        public
-    {}
-
-    /*///////////////////////////////////////////////////////////////
-                        VAULT VALUE LOGIC
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Function to check what the value of the items in the vault is.
-     * @dev Only used for partial liquidations.
-     * @param assetAddresses array of asset addresses
-     * @param assetIds array of assets ids. For assets without Id's (erc20's), Id can be set to 0.
-     * @param assetAmounts amounts of each asset. For assets without amounts (erc721's), amount can be set to 0.
-     * @return totalValue the total value of all assets.
-     */
-    function getValueOfAssets(
-        address[] memory assetAddresses,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        uint8 baseCurrencyOfDebt
-    ) public view returns (uint256 totalValue) {
-        totalValue = IMainRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrencyOfDebt);
     }
 
     /*///////////////////////////////////////////////////////////////
                 MANAGE AND PAY OUT AUCTION PROCEEDS
     ///////////////////////////////////////////////////////////////*/
+
+    function claim(address baseCurrency, uint256 amount) public {
+        //Will revert if msg.sender want to claim more than their open claims
+        openClaims[msg.sender][baseCurrency] -= amount;
+        IERC20(baseCurrency).transfer(msg.sender, amount);
+    }
 
     /**
      * @notice Function a a user can call to check who is eligbile to claim what from an auction vault.
@@ -287,7 +262,6 @@ contract Liquidator is Ownable {
         uint256 protocolReward = (auction.openDebt * ratios.protocol) / 100;
 
         claimables[0] = claimableBitmapMem & (1 << (4 * life + 0)) == 0 ? keeperReward : 0;
-        claimableBy[0] = auction.liquidationInitiator;
 
         if (auction.assetPaid < auction.openDebt || auction.assetPaid <= keeperReward + auction.openDebt) {
             return (claimables, claimableBy);
