@@ -140,11 +140,9 @@ contract EndToEndTest is DeployArcadiaVaults {
         assertEq(dai.balanceOf(vaultOwner), 0);
     }
 
-    function testSuccess_borrow_IncreaseOfDebtPerBlock(
-        uint128 amountEth,
-        uint128 amountCredit,
-        uint24 deltaTimestamp
-    ) public {
+    function testSuccess_borrow_IncreaseOfDebtPerBlock(uint128 amountEth, uint128 amountCredit, uint24 deltaTimestamp)
+        public
+    {
         vm.assume(amountEth > 0);
         uint256 _yearlyInterestRate = pool.interestRate();
         uint128 base = 1e18 + 5e16; //1 + r expressed as 18 decimals fixed point number
@@ -171,8 +169,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         uint256 debtAtStart = proxy.getUsedMargin();
 
-        uint start_timestamp = block.timestamp;
-        vm.warp(start_timestamp + deltaTimestamp);
+        vm.warp(block.timestamp + deltaTimestamp);
 
         uint256 actualDebt = proxy.getUsedMargin();
 
@@ -181,8 +178,7 @@ contract EndToEndTest is DeployArcadiaVaults {
                 debtAtStart
                     * (
                         LogExpMath.pow(
-                            _yearlyInterestRate + 10 ** 18,
-                            (uint256(deltaTimestamp) * 10 ** 18) / pool.YEARLY_SECONDS()
+                            _yearlyInterestRate + 10 ** 18, (uint256(deltaTimestamp) * 10 ** 18) / pool.YEARLY_SECONDS()
                         )
                     )
             ) / 10 ** 18
