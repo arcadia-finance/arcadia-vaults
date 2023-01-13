@@ -323,6 +323,8 @@ contract Vault {
      * The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
      */
     function getUsedMargin() public view returns (uint256 usedMargin) {
+        if (!isTrustedProtocolSet) return 0;
+        
         usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this));
     }
 
