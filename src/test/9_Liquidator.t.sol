@@ -132,8 +132,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.expectRevert("V_LV: This vault is healthy");
         factory.liquidate(address(proxy));
         vm.stopPrank();
-
-        assertEq(proxy.life(), 0);
     }
 
     function testSuccess_liquidate_StartAuction(uint128 amountEth, uint256 newPrice) public {
@@ -144,7 +142,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
         depositERC20InVault(eth, amountEth, vaultOwner);
-        assertEq(proxy.life(), 0);
 
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
@@ -160,7 +157,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
         factory.liquidate(address(proxy));
         vm.stopPrank();
 
-        assertEq(proxy.life(), 1);
+        //ToDo: check on variables
+        //assertEq(proxy.life(), 1);
     }
 
     function testSuccess_liquidate_ShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public {
@@ -186,7 +184,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
         uint16 liqThres = 150;
 
-        (uint256 vaultPrice,, bool forSale) = liquidator.getPriceOfVault(address(proxy), 0);
+        (uint256 vaultPrice,, bool forSale) = liquidator.getPriceOfVault(address(proxy));
 
         uint256 expectedPrice = (amountCredit * liqThres) / 100;
         assertTrue(forSale);
@@ -217,12 +215,12 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt,,,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (uint128 openDebt,,,,,,) = liquidator.auctionInfo(address(proxy));
         uint16 liqThres = 150;
-        (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
+        (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy));
 
         vm.roll(block.number + blocksToRoll);
-        (uint256 vaultPriceAfter,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
+        (uint256 vaultPriceAfter,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy));
 
         uint256 expectedPrice = ((openDebt * liqThres) / 100)
             - (
@@ -260,11 +258,11 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy), 0);
+        (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy));
         giveAsset(auctionBuyer, priceOfVault);
 
         vm.prank(auctionBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
 
         assertEq(proxy.owner(), auctionBuyer); //todo: check erc721 owner
     }
@@ -296,11 +294,11 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy), 0);
+        (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy));
         giveAsset(auctionBuyer, priceOfVault);
 
         vm.prank(auctionBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
 
         assertEq(proxy.owner(), auctionBuyer);
 
@@ -353,10 +351,10 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     //     giveAsset(address(2000), remainingCred * 2);
     //     giveAsset(address(1111), remainingCred * 2);
-    //     (uint256 price,,) = liquidator.getPriceOfVault(address(proxy), 0);
+    //     (uint256 price,,) = liquidator.getPriceOfVault(address(proxy));
     //     vm.startPrank(address(2000));
     //     dai.approve(address(liquidator), type(uint256).max);
-    //     liquidator.buyVault(address(proxy), 0);
+    //     liquidator.buyVault(address(proxy));
     //     vm.stopPrank();
 
     //     address[] memory vaultAddresses = new address[](1);
@@ -521,10 +519,10 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     //     giveAsset(address(2000), remainingCred * 10);
     //     giveAsset(address(1111), remainingCred * 10);
-    //     (uint256 price,,) = liquidator.getPriceOfVault(address(proxy), 0);
+    //     (uint256 price,,) = liquidator.getPriceOfVault(address(proxy));
     //     vm.startPrank(address(2000));
     //     dai.approve(address(liquidator), type(uint256).max);
-    //     liquidator.buyVault(address(proxy), 0);
+    //     liquidator.buyVault(address(proxy));
     //     liquidator.buyVault(address(proxy2), 0);
     //     vm.stopPrank();
 
@@ -701,12 +699,12 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt,,,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (uint128 openDebt,,,,,,) = liquidator.auctionInfo(address(proxy));
         uint16 liqThres = 150;
-        (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
+        (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy));
 
         vm.roll(block.number + blocksToRoll);
-        (uint256 vaultPriceAfter,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy), 0);
+        (uint256 vaultPriceAfter,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy));
 
         uint256 expectedPrice = ((openDebt * liqThres) / 100)
             - ((blocksToRoll * ((openDebt * (liqThres - 100)) / 100)) / (liquidator.hourlyBlocks() * breakevenTime));
@@ -756,13 +754,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
         liquidator.setProtocolTreasury(address(1000));
         liquidator.setReserveFund(address(1111));
         vm.stopPrank();
-    }
-
-    function setLife(Vault vaultAddr, uint256 newLife) public {
-        uint256 slot = stdstore.target(address(vaultAddr)).sig(vaultAddr.life.selector).find();
-        bytes32 loc = bytes32(slot);
-        bytes32 newLife_b = bytes32(abi.encode(newLife));
-        vm.store(address(vaultAddr), loc, newLife_b);
     }
 
     function giveAsset(address addr, uint256 amount) public {

@@ -43,14 +43,12 @@ contract Vault {
     bool public isTrustedCreditorSet;
 
     uint16 public vaultVersion;
-    uint256 public life;
 
-    address public baseCurrency;
-
-    address public owner;
     address public liquidator;
+    address public owner;
     address public registry;
     address public trustedCreditor;
+    address public baseCurrency;
 
     address[] public erc20Stored;
     address[] public erc721Stored;
@@ -352,15 +350,10 @@ contract Vault {
 
         require(
             ILiquidator(liquidator).startAuction(
-                life, liquidationInitiator, owner, uint128(usedMargin), baseCurrency, trustedCreditor
+                liquidationInitiator, owner, uint128(usedMargin), baseCurrency, trustedCreditor
             ),
             "V_LV: Failed to start auction!"
         );
-
-        //gas: good luck overflowing this
-        unchecked {
-            ++life;
-        }
 
         //Hook implemented on the trusted creditor contract to notify that the vault
         //is being liquidated and trigger any necessary logic on the trustedCreditor.

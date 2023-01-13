@@ -26,7 +26,6 @@ contract VaultV2Test is DeployArcadiaVaults {
     struct Checks {
         bool isTrustedCreditorSet;
         uint16 vaultVersion;
-        uint256 life;
         address baseCurrency;
         address owner;
         address liquidator;
@@ -321,7 +320,6 @@ contract VaultV2Test is DeployArcadiaVaults {
 
         checks.isTrustedCreditorSet = proxy.isTrustedCreditorSet();
         checks.baseCurrency = proxy.baseCurrency();
-        checks.life = proxy.life();
         checks.owner = proxy.owner();
         checks.liquidator = proxy.liquidator();
         checks.registry = proxy.registry();

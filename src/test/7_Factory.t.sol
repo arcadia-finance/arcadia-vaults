@@ -88,8 +88,6 @@ contract FactoryTest is DeployArcadiaVaults {
 
         address actualDeployed = factory.createVault(salt, 0);
         assertEq(amountBefore + 1, factory.allVaultsLength());
-        assertEq(Vault(actualDeployed).life(), 0);
-
         assertEq(Vault(actualDeployed).owner(), address(this));
     }
 
@@ -99,8 +97,6 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(sender != address(0));
         address actualDeployed = factory.createVault(salt, 0);
         assertEq(amountBefore + 1, factory.allVaultsLength());
-        assertEq(Vault(actualDeployed).life(), 0);
-
         assertEq(Vault(actualDeployed).owner(), address(sender));
     }
 

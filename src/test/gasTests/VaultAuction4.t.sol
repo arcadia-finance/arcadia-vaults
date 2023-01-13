@@ -77,31 +77,31 @@ contract gasVaultAuction_2ERC202ERC721 is GasTestFixture {
 
     function testAuctionPriceStart() public {
         vm.roll(1); //compile warning to make it a view
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 
     function testAuctionPriceBl100() public {
         vm.roll(100);
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 
     function testAuctionPriceBl500() public {
         vm.roll(500);
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 
     function testAuctionPriceBl1000() public {
         vm.roll(1000);
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 
     function testAuctionPriceBl1500() public {
         vm.roll(1500);
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 
     function testAuctionPriceBl2000() public {
         vm.roll(2000);
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 }
