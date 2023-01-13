@@ -1493,31 +1493,31 @@ contract DepreciatedTest is vaultTests {
         assertTrue(base256 == base128);
     }
 
-    //overflows from deltaBlocks = 894262060268226281981748468
+    //overflows from deltaTimestamp = 894262060268226281981748468
     function testSuccess_CheckExponentUnchecked() public {
-        uint256 yearlyBlocks = 2628000;
-        uint256 maxDeltaBlocks = (uint256(type(uint128).max) * uint256(yearlyBlocks)) / 10 ** 18;
+        uint256 yearlySeconds = 31536000;
+        uint256 maxDeltaTimestamp = (uint256(type(uint128).max) * uint256(yearlySeconds)) / 10 ** 18;
 
-        uint256 exponent256 = (maxDeltaBlocks * 1e18) / yearlyBlocks;
-        uint128 exponent128 = uint128((maxDeltaBlocks * uint256(1e18)) / yearlyBlocks);
+        uint256 exponent256 = (maxDeltaTimestamp * 1e18) / yearlySeconds;
+        uint128 exponent128 = uint128((maxDeltaTimestamp * uint256(1e18)) / yearlySeconds);
 
         assertTrue(exponent256 == exponent128);
 
-        uint256 exponent256Overflow = (((maxDeltaBlocks + 1) * 1e18) / yearlyBlocks);
-        uint128 exponent128Overflow = uint128(((maxDeltaBlocks + 1) * 1e18) / yearlyBlocks);
+        uint256 exponent256Overflow = (((maxDeltaTimestamp + 1) * 1e18) / yearlySeconds);
+        uint128 exponent128Overflow = uint128(((maxDeltaTimestamp + 1) * 1e18) / yearlySeconds);
 
         assertTrue(exponent256Overflow != exponent128Overflow);
         assertTrue(exponent128Overflow == exponent256Overflow - type(uint128).max - 1);
     }
 
-    function testSuccess_CheckUnrealisedDebtUnchecked(uint64 base, uint24 deltaBlocks, uint128 openDebt) public {
+    function testSuccess_CheckUnrealisedDebtUnchecked(uint64 base, uint24 deltaTimestamp, uint128 openDebt) public {
         vm.assume(base <= 10 * 10 ** 18); //1000%
         vm.assume(base >= 10 ** 18);
-        vm.assume(deltaBlocks <= 13140000); //5 year
+        vm.assume(deltaTimestamp <= 5 * 365 * 24 * 60 * 60); //5 year
         vm.assume(openDebt <= type(uint128).max / (10 ** 5)); //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
 
-        uint256 yearlyBlocks = 2628000;
-        uint128 exponent = uint128(((uint256(deltaBlocks)) * 1e18) / yearlyBlocks);
+        uint256 yearlySeconds = 31536000;
+        uint128 exponent = uint128(((uint256(deltaTimestamp)) * 1e18) / yearlySeconds);
         vm.assume(LogExpMath.pow(base, exponent) > 0);
 
         uint256 unRealisedDebt256 = (uint256(openDebt) * (LogExpMath.pow(base, exponent) - 1e18)) / 1e18;
@@ -1536,13 +1536,13 @@ contract DepreciatedTest is vaultTests {
     **/
     function testSuccess_syncInterests_SyncDebtUnchecked(
         uint64 base,
-        uint24 deltaBlocks,
+        uint24 deltaTimestamp,
         uint128 openDebt,
         uint16 additionalDeposit
     ) public {
         vm.assume(base <= 10 * 10 ** 18); //1000%
         vm.assume(base >= 10 ** 18); //No negative interest rate possible
-        vm.assume(deltaBlocks <= 13140000); //5 year
+        vm.assume(deltaTimestamp <= 5 * 365 * 24 * 60 * 60); //5 year
         vm.assume(additionalDeposit > 0);
         //        vm.assume(additionalDeposit < 10);
         vm.assume(openDebt <= type(uint128).max / (10 ** 5)); //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
@@ -1556,15 +1556,15 @@ contract DepreciatedTest is vaultTests {
         ); // This is always zero
         amountEthToDeposit += uint128(additionalDeposit);
 
-        uint256 yearlyBlocks = 2628000;
-        uint128 exponent = uint128(((uint256(deltaBlocks)) * 1e18) / yearlyBlocks);
+        uint256 yearlySeconds = 31536000;
+        uint128 exponent = uint128(((uint256(deltaTimestamp)) * 1e18) / yearlySeconds);
 
         uint256 remainingCredit = depositEthAndTakeMaxCredit(amountEthToDeposit);
 
         //Set interest rate
         stdstore.target(address(pool)).sig(pool.interestRate.selector).checked_write(base - 1e18);
 
-        vm.roll(block.number + deltaBlocks);
+        vm.warp(block.timestamp + deltaTimestamp);
 
         uint128 unRealisedDebt = uint128((remainingCredit * (LogExpMath.pow(base, exponent) - 1e18)) / 1e18);
 
@@ -1604,7 +1604,7 @@ contract DepreciatedTest is vaultTests {
         base = 1e18 + _yearlyInterestRate;
 
         //gas: only overflows when blocks.number > ~10**20
-        exponent = ((block.number - uint32(_lastBlock)) * 1e18) / pool.YEARLY_BLOCKS();
+        exponent = ((block.number - uint32(_lastBlock)) * 1e18) / pool.YEARLY_SECONDS();
 
         uint256 usedMarginExpected = (remainingCredit * LogExpMath.pow(base, exponent)) / 1e18;
 
