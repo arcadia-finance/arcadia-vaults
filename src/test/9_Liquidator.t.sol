@@ -18,7 +18,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
     Tranche tranche;
     DebtToken debt;
 
-    address private liquidatorBot = address(8);
+    address private liquidationInitiator = address(8);
     address private auctionBuyer = address(9);
 
     // EVENTS
@@ -88,35 +88,115 @@ contract LiquidatorTest is DeployArcadiaVaults {
         dai.approve(address(liquidator), type(uint256).max);
     }
 
+    /* ///////////////////////////////////////////////////////////////
+                            DEPLOYMENT
+    /////////////////////////////////////////////////////////////// */
+    function testSuccess_deployment() public {
+        assertEq(liquidator.factory(), address(factory));
+        assertEq(liquidator.registry(), address(mainRegistry));
+        (uint64 protocol, uint64 liquidationInitiator_) = liquidator.claimRatios();
+        assertEq(protocol, 5);
+        assertEq(liquidationInitiator_, 2);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                          LIQUIDATOR OWNERSHIP
+    ///////////////////////////////////////////////////////////////*/
+
     function testSuccess_transferOwnership(address to) public {
         vm.assume(to != address(0));
-        Liquidator liquidator_m = new Liquidator(
-            0x0000000000000000000000000000000000000000,
-            address(mainRegistry)
-        );
 
-        assertEq(address(this), liquidator_m.owner());
+        vm.prank(creatorAddress);
+        liquidator.transferOwnership(to);
 
-        liquidator_m.transferOwnership(to);
-        assertEq(to, liquidator_m.owner());
+        assertEq(to, liquidator.owner());
     }
 
-    function testRevert_transferOwnership_NonOwner_CallerNotOwner(address from) public {
-        vm.assume(from != address(this) && from != address(factory));
+    function testRevert_transferOwnership_NonOwner(address unprivilegedAddress_, address to) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
 
-        Liquidator liquidator_m = new Liquidator(
-            0x0000000000000000000000000000000000000000,
-            address(mainRegistry)
-        );
-        address to = address(12345);
-
-        assertEq(address(this), liquidator_m.owner());
-
-        vm.startPrank(from);
+        vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("Ownable: caller is not the owner");
-        liquidator_m.transferOwnership(to);
-        assertEq(address(this), liquidator_m.owner());
+        liquidator.transferOwnership(to);
+
+        assertEq(creatorAddress, liquidator.owner());
     }
+
+    /*///////////////////////////////////////////////////////////////
+                          EXTERNAL CONTRACTS
+    ///////////////////////////////////////////////////////////////*/
+
+    function testRevert_setFactory_NonOwner(address unprivilegedAddress_, address factory_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Ownable: caller is not the owner");
+        liquidator.setFactory(factory_);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setFactory(address factory_) public {
+        vm.prank(creatorAddress);
+        liquidator.setFactory(factory_);
+
+        assertEq(liquidator.factory(), factory_);
+    }
+
+    function testRevert_setProtocolTreasury_NonOwner(address unprivilegedAddress_, address protocolTreasury_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Ownable: caller is not the owner");
+        liquidator.setProtocolTreasury(protocolTreasury_);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setProtocolTreasury(address protocolTreasury_) public {
+        vm.prank(creatorAddress);
+        liquidator.setProtocolTreasury(protocolTreasury_);
+
+        assertEq(liquidator.protocolTreasury(), protocolTreasury_);
+    }
+
+    function testRevert_setReserveFund_NonOwner(address unprivilegedAddress_, address reserveFund_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Ownable: caller is not the owner");
+        liquidator.setReserveFund(reserveFund_);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setReserveFund(address reserveFund_) public {
+        vm.prank(creatorAddress);
+        liquidator.setReserveFund(reserveFund_);
+
+        assertEq(liquidator.reserveFund(), reserveFund_);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        MANAGE AUCTION SETTINGS
+    ///////////////////////////////////////////////////////////////*/
+
+    function testRevert_setBreakevenTime_NonOwner(address unprivilegedAddress_, uint256 breakevenTime_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Ownable: caller is not the owner");
+        liquidator.setBreakevenTime(breakevenTime_);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setBreakevenTime(uint256 breakevenTime_) public {
+        vm.prank(creatorAddress);
+        liquidator.setBreakevenTime(breakevenTime_);
+
+        assertEq(liquidator.breakevenTime(), breakevenTime_);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                            AUCTION LOGIC
+    ///////////////////////////////////////////////////////////////*/
 
     function testRevert_liquidate_AuctionHealthyVault(uint128 amountEth, uint128 amountCredit) public {
         vm.assume(amountEth > 0);
@@ -128,7 +208,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(vaultOwner);
         pool.borrow(amountCredit, address(proxy), vaultOwner);
 
-        vm.startPrank(liquidatorBot);
+        vm.startPrank(liquidationInitiator);
         vm.expectRevert("V_LV: This vault is healthy");
         factory.liquidate(address(proxy));
         vm.stopPrank();
@@ -151,7 +231,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
 
-        vm.startPrank(liquidatorBot);
+        vm.startPrank(liquidationInitiator);
         vm.expectEmit(true, true, false, false);
         emit OwnershipTransferred(vaultOwner, address(liquidator));
         factory.liquidate(address(proxy));
@@ -179,7 +259,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
 
-        vm.prank(liquidatorBot);
+        vm.prank(liquidationInitiator);
         factory.liquidate(address(proxy));
 
         uint16 liqThres = 150;
@@ -212,10 +292,10 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
 
-        vm.prank(liquidatorBot);
+        vm.prank(liquidationInitiator);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt,,,,,,) = liquidator.auctionInfo(address(proxy));
+        (uint128 openDebt,,,,,,) = liquidator.auctionInformation(address(proxy));
         uint16 liqThres = 150;
         (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy));
 
@@ -255,7 +335,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
 
-        vm.prank(liquidatorBot);
+        vm.prank(liquidationInitiator);
         factory.liquidate(address(proxy));
 
         (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy));
@@ -291,7 +371,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
 
-        vm.prank(liquidatorBot);
+        vm.prank(liquidationInitiator);
         factory.liquidate(address(proxy));
 
         (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy));
@@ -362,7 +442,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
     //     vaultAddresses[0] = address(proxy);
     //     lives[0] = 0;
 
-    //     Liquidator.auctionInformation memory auction;
+    //     Liquidator.auctionInformationrmation memory auction;
     //     auction.assetPaid = uint128(price);
     //     auction.openDebt = uint128(remainingCred);
     //     auction.originalOwner = vaultOwner;
@@ -535,8 +615,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     //     Balances memory pre = getBalances(dai, vaultOwner);
 
-    //     Liquidator.auctionInformation memory auction1;
-    //     Liquidator.auctionInformation memory auction2;
+    //     Liquidator.auctionInformationrmation memory auction1;
+    //     Liquidator.auctionInformationrmation memory auction2;
 
     //     auction1.openDebt = uint128(remainingCred);
     //     auction2.openDebt = uint128(remainingCred);
@@ -606,7 +686,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
     //     vaultAddresses[0] = address(proxy);
     //     lives[0] = newLife;
 
-    //     Liquidator.auctionInformation memory auction;
+    //     Liquidator.auctionInformationrmation memory auction;
     //     auction.assetPaid = uint128(price);
     //     auction.openDebt = uint128(remainingCred);
     //     auction.originalOwner = vaultOwner;
@@ -696,10 +776,10 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
 
-        vm.prank(liquidatorBot);
+        vm.prank(liquidationInitiator);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt,,,,,,) = liquidator.auctionInfo(address(proxy));
+        (uint128 openDebt,,,,,,) = liquidator.auctionInformation(address(proxy));
         uint16 liqThres = 150;
         (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy));
 
@@ -727,7 +807,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
     }
 
     function getRewards(uint256 buyPrice, uint256 openDebt) public view returns (Rewards memory) {
-        (uint64 protocolRatio, uint64 keeperRatio) = liquidator.claimRatio();
+        (uint64 protocolRatio, uint64 keeperRatio) = liquidator.claimRatios();
 
         Rewards memory rewards;
         rewards.expectedKeeperReward = (openDebt * keeperRatio) / 100;
