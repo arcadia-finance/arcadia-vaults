@@ -219,6 +219,70 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
     }
 
+    function testSuccess_safeTransferFrom_WithData(address owner, bytes memory data) public {
+        vm.assume(owner != address(0));
+        address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
+
+        vm.startPrank(owner);
+        proxyAddr = factory.createVault(0, 0);
+
+        //Make sure index in erc721 == vaultIndex
+        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+
+        //Make sure vault itself is owned by owner
+        assertEq(IVault(proxyAddr).owner(), owner);
+
+        //Make sure erc721 is owned by owner
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
+
+        //Transfer vault to another address
+        factory.safeTransferFrom(owner, receiver, factory.vaultIndex(proxyAddr), data);
+
+        //Make sure vault itself is owned by receiver
+        assertEq(IVault(proxyAddr).owner(), receiver);
+
+        //Make sure erc721 is owned by receiver
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), receiver);
+        vm.stopPrank();
+    }
+
+    function testRevert_safeTransferFrom_WithData_NonOwner(
+        address owner,
+        address receiver,
+        address unprivilegedAddress_,
+        bytes memory data
+    ) public {
+        vm.assume(owner != unprivilegedAddress_);
+        vm.assume(owner != address(0));
+        vm.assume(receiver != address(0));
+        vm.assume(unprivilegedAddress_ != address(0));
+
+        vm.prank(owner);
+        proxyAddr = factory.createVault(0, 0);
+
+        //Make sure index in erc721 == vaultIndex
+        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+
+        //Make sure vault itself is owned by owner
+        assertEq(IVault(proxyAddr).owner(), owner);
+
+        //Make sure erc721 is owned by owner
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
+
+        //Transfer vault to another address by not owner
+        uint256 index = factory.vaultIndex(proxyAddr);
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("NOT_AUTHORIZED");
+        factory.safeTransferFrom(owner, receiver, index, data);
+        vm.stopPrank();
+
+        //Make sure vault itself is still owned by owner
+        assertEq(IVault(proxyAddr).owner(), owner);
+
+        //Make sure erc721 is still owned by owner
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
+    }
+
     function testSuccess_transferFrom(address owner) public {
         vm.assume(owner != address(0));
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
