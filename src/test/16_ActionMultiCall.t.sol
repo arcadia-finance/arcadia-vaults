@@ -16,7 +16,11 @@ import {TrustedProtocolMock} from "../mockups/TrustedProtocolMock.sol";
 import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
-
+contract VaultTestExtension is Vault {
+    function setAllowed(address who, bool allow) public {
+        allowed[who] = allow;
+    }
+}
 
 contract ActionMultiCallTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -28,15 +32,23 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
     DebtToken public debt;
     Tranche public tranche;
 
+    VaultTestExtension public proxy_;
+
 
     function setUp() public {
 
         action = new ActionMultiCall();
         deal(address(eth), address(action), 1000*10**20, false);
 
+        vm.startPrank(creatorAddress);
+        vault = new VaultTestExtension();
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
+        factory.confirmNewVaultInfo();
+        vm.stopPrank();
+
         vm.startPrank(vaultOwner);
         proxyAddr = factory.createVault(12345678, 0);
-        proxy = Vault(proxyAddr);
+        proxy_ = VaultTestExtension(proxyAddr);
         vm.stopPrank();
         
         depositERC20InVault(eth, 1000*10**18, vaultOwner);
@@ -89,7 +101,7 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         data[2] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), 1000*10**18);
         data[3] = abi.encodeWithSignature("assetSink(address,uint256)", address(link), 1000*10**18);
         data[4] = abi.encodeWithSignature("assetSource(address,uint256)", address(link), 1000*10**18);
-        data[5] = abi.encodeWithSignature("approve(address,uint256)", address(proxy), 1000*10**18);
+        data[5] = abi.encodeWithSignature("approve(address,uint256)", address(proxy_), 1000*10**18);
 
         deal(address(link), address(multiActionMock), 1000*10**18, false);
 
@@ -127,14 +139,14 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
         emit log_named_bytes("callData", callData);
 
-        // stdstore.target(address(proxy)).sig(proxy.allowed.selector).with_key(address(pool)).checked_write(true);
-        // //stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(10);
+        // stdstore.target(address(proxy_)).sig(proxy_.allowed.selector).with_key(address(pool)).checked_write(true);
+        // //stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy_)).checked_write(10);
 
         // vm.prank(address(pool));
-        // proxy.setBaseCurrency(address(eth));
+        // proxy_.setBaseCurrency(address(eth));
 
         vm.startPrank(vaultOwner);
-        proxy.vaultManagementAction(address(action), callData);
+        proxy_.vaultManagementAction(address(action), callData);
     }
 
 
@@ -146,16 +158,20 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
 
         uint256 ethToLinkRatio = ethRate / linkRate;
-        vm.assume(1000*10**18 + (debtAmount * ethToLinkRatio) < type(uint256).max);
+        vm.assume(1000*10**18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
 
+        //require(false, "1");
         bytes[] memory data = new bytes[](3);
         address[] memory to = new address[](3);
 
         data[0] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), 1000*10**18 + debtAmount);
-        data[1] = abi.encodeWithSignature("swapAssets(address,address,uint256,uint256)", address(eth), address(link), 1000*10**18 + debtAmount, 1000*10**18 + debtAmount * ethToLinkRatio);
-        data[2] = abi.encodeWithSignature("approve(address,uint256)", address(proxy), 1000*10**18 + debtAmount * ethToLinkRatio);
+        data[1] = abi.encodeWithSignature("swapAssets(address,address,uint256,uint256)", address(eth), address(link), 1000*10**18 + debtAmount, 1000*10**18 + uint256(debtAmount) * ethToLinkRatio);
+        data[2] = abi.encodeWithSignature("approve(address,uint256)", address(proxy_), 1000*10**18 + uint256(debtAmount) * ethToLinkRatio);
 
-        deal(address(link), address(multiActionMock), 1000*10**18 + debtAmount * ethToLinkRatio, false);
+        require(false, "3");
+
+        deal(address(link), address(multiActionMock), 1000*10**18 + debtAmount * ethToLinkRatio, true);
+        deal(address(eth), address(action), debtAmount, false);
 
         to[0] = address(eth);
         to[1] = address(multiActionMock);
@@ -187,20 +203,18 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
 
         bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
         
-        // emit log_named_address("proxy", address(proxy));
+        // emit log_named_address("proxy_", address(proxy_));
         // emit log_named_address("vault", address(vault));
-        // emit log_named_bytes("selector", abi.encodePacked(proxy.allowed.selector));
-        // emit log_named_bytes("allowed", abi.encodePacked(proxy.allowed(address(pool))));
+        // emit log_named_bytes("selector", abi.encodePacked(proxy_.allowed.selector));
+        // emit log_named_bytes("allowed", abi.encodePacked(proxy_.allowed(address(pool))));
 
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(debtAmount);
-        stdstore.target(address(proxy)).sig(proxy.allowed.selector).with_key(address(pool)).checked_write(true);
-
+        proxy_.setAllowed(address(pool), true);
 
         vm.prank(address(pool));
-        proxy.setBaseCurrency(address(eth));
+        proxy_.setBaseCurrency(address(eth));
 
         vm.startPrank(vaultOwner);
-        proxy.vaultManagementAction(address(action), callData);
+        proxy_.vaultManagementAction(address(action), callData);
     }
 
 
@@ -232,8 +246,8 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         token.balanceOf(0x0000000000000000000000000000000000000006);
 
         vm.startPrank(sender);
-        token.approve(address(proxy), amount);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        token.approve(address(proxy_), amount);
+        proxy_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
 
