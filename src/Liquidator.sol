@@ -147,7 +147,7 @@ contract Liquidator is Ownable {
         success = true;
     }
 
-    function calcLiquidationInitiatorReward(uint128 openDebt) public view returns (uint256 keeperReward) {
+    function calcLiquidationInitiatorReward(uint256 openDebt) public view returns (uint256 keeperReward) {
         //Calculate liquidationInitiator as the minimum between a percentage of a position capped by a certain amount
         //ToDo: How are we going to cap the max?
         keeperReward = openDebt * claimRatios.liquidationInitiator / 100;
@@ -174,8 +174,8 @@ contract Liquidator is Ownable {
 
         uint256 startPrice = (auctionInformation[vaultAddress].openDebt * 150) / 100;
         uint256 surplusPrice = (auctionInformation[vaultAddress].openDebt * (150 - 100)) / 100;
-        uint256 priceDecrease =
-            (surplusPrice * (block.number - auctionInformation[vaultAddress].startBlock)) / (hourlyBlocks * breakevenTime);
+        uint256 priceDecrease = (surplusPrice * (block.number - auctionInformation[vaultAddress].startBlock))
+            / (hourlyBlocks * breakevenTime);
 
         totalPrice;
         if (priceDecrease > startPrice) {

@@ -7,11 +7,13 @@
 pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
+import {TrustedCreditorMock} from "../mockups/TrustedCreditorMock.sol";
 
 contract FactoryTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     MainRegistry internal mainRegistry2;
+    TrustedCreditorMock trustedCreditor;
 
     //events
     event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 length);
@@ -636,6 +638,61 @@ contract FactoryTest is DeployArcadiaVaults {
     /*///////////////////////////////////////////////////////////////
                     VAULT LIQUIDATION LOGIC
     ///////////////////////////////////////////////////////////////*/
+
+    function testRevert_liquidate_NonVault(address liquidationInitiator, address nonVault) public {
+        vm.startPrank(liquidationInitiator);
+        vm.expectRevert("FTRY: Not a vault");
+        factory.liquidate(nonVault);
+        vm.stopPrank();
+    }
+
+    function xtestRevert_liquidate_VaultLiquidationFailed(address liquidationInitiator) public {
+        trustedCreditor = new TrustedCreditorMock();
+        trustedCreditor.setCallResult(true);
+
+        vm.startPrank(vaultOwner);
+        proxyAddr = factory.createVault(0, 0);
+        proxy = Vault(proxyAddr);
+        proxy.openTrustedMarginAccount(address(trustedCreditor));
+        vm.stopPrank();
+
+        vm.startPrank(liquidationInitiator);
+        vm.expectRevert("FTRY: Vault liquidation failed");
+        factory.liquidate(address(proxy));
+        vm.stopPrank();
+    }
+
+    function testSuccess_liquidate(address liquidationInitiator, uint128 openPosition) public {
+        vm.startPrank(creatorAddress);
+        liquidator = new Liquidator(
+            address(factory),
+            address(mainRegistry)
+        );
+        liquidator.setFactory(address(factory));
+        vm.stopPrank();
+
+        trustedCreditor = new TrustedCreditorMock();
+        trustedCreditor.setCallResult(true);
+        trustedCreditor.setLiquidator(address(liquidator));
+
+        vm.startPrank(vaultOwner);
+        proxyAddr = factory.createVault(0, 0);
+        proxy = Vault(proxyAddr);
+        proxy.openTrustedMarginAccount(address(trustedCreditor));
+        vm.stopPrank();
+
+        vm.assume(openPosition > 0);
+        trustedCreditor.setOpenPosition(address(proxy), openPosition);
+
+        vm.prank(liquidationInitiator);
+        factory.liquidate(address(proxy));
+
+        assertEq(proxy.owner(), address(liquidator));
+        assertEq(factory.balanceOf(vaultOwner), 0);
+        assertEq(factory.balanceOf(address(liquidator)), 1);
+        uint256 index = factory.vaultIndex(address(proxy));
+        assertEq(factory.ownerOf(index), address(liquidator));
+    }
 
     /*///////////////////////////////////////////////////////////////
                         HELPER FUNCTIONS
