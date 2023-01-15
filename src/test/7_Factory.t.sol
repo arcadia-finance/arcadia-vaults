@@ -646,22 +646,6 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function xtestRevert_liquidate_VaultLiquidationFailed(address liquidationInitiator) public {
-        trustedCreditor = new TrustedCreditorMock();
-        trustedCreditor.setCallResult(true);
-
-        vm.startPrank(vaultOwner);
-        proxyAddr = factory.createVault(0, 0);
-        proxy = Vault(proxyAddr);
-        proxy.openTrustedMarginAccount(address(trustedCreditor));
-        vm.stopPrank();
-
-        vm.startPrank(liquidationInitiator);
-        vm.expectRevert("FTRY: Vault liquidation failed");
-        factory.liquidate(address(proxy));
-        vm.stopPrank();
-    }
-
     function testSuccess_liquidate(address liquidationInitiator, uint128 openPosition) public {
         vm.startPrank(creatorAddress);
         liquidator = new Liquidator(

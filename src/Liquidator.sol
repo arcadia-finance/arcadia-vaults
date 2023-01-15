@@ -29,8 +29,6 @@ contract Liquidator is Ownable {
     address public protocolTreasury;
 
     mapping(address => AuctionInformation) public auctionInformation;
-    mapping(address => mapping(uint256 => uint256)) public claimableBitmap;
-
     mapping(address => mapping(address => uint256)) public openClaims;
 
     ClaimRatios public claimRatios;
@@ -47,16 +45,10 @@ contract Liquidator is Ownable {
     struct AuctionInformation {
         uint128 openDebt;
         uint128 startBlock;
-        uint128 assetPaid;
-        bool stopped;
+        bool inAuction;
         address baseCurrency;
         address originalOwner;
         address trustedCreditor;
-    }
-
-    modifier elevated() {
-        require(IFactory(factory).isVault(msg.sender), "LQ: Not a vault!");
-        _;
     }
 
     constructor(address factory_, address registry_) {
@@ -71,7 +63,6 @@ contract Liquidator is Ownable {
 
     /**
      * @notice Sets the factory address on the liquidator.
-     * @dev The factory is used to fetch the isVault bool in elevated().
      * @param factory_ the factory address.
      */
     function setFactory(address factory_) external onlyOwner {
@@ -118,11 +109,10 @@ contract Liquidator is Ownable {
     /**
      * @notice Starts an auction of a vault. Called by the vault itself.
      * @param liquidationInitiator the keeper who triggered the auction. Gets a reward!
-     * @param originalOwner the original owner of this vault, at `life`.
-     * @param openDebt the open debt taken by `originalOwner` at `life`.
+     * @param originalOwner the original owner of this vault.
+     * @param openDebt the open debt taken by `originalOwner` at moment of liquidation.
      * @param baseCurrency the baseCurrency in which the vault is denominated.
      * @param trustedCreditor The account or contract that is owed the debt.
-     * @return success auction has started -> true.
      */
     function startAuction(
         address liquidationInitiator,
@@ -130,9 +120,11 @@ contract Liquidator is Ownable {
         uint128 openDebt,
         address baseCurrency,
         address trustedCreditor
-    ) public elevated returns (bool success) {
-        require(auctionInformation[msg.sender].startBlock == 0, "Liquidation already ongoing");
+    ) public {
+        require(IFactory(factory).isVault(msg.sender), "LQ_SA: Not a vault");
+        require(!auctionInformation[msg.sender].inAuction, "LQ_SA: Auction already ongoing");
 
+        auctionInformation[msg.sender].inAuction = true;
         auctionInformation[msg.sender].startBlock = uint128(block.number);
         auctionInformation[msg.sender].originalOwner = originalOwner;
         auctionInformation[msg.sender].openDebt = openDebt;
@@ -140,17 +132,24 @@ contract Liquidator is Ownable {
         auctionInformation[msg.sender].trustedCreditor = trustedCreditor;
 
         //Initiator can immediately claim the initiator reward.
-        //In edge cases, their might not be sufficient funds yet on the LiquidationEngione contract,
+        //In edge cases, their might not be sufficient funds on the LiquidationEngine contract,
         //nnd the initiator will have to wait untill the auction of collateral is finished.
         openClaims[liquidationInitiator][baseCurrency] += calcLiquidationInitiatorReward(openDebt);
-
-        success = true;
     }
 
-    function calcLiquidationInitiatorReward(uint256 openDebt) public view returns (uint256 keeperReward) {
+    /**
+     * @notice Calculates the Reward in baseCurrency for the Liquidation Initiator.
+     * @param openDebt the open debt taken by `originalOwner`.
+     * @return liquidationInitiatorReward The Reward in baseCurrency for the Liquidation Initiator.
+     */
+    function calcLiquidationInitiatorReward(uint256 openDebt)
+        public
+        view
+        returns (uint256 liquidationInitiatorReward)
+    {
         //Calculate liquidationInitiator as the minimum between a percentage of a position capped by a certain amount
         //ToDo: How are we going to cap the max?
-        keeperReward = openDebt * claimRatios.liquidationInitiator / 100;
+        liquidationInitiatorReward = openDebt * claimRatios.liquidationInitiator / 100;
     }
 
     /**
@@ -166,7 +165,7 @@ contract Liquidator is Ownable {
         view
         returns (uint256 totalPrice, address baseCurrency, bool forSale)
     {
-        forSale = !(auctionInformation[vaultAddress].stopped) && auctionInformation[vaultAddress].startBlock > 0;
+        forSale = auctionInformation[vaultAddress].inAuction && auctionInformation[vaultAddress].startBlock > 0;
 
         if (!forSale) {
             return (0, address(0), false);
@@ -222,129 +221,24 @@ contract Liquidator is Ownable {
             //protocolReward = surplus > protocolReward ? protocolReward  : surplus;
         }
 
-        auctionInformation[vaultAddress].assetPaid = uint128(priceOfVault);
-        auctionInformation[vaultAddress].stopped = true;
+        auctionInformation[vaultAddress].inAuction = false;
         //ToDo: set all auction information to 0?
 
         IFactory(factory).safeTransferFrom(address(this), msg.sender, IFactory(factory).vaultIndex(vaultAddress));
     }
 
     /*///////////////////////////////////////////////////////////////
-                MANAGE AND PAY OUT AUCTION PROCEEDS
+                    CLAIM AUCTION PROCEEDS
     ///////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Claim auction proceeds.
+     * @param baseCurrency The address of the claimable asset, an ERC20 token.
+     * @param amount The amount of tokens claimed.
+     */
     function claim(address baseCurrency, uint256 amount) public {
         //Will revert if msg.sender want to claim more than their open claims
         openClaims[msg.sender][baseCurrency] -= amount;
         IERC20(baseCurrency).transfer(msg.sender, amount);
-    }
-
-    /**
-     * @notice Function a a user can call to check who is eligbile to claim what from an auction vault.
-     * @dev Although only 3 bits are needed per claim in claimableBitmap, we keep it per 4.
-     * This saves some gas on calculations, and would only require writing a new
-     * bitmap after 65 liquidations instead of 85. We're looking forward to the first
-     * vault that gets liquidated 65 times!
-     * @param auction the auction
-     * @param vaultAddress the vaultAddress of the vault the user want to buy.
-     * @param life the lifeIndex of vault, the keeper wants to claim their reward from
-     * @return claimables The amounts claimable for a certain auction (in the baseCurrency of the vault).
-     * @return claimableBy The user that can claim the liquidation reward or surplus.
-     */
-    function claimable(AuctionInformation memory auction, address vaultAddress, uint256 life)
-        public
-        view
-        returns (uint256[] memory claimables, address[] memory claimableBy)
-    {
-        ClaimRatios memory ratios = claimRatios;
-        claimables = new uint256[](3);
-        claimableBy = new address[](3);
-        uint256 claimableBitmapMem = claimableBitmap[vaultAddress][(life >> 6)];
-
-        uint256 keeperReward = (auction.openDebt * ratios.liquidationInitiator) / 100;
-        uint256 protocolReward = (auction.openDebt * ratios.protocol) / 100;
-
-        claimables[0] = claimableBitmapMem & (1 << (4 * life + 0)) == 0 ? keeperReward : 0;
-
-        if (auction.assetPaid < auction.openDebt || auction.assetPaid <= keeperReward + auction.openDebt) {
-            return (claimables, claimableBy);
-        }
-
-        uint256 leftover = auction.assetPaid - auction.openDebt - keeperReward;
-
-        claimables[1] = claimableBitmapMem & (1 << (4 * life + 1)) == 0
-            ? (leftover >= protocolReward ? protocolReward : leftover)
-            : 0;
-        leftover = leftover >= protocolReward ? leftover - protocolReward : 0;
-
-        claimables[2] = claimableBitmapMem & (1 << (4 * life + 2)) == 0 ? leftover : 0;
-
-        claimableBy[1] = protocolTreasury;
-        claimableBy[2] = auction.originalOwner;
-    }
-
-    // /**
-    //  * @notice Function a eligeble claimer can call to claim the proceeds of the vault they are entitled to.
-    //  * @dev vaultAddresses and lives form a combination. Claiming for combinations at vaultAddress[i] && lives[i]
-    //  * if multiple lives of the same vault address are to be claimed, the vault address must be repeated!
-    //  * Although only 3 bits are needed per claim in claimableBitmap, we keep it per 4.
-    //  * This saves some gas on calculations, and would only require writing a new
-    //  * bitmap after 65 liquidations instead of 85. We're looking forward to the first
-    //  * vault that gets liquidated 65 times!
-    //  * @param claimer the address for which (and to which) the claims are requested.
-    //  * @param vaultAddresses vault addresses the caller want to claim the proceeds from.
-    //  * @param lives the lives for which the caller wants to claim for.
-    //  * //todo: make view function showing available addresses & lives for a claimer
-    //  */
-    // function claimProceeds(address claimer, address[] calldata vaultAddresses, uint256[] calldata lives) public {
-    //     uint256 len = vaultAddresses.length;
-    //     require(len == lives.length, "Arrays must be of same length");
-    //     uint256 baseCurrencyCounter = IMainRegistry(registry).baseCurrencyCounter();
-
-    //     uint256[] memory totalClaimable = new uint256[](baseCurrencyCounter);
-    //     uint256 claimableBitmapMem;
-
-    //     uint256[] memory claimables;
-    //     address[] memory claimableBy;
-    //     for (uint256 i; i < len;) {
-    //         address vaultAddress = vaultAddresses[i];
-    //         uint256 life = lives[i];
-    //         auctionInformationrmation memory auction = auctionInformation[vaultAddress][life];
-    //         (claimables, claimableBy) = claimable(auction, vaultAddress, life);
-    //         claimableBitmapMem = claimableBitmap[vaultAddress][(life >> 6)];
-
-    //         if (claimer == claimableBy[0]) {
-    //             totalClaimable[auction.baseCurrency] += claimables[0];
-    //             claimableBitmapMem = claimableBitmapMem | (1 << (4 * life + 0));
-    //         }
-    //         if (claimer == claimableBy[1]) {
-    //             totalClaimable[auction.baseCurrency] += claimables[1];
-    //             claimableBitmapMem = claimableBitmapMem | (1 << (4 * life + 1));
-    //         }
-    //         if (claimer == claimableBy[2]) {
-    //             totalClaimable[auction.baseCurrency] += claimables[2];
-    //             claimableBitmapMem = claimableBitmapMem | (1 << (4 * life + 2));
-    //         }
-
-    //         claimableBitmap[vaultAddress][(life >> 6)] = claimableBitmapMem;
-
-    //         unchecked {
-    //             ++i;
-    //         }
-    //     }
-
-    //     _doTransfers(baseCurrencyCounter, totalClaimable, claimer);
-    // }
-
-    function _doTransfers(uint256 baseCurrencyCounter, uint256[] memory totalClaimable, address claimer) internal {
-        for (uint8 k; k < baseCurrencyCounter;) {
-            if (totalClaimable[k] > 0) {
-                address asset = IMainRegistry(registry).baseCurrencies(uint256(k));
-                require(IERC20(asset).transfer(claimer, totalClaimable[k]));
-            }
-            unchecked {
-                ++k;
-            }
-        }
     }
 }

@@ -13,7 +13,7 @@ interface IVault {
 
     function initialize(address owner, address registry, uint16 latestVaultVersion) external;
 
-    function liquidateVault(address liquidationInitiator) external returns (bool, address);
+    function liquidateVault(address liquidationInitiator) external returns (address);
 
     function upgradeVault(address, uint16) external;
 

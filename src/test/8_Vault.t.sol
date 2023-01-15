@@ -769,41 +769,34 @@ contract LiquidationLogicTest is vaultTests {
         openMarginAccount();
     }
 
-    function testSuccess_liquidate_NewOwnerIsLiquidator(address liquidationInitiator) public {
-        vm.assume(
-            liquidationInitiator != address(this) && liquidationInitiator != address(0)
-                && liquidationInitiator != address(factory)
-        );
+    function testRevert_liquidateVault_NotAuthorized(address unprivilegedAddress_, address liquidationInitiator)
+        public
+    {
+        vm.assume(unprivilegedAddress_ != address(factory));
 
-        uint256 slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
-        bytes32 loc = bytes32(slot);
-        bytes32 addDebt = bytes32(abi.encode(100000000));
-        vm.store(address(debt), loc, addDebt);
-
-        slot = stdstore.target(address(debt)).sig(debt.realisedDebt.selector).find();
-        loc = bytes32(slot);
-        vm.store(address(debt), loc, addDebt);
-
-        slot = stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).find();
-        loc = bytes32(slot);
-        vm.store(address(debt), loc, addDebt);
-
-        vm.startPrank(liquidationInitiator);
-        factory.liquidate(address(vault_));
-        vm.stopPrank();
-
-        assertEq(vault_.owner(), address(liquidator));
-    }
-
-    function testRevert_liquidateVault_NonFactory(address liquidationInitiator) public {
-        vm.assume(liquidationInitiator != address(factory));
-
-        assertEq(vault_.owner(), vaultOwner);
-
+        vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("V: You are not the factory");
         vault_.liquidateVault(liquidationInitiator);
+        vm.stopPrank();
+    }
 
-        assertEq(vault_.owner(), vaultOwner);
+    function testRevert_liquidateVault_VaultIsHealthy(address liquidationInitiator) public {
+        vm.startPrank(address(factory));
+        vm.expectRevert("V_LV: This vault is healthy");
+        vault_.liquidateVault(liquidationInitiator);
+        vm.stopPrank();
+    }
+
+    function testSuccess_liquidateVault(address liquidationInitiator, uint128 usedMargin) public {
+        vm.assume(usedMargin > 0);
+        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(usedMargin);
+        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(usedMargin);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+
+        vm.prank(address(factory));
+        address liquidator_ = vault_.liquidateVault(liquidationInitiator);
+
+        assertEq(liquidator_, address(liquidator));
     }
 }
 

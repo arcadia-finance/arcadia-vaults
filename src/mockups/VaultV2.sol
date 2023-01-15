@@ -338,32 +338,26 @@ contract VaultV2 {
      * Increases the life of the vault to indicate a liquidation has happened.
      * Transfers ownership of the proxy vault to the liquidator!
      * @param liquidationInitiator Address of the keeper who initiated the liquidation process.
-     * @return success Boolean returning if the liquidation process is successfully started.
      * @dev trustedCreditor is a trusted contract.
      * @dev After an auction is successfully started, interest acrual should stop.
      * This must be implemented by trustedCreditor
+     * @dev If liquidateVault(address) is successfull, Factory will transfer ownership of the Vault to the Liquidator.
      */
-    function liquidateVault(address liquidationInitiator)
-        public
-        onlyFactory
-        returns (bool success, address liquidator_)
-    {
+    function liquidateVault(address liquidationInitiator) public onlyFactory returns (address liquidator_) {
         uint256 usedMargin = getUsedMargin();
 
         require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");
 
-        require(
-            ILiquidator(liquidator).startAuction(
-                liquidationInitiator, owner, uint128(usedMargin), baseCurrency, trustedCreditor
-            ),
-            "V_LV: Failed to start auction!"
+        //Start the liquidation process
+        ILiquidator(liquidator).startAuction(
+            liquidationInitiator, owner, uint128(usedMargin), baseCurrency, trustedCreditor
         );
 
         //Hook implemented on the trusted creditor contract to notify that the vault
         //is being liquidated and trigger any necessary logic on the trustedCreditor.
         ITrustedCreditor(trustedCreditor).liquidateVault(usedMargin);
 
-        return (true, liquidator);
+        liquidator_ = liquidator;
     }
 
     /* ///////////////////////////////////////////////////////////////

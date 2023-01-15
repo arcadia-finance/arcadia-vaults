@@ -13,5 +13,5 @@ interface ILiquidator {
         uint128 openDebt,
         address baseCurrency,
         address trustedCreditor
-    ) external returns (bool);
+    ) external;
 }
