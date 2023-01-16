@@ -20,11 +20,18 @@ contract VaultTestExtension is Vault {
     function setAllowed(address who, bool allow) public {
         allowed[who] = allow;
     }
+
+    function setTrustedProtocol(address trustedProtocol_) public {
+        trustedProtocol = trustedProtocol_;
+    }
+
+    function setIsTrustedProtocolSet(bool set) public {
+        isTrustedProtocolSet = set;
+    }
 }
 
 contract ActionMultiCallTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
-
 
     ActionMultiCall public action;
     MultiActionMock public multiActionMock;
@@ -33,12 +40,11 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
     Tranche public tranche;
 
     VaultTestExtension public proxy_;
-
+    TrustedProtocolMock public trustedProtocol;
 
     function setUp() public {
-
         action = new ActionMultiCall();
-        deal(address(eth), address(action), 1000*10**20, false);
+        deal(address(eth), address(action), 1000 * 10 ** 20, false);
 
         vm.startPrank(creatorAddress);
         vault = new VaultTestExtension();
@@ -50,8 +56,8 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         proxyAddr = factory.createVault(12345678, 0);
         proxy_ = VaultTestExtension(proxyAddr);
         vm.stopPrank();
-        
-        depositERC20InVault(eth, 1000*10**18, vaultOwner);
+
+        depositERC20InVault(eth, 1000 * 10 ** 18, vaultOwner);
 
         vm.startPrank(creatorAddress);
         mainRegistry.setAllowedAction(address(action), true);
@@ -62,19 +68,19 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         debt = DebtToken(address(pool));
         tranche = new Tranche(address(pool), "Senior", "SR");
         pool.addTranche(address(tranche), 50);
+
+        trustedProtocol = new TrustedProtocolMock();
         vm.stopPrank();
-
-
-
     }
 
-    function testDoCalls() public returns (actionAssetsData memory) {
+    function testSuccess_executeAction() public {
         actionAssetsData memory assetData = actionAssetsData({
             assets: new address[](1),
             assetIds: new uint256[](0),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)});
+            preActionBalances: new uint256[](0)
+        });
 
         assetData.assets[0] = address(eth);
         assetData.assetTypes[0] = 0;
@@ -86,24 +92,49 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
 
         bytes memory callData = abi.encode(assetData, assetData, to, data);
 
-        return action.executeAction(address(0), callData);
+        action.executeAction(address(0), callData);
+    }
+
+    function testRevert_executeAction_lengthMismatch() public {
+        actionAssetsData memory assetData = actionAssetsData({
+            assets: new address[](1),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            preActionBalances: new uint256[](0)
+        });
+
+        assetData.assets[0] = address(eth);
+        assetData.assetTypes[0] = 0;
+
+        address[] memory to = new address[](2);
+        bytes[] memory data = new bytes[](1);
+        to[0] = address(this);
+        to[1] = address(this);
+        data[0] = abi.encodeWithSignature("returnFive()");
+
+        bytes memory callData = abi.encode(assetData, assetData, to, data);
+
+        vm.expectRevert("EA: Length mismatch");
+        action.executeAction(address(0), callData);
     }
 
     function testSuccess_vaultManagementAction_noDebt() public {
-
         multiActionMock = new MultiActionMock();
 
         bytes[] memory data = new bytes[](6);
         address[] memory to = new address[](6);
 
-        data[0] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), 1000*10**18);
-        data[1] = abi.encodeWithSignature("swapAssets(address,address,uint256,uint256)", address(eth), address(link), 1000*10**18, 1000*10**18);
-        data[2] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), 1000*10**18);
-        data[3] = abi.encodeWithSignature("assetSink(address,uint256)", address(link), 1000*10**18);
-        data[4] = abi.encodeWithSignature("assetSource(address,uint256)", address(link), 1000*10**18);
-        data[5] = abi.encodeWithSignature("approve(address,uint256)", address(proxy_), 1000*10**18);
+        data[0] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), 1000 * 10 ** 18);
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)", address(eth), address(link), 1000 * 10 ** 18, 1000 * 10 ** 18
+        );
+        data[2] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), 1000 * 10 ** 18);
+        data[3] = abi.encodeWithSignature("assetSink(address,uint256)", address(link), 1000 * 10 ** 18);
+        data[4] = abi.encodeWithSignature("assetSource(address,uint256)", address(link), 1000 * 10 ** 18);
+        data[5] = abi.encodeWithSignature("approve(address,uint256)", address(proxy_), 1000 * 10 ** 18);
 
-        deal(address(link), address(multiActionMock), 1000*10**18, false);
+        deal(address(link), address(multiActionMock), 1000 * 10 ** 18, false);
 
         to[0] = address(eth);
         to[1] = address(multiActionMock);
@@ -117,20 +148,21 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
             assetIds: new uint256[](1),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)});
+            preActionBalances: new uint256[](0)
+        });
 
         assetDataOut.assets[0] = address(eth);
         assetDataOut.assetTypes[0] = 0;
         assetDataOut.assetIds[0] = 0;
-        assetDataOut.assetAmounts[0] = 1000*10**18;
-        
+        assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
 
         actionAssetsData memory assetDataIn = actionAssetsData({
             assets: new address[](1),
             assetIds: new uint256[](1),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)});
+            preActionBalances: new uint256[](0)
+        });
 
         assetDataIn.assets[0] = address(link);
         assetDataIn.assetTypes[0] = 0;
@@ -139,39 +171,50 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
         emit log_named_bytes("callData", callData);
 
-        // stdstore.target(address(proxy_)).sig(proxy_.allowed.selector).with_key(address(pool)).checked_write(true);
-        // //stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy_)).checked_write(10);
-
-        // vm.prank(address(pool));
-        // proxy_.setBaseCurrency(address(eth));
-
         vm.startPrank(vaultOwner);
         proxy_.vaultManagementAction(address(action), callData);
     }
 
-
     function testSuccess_vaultManagementAction_withDebt(uint128 debtAmount) public {
-
         multiActionMock = new MultiActionMock();
+
+        proxy_.setAllowed(address(pool), true);
+        vm.prank(address(pool));
+        proxy_.setBaseCurrency(address(eth));
+
+        proxy_.setTrustedProtocol(address(trustedProtocol));
+        proxy_.setIsTrustedProtocolSet(true);
+        trustedProtocol.setOpenPosition(debtAmount);
 
         (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0);
         (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
 
         uint256 ethToLinkRatio = ethRate / linkRate;
-        vm.assume(1000*10**18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
 
         //require(false, "1");
         bytes[] memory data = new bytes[](3);
         address[] memory to = new address[](3);
 
-        data[0] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), 1000*10**18 + debtAmount);
-        data[1] = abi.encodeWithSignature("swapAssets(address,address,uint256,uint256)", address(eth), address(link), 1000*10**18 + debtAmount, 1000*10**18 + uint256(debtAmount) * ethToLinkRatio);
-        data[2] = abi.encodeWithSignature("approve(address,uint256)", address(proxy_), 1000*10**18 + uint256(debtAmount) * ethToLinkRatio);
+        data[0] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(multiActionMock), 1000 * 10 ** 18 + uint256(debtAmount)
+        );
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)",
+            address(eth),
+            address(link),
+            1000 * 10 ** 18 + uint256(debtAmount),
+            1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio
+        );
+        data[2] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(proxy_), 1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio
+        );
 
-        require(false, "3");
+        vm.prank(tokenCreatorAddress);
+        link.mint(address(multiActionMock), 1000 * 10 ** 18 + debtAmount * ethToLinkRatio);
 
-        deal(address(link), address(multiActionMock), 1000*10**18 + debtAmount * ethToLinkRatio, true);
-        deal(address(eth), address(action), debtAmount, false);
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(action), debtAmount);
 
         to[0] = address(eth);
         to[1] = address(multiActionMock);
@@ -182,42 +225,118 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
             assetIds: new uint256[](1),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)});
+            preActionBalances: new uint256[](0)
+        });
 
         assetDataOut.assets[0] = address(eth);
         assetDataOut.assetTypes[0] = 0;
         assetDataOut.assetIds[0] = 0;
-        assetDataOut.assetAmounts[0] = 1000*10**18;
-        
+        assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
 
         actionAssetsData memory assetDataIn = actionAssetsData({
             assets: new address[](1),
             assetIds: new uint256[](1),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)});
+            preActionBalances: new uint256[](0)
+        });
 
         assetDataIn.assets[0] = address(link);
         assetDataIn.assetTypes[0] = 0;
         assetDataOut.assetIds[0] = 0;
 
         bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
-        
-        // emit log_named_address("proxy_", address(proxy_));
-        // emit log_named_address("vault", address(vault));
-        // emit log_named_bytes("selector", abi.encodePacked(proxy_.allowed.selector));
-        // emit log_named_bytes("allowed", abi.encodePacked(proxy_.allowed(address(pool))));
-
-        proxy_.setAllowed(address(pool), true);
-
-        vm.prank(address(pool));
-        proxy_.setBaseCurrency(address(eth));
 
         vm.startPrank(vaultOwner);
         proxy_.vaultManagementAction(address(action), callData);
+        vm.stopPrank();
     }
 
+    function testRevert_vaultManagementAction_InsufficientReturned(uint128 debtAmount) public {
+        vm.assume(debtAmount > 0);
 
+        multiActionMock = new MultiActionMock();
+
+        proxy_.setAllowed(address(pool), true);
+        vm.prank(address(pool));
+        proxy_.setBaseCurrency(address(eth));
+
+        proxy_.setTrustedProtocol(address(trustedProtocol));
+        proxy_.setIsTrustedProtocolSet(true);
+        trustedProtocol.setOpenPosition(debtAmount);
+
+        (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0);
+        (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
+
+        uint256 ethToLinkRatio = ethRate / linkRate;
+        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+
+        //require(false, "1");
+        bytes[] memory data = new bytes[](3);
+        address[] memory to = new address[](3);
+
+        data[0] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(multiActionMock), 1000 * 10 ** 18 + uint256(debtAmount)
+        );
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)",
+            address(eth),
+            address(link),
+            1000 * 10 ** 18 + uint256(debtAmount),
+            0
+        );
+        data[2] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(proxy_), 1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio
+        );
+
+        // vm.prank(tokenCreatorAddress);
+        // link.mint(address(multiActionMock), (1000*10**18 + debtAmount * ethToLinkRatio) - 1);
+
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(action), debtAmount);
+
+        to[0] = address(eth);
+        to[1] = address(multiActionMock);
+        to[2] = address(link);
+
+        actionAssetsData memory assetDataOut = actionAssetsData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            preActionBalances: new uint256[](0)
+        });
+
+        assetDataOut.assets[0] = address(eth);
+        assetDataOut.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+        assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
+
+        actionAssetsData memory assetDataIn = actionAssetsData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            preActionBalances: new uint256[](0)
+        });
+
+        assetDataIn.assets[0] = address(link);
+        assetDataIn.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("VMA: coll. value too low");
+        proxy_.vaultManagementAction(address(action), callData);
+        vm.stopPrank();
+
+        emit log_named_uint("link returned", (1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio) - 1);
+        emit log_named_uint("ratio", ethToLinkRatio);
+        emit log_named_uint("debt", debtAmount);
+        emit log_named_uint("value", proxy_.getCollateralValue());
+        emit log_named_uint("openpos", proxy_.getUsedMargin());
+    }
 
     function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
@@ -254,5 +373,4 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
     function returnFive() public pure returns (uint256) {
         return 5;
     }
-
 }

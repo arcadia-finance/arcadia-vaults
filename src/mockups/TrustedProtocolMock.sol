@@ -9,6 +9,8 @@ pragma solidity ^0.8.13;
 import {TrustedProtocol} from "../../lib/arcadia-lending/src/TrustedProtocol.sol";
 
 contract TrustedProtocolMock is TrustedProtocol {
+    uint256 public openPosition_;
+
     constructor() TrustedProtocol() {}
 
     function openMarginAccount(uint256)
@@ -22,7 +24,11 @@ contract TrustedProtocolMock is TrustedProtocol {
         liquidator_ = address(0);
     }
 
-    function getOpenPosition(address) external pure override returns (uint256 openPosition) {
-        openPosition = 0;
+    function getOpenPosition(address) external view override returns (uint256 openPosition) {
+        openPosition = openPosition_;
+    }
+
+    function setOpenPosition(uint256 openPosition) public {
+        openPosition_ = openPosition;
     }
 }

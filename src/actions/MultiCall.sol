@@ -10,15 +10,28 @@ import "../actions/utils/ActionData.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IERC1155.sol";
 
-contract ActionMultiCall {
+/**
+ * @title Generic multicall action
+ * @author Arcadia Finance
+ * @notice Call any external contract with arbitrary data. Return the balances of assets that need to be deposited within a vault.
+ * @dev Only calls are used, no delegatecalls
+ * This address will approve random addresses. Do not store any funds on this address!
+ */
 
+contract ActionMultiCall {
+    /**
+     * @notice Calls a series of addresses with arbitrrary calldata
+     * @dev input address is not used in this generic action.
+     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
+     * @return incoming a actionAssetData struct with the balances of this ActionMultiCall address.
+     */
     function executeAction(address, bytes calldata actionData) external returns (actionAssetsData memory) {
         (, actionAssetsData memory incoming, address[] memory to, bytes[] memory data) =
             abi.decode(actionData, (actionAssetsData, actionAssetsData, address[], bytes[]));
 
         uint256 callLength = to.length;
 
-        require(to.length == callLength, "ActionMultiCall: to and data arrays must be the same length");
+        require(data.length == callLength, "EA: Length mismatch");
 
         for (uint256 i; i < callLength;) {
             (bool success, bytes memory result) = to[i].call(data[i]);

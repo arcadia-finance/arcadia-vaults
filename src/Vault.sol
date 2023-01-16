@@ -324,7 +324,7 @@ contract Vault {
      */
     function getUsedMargin() public view returns (uint256 usedMargin) {
         if (!isTrustedProtocolSet) return 0;
-        
+
         usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this));
     }
 
@@ -813,6 +813,12 @@ contract Vault {
                     ASSET MANAGEMENT LOGIC
     ///////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Calls external action handlers to execute and interact with external logic.
+     * @dev Similar to flash loans, this function optimistically calls external logic and checks for the vault state at the very end.
+     * @param actionHandler the address of the action handler to call
+     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
+     */
     function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyOwner {
         require(IMainRegistry(registry).isActionAllowlisted(actionHandler), "VL_VMA: Action is not allowlisted");
 
@@ -830,7 +836,7 @@ contract Vault {
 
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
-        require(collValue > usedMargin, "UV2_SWAP: coll. value postAction too low");
+        require(collValue > usedMargin, "VMA: coll. value too low");
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {

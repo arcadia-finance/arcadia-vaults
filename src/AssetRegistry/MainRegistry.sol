@@ -512,6 +512,5 @@ contract MainRegistry is Ownable {
     /////////////////////////////////////////////////////////////// */
     function setAllowedAction(address action, bool allowed) public onlyOwner {
         isActionAllowlisted[action] = allowed;
-
     }
 }
