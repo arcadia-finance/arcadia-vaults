@@ -17,12 +17,6 @@ import "../actions/utils/ActionData.sol";
 import {MultiActionMock} from "../mockups/MultiActionMock.sol";
 
 contract VaultTestExtension is Vault {
-    //Function necessary to set the liquidation threshold, since cheatcodes do not work
-    // with packed structs
-    function setLiquidationThreshold(uint16 liqThres) public {
-        vault.liqThres = liqThres;
-    }
-
     function getLengths() external view returns (uint256, uint256, uint256, uint256) {
         return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
     }
@@ -363,8 +357,7 @@ contract BaseCurrencyLogicTest is vaultTests {
         vm.prank(authorised);
         vault_.setBaseCurrency(address(eth));
 
-        (, address baseCurrency) = vault_.vault();
-        assertEq(baseCurrency, address(eth));
+        assertEq(vault_.baseCurrency(), address(eth));
     }
 
     function testRevert_setBaseCurrency_NonAuthorized(address unprivilegedAddress_) public {
@@ -376,8 +369,7 @@ contract BaseCurrencyLogicTest is vaultTests {
         vault_.setBaseCurrency(address(eth));
         vm.stopPrank();
 
-        (, address baseCurrency) = vault_.vault();
-        assertEq(baseCurrency, address(dai));
+        assertEq(vault_.baseCurrency(), address(dai));
     }
 
     function testRevert_setBaseCurrency_WithUsedMargin(address authorised) public {
@@ -393,8 +385,7 @@ contract BaseCurrencyLogicTest is vaultTests {
         vault_.setBaseCurrency(address(eth));
         vm.stopPrank();
 
-        (, address baseCurrency) = vault_.vault();
-        assertEq(baseCurrency, address(dai));
+        assertEq(vault_.baseCurrency(), address(dai));
     }
 
     function testRevert_setBaseCurrency_BaseCurrencyNotFound(address authorised, address baseCurrency_) public {
@@ -455,37 +446,29 @@ contract MarginAccountSettingsTest is vaultTests {
     }
 
     function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency() public {
-        (, address baseCurrency) = vault_.vault();
-        assertEq(baseCurrency, address(0));
+        assertEq(vault_.baseCurrency(), address(0));
 
         vm.prank(vaultOwner);
         vault_.openTrustedMarginAccount(address(pool));
 
         assertEq(vault_.liquidator(), address(liquidator));
         assertEq(vault_.trustedProtocol(), address(pool));
-        (, baseCurrency) = vault_.vault();
-        assertEq(baseCurrency, address(dai));
+        assertEq(vault_.baseCurrency(), address(dai));
         assertTrue(vault_.isTrustedProtocolSet());
         assertTrue(vault_.allowed(address(pool)));
     }
 
     function testSuccess_openTrustedMarginAccount_SameBaseCurrency() public {
         //Set BaseCurrency to dai
-        uint256 slot = stdstore.target(address(vault_)).sig(vault_.vault.selector).find();
-        bytes32 loc = bytes32(slot);
-        bytes32 value = bytes32(abi.encodePacked(uint16(1), address(dai)));
-        value = value >> 64;
-        vm.store(address(vault_), loc, value);
-        (, address baseCurrency) = vault_.vault();
-        assertEq(baseCurrency, address(dai));
+        stdstore.target(address(vault_)).sig(vault_.baseCurrency.selector).checked_write(address(dai));
+        assertEq(vault_.baseCurrency(), address(dai));
 
         vm.prank(vaultOwner);
         vault_.openTrustedMarginAccount(address(pool));
 
         assertEq(vault_.liquidator(), address(liquidator));
         assertEq(vault_.trustedProtocol(), address(pool));
-        (, baseCurrency) = vault_.vault();
-        assertEq(baseCurrency, address(dai));
+        assertEq(vault_.baseCurrency(), address(dai));
         assertTrue(vault_.isTrustedProtocolSet());
         assertTrue(vault_.allowed(address(pool)));
     }
@@ -530,8 +513,6 @@ contract MarginAccountSettingsTest is vaultTests {
 
         assertTrue(!vault_.isTrustedProtocolSet());
         assertTrue(!vault_.allowed(address(pool)));
-        (uint16 liqThres,) = vault_.vault();
-        assertEq(liqThres, 0);
     }
 }
 
@@ -564,9 +545,6 @@ contract MarginRequirementsTest is vaultTests {
         vm.prank(address(pool));
         bool success = vault_.increaseMarginPosition(baseCurrency, marginIncrease);
         assertTrue(!success);
-
-        (uint16 actualLiqThres,) = vault_.vault();
-        assertEq(0, actualLiqThres);
     }
 
     function testSuccess_increaseMarginPosition_InsufficientMargin(
@@ -574,19 +552,17 @@ contract MarginRequirementsTest is vaultTests {
         uint128 marginIncrease,
         uint128 usedMargin,
         uint8 collFac,
-        uint8 liqThres
+        uint8 liqFac
     ) public {
         // Given: Risk Factors for basecurrency are set
         vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
-        vm.assume(
-            liqThres <= RiskConstants.MAX_LIQUIDATION_THRESHOLD && liqThres >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
-        );
+        vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
         riskVars_[0] = PricingModule.RiskVarInput({
             baseCurrency: uint8(Constants.DaiBaseCurrency),
             asset: address(eth),
             collateralFactor: collFac,
-            liquidationThreshold: liqThres
+            liquidationFactor: liqFac
         });
         vm.prank(creatorAddress);
         standardERC20PricingModule.setBatchRiskVariables(riskVars_);
@@ -609,10 +585,6 @@ contract MarginRequirementsTest is vaultTests {
 
         // Then: The action is not succesfull
         assertTrue(!success);
-
-        // And: Liquidation Threshold is not updated
-        (uint16 actualLiqThres,) = vault_.vault();
-        assertEq(0, actualLiqThres);
     }
 
     function testSuccess_increaseMarginPosition_SufficientMargin(
@@ -620,19 +592,17 @@ contract MarginRequirementsTest is vaultTests {
         uint128 marginIncrease,
         uint128 usedMargin,
         uint8 collFac,
-        uint8 liqThres
+        uint8 liqFac
     ) public {
         // Given: Risk Factors for basecurrency are set
         vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
-        vm.assume(
-            liqThres <= RiskConstants.MAX_LIQUIDATION_THRESHOLD && liqThres >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
-        );
+        vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
         riskVars_[0] = PricingModule.RiskVarInput({
             baseCurrency: uint8(Constants.DaiBaseCurrency),
             asset: address(eth),
             collateralFactor: collFac,
-            liquidationThreshold: liqThres
+            liquidationFactor: liqFac
         });
         vm.prank(creatorAddress);
         standardERC20PricingModule.setBatchRiskVariables(riskVars_);
@@ -655,43 +625,6 @@ contract MarginRequirementsTest is vaultTests {
 
         // Then: The action is succesfull
         assertTrue(success);
-
-        // And: Liquidation Threshold is updated
-        (uint16 actualLiqThres,) = vault_.vault();
-        assertEq(liqThres, actualLiqThres);
-    }
-
-    function testRevert_syncLiquidationThreshold_NonOwner(address nonOwner) public {
-        vm.assume(nonOwner != vaultOwner);
-
-        vm.startPrank(nonOwner);
-        vm.expectRevert("V: You are not the owner");
-        vault_.syncLiquidationThreshold();
-        vm.stopPrank();
-    }
-
-    function testSuccess_syncLiquidationThreshold(uint8 depositAmount, uint8 liqThres) public {
-        vm.assume(depositAmount > 0);
-        depositEthInVault(depositAmount, vaultOwner);
-
-        vm.assume(
-            liqThres <= RiskConstants.MAX_LIQUIDATION_THRESHOLD && liqThres >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
-        );
-        PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
-        riskVars_[0] = PricingModule.RiskVarInput({
-            baseCurrency: uint8(Constants.DaiBaseCurrency),
-            asset: address(eth),
-            collateralFactor: RiskConstants.DEFAULT_COLLATERAL_FACTOR,
-            liquidationThreshold: liqThres
-        });
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.setBatchRiskVariables(riskVars_);
-
-        vm.prank(vaultOwner);
-        vault_.syncLiquidationThreshold();
-
-        (uint16 actualLiqThres,) = vault_.vault();
-        assertEq(liqThres, actualLiqThres);
     }
 
     function testSuccess_getVaultValue(uint8 depositAmount) public {
@@ -716,6 +649,18 @@ contract MarginRequirementsTest is vaultTests {
         uint256 gasAfter = gasleft();
         emit log_int(int256(gasStart - gasAfter));
         assertLt(gasStart - gasAfter, 200000);
+    }
+
+    function testSuccess_getLiquidationValue(uint8 depositAmount) public {
+        depositEthInVault(depositAmount, vaultOwner);
+
+        uint16 liqFactor_ = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
+        uint256 expectedValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
+            * depositAmount / 10 ** (18 - Constants.daiDecimals) * liqFactor_ / 100;
+
+        uint256 actualValue = vault_.getLiquidationValue();
+
+        assertEq(expectedValue, actualValue);
     }
 
     function testSuccess_getCollateralValue(uint8 depositAmount) public {
@@ -859,9 +804,6 @@ contract LiquidationLogicTest is vaultTests {
         slot = stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).find();
         loc = bytes32(slot);
         vm.store(address(debt), loc, addDebt);
-
-        //Set liquidation treshhold on the vault
-        vault_.setLiquidationThreshold(RiskConstants.DEFAULT_COLLATERAL_FACTOR);
 
         vm.startPrank(liquidationKeeper);
         factory.liquidate(address(vault_));
@@ -1701,7 +1643,7 @@ contract DepreciatedTest is vaultTests {
 
     struct debtInfo {
         uint16 collFactor_; //factor 100
-        uint8 liqThres; //factor 100
+        uint8 liqFac; //factor 100
         uint8 baseCurrency;
     }
 

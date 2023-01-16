@@ -37,7 +37,7 @@ contract gasRepay_1ERC20 is GasTestFixture {
 
         uint256 valueEth = (((10 ** 18 * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * s_assetAmounts[0])
             / 10 ** Constants.ethDecimals;
-        maxCredit = uint128((valueEth / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100);
+        maxCredit = uint128((valueEth / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100);
         pool.borrow(maxCredit, address(proxy), vaultOwner);
         vm.stopPrank();
     }

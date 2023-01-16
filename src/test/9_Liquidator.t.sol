@@ -138,8 +138,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     function testSuccess_liquidate_StartAuction(uint128 amountEth, uint256 newPrice) public {
         uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
+        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
+        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -165,8 +165,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     function testSuccess_liquidate_ShowVaultAuctionPrice(uint128 amountEth, uint256 newPrice) public {
         uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
+        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
+        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -184,7 +184,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (,, uint16 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        uint16 liqThres = 150;
 
         (uint256 vaultPrice,, bool forSale) = liquidator.getPriceOfVault(address(proxy), 0);
 
@@ -198,8 +198,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * liquidator.breakevenTime());
         uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
+        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
+        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -217,7 +217,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt,, uint16 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (uint128 openDebt,,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        uint16 liqThres = 150;
         (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
         vm.roll(block.number + blocksToRoll);
@@ -240,8 +241,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     function testSuccess_buyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
         uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
+        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
+        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -271,8 +272,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     function testSuccess_withdraw_FromPurchasedVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
         vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
         uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
+        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
+        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -678,8 +679,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     {
         vm.assume(blocksToRoll < liquidator.hourlyBlocks() * breakevenTime);
         uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqThresProxy = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
-        vm.assume(newPrice / liqThresProxy * 100 < rateEthToUsd / 100 * collFactorProxy);
+        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
+        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
         vm.assume(amountEth > 0);
         uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
@@ -700,7 +701,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.prank(liquidatorBot);
         factory.liquidate(address(proxy));
 
-        (uint128 openDebt,, uint16 liqThres,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        (uint128 openDebt,,,,,,) = liquidator.auctionInfo(address(proxy), 0);
+        uint16 liqThres = 150;
         (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy), 0);
 
         vm.roll(block.number + blocksToRoll);

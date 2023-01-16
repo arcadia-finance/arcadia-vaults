@@ -126,13 +126,13 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {
         vm.startPrank(creatorAddress);
-        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_THRESHOLD
+        // Given: collateralFactors index 0 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 is DEFAULT_LIQUIDATION_FACTOR
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
         riskVars_[0] = PricingModule.RiskVarInput({
             baseCurrency: 0,
             asset: address(0),
-            collateralFactor: collFactor,
-            liquidationThreshold: liqTresh
+            collateralFactor: collateralFactor,
+            liquidationFactor: liquidationFactor
         });
         // When: creatorAddress calls addAsset with wrong number of credits
 
@@ -146,7 +146,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
     }
 
     function testSuccess_addAsset_FullListRiskVariables() public {
-        // Given: collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_THRESHOLD
+        // Given: collateralFactors index 0 and 1 is DEFAULT_COLLATERAL_FACTOR, liquidationThresholds index 0 and 1 is DEFAULT_LIQUIDATION_FACTOR
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with full list credit ratings
         floorERC721PricingModule.addAsset(

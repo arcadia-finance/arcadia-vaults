@@ -45,6 +45,8 @@ contract Vault {
     uint16 public vaultVersion;
     uint256 public life;
 
+    address public baseCurrency;
+
     address public owner;
     address public liquidator;
     address public registry;
@@ -62,13 +64,6 @@ contract Vault {
     struct AddressSlot {
         address value;
     }
-
-    struct VaultInfo {
-        uint16 liqThres; //2 decimals precision (factor 100)
-        address baseCurrency;
-    }
-
-    VaultInfo public vault;
 
     event Upgraded(address indexed implementation);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -174,10 +169,10 @@ contract Vault {
 
     /**
      * @notice Sets the baseCurrency of a vault.
-     * @param baseCurrency the new baseCurrency for the vault.
+     * @param baseCurrency_ the new baseCurrency for the vault.
      */
-    function setBaseCurrency(address baseCurrency) public onlyAuthorized {
-        _setBaseCurrency(baseCurrency);
+    function setBaseCurrency(address baseCurrency_) public onlyAuthorized {
+        _setBaseCurrency(baseCurrency_);
     }
 
     /**
@@ -188,7 +183,7 @@ contract Vault {
     function _setBaseCurrency(address baseCurrency_) private {
         require(getUsedMargin() == 0, "V_SBC: Can't change baseCurrency when Used Margin > 0");
         require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
-        vault.baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
+        baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -207,14 +202,14 @@ contract Vault {
         require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
-        (bool success, address baseCurrency, address liquidator_) =
+        (bool success, address baseCurrency_, address liquidator_) =
             ITrustedProtocol(protocol).openMarginAccount(vaultVersion);
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
         liquidator = liquidator_;
         trustedProtocol = protocol;
-        if (vault.baseCurrency != baseCurrency) {
-            _setBaseCurrency(baseCurrency);
+        if (baseCurrency != baseCurrency_) {
+            _setBaseCurrency(baseCurrency_);
         }
         isTrustedProtocolSet = true;
         allowed[protocol] = true;
@@ -231,7 +226,6 @@ contract Vault {
 
         isTrustedProtocolSet = false;
         allowed[trustedProtocol] = false;
-        vault.liqThres = 0;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -240,61 +234,36 @@ contract Vault {
 
     /**
      * @notice Can be called by authorised applications to increase a margin position.
-     * @param baseCurrency The Base-currency in which the margin position is denominated
+     * @param baseCurrency_ The Base-currency in which the margin position is denominated
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
-     * @dev The Liquidation Threshold will automatically be updated on every increase of margin,
-     * but not automatically on a decrease of margin (since this derisks the vault).
      */
-    function increaseMarginPosition(address baseCurrency, uint256 amount)
+    function increaseMarginPosition(address baseCurrency_, uint256 amount)
         public
+        view
         onlyAuthorized
         returns (bool success)
     {
-        if (baseCurrency != vault.baseCurrency) {
+        if (baseCurrency_ != baseCurrency) {
             return false;
         }
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
-        (uint256 collateralValue, uint256 liquidationThreshold) = IRegistry(registry)
-            .getCollateralValueAndLiquidationThreshold(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
 
         // Check that the collateral value is bigger than the sum  of the already used margin and the increase
         // ToDo: For trusted protocols, already pass usedMargin with the call -> avoid additional hop back to trusted protocol to fetch already open debt
-        success = collateralValue >= getUsedMargin() + amount;
-
-        // Can safely cast to uint16 since liquidationThreshold is maximal 10000
-        if (success) vault.liqThres = uint16(liquidationThreshold);
-    }
-
-    /**
-     * @notice Can be called by vault owner to sync the Liquidation Treshhold.
-     * @dev Vault Owners can always voluntary update the Liquidation Treshhold on a voluntary basis.
-     * They can in practice anyway refinance DeFi loans (eg. with flashloans) if conditions
-     * would become more favourable, hence we foresee a gas efficient function.
-     */
-    function syncLiquidationThreshold() external onlyOwner {
-        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
-            generateAssetData();
-        (, uint256 liquidationThreshold) = IRegistry(registry).getCollateralValueAndLiquidationThreshold(
-            assetAddresses, assetIds, assetAmounts, vault.baseCurrency
-        );
-
-        // Can safely cast to uint16 since liquidationThreshold is maximal 10000
-        vault.liqThres = uint16(liquidationThreshold);
+        success = getCollateralValue() >= getUsedMargin() + amount;
     }
 
     /**
      * @notice Returns the total value of the vault in a specific baseCurrency
      * @dev Fetches all stored assets with their amounts on the proxy vault.
      * Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
-     * @param baseCurrency The asset to return the value in.
+     * @param baseCurrency_ The asset to return the value in.
      * @return vaultValue Total value stored on the vault, expressed in baseCurrency.
      */
-    function getVaultValue(address baseCurrency) public view returns (uint256 vaultValue) {
+    function getVaultValue(address baseCurrency_) public view returns (uint256 vaultValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vaultValue = IRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        vaultValue = IRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency_);
     }
 
     /**
@@ -302,7 +271,7 @@ contract Vault {
      * @return collateralValue The collateral value, returned in the decimals of the base currency.
      * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
      * @dev The collateral value of the vault is equal to the spot value of the underlying assets,
-     * discounted by a haircut (with a factor 100 / collateral_threshold). Since the value of
+     * discounted by a haircut (the collateral factor). Since the value of
      * collateralised assets can fluctuate, the haircut guarantees that the vault
      * remains over-collateralised with a high confidence level (99,9%+). The size of the
      * haircut depends on the underlying risk of the assets in the vault, the bigger the volatility
@@ -311,8 +280,24 @@ contract Vault {
     function getCollateralValue() public view returns (uint256 collateralValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        collateralValue =
-            IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, vault.baseCurrency);
+        collateralValue = IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+    }
+
+    /**
+     * @notice Calculates the total liquidation value of the vault.
+     * @return liquidationValue The liquidation value, returned in the decimals of the base currency.
+     * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+     * @dev The liquidation value of the vault is equal to the spot value of the underlying assets,
+     * discounted by a haircut (the liquidation factor).
+     * The liquidation value takes into account that not the full value of the assets can go towards
+     * repaying the debt, but only a fraction of it, the remaining value is lost due to:
+     * slippage while liquidating the assets, fees for the auction initiator, gas fees and
+     * a penalty to the protocol.
+     */
+    function getLiquidationValue() public view returns (uint256 liquidationValue) {
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            generateAssetData();
+        liquidationValue = IRegistry(registry).getLiquidationValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -353,42 +338,21 @@ contract Vault {
      * @dev Requires an unhealthy vault (value / debt < liqThres).
      * Starts the vault auction on the liquidator contract.
      * Increases the life of the vault to indicate a liquidation has happened.
-     * Sets debtInfo todo: needed?
      * Transfers ownership of the proxy vault to the liquidator!
-     * @param liquidationKeeper Addross of the keeper who initiated the liquidation process.
+     * @param liquidationKeeper Address of the keeper who initiated the liquidation process.
      * @return success Boolean returning if the liquidation process is successfully started.
      */
     function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
-        //gas: 35 gas cheaper to not take debt into memory
-        uint256 totalValue = getVaultValue(vault.baseCurrency);
         uint256 usedMargin = getUsedMargin();
-        uint256 leftHand;
-        uint256 rightHand;
 
-        unchecked {
-            //gas: cannot overflow unless totalValue is
-            //higher than 1.15 * 10**57 * 10**18 decimals
-            leftHand = totalValue * 100;
-        }
-        //ToDo: move to unchecked?
-        //gas: cannot realisticly overflow: usedMargin will be always smaller than uint128.
-        // so uint128 * uint8 << uint256
-        rightHand = usedMargin * vault.liqThres;
+        require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");
 
-        require(leftHand < rightHand, "V_LV: This vault is healthy");
-
-        uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(vault.baseCurrency);
+        uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(baseCurrency);
 
         require(
             //ToDo: check on usedMargin?
             ILiquidator(liquidator).startAuction(
-                address(this),
-                life,
-                liquidationKeeper,
-                owner,
-                uint128(usedMargin),
-                vault.liqThres,
-                baseCurrencyIdentifier
+                address(this), life, liquidationKeeper, owner, uint128(usedMargin), baseCurrencyIdentifier
             ),
             "V_LV: Failed to start auction!"
         );

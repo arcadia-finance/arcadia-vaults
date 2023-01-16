@@ -412,8 +412,8 @@ contract MainRegistry is Ownable {
                 (
                     tempValueInUsd,
                     tempValueInBaseCurrency,
-                    valuesAndRiskVarPerAsset[i].collFactor,
-                    valuesAndRiskVarPerAsset[i].liqThreshold
+                    valuesAndRiskVarPerAsset[i].collateralFactor,
+                    valuesAndRiskVarPerAsset[i].liquidationFactor
                 ) = IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 //Check if baseCurrency is USD
                 if (baseCurrency == 0) {
@@ -466,54 +466,30 @@ contract MainRegistry is Ownable {
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 
-        collateralValue = RiskModule.calculateWeightedCollateralValue(valuesAndRiskVarPerAsset);
+        collateralValue = RiskModule.calculateCollateralValue(valuesAndRiskVarPerAsset);
     }
 
     /**
-     * @notice Calculate the liquidation threshold given the asset details in given baseCurrency
+     * @notice Calculate the getLiquidationValue given the asset details in given baseCurrency
      * @param assetAddresses The List of token addresses of the assets
      * @param assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
      * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An (address) of the BaseCurrency contract
-     * @return liquidationThreshold of the given assets
+     * @param baseCurrency An address of the BaseCurrency contract
+     * @return liquidationValue Liquidation value of the given assets denominated in BaseCurrency.
      */
-    function getLiquidationThreshold(
+
+    function getLiquidationValue(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 liquidationThreshold) {
-        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
+    ) public view returns (uint256 liquidationValue) {
+        //No need to Check that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 
-        liquidationThreshold = RiskModule.calculateWeightedLiquidationThreshold(valuesAndRiskVarPerAsset);
-    }
-
-    /**
-     * @notice Calculate the liquidation threshold given the asset details in given baseCurrency
-     * @param assetAddresses The List of token addresses of the assets
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An (address) of the BaseCurrency contract
-     * @return collateralValue Collateral value of the given assets denominated in BaseCurrency.
-     * @return liquidationThreshold of the given assets
-     */
-    function getCollateralValueAndLiquidationThreshold(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        address baseCurrency
-    ) public view returns (uint256 collateralValue, uint256 liquidationThreshold) {
-        //No need to check that all arrays are of equal length, already done in getListOfValuesPerAsset()
-        RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
-
-        (collateralValue, liquidationThreshold) =
-            RiskModule.calculateCollateralValueAndLiquidationThreshold(valuesAndRiskVarPerAsset);
+        liquidationValue = RiskModule.calculateLiquidationValue(valuesAndRiskVarPerAsset);
     }
 }

@@ -271,8 +271,8 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         riskVars_[0] = PricingModule.RiskVarInput({
             baseCurrency: 0,
             asset: address(0),
-            collateralFactor: collFactor,
-            liquidationThreshold: liqTresh
+            collateralFactor: collateralFactor,
+            liquidationFactor: liquidationFactor
         });
         //When: creator adds a new asset
         //Then: addAsset reverts with "APM_SRV: LENGTH_MISMATCH"

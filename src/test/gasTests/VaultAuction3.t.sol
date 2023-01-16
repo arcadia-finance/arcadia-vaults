@@ -44,7 +44,7 @@ contract gasVaultAuction_1ERC201ERC721 is GasTestFixture {
                 / 10 ** (Constants.oracleWbaycToEthDecimals + Constants.oracleEthToUsdDecimals)
         ) * s_assetAmounts[1];
         pool.borrow(
-            uint128(((valueEth + valueBayc) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100),
+            uint128(((valueEth + valueBayc) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100),
             address(proxy),
             vaultOwner
         );

@@ -36,7 +36,9 @@ contract gasBuyVault_1ERC20 is GasTestFixture {
         uint256 valueEth = (((10 ** 18 * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * s_assetAmounts[0])
             / 10 ** Constants.ethDecimals;
         pool.borrow(
-            uint128((valueEth / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100), address(proxy), vaultOwner
+            uint128((valueEth / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100),
+            address(proxy),
+            vaultOwner
         );
         vm.stopPrank();
 

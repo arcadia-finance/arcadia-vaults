@@ -42,7 +42,7 @@ contract gasBuyVault_2ERC20 is GasTestFixture {
         uint256 valueLink = (((10 ** 18 * rateLinkToUsd) / 10 ** Constants.oracleLinkToUsdDecimals) * s_assetAmounts[1])
             / 10 ** Constants.linkDecimals;
         pool.borrow(
-            uint128(((valueEth + valueLink) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100),
+            uint128(((valueEth + valueLink) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100),
             address(proxy),
             vaultOwner
         );

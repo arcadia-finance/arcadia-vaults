@@ -115,21 +115,21 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     function testSuccess_getRiskVariables_RiskVariablesAreSet(
         address asset,
         uint256 baseCurrency,
-        uint16 collateralFactor,
-        uint16 liquidationThreshold
+        uint16 collateralFactor_,
+        uint16 liquidationFactor_
     ) public {
         uint256 slot = stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.assetRiskVars.selector)
             .with_key(asset).with_key(baseCurrency).find();
         bytes32 loc = bytes32(slot);
-        bytes32 value = bytes32(abi.encodePacked(liquidationThreshold, collateralFactor));
+        bytes32 value = bytes32(abi.encodePacked(liquidationFactor_, collateralFactor_));
         value = value >> 224;
         vm.store(address(abstractPricingModule), loc, value);
 
         (uint16 actualCollateralFactor, uint16 actualLiquidationThreshold) =
             abstractPricingModule.getRiskVariables(asset, baseCurrency);
 
-        assertEq(actualCollateralFactor, collateralFactor);
-        assertEq(actualLiquidationThreshold, liquidationThreshold);
+        assertEq(actualCollateralFactor, collateralFactor_);
+        assertEq(actualLiquidationThreshold, liquidationFactor_);
     }
 
     function testSuccess_getRiskVariables_RiskVariablesAreNotSet(address asset, uint256 baseCurrency) public {
@@ -150,10 +150,10 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         vm.expectRevert("APM_SRV: Coll.Fact not in limits");
         abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
 
-        (uint16 collateralFactor, uint16 liquidationThreshold) =
+        (uint16 collateralFactor_, uint16 liquidationFactor_) =
             abstractPricingModule.getRiskVariables(asset, baseCurrency);
-        assertEq(collateralFactor, 0);
-        assertEq(liquidationThreshold, 0);
+        assertEq(collateralFactor_, 0);
+        assertEq(liquidationFactor_, 0);
     }
 
     function testRevert_setRiskVariables_LiquidationTreshholdOutOfLimits(
@@ -163,18 +163,15 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     ) public {
         vm.assume(riskVars_.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
 
-        vm.assume(
-            riskVars_.liquidationThreshold > RiskConstants.MAX_LIQUIDATION_THRESHOLD
-                || riskVars_.liquidationThreshold < RiskConstants.MIN_LIQUIDATION_THRESHOLD
-        );
+        vm.assume(riskVars_.liquidationFactor > RiskConstants.MAX_LIQUIDATION_FACTOR);
 
-        vm.expectRevert("APM_SRV: Liq.Thres not in limits");
+        vm.expectRevert("APM_SRV: Liq.Fact not in limits");
         abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
 
-        (uint16 collateralFactor, uint16 liquidationThreshold) =
+        (uint16 collateralFactor_, uint16 liquidationFactor_) =
             abstractPricingModule.getRiskVariables(asset, baseCurrency);
-        assertEq(collateralFactor, 0);
-        assertEq(liquidationThreshold, 0);
+        assertEq(collateralFactor_, 0);
+        assertEq(liquidationFactor_, 0);
     }
 
     function testSuccess_setRiskVariables(address asset, uint256 baseCurrency, PricingModule.RiskVars memory riskVars_)
@@ -182,17 +179,14 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     {
         vm.assume(riskVars_.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
 
-        vm.assume(
-            riskVars_.liquidationThreshold <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
-                && riskVars_.liquidationThreshold >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
-        );
+        vm.assume(riskVars_.liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR);
 
         abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
 
-        (uint16 collateralFactor, uint16 liquidationThreshold) =
+        (uint16 collateralFactor_, uint16 liquidationFactor_) =
             abstractPricingModule.getRiskVariables(asset, baseCurrency);
-        assertEq(collateralFactor, riskVars_.collateralFactor);
-        assertEq(liquidationThreshold, riskVars_.liquidationThreshold);
+        assertEq(collateralFactor_, riskVars_.collateralFactor);
+        assertEq(liquidationFactor_, riskVars_.liquidationFactor);
     }
 
     function testRevert_setBatchRiskVariables_NonRiskManager(
@@ -233,20 +227,17 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < riskVarInputs_.length; ++i) {
             riskVarInputs_.push(riskVarInputs[i]);
             vm.assume(riskVarInputs_[i].collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
-            vm.assume(
-                riskVarInputs_[i].liquidationThreshold <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
-                    && riskVarInputs_[i].liquidationThreshold >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
-            );
+            vm.assume(riskVarInputs_[i].liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         }
 
         vm.startPrank(creatorAddress);
         abstractPricingModule.setBatchRiskVariables(riskVarInputs_);
 
         for (uint256 i; i < riskVarInputs_.length; ++i) {
-            (uint16 collateralFactor, uint16 liquidationThreshold) =
+            (uint16 collateralFactor_, uint16 liquidationFactor_) =
                 abstractPricingModule.getRiskVariables(riskVarInputs_[i].asset, riskVarInputs_[i].baseCurrency);
-            assertEq(collateralFactor, riskVarInputs_[i].collateralFactor);
-            assertEq(liquidationThreshold, riskVarInputs_[i].liquidationThreshold);
+            assertEq(collateralFactor_, riskVarInputs_[i].collateralFactor);
+            assertEq(liquidationFactor_, riskVarInputs_[i].liquidationFactor);
         }
     }
 
@@ -280,20 +271,17 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < riskVarInputs.length; ++i) {
             riskVarInputs_.push(riskVarInputs[i]);
             vm.assume(riskVarInputs[i].collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
-            vm.assume(
-                riskVarInputs[i].liquidationThreshold <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
-                    && riskVarInputs[i].liquidationThreshold >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
-            );
+            vm.assume(riskVarInputs[i].liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         }
 
         vm.startPrank(creatorAddress);
         abstractPricingModule.setRiskVariablesForAsset(asset, riskVarInputs_);
 
         for (uint256 i; i < riskVarInputs.length; ++i) {
-            (uint16 collateralFactor, uint16 liquidationThreshold) =
+            (uint16 collateralFactor_, uint16 liquidationFactor_) =
                 abstractPricingModule.getRiskVariables(asset, riskVarInputs[i].baseCurrency);
-            assertEq(collateralFactor, riskVarInputs[i].collateralFactor);
-            assertEq(liquidationThreshold, riskVarInputs[i].liquidationThreshold);
+            assertEq(collateralFactor_, riskVarInputs[i].collateralFactor);
+            assertEq(liquidationFactor_, riskVarInputs[i].liquidationFactor);
         }
     }
 

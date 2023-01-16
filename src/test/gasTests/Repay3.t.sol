@@ -45,7 +45,7 @@ contract gasRepay_1ERC201ERC721 is GasTestFixture {
             (10 ** 18 * rateWbaycToEth * rateEthToUsd)
                 / 10 ** (Constants.oracleWbaycToEthDecimals + Constants.oracleEthToUsdDecimals)
         ) * s_assetAmounts[1];
-        maxCredit = uint128(((valueEth + valueBayc) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100);
+        maxCredit = uint128(((valueEth + valueBayc) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100);
         pool.borrow(maxCredit, address(proxy), vaultOwner);
         vm.stopPrank();
     }

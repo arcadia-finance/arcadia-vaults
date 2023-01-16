@@ -112,6 +112,8 @@ contract UniswapV2PricingModule is PricingModule {
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
+     * @return collateralFactor The Collateral Factor of the asset
+     * @return liquidationFactor The Liquidation Factor of the asset
      * @dev trustedUsdPriceToken cannot realisticly overflow, requires unit price of a token with 0 decimals (worst case),
      * to be bigger than $1,16 * 10^41
      * @dev The UniswapV2PricingModule will always return the value in valueInUsd,
@@ -124,7 +126,7 @@ contract UniswapV2PricingModule is PricingModule {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collateralFactor, uint256 liquidationFactor)
     {
         // To calculate the liquidity value after arbitrage, what matters is the ratio of the price of token0 compared to the price of token1
         // Hence we need to use a trusted external price for an equal amount of tokens,
@@ -155,10 +157,10 @@ contract UniswapV2PricingModule is PricingModule {
         valueInUsd = FixedPointMathLib.mulDivDown(token0Amount, trustedUsdPriceToken0, FixedPointMathLib.WAD)
             + FixedPointMathLib.mulDivDown(token1Amount, trustedUsdPriceToken1, FixedPointMathLib.WAD);
 
-        collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
-        liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;
+        collateralFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liquidationFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationFactor;
 
-        return (valueInUsd, 0, collFactor, liqThreshold);
+        return (valueInUsd, 0, collateralFactor, liquidationFactor);
     }
 
     /**

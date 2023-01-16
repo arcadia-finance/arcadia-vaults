@@ -151,8 +151,8 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         riskVars_[0] = PricingModule.RiskVarInput({
             baseCurrency: 0,
             asset: address(0),
-            collateralFactor: collFactor,
-            liquidationThreshold: liqTresh
+            collateralFactor: collateralFactor,
+            liquidationFactor: liquidationFactor
         });
 
         standardERC4626PricingModule.addAsset(address(ybEth), riskVars_, type(uint128).max);

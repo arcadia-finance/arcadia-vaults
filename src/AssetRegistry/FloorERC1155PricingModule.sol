@@ -144,6 +144,8 @@ contract FloorERC1155PricingModule is PricingModule {
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
+     * @return collateralFactor The Collateral Factor of the asset
+     * @return liquidationFactor The Liquidation Factor of the asset
      * @dev If the Oracle-Hub returns the rate in a baseCurrency different from USD, the FloorERC1155PricingModule will return
      * the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the FloorERC1155PricingModule
      * will return the value of the asset in USD.
@@ -157,7 +159,7 @@ contract FloorERC1155PricingModule is PricingModule {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collFactor, uint256 liqThreshold)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collateralFactor, uint256 liquidationFactor)
     {
         uint256 rateInUsd;
         uint256 rateInBaseCurrency;
@@ -171,7 +173,7 @@ contract FloorERC1155PricingModule is PricingModule {
             valueInUsd = getValueInput.assetAmount * rateInUsd;
         }
 
-        collFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
-        liqThreshold = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationThreshold;
+        collateralFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liquidationFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationFactor;
     }
 }
