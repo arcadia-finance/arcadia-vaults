@@ -17,7 +17,7 @@ import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILendingPool.sol";
 import "./interfaces/ITrustedProtocol.sol";
 import "./interfaces/IActionBase.sol";
-import {actionAssetsData} from "./actions/utils/ActionData.sol";
+import {ActionData} from "./actions/utils/ActionData.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -444,6 +444,27 @@ contract Vault {
         _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
     }
 
+    /**
+     * @notice Deposits assets into the proxy vault.
+     * @dev Each index in each array corresponding to the same asset that will get deposited.
+     * If multiple asset IDs of the same contract address
+     * are deposited, the assetAddress must be repeated in assetAddresses.
+     * The ERC20 gets deposited by transferFrom. ERC721 & ERC1155 using safeTransferFrom.
+     * Example inputs:
+     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * @param assetAddresses The contract addresses of the asset. For each asset to be deposited one address,
+     * even if multiple assets of the same contract address are deposited.
+     * @param assetIds The asset IDs that will be deposited for ERC721 & ERC1155.
+     * When depositing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
+     * @param assetAmounts The amounts of the assets to be deposited.
+     * @param assetTypes The types of the assets to be deposited.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
+     * Any other number = failed tx
+     * @param from The address to deposit from.
+     */
     function _deposit(
         address[] memory assetAddresses,
         uint256[] memory assetIds,
@@ -484,7 +505,6 @@ contract Vault {
      * Example inputs:
      * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
      * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
-     * @dev After withdrawing assets, the interest rate is renewed
      * @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
      * even if multiple assets of the same contract address are withdrawn.
      * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
@@ -517,6 +537,29 @@ contract Vault {
             require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }
+
+    /**
+     * @notice Processes withdrawals of assets
+     * @dev Each index in each array corresponding to the same asset that will get withdrawn.
+     * If multiple asset IDs of the same contract address
+     * are to be withdrawn, the assetAddress must be repeated in assetAddresses.
+     * The ERC20 get withdrawn by transfers. ERC721 & ERC1155 using safeTransferFrom.
+     * Will fail if balance on proxy vault is not sufficient for one of the withdrawals.
+     * Example inputs:
+     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
+     * even if multiple assets of the same contract address are withdrawn.
+     * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
+     * When withdrawing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
+     * @param assetAmounts The amounts of the assets to be withdrawn.
+     * @param assetTypes The types of the assets to be withdrawn.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
+     * Any other number = failed tx
+     * @param to The address to withdraw to.
+     */
 
     function _withdraw(
         address[] memory assetAddresses,
@@ -820,16 +863,15 @@ contract Vault {
      * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
      */
     function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyOwner {
-        require(IMainRegistry(registry).isActionAllowlisted(actionHandler), "VL_VMA: Action is not allowlisted");
+        require(IMainRegistry(registry).isActionAllowed(actionHandler), "VL_VMA: Action is not allowlisted");
 
-        (actionAssetsData memory outgoing,,,) =
-            abi.decode(actionData, (actionAssetsData, actionAssetsData, address[], bytes[]));
+        (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
 
         // withdraw to actionHandler
         _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
 
         // execute Action
-        actionAssetsData memory incoming = IActionBase(actionHandler).executeAction(address(this), actionData);
+        ActionData memory incoming = IActionBase(actionHandler).executeAction(address(this), actionData);
 
         // deposit from actionHandler into vault
         _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);

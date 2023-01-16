@@ -11,5 +11,5 @@ import "../actions/utils/ActionData.sol";
 interface IActionBase {
     function executeAction(address vaultAddress, bytes calldata actionData)
         external
-        returns (actionAssetsData memory result);
+        returns (ActionData memory result);
 }

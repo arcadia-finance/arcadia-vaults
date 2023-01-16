@@ -138,7 +138,7 @@ contract ExternalContractsTest is MainRegistryTest {
         vm.prank(creatorAddress);
         mainRegistry.setAllowedAction(action, allowed);
 
-        assertEq(mainRegistry.isActionAllowlisted(action), allowed);
+        assertEq(mainRegistry.isActionAllowed(action), allowed);
     }
 
     function testRevert_setAllowedAction_NonOwner(address action, bool allowed, address nonAuthorized) public {

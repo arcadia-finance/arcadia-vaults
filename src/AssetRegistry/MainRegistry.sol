@@ -43,7 +43,7 @@ contract MainRegistry is Ownable {
     mapping(address => address) public assetToPricingModule;
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
 
-    mapping(address => bool) public isActionAllowlisted;
+    mapping(address => bool) public isActionAllowed;
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
@@ -103,6 +103,16 @@ contract MainRegistry is Ownable {
      */
     function setFactory(address _factoryAddress) external onlyOwner {
         factoryAddress = _factoryAddress;
+    }
+
+    /**
+     * @notice Sets an allowed action handler
+     * @param action The address of the action handler
+     * @param allowed Bool to indicate its status
+     * @dev Can only be called by owner.
+     */
+    function setAllowedAction(address action, bool allowed) public onlyOwner {
+        isActionAllowed[action] = allowed;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -505,19 +515,5 @@ contract MainRegistry is Ownable {
 
         (collateralValue, liquidationThreshold) =
             RiskModule.calculateCollateralValueAndLiquidationThreshold(valuesAndRiskVarPerAsset);
-    }
-
-    /* ///////////////////////////////////////////////////////////////
-                    ACTION ALLOWLIST SETTERS
-    /////////////////////////////////////////////////////////////// */
-
-    /**
-     * @notice Sets an allowed action handler
-     * @param action The address of the action handler
-     * @param allowed Bool to indicate its status
-     * @dev Can only be called by owner.
-     */
-    function setAllowedAction(address action, bool allowed) public onlyOwner {
-        isActionAllowlisted[action] = allowed;
     }
 }

@@ -42,8 +42,10 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
     VaultTestExtension public proxy_;
     TrustedProtocolMock public trustedProtocol;
 
+    uint256 public numberStored;
+
     function setUp() public {
-        action = new ActionMultiCall();
+        action = new ActionMultiCall(address(mainRegistry));
         deal(address(eth), address(action), 1000 * 10 ** 20, false);
 
         vm.startPrank(creatorAddress);
@@ -73,13 +75,13 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_executeAction() public {
-        actionAssetsData memory assetData = actionAssetsData({
+    function testSuccess_executeAction(uint256 number) public {
+        ActionData memory assetData = ActionData({
             assets: new address[](1),
             assetIds: new uint256[](0),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)
+            actionBalances: new uint256[](0)
         });
 
         assetData.assets[0] = address(eth);
@@ -88,20 +90,22 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         address[] memory to = new address[](1);
         bytes[] memory data = new bytes[](1);
         to[0] = address(this);
-        data[0] = abi.encodeWithSignature("returnFive()");
+        data[0] = abi.encodeWithSignature("setNumberStored(uint256)", number);
 
         bytes memory callData = abi.encode(assetData, assetData, to, data);
 
         action.executeAction(address(0), callData);
+
+        assertEq(numberStored, number);
     }
 
     function testRevert_executeAction_lengthMismatch() public {
-        actionAssetsData memory assetData = actionAssetsData({
+        ActionData memory assetData = ActionData({
             assets: new address[](1),
             assetIds: new uint256[](0),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)
+            actionBalances: new uint256[](0)
         });
 
         assetData.assets[0] = address(eth);
@@ -143,12 +147,12 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         to[4] = address(multiActionMock);
         to[5] = address(link);
 
-        actionAssetsData memory assetDataOut = actionAssetsData({
+        ActionData memory assetDataOut = ActionData({
             assets: new address[](1),
             assetIds: new uint256[](1),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)
+            actionBalances: new uint256[](0)
         });
 
         assetDataOut.assets[0] = address(eth);
@@ -156,12 +160,12 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         assetDataOut.assetIds[0] = 0;
         assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
 
-        actionAssetsData memory assetDataIn = actionAssetsData({
+        ActionData memory assetDataIn = ActionData({
             assets: new address[](1),
             assetIds: new uint256[](1),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)
+            actionBalances: new uint256[](0)
         });
 
         assetDataIn.assets[0] = address(link);
@@ -169,7 +173,6 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         assetDataOut.assetIds[0] = 0;
 
         bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
-        emit log_named_bytes("callData", callData);
 
         vm.startPrank(vaultOwner);
         proxy_.vaultManagementAction(address(action), callData);
@@ -220,12 +223,12 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         to[1] = address(multiActionMock);
         to[2] = address(link);
 
-        actionAssetsData memory assetDataOut = actionAssetsData({
+        ActionData memory assetDataOut = ActionData({
             assets: new address[](1),
             assetIds: new uint256[](1),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)
+            actionBalances: new uint256[](0)
         });
 
         assetDataOut.assets[0] = address(eth);
@@ -233,12 +236,12 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         assetDataOut.assetIds[0] = 0;
         assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
 
-        actionAssetsData memory assetDataIn = actionAssetsData({
+        ActionData memory assetDataIn = ActionData({
             assets: new address[](1),
             assetIds: new uint256[](1),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)
+            actionBalances: new uint256[](0)
         });
 
         assetDataIn.assets[0] = address(link);
@@ -295,12 +298,12 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         to[1] = address(multiActionMock);
         to[2] = address(link);
 
-        actionAssetsData memory assetDataOut = actionAssetsData({
+        ActionData memory assetDataOut = ActionData({
             assets: new address[](1),
             assetIds: new uint256[](1),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)
+            actionBalances: new uint256[](0)
         });
 
         assetDataOut.assets[0] = address(eth);
@@ -308,12 +311,12 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         assetDataOut.assetIds[0] = 0;
         assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
 
-        actionAssetsData memory assetDataIn = actionAssetsData({
+        ActionData memory assetDataIn = ActionData({
             assets: new address[](1),
             assetIds: new uint256[](1),
             assetAmounts: new uint256[](1),
             assetTypes: new uint256[](1),
-            preActionBalances: new uint256[](0)
+            actionBalances: new uint256[](0)
         });
 
         assetDataIn.assets[0] = address(link);
@@ -326,12 +329,6 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         vm.expectRevert("VMA: coll. value too low");
         proxy_.vaultManagementAction(address(action), callData);
         vm.stopPrank();
-
-        emit log_named_uint("link returned", (1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio) - 1);
-        emit log_named_uint("ratio", ethToLinkRatio);
-        emit log_named_uint("debt", debtAmount);
-        emit log_named_uint("value", proxy_.getCollateralValue());
-        emit log_named_uint("openpos", proxy_.getUsedMargin());
     }
 
     function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
@@ -366,7 +363,7 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function returnFive() public pure returns (uint256) {
-        return 5;
+    function setNumberStored(uint256 number) public {
+        numberStored = number;
     }
 }
