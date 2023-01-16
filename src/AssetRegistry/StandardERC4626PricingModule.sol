@@ -125,6 +125,8 @@ contract StandardERC4626PricingModule is PricingModule {
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
+     * @return collateralFactor The Collateral Factor of the asset
+     * @return liquidationFactor The Liquidation Factor of the asset
      * @dev If the Oracle-Hub returns the rate in a baseCurrency different from USD, the StandardERC4626Registry will return
      * the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the StandardERC4626Registry
      * will return the value of the asset in USD.
