@@ -28,7 +28,7 @@ contract ActionMultiCall is ActionBase {
      * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
      * @return incoming a actionAssetData struct with the balances of this ActionMultiCall address.
      */
-    function executeAction(address, bytes calldata actionData) external override returns (ActionData memory) {
+    function executeAction(bytes calldata actionData) external override returns (ActionData memory) {
         (, ActionData memory incoming, address[] memory to, bytes[] memory data) =
             abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
 

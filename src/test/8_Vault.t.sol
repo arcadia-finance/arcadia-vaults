@@ -1514,59 +1514,21 @@ contract VaultActionTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testSuccess_vaultManagementAction_noDebt() public {
-        multiActionMock = new MultiActionMock();
+    function testRevert_vaultManagementAction_NonOwner(address sender) public {
+        vm.assume(sender != vaultOwner);
 
-        bytes[] memory data = new bytes[](6);
-        address[] memory to = new address[](6);
+        vm.startPrank(sender);
+        vm.expectRevert("V: You are not the owner");
+        proxy_.vaultManagementAction(address(action), new bytes(0));
+        vm.stopPrank();
+    }
 
-        data[0] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), 1000 * 10 ** 18);
-        data[1] = abi.encodeWithSignature(
-            "swapAssets(address,address,uint256,uint256)", address(eth), address(link), 1000 * 10 ** 18, 1000 * 10 ** 18
-        );
-        data[2] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), 1000 * 10 ** 18);
-        data[3] = abi.encodeWithSignature("assetSink(address,uint256)", address(link), 1000 * 10 ** 18);
-        data[4] = abi.encodeWithSignature("assetSource(address,uint256)", address(link), 1000 * 10 ** 18);
-        data[5] = abi.encodeWithSignature("approve(address,uint256)", address(proxy_), 1000 * 10 ** 18);
-
-        deal(address(link), address(multiActionMock), 1000 * 10 ** 18, false);
-
-        to[0] = address(eth);
-        to[1] = address(multiActionMock);
-        to[2] = address(link);
-        to[3] = address(multiActionMock);
-        to[4] = address(multiActionMock);
-        to[5] = address(link);
-
-        ActionData memory assetDataOut = ActionData({
-            assets: new address[](1),
-            assetIds: new uint256[](1),
-            assetAmounts: new uint256[](1),
-            assetTypes: new uint256[](1),
-            actionBalances: new uint256[](0)
-        });
-
-        assetDataOut.assets[0] = address(eth);
-        assetDataOut.assetTypes[0] = 0;
-        assetDataOut.assetIds[0] = 0;
-        assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
-
-        ActionData memory assetDataIn = ActionData({
-            assets: new address[](1),
-            assetIds: new uint256[](1),
-            assetAmounts: new uint256[](1),
-            assetTypes: new uint256[](1),
-            actionBalances: new uint256[](0)
-        });
-
-        assetDataIn.assets[0] = address(link);
-        assetDataIn.assetTypes[0] = 0;
-        assetDataOut.assetIds[0] = 0;
-
-        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+    function testRevert_vaultManagementAction_actionNotAllowed(address action_) public {
+        vm.assume(action_ != address(action));
 
         vm.startPrank(vaultOwner);
-        proxy_.vaultManagementAction(address(action), callData);
+        vm.expectRevert("VL_VMA: Action is not allowlisted");
+        proxy_.vaultManagementAction(action_, new bytes(0));
         vm.stopPrank();
     }
 

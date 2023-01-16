@@ -871,7 +871,7 @@ contract Vault {
         _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
 
         // execute Action
-        ActionData memory incoming = IActionBase(actionHandler).executeAction(address(this), actionData);
+        ActionData memory incoming = IActionBase(actionHandler).executeAction(actionData);
 
         // deposit from actionHandler into vault
         _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);

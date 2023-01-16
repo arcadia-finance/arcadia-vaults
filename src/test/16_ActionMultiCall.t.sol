@@ -43,7 +43,7 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
 
         bytes memory callData = abi.encode(assetData, assetData, to, data);
 
-        action.executeAction(address(0), callData);
+        action.executeAction(callData);
 
         assertEq(numberStored, number);
     }
@@ -69,7 +69,7 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         bytes memory callData = abi.encode(assetData, assetData, to, data);
 
         vm.expectRevert("EA: Length mismatch");
-        action.executeAction(address(0), callData);
+        action.executeAction(callData);
     }
 
     function setNumberStored(uint256 number) public {

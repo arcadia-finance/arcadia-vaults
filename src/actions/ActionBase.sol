@@ -15,9 +15,5 @@ abstract contract ActionBase {
         MAIN_REGISTRY = mainreg;
     }
 
-    function executeAction(address vaultAddress, bytes calldata actionData)
-        external
-        virtual
-        returns (ActionData memory resultData)
-    {}
+    function executeAction(bytes calldata actionData) external virtual returns (ActionData memory resultData) {}
 }
