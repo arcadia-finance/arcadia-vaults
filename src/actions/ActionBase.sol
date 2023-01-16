@@ -6,7 +6,7 @@
  */
 pragma solidity >=0.8.0 <0.9.0;
 
-import {actionAssetsData} from "../actions/utils/ActionData.sol";
+import {ActionData} from "../actions/utils/ActionData.sol";
 
 abstract contract ActionBase {
     address public immutable MAIN_REGISTRY;
@@ -15,9 +15,5 @@ abstract contract ActionBase {
         MAIN_REGISTRY = mainreg;
     }
 
-    function executeAction(address vaultAddress, bytes calldata actionData)
-        external
-        virtual
-        returns (actionAssetsData memory resultData)
-    {}
+    function executeAction(bytes calldata actionData) external virtual returns (ActionData memory resultData) {}
 }

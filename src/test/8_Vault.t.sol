@@ -12,9 +12,25 @@ import {TrustedProtocolMock} from "../mockups/TrustedProtocolMock.sol";
 import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
+import {ActionMultiCall} from "../actions/MultiCall.sol";
+import "../actions/utils/ActionData.sol";
+import {MultiActionMock} from "../mockups/MultiActionMock.sol";
+
 contract VaultTestExtension is Vault {
     function getLengths() external view returns (uint256, uint256, uint256, uint256) {
         return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
+    }
+
+    function setAllowed(address who, bool allow) public {
+        allowed[who] = allow;
+    }
+
+    function setTrustedProtocol(address trustedProtocol_) public {
+        trustedProtocol = trustedProtocol_;
+    }
+
+    function setIsTrustedProtocolSet(bool set) public {
+        isTrustedProtocolSet = set;
     }
 }
 
@@ -110,6 +126,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
 
     function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
+        virtual
         returns (
             address[] memory assetAddresses,
             uint256[] memory assetIds,
@@ -1372,6 +1389,245 @@ contract AssetManagementTest is vaultTests {
     }
 }
 
+contract VaultActionTest is vaultTests {
+    ActionMultiCall public action;
+    MultiActionMock public multiActionMock;
+
+    VaultTestExtension public proxy_;
+    TrustedProtocolMock public trustedProtocol;
+
+    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
+        public
+        override
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](1);
+        assetAddresses[0] = address(token);
+
+        assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount;
+
+        assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.prank(tokenCreatorAddress);
+        token.mint(sender, amount);
+
+        token.balanceOf(0x0000000000000000000000000000000000000006);
+
+        vm.startPrank(sender);
+        token.approve(address(proxy_), amount);
+        proxy_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+    function setUp() public override {
+        super.setUp();
+        deployFactory();
+
+        action = new ActionMultiCall(address(mainRegistry));
+        deal(address(eth), address(action), 1000 * 10 ** 20, false);
+
+        vm.startPrank(creatorAddress);
+        vault = new VaultTestExtension();
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
+        factory.confirmNewVaultInfo();
+        vm.stopPrank();
+
+        vm.startPrank(vaultOwner);
+        proxyAddr = factory.createVault(12345678, 0);
+        proxy_ = VaultTestExtension(proxyAddr);
+        vm.stopPrank();
+
+        depositERC20InVault(eth, 1000 * 10 ** 18, vaultOwner);
+        vm.startPrank(creatorAddress);
+        mainRegistry.setAllowedAction(address(action), true);
+
+        trustedProtocol = new TrustedProtocolMock();
+
+        vm.stopPrank();
+    }
+
+    function testRevert_vaultManagementAction_NonOwner(address sender) public {
+        vm.assume(sender != vaultOwner);
+
+        vm.startPrank(sender);
+        vm.expectRevert("V: You are not the owner");
+        proxy_.vaultManagementAction(address(action), new bytes(0));
+        vm.stopPrank();
+    }
+
+    function testRevert_vaultManagementAction_actionNotAllowed(address action_) public {
+        vm.assume(action_ != address(action));
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("VL_VMA: Action is not allowlisted");
+        proxy_.vaultManagementAction(action_, new bytes(0));
+        vm.stopPrank();
+    }
+
+    function testSuccess_vaultManagementAction_withDebt(uint128 debtAmount) public {
+        multiActionMock = new MultiActionMock();
+
+        proxy_.setAllowed(address(pool), true);
+        vm.prank(address(pool));
+        proxy_.setBaseCurrency(address(eth));
+
+        proxy_.setTrustedProtocol(address(trustedProtocol));
+        proxy_.setIsTrustedProtocolSet(true);
+        trustedProtocol.setOpenPosition(debtAmount);
+
+        (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0);
+        (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
+
+        uint256 ethToLinkRatio = ethRate / linkRate;
+        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+
+        //require(false, "1");
+        bytes[] memory data = new bytes[](3);
+        address[] memory to = new address[](3);
+
+        data[0] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(multiActionMock), 1000 * 10 ** 18 + uint256(debtAmount)
+        );
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)",
+            address(eth),
+            address(link),
+            1000 * 10 ** 18 + uint256(debtAmount),
+            1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio
+        );
+        data[2] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(proxy_), 1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio
+        );
+
+        vm.prank(tokenCreatorAddress);
+        link.mint(address(multiActionMock), 1000 * 10 ** 18 + debtAmount * ethToLinkRatio);
+
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(action), debtAmount);
+
+        to[0] = address(eth);
+        to[1] = address(multiActionMock);
+        to[2] = address(link);
+
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataOut.assets[0] = address(eth);
+        assetDataOut.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+        assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
+
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataIn.assets[0] = address(link);
+        assetDataIn.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        vm.startPrank(vaultOwner);
+        proxy_.vaultManagementAction(address(action), callData);
+        vm.stopPrank();
+    }
+
+    function testRevert_vaultManagementAction_InsufficientReturned(uint128 debtAmount) public {
+        vm.assume(debtAmount > 0);
+
+        multiActionMock = new MultiActionMock();
+
+        proxy_.setAllowed(address(pool), true);
+        vm.prank(address(pool));
+        proxy_.setBaseCurrency(address(eth));
+
+        proxy_.setTrustedProtocol(address(trustedProtocol));
+        proxy_.setIsTrustedProtocolSet(true);
+        trustedProtocol.setOpenPosition(debtAmount);
+
+        (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0);
+        (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
+
+        uint256 ethToLinkRatio = ethRate / linkRate;
+        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+
+        bytes[] memory data = new bytes[](3);
+        address[] memory to = new address[](3);
+
+        data[0] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(multiActionMock), 1000 * 10 ** 18 + uint256(debtAmount)
+        );
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)",
+            address(eth),
+            address(link),
+            1000 * 10 ** 18 + uint256(debtAmount),
+            0
+        );
+        data[2] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(proxy_), 1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio
+        );
+
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(action), debtAmount);
+
+        to[0] = address(eth);
+        to[1] = address(multiActionMock);
+        to[2] = address(link);
+
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataOut.assets[0] = address(eth);
+        assetDataOut.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+        assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
+
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataIn.assets[0] = address(link);
+        assetDataIn.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("VMA: coll. value too low");
+        proxy_.vaultManagementAction(address(action), callData);
+        vm.stopPrank();
+    }
+}
+
 /* ///////////////////////////////////////////////////////////////
                 DEPRECIATED TESTS
 /////////////////////////////////////////////////////////////// */
@@ -1435,31 +1691,31 @@ contract DepreciatedTest is vaultTests {
         assertTrue(base256 == base128);
     }
 
-    //overflows from deltaBlocks = 894262060268226281981748468
+    //overflows from deltaTimestamp = 894262060268226281981748468
     function testSuccess_CheckExponentUnchecked() public {
-        uint256 yearlyBlocks = 2628000;
-        uint256 maxDeltaBlocks = (uint256(type(uint128).max) * uint256(yearlyBlocks)) / 10 ** 18;
+        uint256 yearlySeconds = 31536000;
+        uint256 maxDeltaTimestamp = (uint256(type(uint128).max) * uint256(yearlySeconds)) / 10 ** 18;
 
-        uint256 exponent256 = (maxDeltaBlocks * 1e18) / yearlyBlocks;
-        uint128 exponent128 = uint128((maxDeltaBlocks * uint256(1e18)) / yearlyBlocks);
+        uint256 exponent256 = (maxDeltaTimestamp * 1e18) / yearlySeconds;
+        uint128 exponent128 = uint128((maxDeltaTimestamp * uint256(1e18)) / yearlySeconds);
 
         assertTrue(exponent256 == exponent128);
 
-        uint256 exponent256Overflow = (((maxDeltaBlocks + 1) * 1e18) / yearlyBlocks);
-        uint128 exponent128Overflow = uint128(((maxDeltaBlocks + 1) * 1e18) / yearlyBlocks);
+        uint256 exponent256Overflow = (((maxDeltaTimestamp + 1) * 1e18) / yearlySeconds);
+        uint128 exponent128Overflow = uint128(((maxDeltaTimestamp + 1) * 1e18) / yearlySeconds);
 
         assertTrue(exponent256Overflow != exponent128Overflow);
         assertTrue(exponent128Overflow == exponent256Overflow - type(uint128).max - 1);
     }
 
-    function testSuccess_CheckUnrealisedDebtUnchecked(uint64 base, uint24 deltaBlocks, uint128 openDebt) public {
+    function testSuccess_CheckUnrealisedDebtUnchecked(uint64 base, uint24 deltaTimestamp, uint128 openDebt) public {
         vm.assume(base <= 10 * 10 ** 18); //1000%
         vm.assume(base >= 10 ** 18);
-        vm.assume(deltaBlocks <= 13140000); //5 year
+        vm.assume(deltaTimestamp <= 5 * 365 * 24 * 60 * 60); //5 year
         vm.assume(openDebt <= type(uint128).max / (10 ** 5)); //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
 
-        uint256 yearlyBlocks = 2628000;
-        uint128 exponent = uint128(((uint256(deltaBlocks)) * 1e18) / yearlyBlocks);
+        uint256 yearlySeconds = 31536000;
+        uint128 exponent = uint128(((uint256(deltaTimestamp)) * 1e18) / yearlySeconds);
         vm.assume(LogExpMath.pow(base, exponent) > 0);
 
         uint256 unRealisedDebt256 = (uint256(openDebt) * (LogExpMath.pow(base, exponent) - 1e18)) / 1e18;
@@ -1478,13 +1734,13 @@ contract DepreciatedTest is vaultTests {
     **/
     function testSuccess_syncInterests_SyncDebtUnchecked(
         uint64 base,
-        uint24 deltaBlocks,
+        uint24 deltaTimestamp,
         uint128 openDebt,
         uint16 additionalDeposit
     ) public {
         vm.assume(base <= 10 * 10 ** 18); //1000%
         vm.assume(base >= 10 ** 18); //No negative interest rate possible
-        vm.assume(deltaBlocks <= 13140000); //5 year
+        vm.assume(deltaTimestamp <= 5 * 365 * 24 * 60 * 60); //5 year
         vm.assume(additionalDeposit > 0);
         //        vm.assume(additionalDeposit < 10);
         vm.assume(openDebt <= type(uint128).max / (10 ** 5)); //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
@@ -1498,15 +1754,15 @@ contract DepreciatedTest is vaultTests {
         ); // This is always zero
         amountEthToDeposit += uint128(additionalDeposit);
 
-        uint256 yearlyBlocks = 2628000;
-        uint128 exponent = uint128(((uint256(deltaBlocks)) * 1e18) / yearlyBlocks);
+        uint256 yearlySeconds = 31536000;
+        uint128 exponent = uint128(((uint256(deltaTimestamp)) * 1e18) / yearlySeconds);
 
         uint256 remainingCredit = depositEthAndTakeMaxCredit(amountEthToDeposit);
 
         //Set interest rate
         stdstore.target(address(pool)).sig(pool.interestRate.selector).checked_write(base - 1e18);
 
-        vm.roll(block.number + deltaBlocks);
+        vm.warp(block.timestamp + deltaTimestamp);
 
         uint128 unRealisedDebt = uint128((remainingCredit * (LogExpMath.pow(base, exponent) - 1e18)) / 1e18);
 
@@ -1546,7 +1802,7 @@ contract DepreciatedTest is vaultTests {
         base = 1e18 + _yearlyInterestRate;
 
         //gas: only overflows when blocks.number > ~10**20
-        exponent = ((block.number - uint32(_lastBlock)) * 1e18) / pool.YEARLY_BLOCKS();
+        exponent = ((block.number - uint32(_lastBlock)) * 1e18) / pool.YEARLY_SECONDS();
 
         uint256 usedMarginExpected = (remainingCredit * LogExpMath.pow(base, exponent)) / 1e18;
 

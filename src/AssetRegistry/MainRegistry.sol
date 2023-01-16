@@ -43,6 +43,8 @@ contract MainRegistry is Ownable {
     mapping(address => address) public assetToPricingModule;
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
 
+    mapping(address => bool) public isActionAllowed;
+
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
         uint64 baseCurrencyUnitCorrection;
@@ -101,6 +103,16 @@ contract MainRegistry is Ownable {
      */
     function setFactory(address _factoryAddress) external onlyOwner {
         factoryAddress = _factoryAddress;
+    }
+
+    /**
+     * @notice Sets an allowed action handler
+     * @param action The address of the action handler
+     * @param allowed Bool to indicate its status
+     * @dev Can only be called by owner.
+     */
+    function setAllowedAction(address action, bool allowed) public onlyOwner {
+        isActionAllowed[action] = allowed;
     }
 
     /* ///////////////////////////////////////////////////////////////
