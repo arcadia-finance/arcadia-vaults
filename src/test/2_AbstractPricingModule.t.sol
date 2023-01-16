@@ -165,7 +165,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
 
         vm.assume(riskVars_.liquidationFactor > RiskConstants.MAX_LIQUIDATION_FACTOR);
 
-        vm.expectRevert("APM_SRV: Liq.Thres not in limits");
+        vm.expectRevert("APM_SRV: Liq.Fact not in limits");
         abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
 
         (uint16 collateralFactor_, uint16 liquidationFactor_) =
