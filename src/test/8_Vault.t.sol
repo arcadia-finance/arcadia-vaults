@@ -12,6 +12,10 @@ import {TrustedProtocolMock} from "../mockups/TrustedProtocolMock.sol";
 import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
+import {ActionMultiCall} from "../actions/MultiCall.sol";
+import "../actions/utils/ActionData.sol";
+import {MultiActionMock} from "../mockups/MultiActionMock.sol";
+
 contract VaultTestExtension is Vault {
     //Function necessary to set the liquidation threshold, since cheatcodes do not work
     // with packed structs
@@ -21,6 +25,18 @@ contract VaultTestExtension is Vault {
 
     function getLengths() external view returns (uint256, uint256, uint256, uint256) {
         return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
+    }
+
+    function setAllowed(address who, bool allow) public {
+        allowed[who] = allow;
+    }
+
+    function setTrustedProtocol(address trustedProtocol_) public {
+        trustedProtocol = trustedProtocol_;
+    }
+
+    function setIsTrustedProtocolSet(bool set) public {
+        isTrustedProtocolSet = set;
     }
 }
 
@@ -116,6 +132,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
 
     function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
+        virtual
         returns (
             address[] memory assetAddresses,
             uint256[] memory assetIds,
@@ -1427,6 +1444,245 @@ contract AssetManagementTest is vaultTests {
         uint256 expectedValue = valueOfDeposit - valueOfWithdrawal;
 
         assertEq(expectedValue, actualValue);
+    }
+}
+
+contract VaultActionTest is vaultTests {
+    ActionMultiCall public action;
+    MultiActionMock public multiActionMock;
+
+    VaultTestExtension public proxy_;
+    TrustedProtocolMock public trustedProtocol;
+
+    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
+        public
+        override
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](1);
+        assetAddresses[0] = address(token);
+
+        assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount;
+
+        assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.prank(tokenCreatorAddress);
+        token.mint(sender, amount);
+
+        token.balanceOf(0x0000000000000000000000000000000000000006);
+
+        vm.startPrank(sender);
+        token.approve(address(proxy_), amount);
+        proxy_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+    }
+
+    function setUp() public override {
+        super.setUp();
+        deployFactory();
+
+        action = new ActionMultiCall(address(mainRegistry));
+        deal(address(eth), address(action), 1000 * 10 ** 20, false);
+
+        vm.startPrank(creatorAddress);
+        vault = new VaultTestExtension();
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
+        factory.confirmNewVaultInfo();
+        vm.stopPrank();
+
+        vm.startPrank(vaultOwner);
+        proxyAddr = factory.createVault(12345678, 0);
+        proxy_ = VaultTestExtension(proxyAddr);
+        vm.stopPrank();
+
+        depositERC20InVault(eth, 1000 * 10 ** 18, vaultOwner);
+        vm.startPrank(creatorAddress);
+        mainRegistry.setAllowedAction(address(action), true);
+
+        trustedProtocol = new TrustedProtocolMock();
+
+        vm.stopPrank();
+    }
+
+    function testRevert_vaultManagementAction_NonOwner(address sender) public {
+        vm.assume(sender != vaultOwner);
+
+        vm.startPrank(sender);
+        vm.expectRevert("V: You are not the owner");
+        proxy_.vaultManagementAction(address(action), new bytes(0));
+        vm.stopPrank();
+    }
+
+    function testRevert_vaultManagementAction_actionNotAllowed(address action_) public {
+        vm.assume(action_ != address(action));
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("VL_VMA: Action is not allowlisted");
+        proxy_.vaultManagementAction(action_, new bytes(0));
+        vm.stopPrank();
+    }
+
+    function testSuccess_vaultManagementAction_withDebt(uint128 debtAmount) public {
+        multiActionMock = new MultiActionMock();
+
+        proxy_.setAllowed(address(pool), true);
+        vm.prank(address(pool));
+        proxy_.setBaseCurrency(address(eth));
+
+        proxy_.setTrustedProtocol(address(trustedProtocol));
+        proxy_.setIsTrustedProtocolSet(true);
+        trustedProtocol.setOpenPosition(debtAmount);
+
+        (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0);
+        (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
+
+        uint256 ethToLinkRatio = ethRate / linkRate;
+        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+
+        //require(false, "1");
+        bytes[] memory data = new bytes[](3);
+        address[] memory to = new address[](3);
+
+        data[0] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(multiActionMock), 1000 * 10 ** 18 + uint256(debtAmount)
+        );
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)",
+            address(eth),
+            address(link),
+            1000 * 10 ** 18 + uint256(debtAmount),
+            1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio
+        );
+        data[2] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(proxy_), 1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio
+        );
+
+        vm.prank(tokenCreatorAddress);
+        link.mint(address(multiActionMock), 1000 * 10 ** 18 + debtAmount * ethToLinkRatio);
+
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(action), debtAmount);
+
+        to[0] = address(eth);
+        to[1] = address(multiActionMock);
+        to[2] = address(link);
+
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataOut.assets[0] = address(eth);
+        assetDataOut.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+        assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
+
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataIn.assets[0] = address(link);
+        assetDataIn.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        vm.startPrank(vaultOwner);
+        proxy_.vaultManagementAction(address(action), callData);
+        vm.stopPrank();
+    }
+
+    function testRevert_vaultManagementAction_InsufficientReturned(uint128 debtAmount) public {
+        vm.assume(debtAmount > 0);
+
+        multiActionMock = new MultiActionMock();
+
+        proxy_.setAllowed(address(pool), true);
+        vm.prank(address(pool));
+        proxy_.setBaseCurrency(address(eth));
+
+        proxy_.setTrustedProtocol(address(trustedProtocol));
+        proxy_.setIsTrustedProtocolSet(true);
+        trustedProtocol.setOpenPosition(debtAmount);
+
+        (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0);
+        (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
+
+        uint256 ethToLinkRatio = ethRate / linkRate;
+        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+
+        bytes[] memory data = new bytes[](3);
+        address[] memory to = new address[](3);
+
+        data[0] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(multiActionMock), 1000 * 10 ** 18 + uint256(debtAmount)
+        );
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)",
+            address(eth),
+            address(link),
+            1000 * 10 ** 18 + uint256(debtAmount),
+            0
+        );
+        data[2] = abi.encodeWithSignature(
+            "approve(address,uint256)", address(proxy_), 1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio
+        );
+
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(action), debtAmount);
+
+        to[0] = address(eth);
+        to[1] = address(multiActionMock);
+        to[2] = address(link);
+
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataOut.assets[0] = address(eth);
+        assetDataOut.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+        assetDataOut.assetAmounts[0] = 1000 * 10 ** 18;
+
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataIn.assets[0] = address(link);
+        assetDataIn.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("VMA: coll. value too low");
+        proxy_.vaultManagementAction(address(action), callData);
+        vm.stopPrank();
     }
 }
 

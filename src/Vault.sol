@@ -16,6 +16,8 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILendingPool.sol";
 import "./interfaces/ITrustedProtocol.sol";
+import "./interfaces/IActionBase.sol";
+import {ActionData} from "./actions/utils/ActionData.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -111,7 +113,7 @@ contract Vault {
      * @param registry_ The 'beacon' contract to which should be looked at for external logic.
      * @param vaultVersion_ The version of the vault logic.
      */
-    function initialize(address owner_, address registry_, uint16 vaultVersion_) external payable {
+    function initialize(address owner_, address registry_, uint16 vaultVersion_) external {
         require(vaultVersion == 0, "V_I: Already initialized!");
         require(vaultVersion_ != 0, "V_I: Invalid vault version");
         owner = owner_;
@@ -321,6 +323,8 @@ contract Vault {
      * The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
      */
     function getUsedMargin() public view returns (uint256 usedMargin) {
+        if (!isTrustedProtocolSet) return 0;
+
         usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this));
     }
 
@@ -428,7 +432,7 @@ contract Vault {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    ) external payable onlyOwner {
+    ) external onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
@@ -437,16 +441,48 @@ contract Vault {
             "V_D: Length mismatch"
         );
 
+        _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+    }
+
+    /**
+     * @notice Deposits assets into the proxy vault.
+     * @dev Each index in each array corresponding to the same asset that will get deposited.
+     * If multiple asset IDs of the same contract address
+     * are deposited, the assetAddress must be repeated in assetAddresses.
+     * The ERC20 gets deposited by transferFrom. ERC721 & ERC1155 using safeTransferFrom.
+     * Example inputs:
+     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * @param assetAddresses The contract addresses of the asset. For each asset to be deposited one address,
+     * even if multiple assets of the same contract address are deposited.
+     * @param assetIds The asset IDs that will be deposited for ERC721 & ERC1155.
+     * When depositing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
+     * @param assetAmounts The amounts of the assets to be deposited.
+     * @param assetTypes The types of the assets to be deposited.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
+     * Any other number = failed tx
+     * @param from The address to deposit from.
+     */
+    function _deposit(
+        address[] memory assetAddresses,
+        uint256[] memory assetIds,
+        uint256[] memory assetAmounts,
+        uint256[] memory assetTypes,
+        address from
+    ) internal {
         //reverts in mainregistry if invalid input
         IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
+        uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
-                _depositERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
+                _depositERC20(from, assetAddresses[i], assetAmounts[i]);
             } else if (assetTypes[i] == 1) {
-                _depositERC721(msg.sender, assetAddresses[i], assetIds[i]);
+                _depositERC721(from, assetAddresses[i], assetIds[i]);
             } else if (assetTypes[i] == 2) {
-                _depositERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+                _depositERC1155(from, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
                 require(false, "V_D: Unknown asset type");
             }
@@ -469,7 +505,6 @@ contract Vault {
      * Example inputs:
      * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
      * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
-     * @dev After withdrawing assets, the interest rate is renewed
      * @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
      * even if multiple assets of the same contract address are withdrawn.
      * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
@@ -486,7 +521,7 @@ contract Vault {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         uint256[] calldata assetTypes
-    ) external payable onlyOwner {
+    ) external onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
@@ -495,26 +530,60 @@ contract Vault {
             "V_W: Length mismatch"
         );
 
+        _withdraw(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+
+        uint256 usedMargin = getUsedMargin();
+        if (usedMargin != 0) {
+            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
+        }
+    }
+
+    /**
+     * @notice Processes withdrawals of assets
+     * @dev Each index in each array corresponding to the same asset that will get withdrawn.
+     * If multiple asset IDs of the same contract address
+     * are to be withdrawn, the assetAddress must be repeated in assetAddresses.
+     * The ERC20 get withdrawn by transfers. ERC721 & ERC1155 using safeTransferFrom.
+     * Will fail if balance on proxy vault is not sufficient for one of the withdrawals.
+     * Example inputs:
+     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
+     * even if multiple assets of the same contract address are withdrawn.
+     * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
+     * When withdrawing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
+     * @param assetAmounts The amounts of the assets to be withdrawn.
+     * @param assetTypes The types of the assets to be withdrawn.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
+     * Any other number = failed tx
+     * @param to The address to withdraw to.
+     */
+
+    function _withdraw(
+        address[] memory assetAddresses,
+        uint256[] memory assetIds,
+        uint256[] memory assetAmounts,
+        uint256[] memory assetTypes,
+        address to
+    ) internal {
         IRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //reverts in mainregistry if invalid input
 
+        uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
             if (assetTypes[i] == 0) {
-                _withdrawERC20(msg.sender, assetAddresses[i], assetAmounts[i]);
+                _withdrawERC20(to, assetAddresses[i], assetAmounts[i]);
             } else if (assetTypes[i] == 1) {
-                _withdrawERC721(msg.sender, assetAddresses[i], assetIds[i]);
+                _withdrawERC721(to, assetAddresses[i], assetIds[i]);
             } else if (assetTypes[i] == 2) {
-                _withdrawERC1155(msg.sender, assetAddresses[i], assetIds[i], assetAmounts[i]);
+                _withdrawERC1155(to, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
                 require(false, "V_W: Unknown asset type");
             }
             unchecked {
                 ++i;
             }
-        }
-
-        uint256 usedMargin = getUsedMargin();
-        if (usedMargin != 0) {
-            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }
 
@@ -783,11 +852,44 @@ contract Vault {
         }
     }
 
+    /*///////////////////////////////////////////////////////////////
+                    ASSET MANAGEMENT LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Calls external action handlers to execute and interact with external logic.
+     * @dev Similar to flash loans, this function optimistically calls external logic and checks for the vault state at the very end.
+     * @param actionHandler the address of the action handler to call
+     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
+     */
+    function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyOwner {
+        require(IMainRegistry(registry).isActionAllowed(actionHandler), "VL_VMA: Action is not allowlisted");
+
+        (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
+
+        // withdraw to actionHandler
+        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
+
+        // execute Action
+        ActionData memory incoming = IActionBase(actionHandler).executeAction(actionData);
+
+        // deposit from actionHandler into vault
+        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);
+
+        uint256 collValue = getCollateralValue();
+        uint256 usedMargin = getUsedMargin();
+        require(collValue > usedMargin, "VMA: coll. value too low");
+    }
+
     function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
         return this.onERC721Received.selector;
     }
 
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) public pure returns (bytes4) {
         return this.onERC1155Received.selector;
+    }
+
+    fallback() external {
+        revert();
     }
 }
