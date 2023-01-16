@@ -133,6 +133,22 @@ contract ExternalContractsTest is MainRegistryTest {
         // Then: address(factory) should be equal to factoryAddress
         assertEq(address(factory), mainRegistry.factoryAddress());
     }
+
+    function testSuccess_setAllowedAction_Owner(address action, bool allowed) public {
+        vm.prank(creatorAddress);
+        mainRegistry.setAllowedAction(action, allowed);
+
+        assertEq(mainRegistry.isActionAllowlisted(action), allowed);
+    }
+
+    function testRevert_setAllowedAction_NonOwner(address action, bool allowed, address nonAuthorized) public {
+        vm.assume(nonAuthorized != creatorAddress);
+
+        vm.startPrank(nonAuthorized);
+        vm.expectRevert("Ownable: caller is not the owner");
+        mainRegistry.setAllowedAction(action, allowed);
+        vm.stopPrank();
+    }
 }
 
 /* ///////////////////////////////////////////////////////////////
