@@ -271,7 +271,6 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         uint256 ethToLinkRatio = ethRate / linkRate;
         vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
 
-        //require(false, "1");
         bytes[] memory data = new bytes[](3);
         address[] memory to = new address[](3);
 
@@ -288,9 +287,6 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         data[2] = abi.encodeWithSignature(
             "approve(address,uint256)", address(proxy_), 1000 * 10 ** 18 + uint256(debtAmount) * ethToLinkRatio
         );
-
-        // vm.prank(tokenCreatorAddress);
-        // link.mint(address(multiActionMock), (1000*10**18 + debtAmount * ethToLinkRatio) - 1);
 
         vm.prank(tokenCreatorAddress);
         eth.mint(address(action), debtAmount);
