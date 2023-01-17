@@ -5,6 +5,7 @@ on:
       - main_paper_trading
       - main*
       - refactor/arcadia-vault
+      - dev
 
 name: Foundry Tests
 
@@ -21,6 +22,9 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1.0.6
         with:
           version: nightly
+
+      - name: Run format
+        run: forge fmt --check
 
       - name: Run tests
         run: forge test -vvv

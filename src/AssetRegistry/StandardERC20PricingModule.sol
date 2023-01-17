@@ -7,6 +7,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "./AbstractPricingModule.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
 /**
@@ -22,91 +23,78 @@ contract StandardERC20PricingModule is PricingModule {
 
     struct AssetInformation {
         uint64 assetUnit;
-        address assetAddress;
-        address[] oracleAddresses;
+        address[] oracles;
     }
 
     /**
      * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and of the Oracle-Hub
-     * @param mainRegistry The address of the Main-registry
-     * @param oracleHub The address of the Oracle-Hub
+     * @param mainRegistry_ The address of the Main-registry
+     * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Adds a new asset to the StandardERC20PricingModule, or overwrites an existing asset.
-     * @param assetInformation A Struct with information about the asset
-     * - assetUnit: The unit of the asset, equal to 10 to the power of the number of decimals of the asset
-     * - assetAddress: The contract address of the asset
-     * - oracleAddresses: An array of addresses of oracle contracts, to price the asset in USD
-     * @param assetCollateralFactors The List of collateral factors for the asset for the different BaseCurrencies
-     * @param assetLiquidationThresholds The List of liquidation thresholds for the asset for the different BaseCurrencies
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
-     * the number of assets added to the Main Registry,or the list must have length 0.
-     * If the list has length zero, the risk variables of the baseCurrency for all assets
-     * is initiated as default (safest lowest rating).
+     * @notice Adds a new asset to the StandardERC20PricingModule.
+     * @param asset The contract address of the asset
+     * @param oracles An array of addresses of oracle contracts, to price the asset in USD
+     * @param riskVars An array of Risk Variables for the asset
+     * @param maxExposure The maximum exposure of the asset in its own decimals
+     * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.
+     * If no risk variables are provided, the asset is added with the risk variables set to zero, meaning it can't be used as collateral.
+     * @dev RiskVarInput.asset can be zero as it is not taken into account.
      * @dev Risk variable are variables with 2 decimals precision
-     * @dev The assets are added/overwritten in the Main-Registry as well.
-     * By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     * (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
-     * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
-     * assets are no longer updatable.
+     * @dev The assets are added in the Main-Registry as well.
      * @dev Assets can't have more than 18 decimals.
      */
-    function setAssetInformation(
-        AssetInformation calldata assetInformation,
-        uint16[] calldata assetCollateralFactors,
-        uint16[] calldata assetLiquidationThresholds
-    ) external onlyOwner {
-        IOraclesHub(oracleHub).checkOracleSequence(assetInformation.oracleAddresses);
+    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint256 maxExposure)
+        external
+        onlyOwner
+    {
+        //View function, reverts in OracleHub if sequence is not correct
+        IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
-        address assetAddress = assetInformation.assetAddress;
-        require(assetInformation.assetUnit <= 1000000000000000000, "SSR_SAI: Maximal 18 decimals");
-        if (!inPricingModule[assetAddress]) {
-            inPricingModule[assetAddress] = true;
-            assetsInPricingModule.push(assetAddress);
-        }
-        assetToInformation[assetAddress] = assetInformation;
-        isAssetAddressWhiteListed[assetAddress] = true;
-        IMainRegistry(mainRegistry).addAsset(assetAddress, assetCollateralFactors, assetLiquidationThresholds);
+        require(!inPricingModule[asset], "PM20_AA: already added");
+        inPricingModule[asset] = true;
+        assetsInPricingModule.push(asset);
+
+        uint256 assetUnit = 10 ** IERC20(asset).decimals();
+        require(assetUnit <= 1000000000000000000, "PM20_AA: Maximal 18 decimals");
+
+        assetToInformation[asset].assetUnit = uint64(assetUnit); //Can safely cast to uint64, we previously checked it is smaller than 10e18
+        assetToInformation[asset].oracles = oracles;
+        _setRiskVariablesForAsset(asset, riskVars);
+
+        require(maxExposure <= type(uint128).max, "PM20_AA: Max Exposure not in limits");
+        exposure[asset].maxExposure = uint128(maxExposure);
+
+        //Will revert in MainRegistry if asset can't be added
+        IMainRegistry(mainRegistry).addAsset(asset);
+    }
+
+    /**
+     * @notice Sets the oracle addresses for the given asset.
+     * @param asset The contract address of the asset.
+     * @param oracles An array of oracle addresses for the asset.
+     */
+    function setOracles(address asset, address[] calldata oracles) external onlyOwner {
+        require(inPricingModule[asset], "PM20_SO: asset unknown");
+        IOraclesHub(oracleHub).checkOracleSequence(oracles);
+        assetToInformation[asset].oracles = oracles;
     }
 
     /**
      * @notice Returns the information that is stored in the Sub-registry for a given asset
-     * @dev struct is not taken into memory; saves 6613 gas
+     * @dev struct is not taken into memory; saves gas
      * @param asset The Token address of the asset
-     * @return assetDecimals The number of decimals of the asset
-     * @return assetAddress The Token address of the asset
-     * @return oracleAddresses The list of addresses of the oracles to get the exchange rate of the asset in USD
+     * @return assetUnit The unit (10 ** decimals) of the asset
+     * @return oracles The list of addresses of the oracles to get the exchange rate of the asset in USD
      */
-    function getAssetInformation(address asset) external view returns (uint64, address, address[] memory) {
-        return (
-            assetToInformation[asset].assetUnit,
-            assetToInformation[asset].assetAddress,
-            assetToInformation[asset].oracleAddresses
-        );
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        WHITE LIST MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Checks for a token address and the corresponding Id if it is white-listed
-     * @param assetAddress The address of the asset
-     * @dev Since ERC20 tokens have no Id, the Id should be set to 0
-     * @return A boolean, indicating if the asset passed as input is whitelisted
-     */
-    function isWhiteListed(address assetAddress, uint256) external view override returns (bool) {
-        if (isAssetAddressWhiteListed[assetAddress]) {
-            return true;
-        }
-
-        return false;
+    function getAssetInformation(address asset) external view returns (uint64, address[] memory) {
+        return (assetToInformation[asset].assetUnit, assetToInformation[asset].oracles);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -116,12 +104,14 @@ contract StandardERC20PricingModule is PricingModule {
     /**
      * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency
      * @param getValueInput A Struct with all the information neccessary to get the value of an asset
-     * - assetAddress: The contract address of the asset
+     * - asset: The contract address of the asset
      * - assetId: Since ERC20 tokens have no Id, the Id should be set to 0
      * - assetAmount: The Amount of tokens, ERC20 tokens can have any Decimals precision smaller than 18.
      * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
+     * @return collateralFactor The Collateral Factor of the asset
+     * @return liquidationFactor The Liquidation Factor of the asset
      * @dev If the Oracle-Hub returns the rate in a baseCurrency different from USD, the StandardERC20PricingModule will return
      * the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the StandardERC20PricingModule
      * will return the value of the asset in USD.
@@ -135,23 +125,24 @@ contract StandardERC20PricingModule is PricingModule {
         public
         view
         override
-        returns (uint256 valueInUsd, uint256 valueInBaseCurrency)
+        returns (uint256 valueInUsd, uint256 valueInBaseCurrency, uint256 collateralFactor, uint256 liquidationFactor)
     {
         uint256 rateInUsd;
         uint256 rateInBaseCurrency;
 
-        (rateInUsd, rateInBaseCurrency) = IOraclesHub(oracleHub).getRate(
-            assetToInformation[getValueInput.assetAddress].oracleAddresses, getValueInput.baseCurrency
-        );
+        (rateInUsd, rateInBaseCurrency) =
+            IOraclesHub(oracleHub).getRate(assetToInformation[getValueInput.asset].oracles, getValueInput.baseCurrency);
 
         if (rateInBaseCurrency > 0) {
             valueInBaseCurrency = (getValueInput.assetAmount).mulDivDown(
-                rateInBaseCurrency, assetToInformation[getValueInput.assetAddress].assetUnit
+                rateInBaseCurrency, assetToInformation[getValueInput.asset].assetUnit
             );
         } else {
-            valueInUsd = (getValueInput.assetAmount).mulDivDown(
-                rateInUsd, assetToInformation[getValueInput.assetAddress].assetUnit
-            );
+            valueInUsd =
+                (getValueInput.assetAmount).mulDivDown(rateInUsd, assetToInformation[getValueInput.asset].assetUnit);
         }
+
+        collateralFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].collateralFactor;
+        liquidationFactor = assetRiskVars[getValueInput.asset][getValueInput.baseCurrency].liquidationFactor;
     }
 }

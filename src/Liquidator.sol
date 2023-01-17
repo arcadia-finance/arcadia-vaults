@@ -23,8 +23,8 @@ contract Liquidator is Ownable {
     uint256 public constant hourlyBlocks = 300;
     uint256 public breakevenTime = 6; //hours
 
-    address public factoryAddress;
-    address public registryAddress;
+    address public factory;
+    address public registry;
     address public reserveFund;
     address public protocolTreasury;
 
@@ -45,7 +45,6 @@ contract Liquidator is Ownable {
     struct auctionInformation {
         uint128 openDebt;
         uint128 startBlock;
-        uint16 liqThres;
         uint8 baseCurrency;
         uint128 assetPaid;
         bool stopped;
@@ -54,13 +53,13 @@ contract Liquidator is Ownable {
     }
 
     modifier elevated() {
-        require(IFactory(factoryAddress).isVault(msg.sender), "LQ: Not a vault!");
+        require(IFactory(factory).isVault(msg.sender), "LQ: Not a vault!");
         _;
     }
 
-    constructor(address newFactory, address newRegAddr) {
-        factoryAddress = newFactory;
-        registryAddress = newRegAddr;
+    constructor(address factory_, address registry_) {
+        factory = factory_;
+        registry = registry_;
         claimRatio = claimRatios({protocol: 15, liquidationKeeper: 2});
     }
 
@@ -71,28 +70,28 @@ contract Liquidator is Ownable {
     /**
      * @notice Sets the factory address on the liquidator.
      * @dev The factory is used to fetch the isVault bool in elevated().
-     * @param _factory the factory address.
+     * @param factory_ the factory address.
      */
-    function setFactory(address _factory) external onlyOwner {
-        factoryAddress = _factory;
+    function setFactory(address factory_) external onlyOwner {
+        factory = factory_;
     }
 
     /**
      * @notice Sets the protocol treasury address on the liquidator.
      * @dev The protocol treasury is used to receive liquidation rewards.
-     * @param _protocolTreasury the protocol treasury.
+     * @param protocolTreasury_ the protocol treasury.
      */
-    function setProtocolTreasury(address _protocolTreasury) external onlyOwner {
-        protocolTreasury = _protocolTreasury;
+    function setProtocolTreasury(address protocolTreasury_) external onlyOwner {
+        protocolTreasury = protocolTreasury_;
     }
 
     /**
      * @notice Sets the reserve fund address on the liquidator.
      * @dev The reserve fund is used to pay liquidation keepers should the liquidation surplus be insufficient.
-     * @param _reserveFund the reserve fund address.
+     * @param reserveFund_ the reserve fund address.
      */
-    function setReserveFund(address _reserveFund) external onlyOwner {
-        reserveFund = _reserveFund;
+    function setReserveFund(address reserveFund_) external onlyOwner {
+        reserveFund = reserveFund_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -104,10 +103,10 @@ contract Liquidator is Ownable {
      * @dev The breakeven time is the time from starting an auction duration to
      * the moment the price of the auction has decreased to the open debt.
      * The breakevenTime controls the speed of decrease of the auction price.
-     * @param _breakevenTime the new breakeven time address.
+     * @param breakevenTime_ the new breakeven time address.
      */
-    function setBreakevenTime(uint256 _breakevenTime) external onlyOwner {
-        breakevenTime = _breakevenTime;
+    function setBreakevenTime(uint256 breakevenTime_) external onlyOwner {
+        breakevenTime = breakevenTime_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -121,7 +120,6 @@ contract Liquidator is Ownable {
      * @param liquidationKeeper the keeper who triggered the auction. Gets a reward!
      * @param originalOwner the original owner of this vault, at `life`.
      * @param openDebt the open debt taken by `originalOwner` at `life`.
-     * @param liqThres the liquidation threshold of the vault, in factor 100.
      * @param baseCurrency the baseCurrency in which the vault is denominated.
      * @return success auction has started -> true.
      */
@@ -131,7 +129,6 @@ contract Liquidator is Ownable {
         address liquidationKeeper,
         address originalOwner,
         uint128 openDebt,
-        uint16 liqThres,
         uint8 baseCurrency
     ) public elevated returns (bool success) {
         require(auctionInfo[vaultAddress][life].startBlock == 0, "Liquidation already ongoing");
@@ -142,7 +139,6 @@ contract Liquidator is Ownable {
         auctionInfo[vaultAddress][life].liquidationKeeper = liquidationKeeper;
         auctionInfo[vaultAddress][life].originalOwner = originalOwner;
         auctionInfo[vaultAddress][life].openDebt = openDebt;
-        auctionInfo[vaultAddress][life].liqThres = liqThres;
         auctionInfo[vaultAddress][life].baseCurrency = baseCurrency;
 
         return true;
@@ -168,9 +164,8 @@ contract Liquidator is Ownable {
             return (0, 0, false);
         }
 
-        uint256 startPrice = (auctionInfo[vaultAddress][life].openDebt * auctionInfo[vaultAddress][life].liqThres) / 100;
-        uint256 surplusPrice =
-            (auctionInfo[vaultAddress][life].openDebt * (auctionInfo[vaultAddress][life].liqThres - 100)) / 100;
+        uint256 startPrice = (auctionInfo[vaultAddress][life].openDebt * 150) / 100;
+        uint256 surplusPrice = (auctionInfo[vaultAddress][life].openDebt * (150 - 100)) / 100;
         uint256 priceDecrease = (surplusPrice * (block.number - auctionInfo[vaultAddress][life].startBlock))
             / (hourlyBlocks * breakevenTime);
 
@@ -223,9 +218,7 @@ contract Liquidator is Ownable {
         auctionInfo[vaultAddress][life].assetPaid = uint128(priceOfVault);
         auctionInfo[vaultAddress][life].stopped = true;
 
-        IFactory(factoryAddress).safeTransferFrom(
-            address(this), msg.sender, IFactory(factoryAddress).vaultIndex(vaultAddress)
-        );
+        IFactory(factory).safeTransferFrom(address(this), msg.sender, IFactory(factory).vaultIndex(vaultAddress));
     }
 
     /**
@@ -257,8 +250,7 @@ contract Liquidator is Ownable {
         uint256[] memory assetAmounts,
         uint8 baseCurrencyOfDebt
     ) public view returns (uint256 totalValue) {
-        totalValue =
-            IMainRegistry(registryAddress).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrencyOfDebt);
+        totalValue = IMainRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrencyOfDebt);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -326,7 +318,7 @@ contract Liquidator is Ownable {
     function claimProceeds(address claimer, address[] calldata vaultAddresses, uint256[] calldata lives) public {
         uint256 len = vaultAddresses.length;
         require(len == lives.length, "Arrays must be of same length");
-        uint256 baseCurrencyCounter = IMainRegistry(registryAddress).baseCurrencyCounter();
+        uint256 baseCurrencyCounter = IMainRegistry(registry).baseCurrencyCounter();
 
         uint256[] memory totalClaimable = new uint256[](baseCurrencyCounter);
         uint256 claimableBitmapMem;
@@ -366,7 +358,7 @@ contract Liquidator is Ownable {
     function _doTransfers(uint256 baseCurrencyCounter, uint256[] memory totalClaimable, address claimer) internal {
         for (uint8 k; k < baseCurrencyCounter;) {
             if (totalClaimable[k] > 0) {
-                address asset = IMainRegistry(registryAddress).baseCurrencies(uint256(k));
+                address asset = IMainRegistry(registry).baseCurrencies(uint256(k));
                 require(IERC20(asset).transfer(claimer, totalClaimable[k]));
             }
             unchecked {

@@ -7,7 +7,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 interface IMainRegistry {
-    function addAsset(address, uint16[] calldata, uint16[] calldata) external;
+    function addAsset(address) external returns (bool);
 
     function getTotalValue(
         address[] calldata _assetAddresses,
@@ -25,14 +25,11 @@ interface IMainRegistry {
 
     function baseCurrencyCounter() external view returns (uint256);
 
-    function batchIsWhiteListed(address[] calldata assetAddresses, uint256[] calldata assetIds)
-        external
-        view
-        returns (bool);
-
     function assetToPricingModule(address) external view returns (address);
 
     function isBaseCurrency(address) external view returns (bool);
 
     function baseCurrencies(uint256) external view returns (address);
+
+    function isActionAllowed(address) external view returns (bool);
 }

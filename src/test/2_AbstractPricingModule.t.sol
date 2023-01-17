@@ -6,210 +6,380 @@
  */
 pragma solidity >0.8.10;
 
-import "../../lib/forge-std/src/Test.sol";
+import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import "../mockups/ERC20SolmateMock.sol";
-import "../OracleHub.sol";
-import "../utils/Constants.sol";
-import "../AssetRegistry/AbstractPricingModule.sol";
-import "../AssetRegistry/MainRegistry.sol";
+contract AbstractPricingModuleExtension is PricingModule {
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
 
-contract AbstractPricingModuleForTest is PricingModule {
-    constructor(address mainRegistry, address oracleHub) PricingModule(mainRegistry, oracleHub) {}
+    function setRiskVariablesForAsset(address asset, RiskVarInput[] memory riskVarInputs) public {
+        _setRiskVariablesForAsset(asset, riskVarInputs);
+    }
 
-    function setAssetInformation(address assetAddress) public onlyOwner {
-        if (!inPricingModule[assetAddress]) {
-            inPricingModule[assetAddress] = true;
-            assetsInPricingModule.push(assetAddress);
-        }
-        isAssetAddressWhiteListed[assetAddress] = true;
+    function setRiskVariables(address asset, uint256 basecurrency, RiskVars memory riskVars_) public {
+        _setRiskVariables(asset, basecurrency, riskVars_);
+    }
+
+    function setExposure(address asset, uint128 exposure_, uint128 maxExposure) public {
+        exposure[asset].exposure = exposure_;
+        exposure[asset].maxExposure = maxExposure;
     }
 }
 
-contract AbstractPricingModuleTest is Test {
+contract AbstractPricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
-    AbstractPricingModuleForTest internal abstractPricingModule;
-    OracleHub private oracleHub;
-    MainRegistry private mainRegistry;
+    AbstractPricingModuleExtension public abstractPricingModule;
 
-    ERC20Mock private eth;
-    ERC20Mock private snx;
-    ERC20Mock private link;
-
-    address private creatorAddress = address(1);
-    address private tokenCreatorAddress = address(2);
+    PricingModule.RiskVarInput[] riskVarInputs_;
 
     //this is a before
-    constructor() {
-        vm.startPrank(tokenCreatorAddress);
-        eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
-        link = new ERC20Mock(
-            "LINK Mock",
-            "mLINK",
-            uint8(Constants.linkDecimals)
-        );
-
-        vm.stopPrank();
-
-        vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
-        oracleHub = new OracleHub();
-        vm.stopPrank();
-    }
+    constructor() DeployArcadiaVaults() {}
 
     //this is a before each
     function setUp() public {
         vm.prank(creatorAddress);
-        abstractPricingModule = new AbstractPricingModuleForTest(
+        abstractPricingModule = new AbstractPricingModuleExtension(
             address(mainRegistry),
             address(oracleHub)
         );
     }
 
-    function testSuccess_setAssetInformation_AssetWhitelistedWhenAddedToPricingModule(address assetAddress) public {
-        // Given: All necessary contracts deployed on setup
+    /*///////////////////////////////////////////////////////////////
+                       DEPLOYMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    function testSuccess_deployment(address mainRegistry_, address oracleHub_) public {
         vm.prank(creatorAddress);
-        // When: creatorAddress calls setAssetInformation
-        abstractPricingModule.setAssetInformation(assetAddress);
+        abstractPricingModule = new AbstractPricingModuleExtension(
+            mainRegistry_,
+            oracleHub_
+        );
 
-        // Then: isAssetAddressWhiteListed should return true
-        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(assetAddress));
+        assertEq(abstractPricingModule.mainRegistry(), mainRegistry_);
+        assertEq(abstractPricingModule.oracleHub(), oracleHub_);
+        assertEq(abstractPricingModule.riskManager(), creatorAddress);
     }
 
-    function testRevert_addToWhiteList_NonOwnerAddsExistingAssetToWhitelist(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not creatorAddress, creatorAddress calls setAssetInformation with address(eth)
-        vm.assume(unprivilegedAddress != creatorAddress);
+    /*///////////////////////////////////////////////////////////////
+                    RISK MANAGER MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    function testSuccess_setRiskManager(address newRiskManager) public {
+        assertEq(abstractPricingModule.riskManager(), creatorAddress);
+
         vm.prank(creatorAddress);
-        abstractPricingModule.setAssetInformation(address(eth));
+        abstractPricingModule.setRiskManager(newRiskManager);
 
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls addToWhiteList
-
-        // Then: addToWhiteList should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
-        abstractPricingModule.addToWhiteList(address(eth));
-        vm.stopPrank();
-
-        // And: isAssetAddressWhiteListed for address(eth) should return true
-        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
+        assertEq(abstractPricingModule.riskManager(), newRiskManager);
     }
 
-    function testRevert_addToWhiteList_OwnerAddsNonExistingAssetToWhitelist() public {
+    function testRevert_setRiskManager_NonRiskManager(address newRiskManager, address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+        assertEq(abstractPricingModule.riskManager(), creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("APM: ONLY_RISK_MANAGER");
+        abstractPricingModule.setRiskManager(newRiskManager);
+        vm.stopPrank();
+
+        assertEq(abstractPricingModule.riskManager(), creatorAddress);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        WHITE LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    function testSuccess_isWhiteListed_Positive(address asset, uint128 maxExposure) public {
+        // Given: asset is white listed
+        vm.assume(maxExposure > 0);
+        abstractPricingModule.setExposure(asset, 0, maxExposure);
+
+        // When: isWhiteListed(asset, 0) is called
+        // Then: It should return true
+        assertTrue(abstractPricingModule.isWhiteListed(asset, 0));
+    }
+
+    function testSuccess_isWhiteListed_Negative(address asset) public {
         // Given: All necessary contracts deployed on setup
-        vm.startPrank(creatorAddress);
-        // When: creatorAddress calls addToWhiteList
+        // And: asset is non whitelisted
 
-        // Then: addToWhiteList should revert with "Asset not known in Pricing Module"
-        vm.expectRevert("Asset not known in Pricing Module");
-        abstractPricingModule.addToWhiteList(address(eth));
-        vm.stopPrank();
-
-        // And: isAssetAddressWhiteListed for address(eth) should return false
-        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
+        // When: isWhiteListed(asset, 0) is called
+        // Then: It should return false
+        assertTrue(!abstractPricingModule.isWhiteListed(asset, 0));
     }
 
-    function testSuccess_addToWhiteList_OwnerAddsExistingAssetToWhitelist() public {
-        vm.startPrank(creatorAddress);
-        // Given: creatorAddress calls setAssetInformation with address(eth)
-        abstractPricingModule.setAssetInformation(address(eth));
-        // When: creatorAddress calls addToWhiteList with address(eth)
-        abstractPricingModule.addToWhiteList(address(eth));
-        vm.stopPrank();
+    /*///////////////////////////////////////////////////////////////
+                    RISK VARIABLES MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
 
-        // Then: isAssetAddressWhiteListed for address(eth) should return true
-        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
+    function testSuccess_getRiskVariables_RiskVariablesAreSet(
+        address asset,
+        uint256 baseCurrency,
+        uint16 collateralFactor_,
+        uint16 liquidationFactor_
+    ) public {
+        uint256 slot = stdstore.target(address(abstractPricingModule)).sig(abstractPricingModule.assetRiskVars.selector)
+            .with_key(asset).with_key(baseCurrency).find();
+        bytes32 loc = bytes32(slot);
+        bytes32 value = bytes32(abi.encodePacked(liquidationFactor_, collateralFactor_));
+        value = value >> 224;
+        vm.store(address(abstractPricingModule), loc, value);
+
+        (uint16 actualCollateralFactor, uint16 actualLiquidationThreshold) =
+            abstractPricingModule.getRiskVariables(asset, baseCurrency);
+
+        assertEq(actualCollateralFactor, collateralFactor_);
+        assertEq(actualLiquidationThreshold, liquidationFactor_);
     }
 
-    function testRevert_removeFromWhiteList_NonOwnerRemovesExistingAssetFromWhitelist(address unprivilegedAddress)
+    function testSuccess_getRiskVariables_RiskVariablesAreNotSet(address asset, uint256 baseCurrency) public {
+        (uint16 actualCollateralFactor, uint16 actualLiquidationThreshold) =
+            abstractPricingModule.getRiskVariables(asset, baseCurrency);
+
+        assertEq(actualCollateralFactor, 0);
+        assertEq(actualLiquidationThreshold, 0);
+    }
+
+    function testRevert_setRiskVariables_CollateralFactorOutOfLimits(
+        address asset,
+        uint256 baseCurrency,
+        PricingModule.RiskVars memory riskVars_
+    ) public {
+        vm.assume(riskVars_.collateralFactor > RiskConstants.MAX_COLLATERAL_FACTOR);
+
+        vm.expectRevert("APM_SRV: Coll.Fact not in limits");
+        abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
+
+        (uint16 collateralFactor_, uint16 liquidationFactor_) =
+            abstractPricingModule.getRiskVariables(asset, baseCurrency);
+        assertEq(collateralFactor_, 0);
+        assertEq(liquidationFactor_, 0);
+    }
+
+    function testRevert_setRiskVariables_LiquidationTreshholdOutOfLimits(
+        address asset,
+        uint256 baseCurrency,
+        PricingModule.RiskVars memory riskVars_
+    ) public {
+        vm.assume(riskVars_.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
+
+        vm.assume(riskVars_.liquidationFactor > RiskConstants.MAX_LIQUIDATION_FACTOR);
+
+        vm.expectRevert("APM_SRV: Liq.Fact not in limits");
+        abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
+
+        (uint16 collateralFactor_, uint16 liquidationFactor_) =
+            abstractPricingModule.getRiskVariables(asset, baseCurrency);
+        assertEq(collateralFactor_, 0);
+        assertEq(liquidationFactor_, 0);
+    }
+
+    function testSuccess_setRiskVariables(address asset, uint256 baseCurrency, PricingModule.RiskVars memory riskVars_)
         public
     {
-        // Given: unprivilegedAddress is not creatorAddress and address(this), creatorAddress calls setAssetInformation with address(eth)
-        vm.assume(unprivilegedAddress != creatorAddress);
-        vm.assume(unprivilegedAddress != address(this));
+        vm.assume(riskVars_.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
 
+        vm.assume(riskVars_.liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR);
+
+        abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
+
+        (uint16 collateralFactor_, uint16 liquidationFactor_) =
+            abstractPricingModule.getRiskVariables(asset, baseCurrency);
+        assertEq(collateralFactor_, riskVars_.collateralFactor);
+        assertEq(liquidationFactor_, riskVars_.liquidationFactor);
+    }
+
+    function testRevert_setBatchRiskVariables_NonRiskManager(
+        PricingModule.RiskVarInput[] memory riskVarInputs,
+        address unprivilegedAddress_
+    ) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("APM: ONLY_RISK_MANAGER");
+        abstractPricingModule.setBatchRiskVariables(riskVarInputs);
+        vm.stopPrank();
+    }
+
+    function testRevert_setBatchRiskVariables_BaseCurrencyNotInLimits(
+        PricingModule.RiskVarInput[] memory riskVarInputs,
+        uint256 baseCurrencyCounter
+    ) public {
+        vm.assume(riskVarInputs.length > 0);
+        vm.assume(riskVarInputs[0].baseCurrency >= baseCurrencyCounter);
+
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(
+            baseCurrencyCounter
+        );
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("APM_SBRV: BaseCurrency not in limits");
+        abstractPricingModule.setBatchRiskVariables(riskVarInputs);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setBatchRiskVariables(PricingModule.RiskVarInput[2] memory riskVarInputs) public {
+        vm.assume(riskVarInputs[0].baseCurrency != riskVarInputs[1].baseCurrency);
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(
+            type(uint256).max
+        );
+
+        for (uint256 i; i < riskVarInputs_.length; ++i) {
+            riskVarInputs_.push(riskVarInputs[i]);
+            vm.assume(riskVarInputs_[i].collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
+            vm.assume(riskVarInputs_[i].liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR);
+        }
+
+        vm.startPrank(creatorAddress);
+        abstractPricingModule.setBatchRiskVariables(riskVarInputs_);
+
+        for (uint256 i; i < riskVarInputs_.length; ++i) {
+            (uint16 collateralFactor_, uint16 liquidationFactor_) =
+                abstractPricingModule.getRiskVariables(riskVarInputs_[i].asset, riskVarInputs_[i].baseCurrency);
+            assertEq(collateralFactor_, riskVarInputs_[i].collateralFactor);
+            assertEq(liquidationFactor_, riskVarInputs_[i].liquidationFactor);
+        }
+    }
+
+    function testRevert_setRiskVariablesForAsset_BaseCurrencyNotInLimits(
+        address asset,
+        PricingModule.RiskVarInput[] memory riskVarInputs,
+        uint256 baseCurrencyCounter
+    ) public {
+        vm.assume(riskVarInputs.length > 0);
+        vm.assume(riskVarInputs[0].baseCurrency >= baseCurrencyCounter);
+
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(
+            baseCurrencyCounter
+        );
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("APM_SRVFA: BaseCurrency not in limits");
+        abstractPricingModule.setRiskVariablesForAsset(asset, riskVarInputs);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setRiskVariablesForAsset(address asset, PricingModule.RiskVarInput[2] memory riskVarInputs)
+        public
+    {
+        vm.assume(riskVarInputs[0].baseCurrency != riskVarInputs[1].baseCurrency);
+
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.baseCurrencyCounter.selector).checked_write(
+            type(uint256).max
+        );
+
+        for (uint256 i; i < riskVarInputs.length; ++i) {
+            riskVarInputs_.push(riskVarInputs[i]);
+            vm.assume(riskVarInputs[i].collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
+            vm.assume(riskVarInputs[i].liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR);
+        }
+
+        vm.startPrank(creatorAddress);
+        abstractPricingModule.setRiskVariablesForAsset(asset, riskVarInputs_);
+
+        for (uint256 i; i < riskVarInputs.length; ++i) {
+            (uint16 collateralFactor_, uint16 liquidationFactor_) =
+                abstractPricingModule.getRiskVariables(asset, riskVarInputs[i].baseCurrency);
+            assertEq(collateralFactor_, riskVarInputs[i].collateralFactor);
+            assertEq(liquidationFactor_, riskVarInputs[i].liquidationFactor);
+        }
+    }
+
+    function testRevert_setExposureOfAsset_NonRiskManager(
+        address unprivilegedAddress_,
+        address asset,
+        uint248 maxExposure
+    ) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("APM: ONLY_RISK_MANAGER");
+        abstractPricingModule.setExposureOfAsset(asset, maxExposure);
+        vm.stopPrank();
+    }
+
+    function testRevert_setExposureOfAsset_uint256(address asset, uint256 maxExposure) public {
+        vm.assume(maxExposure > type(uint128).max);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("APM_SEA: Max Exposure not in limits");
+        abstractPricingModule.setExposureOfAsset(asset, maxExposure);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setExposureOfAsset(address asset, uint128 maxExposure) public {
         vm.prank(creatorAddress);
-        abstractPricingModule.setAssetInformation(address(eth));
+        abstractPricingModule.setExposureOfAsset(asset, maxExposure);
 
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls removeFromWhiteList
-
-        // Then: removeFromWhiteList should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
-        abstractPricingModule.removeFromWhiteList(address(eth));
-        vm.stopPrank();
-
-        // And: isAssetAddressWhiteListed for address(eth) should return true
-        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
+        (uint128 actualMaxExposure,) = abstractPricingModule.exposure(asset);
+        assertEq(actualMaxExposure, maxExposure);
     }
 
-    function testRevert_removeFromWhiteList_OwnerRemovesNonExistingAssetFromWhitelist() public {
-        // Given: All necessary contracts deployed on setup
-        vm.startPrank(creatorAddress);
-        // When: creatorAddress calls removeFromWhiteList
+    function testRevert_processDeposit_NonMainRegistry(address unprivilegedAddress_, address asset, uint256 amount)
+        public
+    {
+        vm.assume(unprivilegedAddress_ != address(mainRegistry));
 
-        // Then: removeFromWhiteList should revert with "Asset not known in Pricing Module"
-        vm.expectRevert("Asset not known in Pricing Module");
-        abstractPricingModule.removeFromWhiteList(address(eth));
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("APM: ONLY_MAIN_REGISTRY");
+        abstractPricingModule.processDeposit(asset, 0, amount);
         vm.stopPrank();
-
-        // And: isAssetAddressWhiteListed for address(eth) should return false 
-        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
     }
 
-    function testSuccess_removeFromWhiteList_OwnerRemovesExistingAssetFromWhitelist() public {
-        vm.startPrank(creatorAddress);
-        // Given: creatorAddress calls setAssetInformation
-        abstractPricingModule.setAssetInformation(address(eth));
-        // When: creatorAddress calls removeFromWhiteList
-        abstractPricingModule.removeFromWhiteList(address(eth));
-        vm.stopPrank();
+    function testRevert_processDeposit_OverExposure(
+        address asset,
+        uint128 exposure,
+        uint128 amount,
+        uint128 maxExposure
+    ) public {
+        vm.assume(exposure <= type(uint128).max - amount);
+        vm.assume(exposure + amount > maxExposure);
+        abstractPricingModule.setExposure(asset, exposure, maxExposure);
 
-        // Then: isAssetAddressWhiteListed for address(eth) should return false 
-        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
+        vm.startPrank(address(mainRegistry));
+        vm.expectRevert("APM_PD: Exposure not in limits");
+        abstractPricingModule.processDeposit(address(asset), 0, amount);
+        vm.stopPrank();
     }
 
-    function testRevert_addToWhiteList_NonOwnerAddsRemovedAssetToWhitelist(address unprivilegedAddress) public {
-        // Given: unprivilegedAddress is not creatorAddress, creatorAddress setAssetInformation and removeFromWhiteList with address(eth)
-        vm.assume(unprivilegedAddress != creatorAddress);
+    function testSuccess_processDeposit(address asset, uint128 exposure, uint128 amount, uint128 maxExposure) public {
+        vm.assume(exposure <= type(uint128).max - amount);
+        vm.assume(exposure + amount <= maxExposure);
+        abstractPricingModule.setExposure(asset, exposure, maxExposure);
 
-        vm.startPrank(creatorAddress);
-        abstractPricingModule.setAssetInformation(address(eth));
-        abstractPricingModule.removeFromWhiteList(address(eth));
-        vm.stopPrank();
+        vm.prank(address(mainRegistry));
+        abstractPricingModule.processDeposit(address(asset), 0, amount);
 
-        vm.startPrank(unprivilegedAddress);
-        // When: unprivilegedAddress calls addToWhiteList
+        (, uint128 actualExposure) = abstractPricingModule.exposure(address(asset));
+        uint128 expectedExposure = exposure + amount;
 
-        // Then: addToWhiteList should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
-        abstractPricingModule.addToWhiteList(address(eth));
-        vm.stopPrank();
-
-        // And: isAssetAddressWhiteListed for address(eth) should return false 
-        assertTrue(!abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
+        assertEq(actualExposure, expectedExposure);
     }
 
-    function testSuccess_addToWhiteList_OwnerAddsRemovedAssetToWhitelist() public {
-        // Given: creatorAddress calls setAssetInformation and removeFromWhiteList
-        vm.startPrank(creatorAddress);
-        abstractPricingModule.setAssetInformation(address(eth));
-        abstractPricingModule.removeFromWhiteList(address(eth));
+    function testRevert_processWithdrawal_NonMainRegistry(address unprivilegedAddress_, address asset, uint256 amount)
+        public
+    {
+        vm.assume(unprivilegedAddress_ != address(mainRegistry));
 
-        // When: creatorAddress calls addToWhiteList
-        abstractPricingModule.addToWhiteList(address(eth));
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("APM: ONLY_MAIN_REGISTRY");
+        abstractPricingModule.processWithdrawal(asset, amount);
         vm.stopPrank();
+    }
 
-        // Then: isAssetAddressWhiteListed for address(eth) should return true
-        assertTrue(abstractPricingModule.isAssetAddressWhiteListed(address(eth)));
+    function testSuccess_processWithdrawal(address asset, uint128 exposure, uint128 amount, uint128 maxExposure)
+        public
+    {
+        vm.assume(maxExposure >= exposure);
+        vm.assume(exposure >= amount);
+        abstractPricingModule.setExposure(asset, exposure, maxExposure);
+
+        vm.prank(address(mainRegistry));
+        abstractPricingModule.processWithdrawal(asset, amount);
+
+        (, uint128 actualExposure) = abstractPricingModule.exposure(address(asset));
+        uint128 expectedExposure = exposure - amount;
+
+        assertEq(actualExposure, expectedExposure);
     }
 }

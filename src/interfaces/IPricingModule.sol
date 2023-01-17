@@ -16,9 +16,15 @@ interface IPricingModule {
 
     function getAssetInformation(address asset) external view returns (uint64, address, address[] memory);
 
-    function isAssetAddressWhiteListed(address) external view returns (bool);
+    function setRiskVariablesForAsset(
+        address asset,
+        uint16[] memory collateralFactors,
+        uint16[] memory liquidationThresholds
+    ) external;
 
     function isWhiteListed(address, uint256) external view returns (bool);
+    function processDeposit(address, uint256, uint256) external;
+    function processWithdrawal(address, uint256) external;
 
-    function getValue(GetValueInput memory) external view returns (uint256, uint256);
+    function getValue(GetValueInput memory) external view returns (uint256, uint256, uint256, uint256);
 }

@@ -6,9 +6,12 @@ library CompareArrays {
         if (arr1.length != arr2.length) {
             return false;
         }
-        for (uint256 i; i < arr1.length; i++) {
+        for (uint256 i; i < arr1.length;) {
             if (arr1[i] != arr2[i]) {
                 return false;
+            }
+            unchecked {
+                ++i;
             }
         }
         return true;
@@ -18,9 +21,12 @@ library CompareArrays {
         if (arr1.length != arr2.length) {
             return false;
         }
-        for (uint256 i; i < arr1.length; i++) {
+        for (uint256 i; i < arr1.length;) {
             if (arr1[i] != arr2[i]) {
                 return false;
+            }
+            unchecked {
+                ++i;
             }
         }
         return true;

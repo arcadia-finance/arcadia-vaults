@@ -7,6 +7,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "./utils/FixedPointMathLib.sol";
+import {RiskConstants} from "./utils/RiskConstants.sol";
 
 /**
  * @title Risk Module
@@ -14,77 +15,52 @@ import "./utils/FixedPointMathLib.sol";
  * @notice The Risk Module manages the supported asset related risks, collateral factor, liquidity threshold
  * @dev No end-user should directly interact with the Risk Module
  */
-contract RiskModule {
+library RiskModule {
     using FixedPointMathLib for uint256;
 
-    mapping(address => mapping(uint256 => uint16)) public collateralFactors;
-    mapping(address => mapping(uint256 => uint16)) public liquidationThresholds;
-
-    uint16 public constant VARIABLE_DECIMAL = 100;
-
-    uint16 public constant MIN_COLLATERAL_FACTOR = 0;
-    uint16 public constant MIN_LIQUIDATION_THRESHOLD = 100;
-
-    uint16 public constant MAX_COLLATERAL_FACTOR = 100;
-    uint16 public constant MAX_LIQUIDATION_THRESHOLD = 10000;
-
-    uint16 public constant DEFAULT_COLLATERAL_FACTOR = 50;
-    uint16 public constant DEFAULT_LIQUIDATION_THRESHOLD = 110;
+    struct AssetValueAndRiskVariables {
+        uint256 valueInBaseCurrency;
+        uint256 collateralFactor;
+        uint256 liquidationFactor;
+    }
 
     /**
-     * @notice Calculate the weighted collateral value given the assets
-     * @param assetAddresses The List of token addresses of the assets
-     * @param valuesPerAsset The list of corresponding monetary values of each asset address.
-     * @return collateralValue is the weighted collateral value of the given assets
+     * @notice Calculate the weighted collateral value given a combination of asset values and corresponding collateral factors.
+     * @param valuesAndRiskVarPerAsset List of asset values and corresponding collateral factors.
+     * @return collateralValue The collateral value of the given assets
      */
-    function calculateWeightedCollateralValue(
-        address[] calldata assetAddresses,
-        uint256[] memory valuesPerAsset,
-        uint256 baseCurrencyInd
-    ) public view returns (uint256 collateralValue) {
-        uint256 assetAddressesLength = assetAddresses.length;
-        require(assetAddressesLength == valuesPerAsset.length, "RM_CCV: LENGTH_MISMATCH");
-        for (uint256 i; i < assetAddressesLength;) {
-            collateralValue += valuesPerAsset[i] * uint256(collateralFactors[assetAddresses[i]][baseCurrencyInd]);
+    function calculateCollateralValue(AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset)
+        public
+        pure
+        returns (uint256 collateralValue)
+    {
+        for (uint256 i; i < valuesAndRiskVarPerAsset.length;) {
+            collateralValue +=
+                valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].collateralFactor;
             unchecked {
                 ++i;
             }
         }
-        collateralValue = collateralValue / VARIABLE_DECIMAL;
+        collateralValue = collateralValue / RiskConstants.RISK_VARIABLES_UNIT;
     }
 
     /**
-     * @notice Calculate the weighted liquidation threshold given the assets
-     * @param assetAddresses The List of token addresses of the assets
-     * @param valuesPerAsset The list of corresponding monetary values of each asset address.
-     * @return liquidationThreshold is the weighted liquidation threshold of the given assets
+     * @notice Calculate the weighted liquidation value given a combination of asset values and corresponding collateral factors.
+     * @param valuesAndRiskVarPerAsset List of asset values and corresponding collateral factors.
+     * @return liquidationValue The value of a combination of assets, each discounted with a liquidation factor
      */
-    function calculateWeightedLiquidationThreshold(
-        address[] calldata assetAddresses,
-        uint256[] memory valuesPerAsset,
-        uint256 baseCurrencyInd
-    ) public view returns (uint16 liquidationThreshold) {
-        uint256 assetAddressesLength = assetAddresses.length;
-        require(assetAddressesLength == valuesPerAsset.length, "RM_CWLT: LENGTH_MISMATCH");
-
-        uint256 liquidationThreshold256;
-        uint256 totalValue;
-
-        for (uint256 i; i < assetAddressesLength;) {
-            totalValue += valuesPerAsset[i];
-            liquidationThreshold256 +=
-                valuesPerAsset[i] * uint256(liquidationThresholds[assetAddresses[i]][baseCurrencyInd]);
+    function calculateLiquidationValue(AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset)
+        public
+        pure
+        returns (uint256 liquidationValue)
+    {
+        for (uint256 i; i < valuesAndRiskVarPerAsset.length;) {
+            liquidationValue +=
+                valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].liquidationFactor;
             unchecked {
-                i++;
+                ++i;
             }
         }
-        require(totalValue > 0, "RM_CWLT: Total asset value must be bigger than zero");
-        // Not possible to overflow
-        // given total_value = value_x + value_y + ... + value_n
-        // liquidationThreshold = (liqThres_x * value_x + liqThres_y * value_y + ... + liqThres_n * value_n) / total_value
-        // so liquidationThreshold will be in line with the liqThres_x, ... , liqThres_n
-        unchecked {
-            liquidationThreshold = uint16(liquidationThreshold256 / totalValue);
-        }
+        liquidationValue = liquidationValue / RiskConstants.RISK_VARIABLES_UNIT;
     }
 }

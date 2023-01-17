@@ -8,8 +8,7 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./interfaces/IChainLinkData.sol";
-
-import {Printing} from "./utils/Printer.sol";
+import {StringHelpers} from "./utils/StringHelpers.sol";
 import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
 
 /**
@@ -23,6 +22,7 @@ import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
  */
 contract OracleHub is Ownable {
     using FixedPointMathLib for uint256;
+    using StringHelpers for string;
 
     mapping(address => bool) public inOracleHub;
     mapping(address => OracleInformation) public oracleToOracleInformation;
@@ -33,7 +33,7 @@ contract OracleHub is Ownable {
         bool baseAssetIsBaseCurrency;
         string quoteAsset;
         string baseAsset;
-        address oracleAddress;
+        address oracle;
         address quoteAssetAddress;
     }
 
@@ -55,46 +55,46 @@ contract OracleHub is Ownable {
      * - baseAssetIsBaseCurrency: boolean indicating if the base asset can be used as baseCurrency of a vault
      * - quoteAsset: The symbol of the quote assets (only used for readability purpose)
      * - baseAsset: The symbol of the base assets (only used for readability purpose)
-     * - oracleAddress: The contract address of the oracle
+     * - oracle: The contract address of the oracle
      * - quoteAssetAddress: The contract address of the quote asset
      * @dev It is not possible to overwrite the information of an existing Oracle in the Oracle Hub.
      * @dev Oracles can't have more than 18 decimals.
      */
     function addOracle(OracleInformation calldata oracleInformation) external onlyOwner {
-        address oracleAddress = oracleInformation.oracleAddress;
-        require(!inOracleHub[oracleAddress], "Oracle already in oracle-hub");
-        require(oracleInformation.oracleUnit <= 1000000000000000000, "Oracle can have maximal 18 decimals");
-        inOracleHub[oracleAddress] = true;
-        oracleToOracleInformation[oracleAddress] = oracleInformation;
+        address oracle = oracleInformation.oracle;
+        require(!inOracleHub[oracle], "OH_AO: Oracle not unique");
+        require(oracleInformation.oracleUnit <= 1000000000000000000, "OH_AO: Maximal 18 decimals");
+        inOracleHub[oracle] = true;
+        oracleToOracleInformation[oracle] = oracleInformation;
     }
 
     /**
      * @notice Checks if a series of oracles adheres to a predefined ruleset
-     * @param oracleAdresses An array of addresses of oracle contracts
+     * @param oracles An array of addresses of oracle contracts
      * @dev Function will do nothing if all checks pass, but reverts if at least one check fails.
      * The following checks are performed:
      * - The oracle-address must be previously added to the Oracle-Hub.
      * - The last oracle in the series must have USD as base-asset.
      * - The Base-asset of all oracles must be equal to the quote-asset of the next oracle (except for the last oracle in the series).
      */
-    function checkOracleSequence(address[] memory oracleAdresses) external view {
-        uint256 oracleAdressesLength = oracleAdresses.length;
-        require(oracleAdressesLength <= 3, "Oracle seq. cant be longer than 3");
+    function checkOracleSequence(address[] memory oracles) external view {
+        uint256 oracleAdressesLength = oracles.length;
+        require(oracleAdressesLength <= 3, "OH_COS: Max 3 Oracles");
         for (uint256 i; i < oracleAdressesLength;) {
-            require(inOracleHub[oracleAdresses[i]], "Unknown oracle");
+            require(inOracleHub[oracles[i]], "OH_COS: Unknown Oracle");
             if (i > 0) {
                 require(
-                    compareStrings(
-                        oracleToOracleInformation[oracleAdresses[i - 1]].baseAsset,
-                        oracleToOracleInformation[oracleAdresses[i]].quoteAsset
+                    StringHelpers.compareStrings(
+                        oracleToOracleInformation[oracles[i - 1]].baseAsset,
+                        oracleToOracleInformation[oracles[i]].quoteAsset
                     ),
-                    "qAsset doesnt match with bAsset of prev oracle"
+                    "OH_COS: No Match qAsset and bAsset"
                 );
             }
             if (i == oracleAdressesLength - 1) {
                 require(
-                    compareStrings(oracleToOracleInformation[oracleAdresses[i]].baseAsset, "USD"),
-                    "Last oracle does not have USD as bAsset"
+                    StringHelpers.compareStrings(oracleToOracleInformation[oracles[i]].baseAsset, "USD"),
+                    "OH_COS: Last bAsset not USD"
                 );
             }
             unchecked {
@@ -109,7 +109,7 @@ contract OracleHub is Ownable {
 
     /**
      * @notice Returns the exchange rate of a certain asset, denominated in USD or in another BaseCurrency
-     * @param oracleAdresses An array of addresses of oracle contracts
+     * @param oracles An array of addresses of oracle contracts
      * @param baseCurrency The BaseCurrency (base-asset) in which the exchange rate is ideally expressed
      * @return rateInUsd The exchange rate of the asset denominated in USD, integer with 18 Decimals precision
      * @return rateInBaseCurrency The exchange rate of the asset denominated in a BaseCurrency different from USD, integer with 18 Decimals precision
@@ -130,7 +130,7 @@ contract OracleHub is Ownable {
      * the given baseCurrency as base-asset.
      * Only one of the two values can be different from 0.
      */
-    function getRate(address[] memory oracleAdresses, uint256 baseCurrency)
+    function getRate(address[] memory oracles, uint256 baseCurrency)
         public
         view
         returns (uint256 rateInUsd, uint256 rateInBaseCurrency)
@@ -138,13 +138,13 @@ contract OracleHub is Ownable {
         //Scalar 1 with 18 decimals (internal precision for)
         uint256 rate = FixedPointMathLib.WAD;
         int256 tempRate;
-        uint256 oraclesLength = oracleAdresses.length;
+        uint256 oraclesLength = oracles.length;
         address oracleAddressAtIndex;
 
         for (uint256 i; i < oraclesLength;) {
-            oracleAddressAtIndex = oracleAdresses[i];
+            oracleAddressAtIndex = oracles[i];
             (, tempRate,,,) = IChainLinkData(oracleAddressAtIndex).latestRoundData();
-            require(tempRate >= 0, "Negative oracle price");
+            require(tempRate >= 0, "OH_GR: Negative Rate");
 
             rate = rate.mulDivDown(uint256(tempRate), oracleToOracleInformation[oracleAddressAtIndex].oracleUnit);
 
@@ -165,24 +165,6 @@ contract OracleHub is Ownable {
             }
         }
         //Since all series of oracles must end with USD, it should be impossible to arrive at this point
-        revert("No oracle with USD or baseCurrency as bAsset");
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        HELPER FUNCTIONS
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Checks if two input strings are identical, if so returns true
-     * @param a The first string to be compared
-     * @param b The second string to be compared
-     * @return result Boolean that returns true if both input strings are equal, and false if both strings are different
-     */
-    function compareStrings(string memory a, string memory b) internal pure returns (bool result) {
-        if (bytes(a).length != bytes(b).length) {
-            return false;
-        } else {
-            result = keccak256(bytes(a)) == keccak256(bytes(b));
-        }
+        revert("OH_GR: No bAsset in USD or bCurr");
     }
 }
