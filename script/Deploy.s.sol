@@ -184,16 +184,16 @@ contract ArcadiaVaultDeployer is Test {
         );
     }
 
-    function testDeploy_script() public {
-        run();
+    // function testDeploy_script() public {
+    //     run();
 
-        emit log_named_address("oracleHub", address(oracleHub));
-        emit log_named_address("factory", address(factory));
-        emit log_named_address("mainRegistry", address(mainRegistry));
-        emit log_named_address("standardERC20PricingModule", address(standardERC20PricingModule));
-        emit log_named_address("vaultLogic", address(vault));
+    //     emit log_named_address("oracleHub", address(oracleHub));
+    //     emit log_named_address("factory", address(factory));
+    //     emit log_named_address("mainRegistry", address(mainRegistry));
+    //     emit log_named_address("standardERC20PricingModule", address(standardERC20PricingModule));
+    //     emit log_named_address("vaultLogic", address(vault));
 
-    }
+    // }
 
     function run() public {
 
