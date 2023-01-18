@@ -20,13 +20,13 @@ import "./interfaces/ILendingPool.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Ownable {
-    uint256 public constant hourlyBlocks = 300;
-    uint256 public breakevenTime = 6; //hours
+    uint256 public maxAuctionTime = 14_400; //4 hours in seconds
+    uint256 public startPriceMultiplier; //2 decimals
 
     address public factory;
     address public registry;
     address public reserveFund;
-    address public protocolTreasury;
+    address public treasury;
 
     mapping(address => AuctionInformation) public auctionInformation;
     mapping(address => mapping(address => uint256)) public openClaims;
@@ -38,13 +38,13 @@ contract Liquidator is Ownable {
      * @dev ratio's have 2 decimals precision (50 equals 0,5 or 50%)
      */
     struct ClaimRatios {
-        uint64 protocol;
-        uint64 liquidationInitiator;
+        uint64 penalty;
+        uint64 initiatorReward;
     }
 
     struct AuctionInformation {
         uint128 openDebt;
-        uint128 startBlock;
+        uint128 startTime;
         bool inAuction;
         address baseCurrency;
         address originalOwner;
@@ -54,7 +54,8 @@ contract Liquidator is Ownable {
     constructor(address factory_, address registry_) {
         factory = factory_;
         registry = registry_;
-        claimRatios = ClaimRatios({protocol: 5, liquidationInitiator: 2});
+        claimRatios = ClaimRatios({penalty: 5, initiatorReward: 2});
+        startPriceMultiplier = 110;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -72,10 +73,10 @@ contract Liquidator is Ownable {
     /**
      * @notice Sets the protocol treasury address on the liquidator.
      * @dev The protocol treasury is used to receive liquidation rewards.
-     * @param protocolTreasury_ the protocol treasury.
+     * @param treasury_ the protocol treasury.
      */
-    function setProtocolTreasury(address protocolTreasury_) external onlyOwner {
-        protocolTreasury = protocolTreasury_;
+    function setTreasury(address treasury_) external onlyOwner {
+        treasury = treasury_;
     }
 
     /**
@@ -92,14 +93,24 @@ contract Liquidator is Ownable {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Sets the breakeven time on the liquidator.
-     * @dev The breakeven time is the time from starting an auction duration to
-     * the moment the price of the auction has decreased to the open debt.
-     * The breakevenTime controls the speed of decrease of the auction price.
-     * @param breakevenTime_ the new breakeven time address.
+     * @notice Sets the Claim Ratios.
+     * @param claimRatios_ The new Claim ratios.
+     * @dev Each claim ratio has 2 decimals precision (50 equals 0,5 or 50%)
      */
-    function setBreakevenTime(uint256 breakevenTime_) external onlyOwner {
-        breakevenTime = breakevenTime_;
+    function setClaimRatios(ClaimRatios memory claimRatios_) external onlyOwner {
+        //ToDo: set upper bounds?
+        claimRatios = claimRatios_;
+    }
+
+    /**
+     * @notice Sets the maximum auction time on the liquidator.
+     * @dev The maximum auction time is the time from starting an auction to
+     * the moment the price of the auction has decreased to 0.
+     * The maxAuctionTime controls the speed of decrease of the auction price.
+     * @param maxAuctionTime_ The new maximum auction time.
+     */
+    function setMaxAuctionTime(uint256 maxAuctionTime_) external onlyOwner {
+        maxAuctionTime = maxAuctionTime_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -125,106 +136,160 @@ contract Liquidator is Ownable {
         require(!auctionInformation[msg.sender].inAuction, "LQ_SA: Auction already ongoing");
 
         auctionInformation[msg.sender].inAuction = true;
-        auctionInformation[msg.sender].startBlock = uint128(block.number);
+        auctionInformation[msg.sender].startTime = uint128(block.timestamp);
         auctionInformation[msg.sender].originalOwner = originalOwner;
         auctionInformation[msg.sender].openDebt = openDebt;
         auctionInformation[msg.sender].baseCurrency = baseCurrency;
         auctionInformation[msg.sender].trustedCreditor = trustedCreditor;
 
         //Initiator can immediately claim the initiator reward.
-        //In edge cases, their might not be sufficient funds on the LiquidationEngine contract,
-        //nnd the initiator will have to wait untill the auction of collateral is finished.
+        //In edge cases, there might not be sufficient funds on this Liquidator contract,
+        //and the initiator will have to wait untill the auction of collateral is finished.
         openClaims[liquidationInitiator][baseCurrency] += calcLiquidationInitiatorReward(openDebt);
     }
 
     /**
      * @notice Calculates the Reward in baseCurrency for the Liquidation Initiator.
-     * @param openDebt the open debt taken by `originalOwner`.
-     * @return liquidationInitiatorReward The Reward in baseCurrency for the Liquidation Initiator.
+     * @param openDebt the open debt taken by `originalOwner`, denominated in baseCurrency.
+     * @return liquidationInitiatorReward The Reward for the Liquidation Initiator, denominated in baseCurrency.
      */
     function calcLiquidationInitiatorReward(uint256 openDebt)
         public
         view
         returns (uint256 liquidationInitiatorReward)
     {
-        //Calculate liquidationInitiator as the minimum between a percentage of a position capped by a certain amount
+        //Calculate liquidationInitiatorreward as the minimum between a percentage of a position capped by a certain amount
         //ToDo: How are we going to cap the max?
-        liquidationInitiatorReward = openDebt * claimRatios.liquidationInitiator / 100;
+        liquidationInitiatorReward = openDebt * claimRatios.initiatorReward / 100;
     }
 
     /**
-     * @notice Function to check what the current price of the vault being auctioned of is.
-     * @dev Returns whether the vault is on sale or not. Always check the forSale bool!
+     * @notice Function returns the current auction price of a vault.
      * @param vaultAddress the vaultAddress.
-     * @return totalPrice the total price for which the vault can be purchased.
-     * @return baseCurrency the baseCurrency in which the vault (and totalPrice) is denominaetd.
-     * @return forSale returns false when the vault is not for sale.
+     * @return price the total price for which the vault can be purchased.
+     * @return baseCurrency the baseCurrency in which the vault (and totalPrice) is denominated.
+     * @return inAuction returns false when the vault is not being auctioned.
+     * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
+     * And immediately ends the auction.
      */
     function getPriceOfVault(address vaultAddress)
         public
         view
-        returns (uint256 totalPrice, address baseCurrency, bool forSale)
+        returns (uint256 price, address baseCurrency, bool inAuction)
     {
-        forSale = auctionInformation[vaultAddress].inAuction && auctionInformation[vaultAddress].startBlock > 0;
+        inAuction = auctionInformation[vaultAddress].inAuction;
 
-        if (!forSale) {
+        if (!inAuction) {
             return (0, address(0), false);
         }
 
-        uint256 startPrice = (auctionInformation[vaultAddress].openDebt * 150) / 100;
-        uint256 surplusPrice = (auctionInformation[vaultAddress].openDebt * (150 - 100)) / 100;
-        uint256 priceDecrease = (surplusPrice * (block.number - auctionInformation[vaultAddress].startBlock))
-            / (hourlyBlocks * breakevenTime);
+        uint256 auctionTime = block.timestamp - auctionInformation[vaultAddress].startTime; //Can be unchecked
 
-        totalPrice;
-        if (priceDecrease > startPrice) {
+        if (auctionTime > maxAuctionTime) {
             //ヽ༼ຈʖ̯ຈ༽ﾉ
-            totalPrice = 0;
+            price = 0;
         } else {
-            totalPrice = startPrice - priceDecrease;
+            price =
+                uint256(auctionInformation[vaultAddress].openDebt) * startPriceMultiplier * (maxAuctionTime - auctionTime) / maxAuctionTime / 100;
         }
 
-        return (totalPrice, auctionInformation[vaultAddress].baseCurrency, forSale);
+        return (price, auctionInformation[vaultAddress].baseCurrency, inAuction);
     }
 
     /**
-     * @notice Function a user calls to buy the vault during the auction process. This ends the auction process
-     * @dev Ensure the vault is for sale before calling this function.
+     * @notice Function a user (the bidder) calls to buy the vault during the auction process.
      * @param vaultAddress the vaultAddress of the vault the user want to buy.
+     * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
+     * And immediately ends the auction.
      */
     function buyVault(address vaultAddress) public {
-        (uint256 priceOfVault,, bool forSale) = getPriceOfVault(vaultAddress);
+        //Check if the Vault is indeed for sale and get the current price.
+        (uint256 priceOfVault,, bool inAuction) = getPriceOfVault(vaultAddress);
+        require(inAuction, "LQ_BV: Not for sale");
 
-        require(forSale, "LQ_BV: Not for sale");
+        //Stop the auction, this will prevent any possible reentrance attacks.
+        auctionInformation[vaultAddress].inAuction = false;
+        //ToDo: set all other auction information to 0?
 
+        //Transfer funds, equal to the current auction price from the bidder to the Liquidation contract.
+        //The bidder should have approved the Liquidation contract for at least an amount of priceOfVault.
+        address baseCurrency = auctionInformation[vaultAddress].baseCurrency;
+        require(IERC20(baseCurrency).transferFrom(msg.sender, address(this), priceOfVault), "LQ_BV: transfer failed");
+
+        //fetch the contract address of the Creditor and the total amount of liabilities that need to be repaid.
         address trustedCreditor = auctionInformation[vaultAddress].trustedCreditor;
-        address asset = auctionInformation[vaultAddress].baseCurrency;
-
-        require(IERC20(asset).transferFrom(msg.sender, address(this), priceOfVault), "LQ_BV: transfer failed");
-
         uint256 openDebt = auctionInformation[vaultAddress].openDebt;
-        ClaimRatios memory ratios = claimRatios;
-        uint256 keeperReward = openDebt * ratios.liquidationInitiator / 100;
+        uint256 liquidationInitiatorReward = calcLiquidationInitiatorReward(openDebt);
 
-        if (priceOfVault < openDebt + keeperReward) {
-            uint256 default_ = openDebt + keeperReward - priceOfVault;
-            uint256 deficit = priceOfVault < keeperReward ? keeperReward - openDebt : 0;
+        if (priceOfVault < openDebt + liquidationInitiatorReward) {
+            //Auction proceeds do not cover all liabilities (debt + reward for the liquidation initiator)
+            uint256 badDebt = openDebt + liquidationInitiatorReward - priceOfVault;
+
+            //In the worst case scenario, auction proceeds do not even cover the reward for the liquidation initiator.
+            //In this edge case there are not enough funds on the Liquidator contract to honour all openClaims.
+            //The missing funds (deficit) have be transferred from the tustedCreditor to this Liquidator contract
+            //via the function settleLiquidation(uint256, uint256).
+            uint256 deficit = priceOfVault < liquidationInitiatorReward ? liquidationInitiatorReward - openDebt : 0;
+
             if (deficit == 0) {
-                IERC20(asset).transfer(trustedCreditor, openDebt - default_);
-            } //ToDo do one transfer from msg.sender directly to liquiditypool?
-            ILendingPool(trustedCreditor).settleLiquidation(default_, deficit);
+                //No deficit, transfer the auction proceeds (minus Liquidation Initiator reward back to the trustedcreditor).
+                //Since liabilities (openDebt) are not fully paid off, the trusted Creditor has to write off an amount of badDebt.
+                IERC20(baseCurrency).transfer(trustedCreditor, openDebt - badDebt);
+            }
+
+            //Trigger Logic on the Trusted Creditor to write off badDebt, and in the unlikely case there is a deficit,
+            //trigger a transfer from Trusted Creditor back to the Liquidator.
+            ILendingPool(trustedCreditor).settleLiquidation(badDebt, deficit);
         } else {
-            IERC20(asset).transfer(trustedCreditor, openDebt);
-            //ToDo: transfer protocolReward to Liquidity Pool
-            //uint256 protocolReward = openDebt * ratios.protocol / 100;
-            //uint256 surplus = priceOfVault - auctionInformation[vaultAddress][life].openDebt;
-            //protocolReward = surplus > protocolReward ? protocolReward  : surplus;
+            //Auction proceeds do cover all liabilities (debt + reward for the liquidation initiator).
+            //Full amount of debt owed to the Creditor is paid off.
+            //No need to trigger any additional logic on Trusted Creditor.
+            IERC20(baseCurrency).transfer(trustedCreditor, openDebt);
+
+            //Calculate Liquidation Penalty, any funds remaining after the liabilities and the liquidation penalty are paid off,
+            //Go back to the Original Owner off the vault.
+            (uint256 liquidationPenalty, uint256 remainder) =
+                calcLiquidationPenalty(priceOfVault, openDebt, liquidationInitiatorReward);
+
+            //After the auction the treasury can claim the liquidationPenalty and the originalOwner any remaining assets.
+            //ToDo: should the treasury claim the liquidationPenalty, or should it immediately be send to the Lending pool?
+            openClaims[treasury][baseCurrency] += liquidationPenalty;
+            if (remainder != 0) openClaims[auctionInformation[vaultAddress].originalOwner][baseCurrency] += remainder;
         }
 
-        auctionInformation[vaultAddress].inAuction = false;
-        //ToDo: set all auction information to 0?
-
+        //Change ownership of the auctioned vault to the bidder.
+        //Todo: transfer a vault imediately on vault address instead of ID.
         IFactory(factory).safeTransferFrom(address(this), msg.sender, IFactory(factory).vaultIndex(vaultAddress));
+    }
+
+    /**
+     * @notice Calculates the Liquidation Penalty in baseCurrency and the remainder.
+     * @param priceOfVault the price for which the vault is auctioned, denominated in baseCurrency.
+     * @param openDebt the open debt taken by `originalOwner`, denominated in baseCurrency.
+     * @param liquidationInitiatorReward The Reward for the Liquidation Initiator, denominated in baseCurrency.
+     * @return liquidationPenalty The Liquidation Penalty, denominated in baseCurrency.
+     * @return remainder The remaining funds after the liabilities and the liquidation penalty are paid off, denominated in baseCurrency.
+     */
+    function calcLiquidationPenalty(uint256 priceOfVault, uint256 openDebt, uint256 liquidationInitiatorReward)
+        public
+        view
+        returns (uint256 liquidationPenalty, uint256 remainder)
+    {
+        //Intermediate result of the remainder
+        remainder = priceOfVault - openDebt - liquidationInitiatorReward;
+
+        //Max amount of the liquidation penalty
+        liquidationPenalty = openDebt * claimRatios.penalty / 100;
+
+        //Check if the remainder can cover the full liquidation penalty
+        if (liquidationPenalty > remainder) {
+            //If yes, calculate the final remainder
+            remainder -= liquidationPenalty;
+        } else {
+            //If not, there is no remainder for the originalOwner.
+            remainder = 0;
+            liquidationPenalty = remainder;
+        }
     }
 
     /*///////////////////////////////////////////////////////////////
