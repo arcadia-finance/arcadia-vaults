@@ -20,7 +20,6 @@ library DeployAddresses {
     address public constant oracleSnxToUsd = 0xdC5f59e61e51b90264b38F0202156F07956E2577;
     address public constant oracleUsdcToUsd = 0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7;
     address public constant oracleBtcToEth = 0x779877A7B0D9E8603169DdbD7836e478b4624789;
-
 }
 
 library DeployNumbers {
@@ -42,12 +41,9 @@ library DeployNumbers {
     uint256 public constant UsdBaseCurrency = 0;
     uint256 public constant EthBaseCurrency = 1;
     uint256 public constant UsdcBaseCurrency = 2;
-
 }
 
-library DeployBytes { 
+library DeployBytes {
     bytes32 public constant upgradeRoot1To2 = 0x472ba66bf173e177005d95fe17be2002ac4c417ff5bef6fb20a1e357f75bf394;
     bytes32 public constant upgradeRoot1To1 = 0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f;
-
 }
-
