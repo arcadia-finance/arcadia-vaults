@@ -647,6 +647,8 @@ contract FactoryTest is DeployArcadiaVaults {
     }
 
     function testSuccess_liquidate(address liquidationInitiator, uint128 openPosition) public {
+        vm.assume(openPosition > 0);
+
         vm.startPrank(creatorAddress);
         liquidator = new Liquidator(
             address(factory),
@@ -665,7 +667,6 @@ contract FactoryTest is DeployArcadiaVaults {
         proxy.openTrustedMarginAccount(address(trustedCreditor));
         vm.stopPrank();
 
-        vm.assume(openPosition > 0);
         trustedCreditor.setOpenPosition(address(proxy), openPosition);
 
         vm.prank(liquidationInitiator);
