@@ -109,6 +109,19 @@ contract Factory is ERC721, Ownable {
 
     /**
      * @notice Function used to transfer a vault between users
+     * @dev This method transfers a vault not on id but on address and also transfers the vault proxy contract to the new owner.
+     * @param from sender.
+     * @param to target.
+     * @param vault The address of the vault that is about to be transfered.
+     */
+    function safeTransferFrom(address from, address to, address vault) public {
+        uint256 id = vaultIndex[vault];
+        IVault(allVaults[id - 1]).transferOwnership(to);
+        super.safeTransferFrom(from, to, id);
+    }
+
+    /**
+     * @notice Function used to transfer a vault between users
      * @dev This method overwrites the safeTransferFrom function in ERC721.sol to also transfer the vault proxy contract to the new owner.
      * @param from sender.
      * @param to target.

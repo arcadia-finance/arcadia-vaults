@@ -9,6 +9,8 @@ pragma solidity >=0.4.22 <0.9.0;
 interface IFactory {
     function isVault(address vaultAddress) external view returns (bool);
 
+    function safeTransferFrom(address from, address to, address vault) external;
+
     function safeTransferFrom(address from, address to, uint256 id) external;
 
     function liquidate(address vault) external returns (bool);
