@@ -15,7 +15,7 @@ import "../interfaces/ILiquidator.sol";
 import "../interfaces/IRegistry.sol";
 import "../interfaces/IMainRegistry.sol";
 import "../interfaces/ILendingPool.sol";
-import "../interfaces/ITrustedProtocol.sol";
+import "../interfaces/ITrustedCreditor.sol";
 import "../interfaces/IActionBase.sol";
 import {ActionData} from "../actions/utils/ActionData.sol";
 
@@ -40,17 +40,15 @@ contract VaultV2 {
      */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
-    bool public isTrustedProtocolSet;
+    bool public isTrustedCreditorSet;
 
     uint16 public vaultVersion;
-    uint256 public life;
 
-    address public baseCurrency;
-
-    address public owner;
     address public liquidator;
+    address public owner;
     address public registry;
-    address public trustedProtocol;
+    address public trustedCreditor;
+    address public baseCurrency;
 
     address[] public erc20Stored;
     address[] public erc721Stored;
@@ -199,19 +197,19 @@ contract VaultV2 {
      * The protocol has significant authorisation: use margin (-> trigger liquidation)
      */
     function openTrustedMarginAccount(address protocol) public onlyOwner {
-        require(!isTrustedProtocolSet, "V_OMA: ALREADY SET");
+        require(!isTrustedCreditorSet, "V_OMA: ALREADY SET");
         //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
         (bool success, address baseCurrency_, address liquidator_) =
-            ITrustedProtocol(protocol).openMarginAccount(vaultVersion);
+            ITrustedCreditor(protocol).openMarginAccount(vaultVersion);
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
 
         liquidator = liquidator_;
-        trustedProtocol = protocol;
+        trustedCreditor = protocol;
         if (baseCurrency != baseCurrency_) {
             _setBaseCurrency(baseCurrency_);
         }
-        isTrustedProtocolSet = true;
+        isTrustedCreditorSet = true;
         allowed[protocol] = true;
     }
 
@@ -221,11 +219,11 @@ contract VaultV2 {
      * @dev Currently only one trusted protocol can be set.
      */
     function closeTrustedMarginAccount() public onlyOwner {
-        require(isTrustedProtocolSet, "V_CMA: NOT SET");
-        require(ITrustedProtocol(trustedProtocol).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
+        require(isTrustedCreditorSet, "V_CMA: NOT SET");
+        require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
 
-        isTrustedProtocolSet = false;
-        allowed[trustedProtocol] = false;
+        isTrustedCreditorSet = false;
+        allowed[trustedCreditor] = false;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -308,9 +306,9 @@ contract VaultV2 {
      * The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
      */
     function getUsedMargin() public view returns (uint256 usedMargin) {
-        if (!isTrustedProtocolSet) return 0;
+        if (!isTrustedCreditorSet) return 0;
 
-        usedMargin = ITrustedProtocol(trustedProtocol).getOpenPosition(address(this));
+        usedMargin = ITrustedCreditor(trustedCreditor).getOpenPosition(address(this));
     }
 
     /**
@@ -339,30 +337,27 @@ contract VaultV2 {
      * Starts the vault auction on the liquidator contract.
      * Increases the life of the vault to indicate a liquidation has happened.
      * Transfers ownership of the proxy vault to the liquidator!
-     * @param liquidationKeeper Address of the keeper who initiated the liquidation process.
-     * @return success Boolean returning if the liquidation process is successfully started.
+     * @param liquidationInitiator Address of the keeper who initiated the liquidation process.
+     * @dev trustedCreditor is a trusted contract.
+     * @dev After an auction is successfully started, interest acrual should stop.
+     * This must be implemented by trustedCreditor
+     * @dev If liquidateVault(address) is successfull, Factory will transfer ownership of the Vault to the Liquidator.
      */
-    function liquidateVault(address liquidationKeeper) public onlyFactory returns (bool success, address liquidator_) {
+    function liquidateVault(address liquidationInitiator) public onlyFactory returns (address liquidator_) {
         uint256 usedMargin = getUsedMargin();
 
         require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");
 
-        uint8 baseCurrencyIdentifier = IRegistry(registry).assetToBaseCurrency(baseCurrency);
-
-        require(
-            //ToDo: check on usedMargin?
-            ILiquidator(liquidator).startAuction(
-                address(this), life, liquidationKeeper, owner, uint128(usedMargin), baseCurrencyIdentifier
-            ),
-            "V_LV: Failed to start auction!"
+        //Start the liquidation process
+        ILiquidator(liquidator).startAuction(
+            liquidationInitiator, owner, uint128(usedMargin), baseCurrency, trustedCreditor
         );
 
-        //gas: good luck overflowing this
-        unchecked {
-            ++life;
-        }
+        //Hook implemented on the trusted creditor contract to notify that the vault
+        //is being liquidated and trigger any necessary logic on the trustedCreditor.
+        ITrustedCreditor(trustedCreditor).liquidateVault(usedMargin);
 
-        return (true, liquidator);
+        liquidator_ = liquidator;
     }
 
     /* ///////////////////////////////////////////////////////////////

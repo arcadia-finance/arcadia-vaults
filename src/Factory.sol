@@ -229,20 +229,16 @@ contract Factory is ERC721, Ownable {
      */
     function liquidate(address vault) external {
         require(isVault(vault), "FTRY: Not a vault");
-        _liquidate(vault, msg.sender);
-    }
 
-    /**
-     * @notice Internal function used to start the liquidation of a vault.
-     * @dev
-     * @param vault Vault that needs to get liquidated.
-     * @param sender The msg.sender of the liquidator. Also the 'keeper'
-     */
-    function _liquidate(address vault, address sender) internal {
-        (bool success, address liquidator) = IVault(vault).liquidateVault(sender);
-        require(success, "FTRY: Vault liquidation failed");
-        // Vault version read via Ivault?
+        //liquidateVault(address) will check if the Vault is indeed susceptible for liquidation.
+        //And if so, start the liquidation process.
+        //If not, the function will revert.
+        address liquidator = IVault(vault).liquidateVault(msg.sender);
+
+        //Transfer the vault proxy contract to the new owner.
         IVault(vault).transferOwnership(liquidator);
+
+        //Transfer ownership of the ERC721.
         _liquidateTransfer(vault, liquidator);
     }
 

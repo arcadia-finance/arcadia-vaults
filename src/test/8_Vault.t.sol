@@ -8,7 +8,7 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {TrustedProtocolMock} from "../mockups/TrustedProtocolMock.sol";
+import {TrustedCreditorMock} from "../mockups/TrustedCreditorMock.sol";
 import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
 import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
 
@@ -25,12 +25,12 @@ contract VaultTestExtension is Vault {
         allowed[who] = allow;
     }
 
-    function setTrustedProtocol(address trustedProtocol_) public {
-        trustedProtocol = trustedProtocol_;
+    function setTrustedCreditor(address trustedCreditor_) public {
+        trustedCreditor = trustedCreditor_;
     }
 
-    function setIsTrustedProtocolSet(bool set) public {
-        isTrustedProtocolSet = set;
+    function setIsTrustedCreditorSet(bool set) public {
+        isTrustedCreditorSet = set;
     }
 }
 
@@ -408,40 +408,40 @@ contract BaseCurrencyLogicTest is vaultTests {
 contract MarginAccountSettingsTest is vaultTests {
     using stdStorage for StdStorage;
 
-    TrustedProtocolMock trustedProtocol;
+    TrustedCreditorMock trustedCreditor;
 
     function setUp() public override {
         super.setUp();
         deployFactory();
     }
 
-    function testRevert_openTrustedMarginAccount_NonOwner(address unprivilegedAddress_, address trustedProtocol_)
+    function testRevert_openTrustedMarginAccount_NonOwner(address unprivilegedAddress_, address trustedCreditor_)
         public
     {
         vm.assume(unprivilegedAddress_ != vaultOwner);
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("V: You are not the owner");
-        vault_.openTrustedMarginAccount(trustedProtocol_);
+        vault_.openTrustedMarginAccount(trustedCreditor_);
         vm.stopPrank();
     }
 
-    function testRevert_openTrustedMarginAccount_AlreadySet(address trustedProtocol_) public {
+    function testRevert_openTrustedMarginAccount_AlreadySet(address trustedCreditor_) public {
         vm.prank(vaultOwner);
         vault_.openTrustedMarginAccount(address(pool));
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_OMA: ALREADY SET");
-        vault_.openTrustedMarginAccount(trustedProtocol_);
+        vault_.openTrustedMarginAccount(trustedCreditor_);
         vm.stopPrank();
     }
 
     function testRevert_openTrustedMarginAccount_OpeningMarginAccountFails() public {
-        trustedProtocol = new TrustedProtocolMock();
+        trustedCreditor = new TrustedCreditorMock();
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_OMA: OPENING ACCOUNT REVERTED");
-        vault_.openTrustedMarginAccount(address(trustedProtocol));
+        vault_.openTrustedMarginAccount(address(trustedCreditor));
         vm.stopPrank();
     }
 
@@ -452,9 +452,9 @@ contract MarginAccountSettingsTest is vaultTests {
         vault_.openTrustedMarginAccount(address(pool));
 
         assertEq(vault_.liquidator(), address(liquidator));
-        assertEq(vault_.trustedProtocol(), address(pool));
+        assertEq(vault_.trustedCreditor(), address(pool));
         assertEq(vault_.baseCurrency(), address(dai));
-        assertTrue(vault_.isTrustedProtocolSet());
+        assertTrue(vault_.isTrustedCreditorSet());
         assertTrue(vault_.allowed(address(pool)));
     }
 
@@ -467,9 +467,9 @@ contract MarginAccountSettingsTest is vaultTests {
         vault_.openTrustedMarginAccount(address(pool));
 
         assertEq(vault_.liquidator(), address(liquidator));
-        assertEq(vault_.trustedProtocol(), address(pool));
+        assertEq(vault_.trustedCreditor(), address(pool));
         assertEq(vault_.baseCurrency(), address(dai));
-        assertTrue(vault_.isTrustedProtocolSet());
+        assertTrue(vault_.isTrustedCreditorSet());
         assertTrue(vault_.allowed(address(pool)));
     }
 
@@ -511,7 +511,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.prank(vaultOwner);
         vault_.closeTrustedMarginAccount();
 
-        assertTrue(!vault_.isTrustedProtocolSet());
+        assertTrue(!vault_.isTrustedCreditorSet());
         assertTrue(!vault_.allowed(address(pool)));
     }
 }
@@ -786,41 +786,34 @@ contract LiquidationLogicTest is vaultTests {
         openMarginAccount();
     }
 
-    function testSuccess_liquidate_NewOwnerIsLiquidator(address liquidationKeeper) public {
-        vm.assume(
-            liquidationKeeper != address(this) && liquidationKeeper != address(0)
-                && liquidationKeeper != address(factory)
-        );
+    function testRevert_liquidateVault_NotAuthorized(address unprivilegedAddress_, address liquidationInitiator)
+        public
+    {
+        vm.assume(unprivilegedAddress_ != address(factory));
 
-        uint256 slot = stdstore.target(address(debt)).sig(debt.totalSupply.selector).find();
-        bytes32 loc = bytes32(slot);
-        bytes32 addDebt = bytes32(abi.encode(100000000));
-        vm.store(address(debt), loc, addDebt);
-
-        slot = stdstore.target(address(debt)).sig(debt.realisedDebt.selector).find();
-        loc = bytes32(slot);
-        vm.store(address(debt), loc, addDebt);
-
-        slot = stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).find();
-        loc = bytes32(slot);
-        vm.store(address(debt), loc, addDebt);
-
-        vm.startPrank(liquidationKeeper);
-        factory.liquidate(address(vault_));
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("V: You are not the factory");
+        vault_.liquidateVault(liquidationInitiator);
         vm.stopPrank();
-
-        assertEq(vault_.owner(), address(liquidator));
     }
 
-    function testRevert_liquidateVault_NonFactory(address liquidationKeeper) public {
-        vm.assume(liquidationKeeper != address(factory));
+    function testRevert_liquidateVault_VaultIsHealthy(address liquidationInitiator) public {
+        vm.startPrank(address(factory));
+        vm.expectRevert("V_LV: This vault is healthy");
+        vault_.liquidateVault(liquidationInitiator);
+        vm.stopPrank();
+    }
 
-        assertEq(vault_.owner(), vaultOwner);
+    function testSuccess_liquidateVault(address liquidationInitiator, uint128 usedMargin) public {
+        vm.assume(usedMargin > 0);
+        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(usedMargin);
+        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(usedMargin);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
 
-        vm.expectRevert("V: You are not the factory");
-        vault_.liquidateVault(liquidationKeeper);
+        vm.prank(address(factory));
+        address liquidator_ = vault_.liquidateVault(liquidationInitiator);
 
-        assertEq(vault_.owner(), vaultOwner);
+        assertEq(liquidator_, address(liquidator));
     }
 }
 
@@ -1394,7 +1387,7 @@ contract VaultActionTest is vaultTests {
     MultiActionMock public multiActionMock;
 
     VaultTestExtension public proxy_;
-    TrustedProtocolMock public trustedProtocol;
+    TrustedCreditorMock public trustedCreditor;
 
     function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
@@ -1451,7 +1444,7 @@ contract VaultActionTest is vaultTests {
         vm.startPrank(creatorAddress);
         mainRegistry.setAllowedAction(address(action), true);
 
-        trustedProtocol = new TrustedProtocolMock();
+        trustedCreditor = new TrustedCreditorMock();
 
         vm.stopPrank();
     }
@@ -1481,9 +1474,9 @@ contract VaultActionTest is vaultTests {
         vm.prank(address(pool));
         proxy_.setBaseCurrency(address(eth));
 
-        proxy_.setTrustedProtocol(address(trustedProtocol));
-        proxy_.setIsTrustedProtocolSet(true);
-        trustedProtocol.setOpenPosition(debtAmount);
+        proxy_.setTrustedCreditor(address(trustedCreditor));
+        proxy_.setIsTrustedCreditorSet(true);
+        trustedCreditor.setOpenPosition(address(proxy_), debtAmount);
 
         (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0);
         (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
@@ -1560,9 +1553,9 @@ contract VaultActionTest is vaultTests {
         vm.prank(address(pool));
         proxy_.setBaseCurrency(address(eth));
 
-        proxy_.setTrustedProtocol(address(trustedProtocol));
-        proxy_.setIsTrustedProtocolSet(true);
-        trustedProtocol.setOpenPosition(debtAmount);
+        proxy_.setTrustedCreditor(address(trustedCreditor));
+        proxy_.setIsTrustedCreditorSet(true);
+        trustedCreditor.setOpenPosition(address(proxy_), debtAmount);
 
         (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0);
         (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
