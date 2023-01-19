@@ -65,8 +65,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
         );
         proxy = Vault(proxyAddr);
 
-        stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault)).checked_write(true);
-
         proxy.openTrustedMarginAccount(address(pool));
         dai.approve(address(proxy), type(uint256).max);
 
@@ -223,7 +221,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint128 openDebt
     ) public {
         vm.assume(unprivilegedAddress_ != address(proxy));
-        vm.assume(unprivilegedAddress_ != address(vault));
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("LQ_SA: Not a vault");

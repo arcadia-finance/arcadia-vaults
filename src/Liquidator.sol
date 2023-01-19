@@ -143,8 +143,8 @@ contract Liquidator is Ownable {
         auctionInformation[msg.sender].trustedCreditor = trustedCreditor;
 
         //Initiator can immediately claim the initiator reward.
-        //In edge cases, there might not be sufficient funds on this Liquidator contract,
-        //and the initiator will have to wait untill the auction of collateral is finished.
+        //In edge cases, there might not be sufficient funds on the LiquidationEngine contract,
+        //and the initiator will have to wait until the auction of collateral is finished.
         openClaims[liquidationInitiator][baseCurrency] += calcLiquidationInitiatorReward(openDebt);
     }
 
@@ -299,7 +299,7 @@ contract Liquidator is Ownable {
      * @param amount The amount of tokens claimed.
      */
     function claim(address baseCurrency, uint256 amount) public {
-        //Will revert if msg.sender want to claim more than their open claims
+        //Will revert if msg.sender wants to claim more than their open claims
         openClaims[msg.sender][baseCurrency] -= amount;
         IERC20(baseCurrency).transfer(msg.sender, amount);
     }
