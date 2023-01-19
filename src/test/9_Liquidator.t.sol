@@ -287,10 +287,9 @@ contract LiquidatorTest is DeployArcadiaVaults {
     }
 
     function testSuccess_getPriceOfVault_NotForSale(address vaultAddress) public {
-        (uint256 price, address baseCurrency, bool inAuction) = liquidator.getPriceOfVault(vaultAddress);
+        (uint256 price, bool inAuction) = liquidator.getPriceOfVault(vaultAddress);
 
         assertEq(price, 0);
-        assertEq(baseCurrency, address(0));
         assertEq(inAuction, false);
     }
 
@@ -311,10 +310,9 @@ contract LiquidatorTest is DeployArcadiaVaults {
         liquidator.startAuction(liquidationInitiator_, vaultOwner, openDebt, address(dai), address(pool));
         vm.warp(currentTime);
 
-        (uint256 price, address baseCurrency, bool inAuction) = liquidator.getPriceOfVault(address(proxy));
+        (uint256 price, bool inAuction) = liquidator.getPriceOfVault(address(proxy));
 
         assertEq(price, 0);
-        assertEq(baseCurrency, address(dai));
         assertEq(inAuction, true);
     }
 
@@ -330,7 +328,9 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(currentTime - startTime <= maxAuctionTime);
 
         stdstore.target(address(liquidator)).sig(liquidator.maxAuctionTime.selector).checked_write(maxAuctionTime);
-        stdstore.target(address(liquidator)).sig(liquidator.startPriceMultiplier.selector).checked_write(startPriceMultiplier_);
+        stdstore.target(address(liquidator)).sig(liquidator.startPriceMultiplier.selector).checked_write(
+            startPriceMultiplier_
+        );
         vm.warp(startTime);
 
         vm.prank(address(proxy));
@@ -342,12 +342,21 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint256 expectedPrice = startPrice * (maxAuctionTime - auctionTime) / maxAuctionTime; //2 decimals
         expectedPrice = expectedPrice / 100; //0 decimals
 
-        (uint256 actualPrice, address baseCurrency, bool inAuction) = liquidator.getPriceOfVault(address(proxy));
+        (uint256 actualPrice, bool inAuction) = liquidator.getPriceOfVault(address(proxy));
 
         assertEq(actualPrice, expectedPrice);
-        assertEq(baseCurrency, address(dai));
         assertEq(inAuction, true);
     }
+
+    function testRevert_buyVault_notForSale() public {}
+
+    function testSuccess_buyVault_Deficit() public {}
+
+    function testSuccess_buyVault_BadDebt() public {}
+
+    function testSuccess_buyVault_Penalty() public {}
+
+    function testSuccess_buyVault_Remainder() public {}
 
     /*///////////////////////////////////////////////////////////////
                     CLAIM AUCTION PROCEEDS

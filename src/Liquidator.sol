@@ -167,20 +167,15 @@ contract Liquidator is Ownable {
      * @notice Function returns the current auction price of a vault.
      * @param vaultAddress the vaultAddress.
      * @return price the total price for which the vault can be purchased.
-     * @return baseCurrency the baseCurrency in which the vault (and totalPrice) is denominated.
      * @return inAuction returns false when the vault is not being auctioned.
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
      * And immediately ends the auction.
      */
-    function getPriceOfVault(address vaultAddress)
-        public
-        view
-        returns (uint256 price, address baseCurrency, bool inAuction)
-    {
+    function getPriceOfVault(address vaultAddress) public view returns (uint256 price, bool inAuction) {
         inAuction = auctionInformation[vaultAddress].inAuction;
 
         if (!inAuction) {
-            return (0, address(0), false);
+            return (0, false);
         }
 
         uint256 auctionTime = block.timestamp - auctionInformation[vaultAddress].startTime; //Can be unchecked
@@ -189,11 +184,11 @@ contract Liquidator is Ownable {
             //ヽ༼ຈʖ̯ຈ༽ﾉ
             price = 0;
         } else {
-            price =
-                uint256(auctionInformation[vaultAddress].openDebt) * startPriceMultiplier * (maxAuctionTime - auctionTime) / maxAuctionTime / 100;
+            price = uint256(auctionInformation[vaultAddress].openDebt) * startPriceMultiplier
+                * (maxAuctionTime - auctionTime) / maxAuctionTime / 100;
         }
 
-        return (price, auctionInformation[vaultAddress].baseCurrency, inAuction);
+        return (price, inAuction);
     }
 
     /**
@@ -204,7 +199,7 @@ contract Liquidator is Ownable {
      */
     function buyVault(address vaultAddress) public {
         //Check if the Vault is indeed for sale and get the current price.
-        (uint256 priceOfVault,, bool inAuction) = getPriceOfVault(vaultAddress);
+        (uint256 priceOfVault, bool inAuction) = getPriceOfVault(vaultAddress);
         require(inAuction, "LQ_BV: Not for sale");
 
         //Stop the auction, this will prevent any possible reentrance attacks.
@@ -214,7 +209,9 @@ contract Liquidator is Ownable {
         //Transfer funds, equal to the current auction price from the bidder to the Liquidation contract.
         //The bidder should have approved the Liquidation contract for at least an amount of priceOfVault.
         address baseCurrency = auctionInformation[vaultAddress].baseCurrency;
-        require(IERC20(baseCurrency).transferFrom(msg.sender, address(this), priceOfVault), "LQ_BV: transfer failed");
+        require(
+            IERC20(baseCurrency).transferFrom(msg.sender, address(this), priceOfVault), "LQ_BV: transfer from failed"
+        );
 
         //fetch the contract address of the Creditor and the total amount of liabilities that need to be repaid.
         address trustedCreditor = auctionInformation[vaultAddress].trustedCreditor;
@@ -229,12 +226,12 @@ contract Liquidator is Ownable {
             //In this edge case there are not enough funds on the Liquidator contract to honour all openClaims.
             //The missing funds (deficit) have be transferred from the tustedCreditor to this Liquidator contract
             //via the function settleLiquidation(uint256, uint256).
-            uint256 deficit = priceOfVault < liquidationInitiatorReward ? liquidationInitiatorReward - openDebt : 0;
+            uint256 deficit = priceOfVault < liquidationInitiatorReward ? liquidationInitiatorReward - priceOfVault : 0;
 
             if (deficit == 0) {
                 //No deficit, transfer the auction proceeds (minus Liquidation Initiator reward back to the trustedcreditor).
                 //Since liabilities (openDebt) are not fully paid off, the trusted Creditor has to write off an amount of badDebt.
-                IERC20(baseCurrency).transfer(trustedCreditor, openDebt - badDebt);
+                require(IERC20(baseCurrency).transfer(trustedCreditor, openDebt - badDebt), "LQ_BV: transfer failed");
             }
 
             //Trigger Logic on the Trusted Creditor to write off badDebt, and in the unlikely case there is a deficit,
@@ -244,7 +241,7 @@ contract Liquidator is Ownable {
             //Auction proceeds do cover all liabilities (debt + reward for the liquidation initiator).
             //Full amount of debt owed to the Creditor is paid off.
             //No need to trigger any additional logic on Trusted Creditor.
-            IERC20(baseCurrency).transfer(trustedCreditor, openDebt);
+            require(IERC20(baseCurrency).transfer(trustedCreditor, openDebt), "LQ_BV: transfer failed");
 
             //Calculate Liquidation Penalty, any funds remaining after the liabilities and the liquidation penalty are paid off,
             //Go back to the Original Owner off the vault.
@@ -259,7 +256,7 @@ contract Liquidator is Ownable {
 
         //Change ownership of the auctioned vault to the bidder.
         //Todo: transfer a vault imediately on vault address instead of ID.
-        IFactory(factory).safeTransferFrom(address(this), msg.sender, IFactory(factory).vaultIndex(vaultAddress));
+        IFactory(factory).safeTransferFrom(address(this), msg.sender, vaultAddress);
     }
 
     /**
