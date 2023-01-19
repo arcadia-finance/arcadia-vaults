@@ -58,6 +58,7 @@ contract Vault {
     uint256[] public erc1155TokenIds;
 
     mapping(address => bool) public allowed;
+    mapping(address => bool) public isAssetManager;
 
     struct AddressSlot {
         address value;
@@ -90,6 +91,14 @@ contract Vault {
         _;
     }
 
+    /**
+     * @dev Throws if called by any account other than an asset manager.
+     */
+    modifier onlyAssetManager() {
+        require(isAssetManager[msg.sender], "V: You are not an asset manager");
+        _;
+    }
+
     constructor() {}
 
     /* ///////////////////////////////////////////////////////////////
@@ -112,6 +121,7 @@ contract Vault {
         owner = owner_;
         registry = registry_;
         vaultVersion = vaultVersion_;
+        isAssetManager[owner_] = true;
     }
 
     /**
@@ -739,6 +749,42 @@ contract Vault {
         IERC1155(ERC1155Address).safeTransferFrom(address(this), to, id, amount, "");
     }
 
+    /*///////////////////////////////////////////////////////////////
+                    ASSET MANAGEMENT LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    function setAssetManager(address assetManager, bool value) external onlyOwner {
+        isAssetManager[assetManager] = value;
+    }
+
+    /**
+     * @notice Calls external action handlers to execute and interact with external logic.
+     * @param actionHandler the address of the action handler to call
+     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
+     * @dev Similar to flash loans, this function optimistically calls external logic and checks for the vault state at the very end.
+     * @dev Asset managers can potentially steal assets (as long as the vault position remains healthy), only set trusted protocols as Asset manager.
+     * Potential use-cases of the asset manager might be automate actions by keeper networks, 
+     * or to chain interactions with trusted creditor together with vault actions (eg. borrow deposit and trade in one transaction). 
+     */
+    function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyAssetManager {
+        require(IMainRegistry(registry).isActionAllowed(actionHandler), "VL_VMA: Action is not allowlisted");
+
+        (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
+
+        // withdraw to actionHandler
+        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
+
+        // execute Action
+        ActionData memory incoming = IActionBase(actionHandler).executeAction(actionData);
+
+        // deposit from actionHandler into vault
+        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);
+
+        uint256 collValue = getCollateralValue();
+        uint256 usedMargin = getUsedMargin();
+        require(collValue > usedMargin, "VMA: coll. value too low");
+    }
+
     /* ///////////////////////////////////////////////////////////////
                         HELPER FUNCTIONS
     /////////////////////////////////////////////////////////////// */
@@ -809,35 +855,6 @@ contract Vault {
                 ++k;
             }
         }
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                    ASSET MANAGEMENT LOGIC
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Calls external action handlers to execute and interact with external logic.
-     * @dev Similar to flash loans, this function optimistically calls external logic and checks for the vault state at the very end.
-     * @param actionHandler the address of the action handler to call
-     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
-     */
-    function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyOwner {
-        require(IMainRegistry(registry).isActionAllowed(actionHandler), "VL_VMA: Action is not allowlisted");
-
-        (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
-
-        // withdraw to actionHandler
-        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
-
-        // execute Action
-        ActionData memory incoming = IActionBase(actionHandler).executeAction(actionData);
-
-        // deposit from actionHandler into vault
-        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);
-
-        uint256 collValue = getCollateralValue();
-        uint256 usedMargin = getUsedMargin();
-        require(collValue > usedMargin, "VMA: coll. value too low");
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
