@@ -10,9 +10,9 @@ gas_reports = ['Vault', 'Factory', 'FloorERC721PricingModule', 'InterestRateModu
 auto_detect_solc = true
 
 [profile.dev]
-fuzz = { runs = 100 }
+fuzz = { runs = 100, max_test_rejects = 100_000_000}
 
 [profile.gh]
-fuzz = { runs = 2_000 }
+fuzz = { runs = 2_000, max_test_rejects = 1_000_000_000}
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config
