@@ -57,7 +57,6 @@ contract Vault {
     uint256[] public erc721TokenIds;
     uint256[] public erc1155TokenIds;
 
-    mapping(address => bool) public allowed;
     mapping(address => bool) public isAssetManager;
 
     struct AddressSlot {
@@ -76,14 +75,6 @@ contract Vault {
     }
 
     /**
-     * @dev Throws if called by any account other than an authorised adress.
-     */
-    modifier onlyAuthorized() {
-        require(allowed[msg.sender] || msg.sender == owner, "V: You are not authorized");
-        _;
-    }
-
-    /**
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
@@ -92,10 +83,10 @@ contract Vault {
     }
 
     /**
-     * @dev Throws if called by any account other than an asset manager.
+     * @dev Throws if called by any account other than an asset manager or the owner.
      */
     modifier onlyAssetManager() {
-        require(isAssetManager[msg.sender], "V: You are not an asset manager");
+        require(msg.sender == owner || isAssetManager[msg.sender], "V: You are not an asset manager");
         _;
     }
 
@@ -121,7 +112,6 @@ contract Vault {
         owner = owner_;
         registry = registry_;
         vaultVersion = vaultVersion_;
-        isAssetManager[owner_] = true;
         _setBaseCurrency(baseCurrency_);
     }
 
@@ -180,7 +170,7 @@ contract Vault {
      * @notice Sets the baseCurrency of a vault.
      * @param baseCurrency_ the new baseCurrency for the vault.
      */
-    function setBaseCurrency(address baseCurrency_) public onlyAuthorized {
+    function setBaseCurrency(address baseCurrency_) public onlyOwner {
         _setBaseCurrency(baseCurrency_);
     }
 
@@ -209,7 +199,6 @@ contract Vault {
      */
     function openTrustedMarginAccount(address protocol) public onlyOwner {
         require(!isTrustedCreditorSet, "V_OMA: ALREADY SET");
-        //ToDo: Check in Factory/Mainregistry if protocol is indeed trusted?
 
         (bool success, address baseCurrency_, address liquidator_) =
             ITrustedCreditor(protocol).openMarginAccount(vaultVersion);
@@ -221,7 +210,6 @@ contract Vault {
             _setBaseCurrency(baseCurrency_);
         }
         isTrustedCreditorSet = true;
-        allowed[protocol] = true;
     }
 
     /**
@@ -234,7 +222,6 @@ contract Vault {
         require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
 
         isTrustedCreditorSet = false;
-        allowed[trustedCreditor] = false;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -364,6 +351,48 @@ contract Vault {
         ITrustedCreditor(trustedCreditor).liquidateVault(usedMargin);
 
         liquidator_ = liquidator;
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                    ASSET MANAGEMENT LOGIC
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Add or remove an Asset Manager.
+     * @param assetManager the address of the Asset Manager
+     * @param value A boolean giving permissions to or taking permissions from an Asset manager
+     * @dev Only set trusted addresses as Asset manager, Asset managers can potentially steal assets (as long as the vault position remains healthy).
+     * @dev No need to set the Owner as Asset manager, owner will automattically have all permissions of an asset manager.
+     */
+    function setAssetManager(address assetManager, bool value) external onlyOwner {
+        isAssetManager[assetManager] = value;
+    }
+
+    /**
+     * @notice Calls external action handlers to execute and interact with external logic.
+     * @param actionHandler the address of the action handler to call
+     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
+     * @dev Similar to flash loans, this function optimistically calls external logic and checks for the vault state at the very end.
+     * Potential use-cases of the asset manager might be automate actions by keeper networks,
+     * or to chain interactions with trusted creditor together with vault actions (eg. borrow deposit and trade in one transaction).
+     */
+    function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyAssetManager {
+        require(IMainRegistry(registry).isActionAllowed(actionHandler), "VL_VMA: Action is not allowlisted");
+
+        (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
+
+        // withdraw to actionHandler
+        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
+
+        // execute Action
+        ActionData memory incoming = IActionBase(actionHandler).executeAction(actionData);
+
+        // deposit from actionHandler into vault
+        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);
+
+        uint256 collValue = getCollateralValue();
+        uint256 usedMargin = getUsedMargin();
+        require(collValue > usedMargin, "VMA: coll. value too low");
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -743,42 +772,6 @@ contract Vault {
         }
 
         IERC1155(ERC1155Address).safeTransferFrom(address(this), to, id, amount, "");
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                    ASSET MANAGEMENT LOGIC
-    ///////////////////////////////////////////////////////////////*/
-
-    function setAssetManager(address assetManager, bool value) external onlyOwner {
-        isAssetManager[assetManager] = value;
-    }
-
-    /**
-     * @notice Calls external action handlers to execute and interact with external logic.
-     * @param actionHandler the address of the action handler to call
-     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
-     * @dev Similar to flash loans, this function optimistically calls external logic and checks for the vault state at the very end.
-     * @dev Asset managers can potentially steal assets (as long as the vault position remains healthy), only set trusted protocols as Asset manager.
-     * Potential use-cases of the asset manager might be automate actions by keeper networks, 
-     * or to chain interactions with trusted creditor together with vault actions (eg. borrow deposit and trade in one transaction). 
-     */
-    function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyAssetManager {
-        require(IMainRegistry(registry).isActionAllowed(actionHandler), "VL_VMA: Action is not allowlisted");
-
-        (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
-
-        // withdraw to actionHandler
-        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
-
-        // execute Action
-        ActionData memory incoming = IActionBase(actionHandler).executeAction(actionData);
-
-        // deposit from actionHandler into vault
-        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);
-
-        uint256 collValue = getCollateralValue();
-        uint256 usedMargin = getUsedMargin();
-        require(collValue > usedMargin, "VMA: coll. value too low");
     }
 
     /* ///////////////////////////////////////////////////////////////
