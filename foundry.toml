@@ -9,7 +9,10 @@ optimizer_runs = 200
 gas_reports = ['Vault', 'Factory', 'FloorERC721PricingModule', 'InterestRateModule', 'Liquidator', 'MainRegistry', 'OracleHub', 'SimplifiedChainlinkOracle', 'StandardERC20PricingModule', 'FloorERC1155PricingModule', 'Proxy']
 auto_detect_solc = true
 
-[fuzz]
-runs = 2000
+[profile.dev]
+fuzz = { runs = 100 }
+
+[profile.gh]
+fuzz = { runs = 2_000 }
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config
