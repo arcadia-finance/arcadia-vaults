@@ -4,6 +4,7 @@ out/
 build/*
 node_modules
 broadcast/
+foundry.toml
 
 # JetBrains
 .idea
@@ -13,3 +14,4 @@ broadcast/
 
 # OS generated
 .DS_STORE
+
