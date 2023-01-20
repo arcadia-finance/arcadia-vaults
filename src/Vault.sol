@@ -237,12 +237,7 @@ contract Vault {
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
      */
-    function increaseMarginPosition(address baseCurrency_, uint256 amount)
-        public
-        view
-        onlyAuthorized
-        returns (bool success)
-    {
+    function increaseMarginPosition(address baseCurrency_, uint256 amount) public view returns (bool success) {
         if (baseCurrency_ != baseCurrency) {
             return false;
         }

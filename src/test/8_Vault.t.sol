@@ -239,6 +239,19 @@ abstract contract vaultTests is DeployArcadiaVaults {
     }
 }
 
+contract DeploymentTest is vaultTests {
+    function setUp() public override {
+        super.setUp();
+    }
+
+    function testSuccess_deployment() public {
+        assertEq(vault_.owner(), vaultOwner);
+        assertEq(vault_.registry(), address(mainRegistry));
+        assertEq(vault_.vaultVersion(), 1);
+        assertEq(vault_.baseCurrency(), address(0));
+    }
+}
+
 /* ///////////////////////////////////////////////////////////////
                     VAULT MANAGEMENT
 /////////////////////////////////////////////////////////////// */
@@ -527,17 +540,6 @@ contract MarginRequirementsTest is vaultTests {
         super.setUp();
         deployFactory();
         openMarginAccount();
-    }
-
-    function testRevert_increaseMarginPosition_NonAuthorized(address unprivilegedAddress_, uint256 marginIncrease)
-        public
-    {
-        vm.assume(unprivilegedAddress_ != address(pool));
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("V: You are not authorized");
-        vault_.increaseMarginPosition(address(dai), marginIncrease);
-        vm.stopPrank();
     }
 
     function testSuccess_increaseMarginPosition_DifferentBaseCurrency(address baseCurrency, uint256 marginIncrease)
