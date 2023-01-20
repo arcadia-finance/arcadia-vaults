@@ -61,7 +61,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
                     )
                 )
             ),
-            0
+            0,
+            address(0)
         );
         proxy = Vault(proxyAddr);
 
