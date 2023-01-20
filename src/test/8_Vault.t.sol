@@ -83,7 +83,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
         vault_ = new VaultTestExtension();
 
         vm.prank(vaultOwner);
-        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
     }
 
     function deployFactory() internal {
@@ -248,29 +248,30 @@ contract VaultManagementTest is vaultTests {
     }
 
     function testRevert_initialize_AlreadyInitialized() public {
-        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
 
         vm.expectRevert("V_I: Already initialized!");
-        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
     }
 
     function testRevert_initialize_InvalidVersion() public {
         vm.expectRevert("V_I: Invalid vault version");
-        vault_.initialize(vaultOwner, address(mainRegistry), 0);
+        vault_.initialize(vaultOwner, address(mainRegistry), 0, address(0));
     }
 
-    function testSuccess_initialize(address owner_, address registry_, uint16 vaultVersion_) public {
+    function testSuccess_initialize(address owner_, uint16 vaultVersion_) public {
         vm.assume(vaultVersion_ > 0);
 
-        vault_.initialize(owner_, registry_, vaultVersion_);
+        vault_.initialize(owner_, address(mainRegistry), vaultVersion_, address(0));
 
         assertEq(vault_.owner(), owner_);
-        assertEq(vault_.registry(), registry_);
+        assertEq(vault_.registry(), address(mainRegistry));
         assertEq(vault_.vaultVersion(), vaultVersion_);
+        assertEq(vault_.baseCurrency(), address(0));
     }
 
     function testSuccess_upgradeVault(address newImplementation, uint16 newVersion) public {
-        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
 
         vm.startPrank(address(factory));
         vault_.upgradeVault(newImplementation, newVersion);
@@ -286,7 +287,7 @@ contract VaultManagementTest is vaultTests {
     {
         vm.assume(nonOwner != address(factory));
 
-        vault_.initialize(vaultOwner, address(mainRegistry), 1);
+        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
 
         vm.startPrank(nonOwner);
         vm.expectRevert("V: You are not the factory");
@@ -1436,7 +1437,7 @@ contract VaultActionTest is vaultTests {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        proxyAddr = factory.createVault(12345678, 0);
+        proxyAddr = factory.createVault(12345678, 0, address(0));
         proxy_ = VaultTestExtension(proxyAddr);
         vm.stopPrank();
 
