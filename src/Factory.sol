@@ -46,7 +46,7 @@ contract Factory is ERC721, Ownable {
      * @param vaultVersion The Vault version.
      * @return vault The contract address of the proxy contract of the newly deployed vault.
      */
-    function createVault(uint256 salt, uint256 vaultVersion) external returns (address vault) {
+    function createVault(uint256 salt, uint256 vaultVersion, address baseCurrency) external returns (address vault) {
         vaultVersion = vaultVersion == 0 ? latestVaultVersion : vaultVersion;
 
         require(vaultVersion <= latestVaultVersion, "FTRY_CV: Unknown vault version");
@@ -54,7 +54,7 @@ contract Factory is ERC721, Ownable {
 
         vault = address(new Proxy{salt: bytes32(salt)}(vaultDetails[vaultVersion].logic));
 
-        IVault(vault).initialize(msg.sender, vaultDetails[vaultVersion].registry, uint16(vaultVersion));
+        IVault(vault).initialize(msg.sender, vaultDetails[vaultVersion].registry, uint16(vaultVersion), baseCurrency);
 
         allVaults.push(vault);
         vaultIndex[vault] = allVaults.length;

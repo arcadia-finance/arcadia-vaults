@@ -79,7 +79,7 @@ contract Vault {
      * @dev Throws if called by any account other than an authorised adress.
      */
     modifier onlyAuthorized() {
-        require(allowed[msg.sender], "V: You are not authorized");
+        require(allowed[msg.sender] || msg.sender == owner, "V: You are not authorized");
         _;
     }
 
@@ -115,13 +115,14 @@ contract Vault {
      * @param registry_ The 'beacon' contract to which should be looked at for external logic.
      * @param vaultVersion_ The version of the vault logic.
      */
-    function initialize(address owner_, address registry_, uint16 vaultVersion_) external {
+    function initialize(address owner_, address registry_, uint16 vaultVersion_, address baseCurrency_) external {
         require(vaultVersion == 0, "V_I: Already initialized!");
         require(vaultVersion_ != 0, "V_I: Invalid vault version");
         owner = owner_;
         registry = registry_;
         vaultVersion = vaultVersion_;
         isAssetManager[owner_] = true;
+        _setBaseCurrency(baseCurrency_);
     }
 
     /**
@@ -246,12 +247,7 @@ contract Vault {
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position
      */
-    function increaseMarginPosition(address baseCurrency_, uint256 amount)
-        public
-        view
-        onlyAuthorized
-        returns (bool success)
-    {
+    function increaseMarginPosition(address baseCurrency_, uint256 amount) public view returns (bool success) {
         if (baseCurrency_ != baseCurrency) {
             return false;
         }

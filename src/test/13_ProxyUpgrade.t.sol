@@ -77,7 +77,8 @@ contract VaultV2Test is DeployArcadiaVaults {
                     )
                 )
             ),
-            0
+            0,
+            address(0)
         );
         proxy = Vault(proxyAddr);
         proxy.openTrustedMarginAccount(address(pool));
@@ -108,7 +109,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
 
         vm.startPrank(address(123456789));
-        proxyAddr2 = factory.createVault(salt, 0);
+        proxyAddr2 = factory.createVault(salt, 0, address(0));
         vaultV2 = VaultV2(proxyAddr2);
         assertEq(vaultV2.returnFive(), 5);
         vm.stopPrank();
