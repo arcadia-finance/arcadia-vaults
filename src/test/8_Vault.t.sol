@@ -995,6 +995,7 @@ contract AssetManagementTest is vaultTests {
         vm.stopPrank();
 
         assertEq(vault_.erc20Stored(0), address(eth));
+        assertEq(vault_.erc20Balances(address(eth)), eth.balanceOf(address(vault_)));
     }
 
     function testSuccess_deposit_MultipleSameERC20(uint16 amount) public {
@@ -1021,6 +1022,7 @@ contract AssetManagementTest is vaultTests {
         vm.stopPrank();
 
         assertEq(erc20StoredDuring, erc20StoredAfter);
+        assertEq(vault_.erc20Balances(address(eth)), eth.balanceOf(address(vault_)));
     }
 
     function testSuccess_deposit_SingleERC721() public {
@@ -1092,6 +1094,7 @@ contract AssetManagementTest is vaultTests {
 
         assertEq(vault_.erc1155Stored(0), address(interleave));
         assertEq(vault_.erc1155TokenIds(0), 1);
+        assertEq(vault_.erc1155Balances(address(interleave), 1), interleave.balanceOf(address(vault_), 1));
     }
 
     function testSuccess_deposit_ERC20ERC721(uint8 erc20Amount1, uint8 erc20Amount2) public {
@@ -1117,6 +1120,10 @@ contract AssetManagementTest is vaultTests {
 
         vm.prank(vaultOwner);
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        assertEq(vault_.erc20Balances(address(eth)), eth.balanceOf(address(vault_)));
+        assertEq(vault_.erc20Balances(address(eth)), erc20Amount1 * 10 ** Constants.ethDecimals);
+        assertEq(vault_.erc20Balances(address(link)), link.balanceOf(address(vault_)));
+        assertEq(vault_.erc20Balances(address(link)), erc20Amount2 * 10 ** Constants.linkDecimals);
     }
 
     function testSuccess_deposit_ERC20ERC721ERC1155(uint8 erc20Amount1, uint8 erc20Amount2, uint8 erc1155Amount)
@@ -1148,6 +1155,12 @@ contract AssetManagementTest is vaultTests {
 
         vm.prank(vaultOwner);
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        assertEq(vault_.erc20Balances(address(eth)), eth.balanceOf(address(vault_)));
+        assertEq(vault_.erc20Balances(address(eth)), erc20Amount1 * 10 ** Constants.ethDecimals);
+        assertEq(vault_.erc20Balances(address(link)), link.balanceOf(address(vault_)));
+        assertEq(vault_.erc20Balances(address(link)), erc20Amount2 * 10 ** Constants.linkDecimals);
+        assertEq(vault_.erc1155Balances(address(interleave), 1), interleave.balanceOf(address(vault_), 1));
+        assertEq(vault_.erc1155Balances(address(interleave), 1), erc1155Amount);
     }
 
     function testRevert_withdraw_NonOwner(uint8 depositAmount, uint8 withdrawalAmount, address sender) public {
