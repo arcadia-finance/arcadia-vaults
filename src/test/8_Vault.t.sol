@@ -1236,6 +1236,7 @@ contract AssetManagementTest is vaultTests {
     }
 
     function testRevert_deposit_ERC721IsNotWhitelisted(address inputAddr, uint256 id) public {
+        vm.assume(inputAddr != address(dai));
         vm.assume(inputAddr != address(eth));
         vm.assume(inputAddr != address(link));
         vm.assume(inputAddr != address(snx));
