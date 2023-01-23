@@ -392,7 +392,7 @@ contract Vault {
 
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
-        require(collValue > usedMargin, "VMA: coll. value too low");
+        require(collValue >= usedMargin, "VMA: coll. value too low");
     }
 
     /* ///////////////////////////////////////////////////////////////
