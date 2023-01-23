@@ -19,7 +19,7 @@ contract gasDeposits is GasTestFixture {
         super.setUp();
     }
 
-    function test1_1_ERC20() public {
+    function testDeposit_1_ERC20() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -41,7 +41,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test2_2_ERC20s() public {
+    function testDeposit_2_ERC20s() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -67,7 +67,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test3_3_ERC20s() public {
+    function testDeposit_3_ERC20s() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -97,7 +97,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test4_1_ERC721() public {
+    function testDeposit_1_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -119,7 +119,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test5_2_same_ERC721() public {
+    function testDeposit_2_same_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -145,7 +145,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test6_2_diff_ERC721() public {
+    function testDeposit_2_diff_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -171,7 +171,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test7_1_ERC1155() public {
+    function testDeposit_1_ERC1155() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -193,7 +193,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test8_2_diff_ERC1155() public {
+    function testDeposit_2_diff_ERC1155() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -219,7 +219,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test9_1_ERC20_1_ERC721() public {
+    function testDeposit_1_ERC20_1_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -245,7 +245,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test10_1_ERC20_2_same_ERC721() public {
+    function testDeposit_1_ERC20_2_same_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -275,7 +275,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test11_1_ERC20_2_diff_ERC721() public {
+    function testDeposit_1_ERC20_2_diff_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -305,7 +305,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test12_2_ERC20_2_diff_ERC721() public {
+    function testDeposit_2_ERC20_2_diff_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -339,7 +339,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test13_2_ERC20_2_same_ERC721_2_diff_ERC1155() public {
+    function testDeposit_2_ERC20_2_same_ERC721_2_diff_ERC1155() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
@@ -381,7 +381,7 @@ contract gasDeposits is GasTestFixture {
         proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
-    function test14_2_ERC20_2_diff_ERC721_2_diff_ERC1155() public {
+    function testDeposit_2_ERC20_2_diff_ERC721_2_diff_ERC1155() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
