@@ -954,7 +954,30 @@ contract AssetManagementTest is vaultTests {
         vm.stopPrank();
     }
 
+    function testSuccess_deposit_ZeroAmount() public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 0;
+
+        uint256[] memory assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.prank(vaultOwner);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+
+        (uint256 erc20Len,,,) = vault_.getLengths();
+
+        assertEq(erc20Len, 0);
+    }
+
     function testSuccess_deposit_SingleERC20(uint16 amount) public {
+        vm.assume(amount > 0);
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
 
@@ -1282,6 +1305,7 @@ contract AssetManagementTest is vaultTests {
     }
 
     function testSuccess_withdraw_ERC20NoDebt(uint8 baseAmountDeposit) public {
+        vm.assume(baseAmountDeposit > 0);
         uint256 valueAmount = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * baseAmountDeposit / 10 ** (18 - Constants.daiDecimals);
 
