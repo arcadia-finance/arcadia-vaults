@@ -59,17 +59,7 @@ abstract contract FactoryGuardian is BaseGuardian {
     }
 
     /**
-     * @notice This function is used to pause the contract.
-     * @dev This function can be called by the guardian to pause all functionality in the event of an emergency.
-     *      This function pauses create and liquidate
-     *      This function can only be called by the guardian.
-     *      The guardian can only pause the protocol again after 32 days have passed since the last pause.
-     *      This is to prevent that a malicious guardian can take user-funds hostage for an indefinite time.
-     *  After the guardian has paused the protocol, the owner has 30 days to find potential problems,
-     *  find a solution and unpause the protocol. If the protocol is not unpaused after 30 days,
-     *  an emergency procedure can be started by any user to unpause the protocol.
-     *  All users have now at least a two-day window to withdraw assets and close positions before
-     *  the protocol can again be paused (by the guardian).
+     * @inheritdoc BaseGuardian
      */
     function pause() external override onlyGuardian {
         require(block.timestamp > pauseTimestamp + 32 days, "G_P: Cannot pause");
@@ -94,12 +84,7 @@ abstract contract FactoryGuardian is BaseGuardian {
     }
 
     /**
-     * @notice This function is used to unpause the contract.
-     * @dev This function can unPause variables all at once.
-     *      If the protocol is not unpaused after 30 days, any user can unpause the protocol.
-     *  This ensures that no rogue owner or guardian can lock user funds for an indefinite amount of time.
-     *  All users have now at least a two-day window to withdraw assets and close positions before
-     *  the protocol can again be paused (by the guardian).
+     * @inheritdoc BaseGuardian
      */
     function unPause() external override {
         require(block.timestamp > pauseTimestamp + 30 days, "G_UP: Cannot unPause");
