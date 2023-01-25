@@ -10,7 +10,7 @@ pragma solidity ^0.8.0;
 import "./BaseGuardian.sol";
 
 /**
- * @title Factory Guardian
+ * @title Main Registry Guardian
  * @dev This module provides a mechanism that allows authorized accounts to trigger an emergency stop
  *
  */
@@ -70,7 +70,7 @@ abstract contract MainRegistryGuardian is BaseGuardian {
 
     /**
      * @notice This function is used to unpause the contract.
-     * @param withdrawPaused_ Whether create functionality should be paused.
+     * @param withdrawPaused_ Whether withdraw functionality should be paused.
      * @param depositPaused_ Whether deposit functionality should be paused.
      *      This function can unPause variables individually.
      *      Only owner can call this function. It updates the variables if incoming variable is false.

@@ -79,7 +79,7 @@ abstract contract BaseGuardian is Ownable {
      *      If the protocol is not unpaused after 30 days, any user can unpause the protocol.
      *  This ensures that no rogue owner or guardian can lock user funds for an indefinite amount of time.
      *  All users have now at least a two-day window to withdraw assets and close positions before
-     *  the protocol can again be paused (by or the owner or the guardian)
+     *  the protocol can again be paused (by the guardian)
      */
     function unPause() external virtual {}
 }
