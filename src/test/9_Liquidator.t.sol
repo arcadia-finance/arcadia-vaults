@@ -302,6 +302,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
     {
         vm.assume(claimAmount <= openClaim);
         vm.assume(claimAmount <= liquidatorBalance);
+        vm.assume(claimer != address(liquidator));
 
         vm.prank(liquidityProvider);
         dai.transfer(address(liquidator), liquidatorBalance);
