@@ -161,9 +161,7 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.pause();
 
         // Then: Reverted
-        uint256 amountBefore = factory.allVaultsLength();
         vm.prank(sender);
-        vm.assume(sender != address(0));
         vm.expectRevert("Guardian: create paused");
         address actualDeployed = factory.createVault(salt, 0, address(0));
     }

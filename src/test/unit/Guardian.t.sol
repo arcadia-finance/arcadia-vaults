@@ -119,18 +119,8 @@ contract BaseGuardianUnitTest is Test {
         vm.startPrank(owner);
         baseGuardian = new BaseGuardianPossibleExtension();
         baseGuardian.changeGuardian(guardian);
-        vm.stopPrank();
-    }
-
-    function setUp() public virtual {
-        // Reset the variables
-        vm.startPrank(owner);
-        baseGuardian.resetPauseVars();
-        vm.stopPrank();
-        // Reset: the contract pauseTimestamp
-        stdstore.target(address(baseGuardian)).sig(baseGuardian.pauseTimestamp.selector).checked_write(uint256(0));
-        // Warp the block timestamp to 60days for smooth testing
         vm.warp(60 days);
+        vm.stopPrank();
     }
 
     function testRevert_changeGuardian_onlyOwner(address nonOwner_) public {
@@ -157,14 +147,6 @@ contract BaseGuardianUnitTest is Test {
         vm.stopPrank();
         // Then: the guardian is changed
         assertEq(baseGuardian.guardian(), newGuardian_);
-
-        // When: The owner changes the guardian back to the original guardian
-        vm.startPrank(owner);
-        baseGuardian.changeGuardian(guardian);
-        vm.stopPrank();
-
-        // Then: the guardian is changed
-        assertEq(baseGuardian.guardian(), guardian);
     }
 
     function testRevert_pause_onlyGuard(address pauseCaller) public {
@@ -335,19 +317,8 @@ contract MainRegistryGuardianUnitTest is Test {
         vm.startPrank(owner);
         mainRegistry = new MainRegistryMockup();
         mainRegistry.changeGuardian(guardian);
-        vm.stopPrank();
-    }
-
-    function setUp() public virtual {
-        // Reset the contract variables
-        vm.startPrank(owner);
-        mainRegistry.reset();
-        mainRegistry.resetPauseVars();
-        vm.stopPrank();
-        // Reset: the contract pauseTimestamp
-        stdstore.target(address(mainRegistry)).sig(mainRegistry.pauseTimestamp.selector).checked_write(uint256(0));
-        // Warp the block timestamp to 60days for smooth testing
         vm.warp(60 days);
+        vm.stopPrank();
     }
 
     function testSuccess_unPause_onlyUnpausePossible(uint256 timePassedAfterPause, address user) public {
@@ -533,19 +504,8 @@ contract FactoryGuardianUnitTest is Test {
         vm.startPrank(owner);
         factory = new FactoryMockup();
         factory.changeGuardian(guardian);
-        vm.stopPrank();
-    }
-
-    function setUp() public virtual {
-        // Reset the contract variables
-        vm.startPrank(owner);
-        factory.reset();
-        factory.resetPauseVars();
-        vm.stopPrank();
-        // Reset: the contract pauseTimestamp
-        stdstore.target(address(factory)).sig(factory.pauseTimestamp.selector).checked_write(uint256(0));
-        // Warp the block timestamp to 60days for smooth testing
         vm.warp(60 days);
+        vm.stopPrank();
     }
 
     function testSuccess_unPause_onlyUnpausePossible(uint256 timePassedAfterPause, address user) public {

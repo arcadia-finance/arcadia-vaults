@@ -518,7 +518,7 @@ contract AssetManagementTest is MainRegistryTest {
         vm.prank(guardian);
         mainRegistry.pause();
 
-        // Then: batchProcessDeposit should revert with "MR_BPD: Paused"
+        // Then: batchProcessDeposit should reverted
         vm.prank(proxyAddr);
         vm.expectRevert("Guardian: deposit paused");
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
