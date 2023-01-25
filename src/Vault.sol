@@ -435,7 +435,7 @@ contract Vault {
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
-            if (assetAmounts[i] == 0) {
+            if (assetAmounts[i] == 0) { //skip if amount is 0 to prevent storing addresses that have 0 balance
                 unchecked {
                     ++i;
                 }
@@ -537,7 +537,7 @@ contract Vault {
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
-            if (assetAmounts[i] == 0) {
+            if (assetAmounts[i] == 0) { //skip if amount is 0 to prevent transferring 0 balances
                 unchecked {
                     ++i;
                 }
@@ -562,9 +562,7 @@ contract Vault {
     /**
      * @notice Internal function used to deposit ERC20 tokens.
      * @dev Used for all tokens types = 0. Note the transferFrom, not the safeTransferFrom to allow legacy ERC20s.
-     * After successful transfer, the function checks whether the same asset has been deposited.
-     * This check is done using a loop: writing it in a mapping vs extra loops is in favor of extra loops in this case.
-     * If the address has not yet been seen, the ERC20 token address is stored.
+     * If the address has not yet been deposited, the ERC20 token address is stored.
      * @param from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
      * @param ERC20Address The asset address that should be transferred.
      * @param amount The amount of ERC20 tokens to be transferred.
@@ -594,7 +592,6 @@ contract Vault {
         IERC721(ERC721Address).transferFrom(from, address(this), id);
 
         erc721Stored.push(ERC721Address);
-        //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
         erc721TokenIds.push(id);
     }
 
@@ -603,7 +600,7 @@ contract Vault {
      * @dev Used for all tokens types = 2. Note the safeTransferFrom.
      * After successful transfer, the function checks whether the combination of address & ID has already been stored.
      * If not, the function pushes the new address and ID to the stored arrays.
-     * This may cause duplicates in the ERC1155 stored addresses array, but this is intended.
+     * This may cause duplicates in the ERC1155 stored addresses array, this is intended.
      * @param from The Address the tokens should be taken from. This address must have pre-approved the proxy vault.
      * @param ERC1155Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
@@ -615,7 +612,7 @@ contract Vault {
         uint256 currentBalance = erc1155Balances[ERC1155Address][id];
 
         if (currentBalance == 0) {
-            erc1155Stored.push(ERC1155Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
+            erc1155Stored.push(ERC1155Address);
             erc1155TokenIds.push(id);
         }
 
@@ -748,7 +745,7 @@ contract Vault {
     /**
      * @notice Generates three arrays about the stored assets in the proxy vault
      * in the format needed for vault valuation functions.
-     * @dev No balances are stored on the contract. Both for gas savings upon deposit and to allow for rebasing/... tokens.
+     * @dev Balances are stored on the contract to prevent working around the deposit limits.
      * Loops through the stored asset addresses and fills the arrays.
      * The vault valuation function fetches the asset type through the asset registries.
      * There is no importance of the order in the arrays, but all indexes of the arrays correspond to the same asset.
