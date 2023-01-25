@@ -81,7 +81,7 @@ abstract contract MainRegistryGuardian is BaseGuardian {
     /**
      * @notice This function is used to unpause the contract.
      * @param withdrawPaused_ Whether create functionality should be paused.
-     * @param depositPaused_ Whether liquidate functionality should be paused.
+     * @param depositPaused_ Whether deposit functionality should be paused.
      *      This function can unPause variables individually.
      *      Only owner can call this function. It updates the variables if incoming variable is false.
      *  If variable is false and incoming variable is true, then it does not update the variable.
