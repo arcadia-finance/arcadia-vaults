@@ -8,22 +8,20 @@
 pragma solidity ^0.8.0;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./BaseGuardian.sol";
 
 /**
  * @title Factory Guardian
  * @dev This module provides a mechanism that allows authorized accounts to trigger an emergency stop
  *
  */
-abstract contract FactoryGuardian is Ownable {
-    address public guardian;
-
+abstract contract FactoryGuardian is BaseGuardian {
     /*
     //////////////////////////////////////////////////////////////
                             EVENTS
     //////////////////////////////////////////////////////////////
     */
 
-    event GuardianChanged(address indexed oldGuardian, address indexed newGuardian);
     event PauseUpdate(address account, bool createPauseUpdate, bool liquidatePauseUpdate);
 
     /*
@@ -33,7 +31,6 @@ abstract contract FactoryGuardian is Ownable {
     */
     bool public createPaused;
     bool public liquidatePaused;
-    uint256 public pauseTimestamp;
 
     constructor() {}
 
@@ -42,14 +39,6 @@ abstract contract FactoryGuardian is Ownable {
                             MODIFIERS
     //////////////////////////////////////////////////////////////
     */
-
-    /**
-     * @dev Throws if called by any account other than the guardian.
-     */
-    modifier onlyGuardian() {
-        require(msg.sender == guardian, "Guardian: Only guardian");
-        _;
-    }
 
     /**
      * @dev This modifier is used to restrict access to certain functions when the contract is paused for create vault.
@@ -70,16 +59,6 @@ abstract contract FactoryGuardian is Ownable {
     }
 
     /**
-     * @notice This function is used to set the guardian address
-     * @param guardian_ The address of the new guardian.
-     * @dev Allows onlyOwner to change the guardian address.
-     */
-    function changeGuardian(address guardian_) external onlyOwner {
-        guardian = guardian_;
-        emit GuardianChanged(guardian, guardian_);
-    }
-
-    /**
      * @notice This function is used to pause the contract.
      * @dev This function can be called by the guardian to pause all functionality in the event of an emergency.
      *      This function pauses repay, withdraw, borrow, deposit and liquidation.
@@ -92,7 +71,7 @@ abstract contract FactoryGuardian is Ownable {
      *  All users have now at least a two-day window to withdraw assets and close positions before
      *  the protocol can again be paused (by or the owner or the guardian.
      */
-    function pause() external onlyGuardian {
+    function pause() external override onlyGuardian {
         require(block.timestamp > pauseTimestamp + 32 days, "G_P: Cannot pause");
         createPaused = true;
         liquidatePaused = true;
@@ -122,7 +101,7 @@ abstract contract FactoryGuardian is Ownable {
      *  All users have now at least a two-day window to withdraw assets and close positions before
      *  the protocol can again be paused (by or the owner or the guardian.
      */
-    function unPause() external {
+    function unPause() external override {
         require(block.timestamp > pauseTimestamp + 30 days, "G_UP: Cannot unPause");
         if (createPaused || liquidatePaused) {
             createPaused = false;

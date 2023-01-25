@@ -7,29 +7,30 @@
 
 pragma solidity ^0.8.0;
 
-import "./BaseGuardian.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /**
  * @title Factory Guardian
  * @dev This module provides a mechanism that allows authorized accounts to trigger an emergency stop
  *
  */
-abstract contract MainRegistryGuardian is BaseGuardian {
+abstract contract BaseGuardian is Ownable {
+    address public guardian;
+
     /*
     //////////////////////////////////////////////////////////////
                             EVENTS
     //////////////////////////////////////////////////////////////
     */
 
-    event PauseUpdate(address account, bool withdrawPauseUpdate, bool depositPauseUpdate);
+    event GuardianChanged(address indexed oldGuardian, address indexed newGuardian);
 
     /*
     //////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////
     */
-    bool public withdrawPaused;
-    bool public depositPaused;
+    uint256 public pauseTimestamp;
 
     constructor() {}
 
@@ -40,21 +41,21 @@ abstract contract MainRegistryGuardian is BaseGuardian {
     */
 
     /**
-     * @dev This modifier is used to restrict access to certain functions when the contract is paused for withdraw assets.
-     * It throws if withdraw is paused.
+     * @dev Throws if called by any account other than the guardian.
      */
-    modifier whenWithdrawNotPaused() {
-        require(!withdrawPaused, "Guardian: withdraw paused");
+    modifier onlyGuardian() {
+        require(msg.sender == guardian, "Guardian: Only guardian");
         _;
     }
 
     /**
-     * @dev This modifier is used to restrict access to certain functions when the contract is paused for deposit assets
-     * It throws if deposit assets is paused.
+     * @notice This function is used to set the guardian address
+     * @param guardian_ The address of the new guardian.
+     * @dev Allows onlyOwner to change the guardian address.
      */
-    modifier whenDepositNotPaused() {
-        require(!depositPaused, "Guardian: deposit paused");
-        _;
+    function changeGuardian(address guardian_) external onlyOwner {
+        guardian = guardian_;
+        emit GuardianChanged(guardian, guardian_);
     }
 
     /**
@@ -70,27 +71,7 @@ abstract contract MainRegistryGuardian is BaseGuardian {
      *  All users have now at least a two-day window to withdraw assets and close positions before
      *  the protocol can again be paused (by or the owner or the guardian.
      */
-    function pause() external override onlyGuardian {
-        require(block.timestamp > pauseTimestamp + 32 days, "G_P: Cannot pause");
-        withdrawPaused = true;
-        depositPaused = true;
-        pauseTimestamp = block.timestamp;
-        emit PauseUpdate(msg.sender, true, true);
-    }
-
-    /**
-     * @notice This function is used to unpause the contract.
-     * @param withdrawPaused_ Whether create functionality should be paused.
-     * @param depositPaused_ Whether liquidate functionality should be paused.
-     *      This function can unPause variables individually.
-     *      Only owner can call this function. It updates the variables if incoming variable is false.
-     *  If variable is false and incoming variable is true, then it does not update the variable.
-     */
-    function unPause(bool withdrawPaused_, bool depositPaused_) external onlyOwner {
-        withdrawPaused = withdrawPaused && withdrawPaused_;
-        depositPaused = depositPaused && depositPaused_;
-        emit PauseUpdate(msg.sender, withdrawPaused, depositPaused);
-    }
+    function pause() external virtual onlyGuardian {}
 
     /**
      * @notice This function is used to unpause the contract.
@@ -100,12 +81,5 @@ abstract contract MainRegistryGuardian is BaseGuardian {
      *  All users have now at least a two-day window to withdraw assets and close positions before
      *  the protocol can again be paused (by or the owner or the guardian.
      */
-    function unPause() external override {
-        require(block.timestamp > pauseTimestamp + 30 days, "G_UP: Cannot unPause");
-        if (withdrawPaused || depositPaused) {
-            withdrawPaused = false;
-            depositPaused = false;
-            emit PauseUpdate(msg.sender, false, false);
-        }
-    }
+    function unPause() external virtual {}
 }
