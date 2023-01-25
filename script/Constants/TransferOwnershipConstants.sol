@@ -7,22 +7,25 @@
 pragma solidity ^0.8.13;
 
 library ArcadiaContractAddresses {
-    address public constant mainRegistry = "";
-    address public constant factory = "";
-    address public constant liquidator = "";
-    address public constant oracleHub = "";
-    address public constant riskModule = "";
-    address public constant standardERC20PricingModule = "";
+    // Todo: Update these addresses
+    address public constant mainRegistry = address(0);
+    address public constant factory = address(0);
+    address public constant liquidator = address(0);
+    address public constant oracleHub = address(0);
+    address public constant riskModule = address(0);
+    address public constant standardERC20PricingModule = address(0);
 }
 
 library ArcadiaAddresses {
-    address public constant multiSig1 = "";
-    address public constant multiSig2 = "";
-    address public constant multiSig3 = "";
+    // Todo: Update these addresses
+    address public constant multiSig1 = address(0);
+    address public constant multiSig2 = address(0);
+    address public constant multiSig3 = address(0);
 
-    address public mainRegistryOwner = multiSig1;
-    address public factoryOwner = multiSig1;
-    address public liquidatorOwner = multiSig1;
-    address public oracleHubOwner = multiSig1;
-    address public riskModuleOwner = multiSig1;
+    address public constant mainRegistryOwner = multiSig1;
+    address public constant factoryOwner = multiSig1;
+    address public constant liquidatorOwner = multiSig1;
+    address public constant oracleHubOwner = multiSig1;
+    address public constant standardERC20PricingModuleOwner = multiSig1;
+    address public constant riskModuleOwner = multiSig1;
 }

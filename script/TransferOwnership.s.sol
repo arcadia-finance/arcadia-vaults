@@ -33,11 +33,11 @@ contract ArcadiaVaultTransferOwnership is Test {
     function run() public {
         uint256 ownerPrivateKey = vm.envUint("OWNER_PRIVATE_KEY");
         vm.startBroadcast(ownerPrivateKey);
-        factory.transferOwnership(ArcadiaAddresses.factoryOwner());
-        oracleHub.transferOwnership(ArcadiaAddresses.oracleHubOwner());
-        mainRegistry.transferOwnership(ArcadiaAddresses.mainRegistryOwner());
-        standardERC20PricingModule.transferOwnership(ArcadiaAddresses.standardERC20PricingModuleOwner());
-        liquidator.transferOwnership(ArcadiaAddresses.liquidatorOwner());
+        factory.transferOwnership(ArcadiaAddresses.factoryOwner);
+        oracleHub.transferOwnership(ArcadiaAddresses.oracleHubOwner);
+        mainRegistry.transferOwnership(ArcadiaAddresses.mainRegistryOwner);
+        standardERC20PricingModule.transferOwnership(ArcadiaAddresses.standardERC20PricingModuleOwner);
+        liquidator.transferOwnership(ArcadiaAddresses.liquidatorOwner);
         vm.stopBroadcast();
     }
 }
