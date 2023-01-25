@@ -11,6 +11,7 @@ interface ITrustedCreditor {
 
     function openMarginAccount(uint256 vaultVersion)
         external
+        view
         returns (bool success, address pToken, address baseCurrency);
 
     function getOpenPosition(address vault) external view returns (uint256 openPosition);

@@ -186,6 +186,17 @@ contract DeployArcadiaVaults is Test {
 
         oracleHub.addOracle(
             OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleDaiToUsdUnit),
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "DAI",
+                baseAsset: "USD",
+                oracle: address(oracleDaiToUsd),
+                quoteAssetAddress: address(dai),
+                baseAssetIsBaseCurrency: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
                 baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
                 quoteAsset: "ETH",
@@ -323,6 +334,7 @@ contract DeployArcadiaVaults is Test {
 
         PricingModule.RiskVarInput[] memory riskVars_ = riskVars;
 
+        standardERC20PricingModule.addAsset(address(dai), oracleDaiToUsdArr, riskVars_, type(uint128).max);
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_, type(uint128).max);
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_, type(uint128).max);
         standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, riskVars_, type(uint128).max);
