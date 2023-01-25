@@ -54,6 +54,9 @@ contract VaultV2 {
     address[] public erc721Stored;
     address[] public erc1155Stored;
 
+    mapping(address => uint256) public erc20Balances;
+    mapping(address => mapping(uint256 => uint256)) public erc1155Balances;
+
     uint256[] public erc721TokenIds;
     uint256[] public erc1155TokenIds;
 
@@ -474,6 +477,13 @@ contract VaultV2 {
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
+            if (assetAmounts[i] == 0) {
+                unchecked {
+                    ++i;
+                }
+                continue;
+            }
+
             if (assetTypes[i] == 0) {
                 _depositERC20(from, assetAddresses[i], assetAmounts[i]);
             } else if (assetTypes[i] == 1) {
@@ -569,6 +579,13 @@ contract VaultV2 {
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
+            if (assetAmounts[i] == 0) {
+                unchecked {
+                    ++i;
+                }
+                continue;
+            }
+
             if (assetTypes[i] == 0) {
                 _withdrawERC20(to, assetAddresses[i], assetAmounts[i]);
             } else if (assetTypes[i] == 1) {
@@ -597,18 +614,13 @@ contract VaultV2 {
     function _depositERC20(address from, address ERC20Address, uint256 amount) private {
         require(IERC20(ERC20Address).transferFrom(from, address(this), amount), "Transfer from failed");
 
-        uint256 erc20StoredLength = erc20Stored.length;
-        for (uint256 i; i < erc20StoredLength;) {
-            if (erc20Stored[i] == ERC20Address) {
-                return;
-            }
-            unchecked {
-                ++i;
-            }
+        uint256 currentBalance = erc20Balances[ERC20Address];
+
+        if (currentBalance == 0) {
+            erc20Stored.push(ERC20Address);
         }
 
-        erc20Stored.push(ERC20Address);
-        //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
+        erc20Balances[ERC20Address] += amount;
     }
 
     /**
@@ -642,43 +654,32 @@ contract VaultV2 {
     function _depositERC1155(address from, address ERC1155Address, uint256 id, uint256 amount) private {
         IERC1155(ERC1155Address).safeTransferFrom(from, address(this), id, amount, "");
 
-        bool addrSeen;
+        uint256 currentBalance = erc1155Balances[ERC1155Address][id];
 
-        uint256 erc1155StoredLength = erc1155Stored.length;
-        for (uint256 i; i < erc1155StoredLength;) {
-            if (erc1155Stored[i] == ERC1155Address) {
-                if (erc1155TokenIds[i] == id) {
-                    addrSeen = true;
-                    break;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        if (!addrSeen) {
+        if (currentBalance == 0) {
             erc1155Stored.push(ERC1155Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
             erc1155TokenIds.push(id);
         }
+
+        erc1155Balances[ERC1155Address][id] += amount;
     }
 
     /**
      * @notice Internal function used to withdraw ERC20 tokens.
-     * @dev Used for all tokens types = 0. Note the transferFrom, not the safeTransferFrom to allow legacy ERC20s.
-     * After successful transfer, the function checks whether the proxy vault has any leftover balance of said asset.
+     * @dev Used for all tokens types = 0. Note the transfer, not the safeTransfer to allow legacy ERC20s.
+     * The function checks whether the proxy vault has any leftover balance of said asset.
      * If not, it will pop() the ERC20 asset address from the stored addresses array.
      * Note: this shifts the order of erc20Stored!
      * This check is done using a loop: writing it in a mapping vs extra loops is in favor of extra loops in this case.
-     * @param to Address the tokens should be sent to. This will in any case be the proxy vault owner
+     * @param to Address the tokens should be sent to.
      * either being the original user or the liquidator!.
      * @param ERC20Address The asset address that should be transferred.
      * @param amount The amount of ERC20 tokens to be transferred.
      */
     function _withdrawERC20(address to, address ERC20Address, uint256 amount) private {
-        require(IERC20(ERC20Address).transfer(to, amount), "Transfer from failed");
+        erc20Balances[ERC20Address] -= amount;
 
-        if (IERC20(ERC20Address).balanceOf(address(this)) == 0) {
+        if (erc20Balances[ERC20Address] == 0) {
             uint256 erc20StoredLength = erc20Stored.length;
 
             if (erc20StoredLength == 1) {
@@ -697,17 +698,19 @@ contract VaultV2 {
                 }
             }
         }
+
+        require(IERC20(ERC20Address).transfer(to, amount), "V_W20: Transfer failed");
     }
 
     /**
      * @notice Internal function used to withdraw ERC721 tokens.
      * @dev Used for all tokens types = 1. Note the safeTransferFrom. No amounts are given since ERC721 are one-off's.
-     * After successful transfer, the function checks whether any other ERC721 is deposited in the proxy vault.
+     * The function checks whether any other ERC721 is deposited in the proxy vault.
      * If not, it pops the stored addresses and stored IDs (pop() of two arrs is 180 gas cheaper than deleting).
      * If there are, it loops through the stored arrays and searches the ID that's withdrawn,
      * then replaces it with the last index, followed by a pop().
      * Sensitive to ReEntrance attacks! SafeTransferFrom therefore done at the end of the function.
-     * @param to Address the tokens should be taken from. This address must have pre-approved the proxy vault.
+     * @param to Address the tokens should be transferred to.
      * @param ERC721Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
      */
@@ -752,7 +755,10 @@ contract VaultV2 {
      */
     function _withdrawERC1155(address to, address ERC1155Address, uint256 id, uint256 amount) private {
         uint256 tokenIdLength = erc1155TokenIds.length;
-        if (IERC1155(ERC1155Address).balanceOf(address(this), id) - amount == 0) {
+
+        erc1155Balances[ERC1155Address][id] -= amount;
+
+        if (erc1155Balances[ERC1155Address][id] == 0) {
             if (tokenIdLength == 1) {
                 erc1155TokenIds.pop();
                 erc1155Stored.pop();
@@ -812,7 +818,7 @@ contract VaultV2 {
             cacheAddr = erc20Stored[i];
             assetAddresses[i] = cacheAddr;
             //assetIds[i] = 0; //gas: no need to store 0, index will continue anyway
-            assetAmounts[i] = IERC20(cacheAddr).balanceOf(address(this));
+            assetAmounts[i] = erc20Balances[cacheAddr];
             unchecked {
                 ++i;
             }
@@ -839,7 +845,7 @@ contract VaultV2 {
             cacheAddr = erc1155Stored[k];
             assetAddresses[i] = cacheAddr;
             assetIds[i] = erc1155TokenIds[k];
-            assetAmounts[i] = IERC1155(cacheAddr).balanceOf(address(this), erc1155TokenIds[k]);
+            assetAmounts[i] = erc1155Balances[cacheAddr][erc1155TokenIds[k]];
             unchecked {
                 ++i;
             }

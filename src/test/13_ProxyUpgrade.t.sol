@@ -31,11 +31,9 @@ contract VaultV2Test is DeployArcadiaVaults {
         address liquidator;
         address registry;
         address trustedCreditor;
-        address erc20Stored;
-        address erc721Stored;
-        address erc1155Stored;
-        uint256 erc721TokenIds;
-        uint256 erc1155TokenIds;
+        address[] assetAddresses;
+        uint256[] assetIds;
+        uint256[] assetAmounts;
     }
 
     // EVENTS
@@ -325,11 +323,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         checks.liquidator = proxy.liquidator();
         checks.registry = proxy.registry();
         checks.trustedCreditor = proxy.trustedCreditor();
-        checks.erc20Stored = proxy.erc20Stored(0); //ToDo; improve for whole list
-        checks.erc721Stored = proxy.erc721Stored(0);
-        checks.erc1155Stored = proxy.erc1155Stored(0);
-        checks.erc721TokenIds = proxy.erc721TokenIds(0);
-        checks.erc1155TokenIds = proxy.erc1155TokenIds(0);
+        (checks.assetAddresses, checks.assetIds, checks.assetAmounts) = proxy.generateAssetData();
 
         return checks;
     }
