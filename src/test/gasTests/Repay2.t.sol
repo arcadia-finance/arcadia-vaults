@@ -11,6 +11,8 @@ import "../fixtures/GastTestFixture.f.sol";
 contract gasRepay_2ERC20 is GasTestFixture {
     using stdStorage for StdStorage;
 
+    bytes3 public emptyBytes3;
+
     uint128 maxCredit;
 
     //this is a before
@@ -44,7 +46,7 @@ contract gasRepay_2ERC20 is GasTestFixture {
         uint256 valueLink = (((10 ** 18 * rateLinkToUsd) / 10 ** Constants.oracleLinkToUsdDecimals) * s_assetAmounts[1])
             / 10 ** Constants.linkDecimals;
         maxCredit = uint128(((valueEth + valueLink) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100);
-        pool.borrow(maxCredit, address(proxy), vaultOwner);
+        pool.borrow(maxCredit, address(proxy), vaultOwner, emptyBytes3);
         vm.stopPrank();
     }
 

@@ -11,6 +11,8 @@ import "../fixtures/GastTestFixture.f.sol";
 contract gasBuyVault_2ERC202ERC721 is GasTestFixture {
     using stdStorage for StdStorage;
 
+    bytes3 public emptyBytes3;
+
     //this is a before
     constructor() GasTestFixture() {}
 
@@ -60,7 +62,7 @@ contract gasBuyVault_2ERC202ERC721 is GasTestFixture {
                     / 100
             ),
             address(proxy),
-            vaultOwner
+            vaultOwner, emptyBytes3
         );
         vm.stopPrank();
 

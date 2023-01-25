@@ -11,6 +11,8 @@ import "../fixtures/GastTestFixture.f.sol";
 contract gasBuyVault_1ERC20 is GasTestFixture {
     using stdStorage for StdStorage;
 
+    bytes3 public emptyBytes3;
+
     //this is a before
     constructor() GasTestFixture() {}
 
@@ -38,7 +40,7 @@ contract gasBuyVault_1ERC20 is GasTestFixture {
         pool.borrow(
             uint128((valueEth / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100),
             address(proxy),
-            vaultOwner
+            vaultOwner, emptyBytes3
         );
         vm.stopPrank();
 

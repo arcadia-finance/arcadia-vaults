@@ -14,7 +14,6 @@ import "./interfaces/IERC4626.sol";
 import "./interfaces/ILiquidator.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
-import "./interfaces/ILendingPool.sol";
 import "./interfaces/ITrustedCreditor.sol";
 import "./interfaces/IActionBase.sol";
 import {ActionData} from "./actions/utils/ActionData.sol";
