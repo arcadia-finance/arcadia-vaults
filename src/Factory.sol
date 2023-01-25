@@ -232,7 +232,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @dev This function is called by an external user or a bot to start the liquidation process of a vault.
      * @param vault Vault that needs to get liquidated.
      */
-    function liquidate(address vault) external whenLiquidationNotPaused {
+    function liquidate(address vault) external whenLiquidateNotPaused {
         require(isVault(vault), "FTRY: Not a vault");
 
         //liquidateVault(address) will check if the Vault is indeed susceptible for liquidation.

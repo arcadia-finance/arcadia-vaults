@@ -7,14 +7,14 @@
 
 pragma solidity ^0.8.0;
 
-import "../../lib/solmate/src/auth/Owned.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /**
  * @title Factory Guardian
  * @dev This module provides a mechanism that allows authorized accounts to trigger an emergency stop
  *
  */
-abstract contract FactoryGuardian is Owned {
+abstract contract FactoryGuardian is Ownable {
     address public guardian;
 
     /*
@@ -35,7 +35,7 @@ abstract contract FactoryGuardian is Owned {
     bool public liquidatePaused;
     uint256 public pauseTimestamp;
 
-    constructor() Owned(msg.sender) {}
+    constructor() {}
 
     /*
     //////////////////////////////////////////////////////////////

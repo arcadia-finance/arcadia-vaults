@@ -236,7 +236,7 @@ contract MainRegistry is MainRegistryGuardian {
      */
     function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
         public
-        whenWithdrawalNotPaused
+        whenWithdrawNotPaused
         onlyVault
         noDelegate
     {

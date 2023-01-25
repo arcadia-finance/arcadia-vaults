@@ -7,14 +7,14 @@
 
 pragma solidity ^0.8.0;
 
-import "../../lib/solmate/src/auth/Owned.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /**
  * @title Factory Guardian
  * @dev This module provides a mechanism that allows authorized accounts to trigger an emergency stop
  *
  */
-abstract contract MainRegistryGuardian is Owned {
+abstract contract MainRegistryGuardian is Ownable {
     address public guardian;
 
     /*
@@ -35,7 +35,7 @@ abstract contract MainRegistryGuardian is Owned {
     bool public depositPaused;
     uint256 public pauseTimestamp;
 
-    constructor() Owned(msg.sender) {}
+    constructor() {}
 
     /*
     //////////////////////////////////////////////////////////////
@@ -56,7 +56,7 @@ abstract contract MainRegistryGuardian is Owned {
      * It throws if withdraw is paused.
      */
     modifier whenWithdrawNotPaused() {
-        require(!createPaused, "Guardian: withdraw paused");
+        require(!withdrawPaused, "Guardian: withdraw paused");
         _;
     }
 
