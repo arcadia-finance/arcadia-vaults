@@ -63,7 +63,7 @@ abstract contract FactoryGuardian is BaseGuardian {
      * @dev This function can be called by the guardian to pause all functionality in the event of an emergency.
      *      This function pauses repay, withdraw, borrow, deposit and liquidation.
      *      This function can only be called by the guardian.
-     *      The guardian can only pause the protocol again after 32 days have past since the last pause.
+     *      The guardian can only pause the protocol again after 32 days have passed since the last pause.
      *      This is to prevent that a malicious guardian can take user-funds hostage for an indefinite time.
      *  After the guardian has paused the protocol, the owner has 30 days to find potential problems,
      *  find a solution and unpause the protocol. If the protocol is not unpaused after 30 days,
