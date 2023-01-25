@@ -31,3 +31,7 @@ jobs:
 
       - name: Run snapshot
         run: forge snapshot --match-contract gas
+
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
