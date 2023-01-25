@@ -435,7 +435,8 @@ contract Vault {
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
-            if (assetAmounts[i] == 0) { //skip if amount is 0 to prevent storing addresses that have 0 balance
+            if (assetAmounts[i] == 0) {
+                //skip if amount is 0 to prevent storing addresses that have 0 balance
                 unchecked {
                     ++i;
                 }
@@ -537,7 +538,8 @@ contract Vault {
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
-            if (assetAmounts[i] == 0) { //skip if amount is 0 to prevent transferring 0 balances
+            if (assetAmounts[i] == 0) {
+                //skip if amount is 0 to prevent transferring 0 balances
                 unchecked {
                     ++i;
                 }

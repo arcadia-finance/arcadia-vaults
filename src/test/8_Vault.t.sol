@@ -1335,7 +1335,12 @@ contract AssetManagementTest is vaultTests {
         vm.stopPrank();
 
         uint256 vaultValueAfter = vault_.getVaultValue(address(dai));
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            vault_.generateAssetData();
         assertEq(vaultValueAfter, 0);
+        assertEq(assetAddresses.length, 0);
+        assertEq(assetIds.length, 0);
+        assertEq(assetAmounts.length, 0);
     }
 
     function testSuccess_withdraw_ERC20fterTakingCredit(
