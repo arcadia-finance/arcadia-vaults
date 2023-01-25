@@ -41,9 +41,9 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                           CONTRACT OWNERSHIP
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testSuccess_transferOwnership(address owner, address to) public {
         vm.assume(to != address(0));
@@ -72,9 +72,9 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(owner, factoryContr_m.owner());
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testSuccess_createVault_DeployVaultContractMappings(uint256 salt) public {
         uint256 amountBefore = factory.allVaultsLength();
@@ -144,6 +144,26 @@ contract FactoryTest is DeployArcadiaVaults {
                 address(0)
             );
         }
+    }
+
+    function testRevert_createVault_Paused(uint256 salt, address sender, address guardian) public {
+        vm.assume(sender != address(0));
+        vm.assume(guardian != address(0));
+        vm.assume(sender != guardian);
+
+        // Given: variables and initialization
+        vm.prank(creatorAddress);
+        factory.changeGuardian(guardian);
+        vm.warp(35 days);
+
+        // When: guardian pauses the contract
+        vm.prank(guardian);
+        factory.pause();
+
+        // Then: Reverted
+        vm.prank(sender);
+        vm.expectRevert("Guardian: create paused");
+        address actualDeployed = factory.createVault(salt, 0, address(0));
     }
 
     function testSuccess_isVault_positive() public {
@@ -348,9 +368,9 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                     VAULT VERSION MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testRevert_setNewVaultInfo_NonOwner(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
@@ -639,15 +659,53 @@ contract FactoryTest is DeployArcadiaVaults {
         assertTrue(factory.vaultVersionBlocked(vaultVersion));
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                     VAULT LIQUIDATION LOGIC
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testRevert_liquidate_NonVault(address liquidationInitiator, address nonVault) public {
         vm.startPrank(liquidationInitiator);
         vm.expectRevert("FTRY: Not a vault");
         factory.liquidate(nonVault);
         vm.stopPrank();
+    }
+
+    function testRevert_liquidate_Paused(address liquidationInitiator, uint128 openPosition, address guardian) public {
+        // Given: guardian is the guardian of factory
+        vm.prank(creatorAddress);
+        factory.changeGuardian(guardian);
+        vm.warp(35 days);
+
+        vm.assume(openPosition > 0);
+
+        vm.startPrank(creatorAddress);
+        liquidator = new Liquidator(
+            address(factory),
+            address(mainRegistry)
+        );
+        liquidator.setFactory(address(factory));
+        vm.stopPrank();
+
+        trustedCreditor = new TrustedCreditorMock();
+        trustedCreditor.setCallResult(true);
+        trustedCreditor.setLiquidator(address(liquidator));
+
+        vm.startPrank(vaultOwner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+        proxy = Vault(proxyAddr);
+        proxy.openTrustedMarginAccount(address(trustedCreditor));
+        vm.stopPrank();
+
+        trustedCreditor.setOpenPosition(address(proxy), openPosition);
+
+        // When: factory is paused
+        vm.prank(guardian);
+        factory.pause();
+
+        // Then: liquidate reverts
+        vm.expectRevert("Guardian: liquidate paused");
+        vm.prank(liquidationInitiator);
+        factory.liquidate(address(proxy));
     }
 
     function testSuccess_liquidate(address liquidationInitiator, uint128 openPosition) public {
@@ -683,9 +741,9 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(factory.ownerOf(index), address(liquidator));
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         HELPER FUNCTIONS
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testSuccess_allVaultsLength_VaultIdStartFromZero() public {
         assertEq(factory.allVaultsLength(), 0);
@@ -698,9 +756,9 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(expectedRegistry, actualRegistry);
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         ERC-721 LOGIC
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testSuccess_setBaseURI(string calldata uri) public {
         vm.prank(creatorAddress);

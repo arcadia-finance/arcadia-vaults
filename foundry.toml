@@ -13,6 +13,9 @@ auto_detect_solc = true
 fuzz = { runs = 100, max_test_rejects = 100_000_000}
 
 [profile.gh]
+fuzz = { runs = 200, max_test_rejects = 100_000_000}
+
+[profile.hf]
 fuzz = { runs = 2_000, max_test_rejects = 1_000_000_000}
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config
