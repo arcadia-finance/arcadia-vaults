@@ -39,6 +39,7 @@ contract Vault {
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
      */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+    uint256 public constant ASSET_LIMIT = 15;
 
     bool public isTrustedCreditorSet;
 
@@ -434,6 +435,11 @@ contract Vault {
         uint256[] calldata assetTypes
     ) external onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
+
+        require(
+            erc20Stored.length + erc721Stored.length + erc1155Stored.length + assetAddressesLength <= ASSET_LIMIT,
+            "V_D: Too many assets"
+        );
 
         require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
