@@ -79,7 +79,7 @@ contract FactoryTest is DeployArcadiaVaults {
     function testSuccess_createVault_DeployVaultContractMappings(uint256 salt) public {
         uint256 amountBefore = factory.allVaultsLength();
 
-        address actualDeployed = factory.createVault(salt, 0);
+        address actualDeployed = factory.createVault(salt, 0, address(0));
         assertEq(amountBefore + 1, factory.allVaultsLength());
         assertEq(actualDeployed, factory.allVaults(factory.allVaultsLength() - 1));
         assertEq(factory.vaultIndex(actualDeployed), (factory.allVaultsLength()));
@@ -88,7 +88,7 @@ contract FactoryTest is DeployArcadiaVaults {
     function testSuccess_createVault_DeployNewProxyWithLogic(uint256 salt) public {
         uint256 amountBefore = factory.allVaultsLength();
 
-        address actualDeployed = factory.createVault(salt, 0);
+        address actualDeployed = factory.createVault(salt, 0, address(0));
         assertEq(amountBefore + 1, factory.allVaultsLength());
         assertEq(Vault(actualDeployed).owner(), address(this));
     }
@@ -97,7 +97,7 @@ contract FactoryTest is DeployArcadiaVaults {
         uint256 amountBefore = factory.allVaultsLength();
         vm.prank(sender);
         vm.assume(sender != address(0));
-        address actualDeployed = factory.createVault(salt, 0);
+        address actualDeployed = factory.createVault(salt, 0, address(0));
         assertEq(amountBefore + 1, factory.allVaultsLength());
         assertEq(Vault(actualDeployed).owner(), address(sender));
     }
@@ -107,7 +107,9 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(vaultVersion > currentVersion);
 
         vm.expectRevert("FTRY_CV: Unknown vault version");
-        factory.createVault(uint256(keccak256(abi.encodePacked(vaultVersion, block.timestamp))), vaultVersion);
+        factory.createVault(
+            uint256(keccak256(abi.encodePacked(vaultVersion, block.timestamp))), vaultVersion, address(0)
+        );
     }
 
     function testRevert_createVault_FromBlockedVersion(
@@ -137,13 +139,15 @@ contract FactoryTest is DeployArcadiaVaults {
             }
             vm.expectRevert("FTRY_CV: This vault version cannot be created");
             factory.createVault(
-                uint256(keccak256(abi.encodePacked(versionsToBlock[z], block.timestamp))), versionsToBlock[z]
+                uint256(keccak256(abi.encodePacked(versionsToBlock[z], block.timestamp))),
+                versionsToBlock[z],
+                address(0)
             );
         }
     }
 
     function testSuccess_isVault_positive() public {
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         bool expectedReturn = factory.isVault(address(proxyAddr));
         bool actualReturn = true;
@@ -227,7 +231,7 @@ contract FactoryTest is DeployArcadiaVaults {
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
 
         vm.startPrank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
@@ -258,7 +262,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != address(0));
 
         vm.prank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
@@ -288,7 +292,7 @@ contract FactoryTest is DeployArcadiaVaults {
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
 
         vm.startPrank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
@@ -322,7 +326,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != address(0));
 
         vm.prank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
@@ -352,7 +356,7 @@ contract FactoryTest is DeployArcadiaVaults {
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
 
         vm.startPrank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
@@ -381,7 +385,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != address(0));
 
         vm.prank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
@@ -724,7 +728,7 @@ contract FactoryTest is DeployArcadiaVaults {
         trustedCreditor.setLiquidator(address(liquidator));
 
         vm.startPrank(vaultOwner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
         proxy = Vault(proxyAddr);
         proxy.openTrustedMarginAccount(address(trustedCreditor));
         vm.stopPrank();

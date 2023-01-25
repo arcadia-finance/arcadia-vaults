@@ -27,7 +27,7 @@ jobs:
         run: forge fmt --check
 
       - name: Run tests
-        run: forge test -vvv
+        run: FOUNDRY_PROFILE=gh forge test -vvv
 
       - name: Run snapshot
         run: forge snapshot --match-contract gas

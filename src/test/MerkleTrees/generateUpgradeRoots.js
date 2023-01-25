@@ -3,7 +3,8 @@ const keccak256 = require('keccak256')
 const { soliditySha3 } = require("web3-utils");
 
 const fs = require('fs');
-const rawLeaves = [[1,1], [1,2], [1,3], [2,3]];
+// const rawLeaves = [[1,1], [1,2], [1,3], [2,3]];
+const rawLeaves = [[1,1]];
 
 
 const buf2hex = x => '0x'+x.toString('hex');

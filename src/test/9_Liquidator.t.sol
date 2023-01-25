@@ -61,7 +61,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
                     )
                 )
             ),
-            0
+            0,
+            address(0)
         );
         proxy = Vault(proxyAddr);
 
@@ -407,6 +408,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
     // {
     //     vm.assume(claimAmount <= openClaim);
     //     vm.assume(claimAmount <= liquidatorBalance);
+    //    vm.assume(claimer != liquidityProvider);
 
     //     vm.prank(liquidityProvider);
     //     dai.transfer(address(liquidator), liquidatorBalance);

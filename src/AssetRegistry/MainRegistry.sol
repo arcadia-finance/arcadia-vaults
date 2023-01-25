@@ -87,7 +87,9 @@ contract MainRegistry is Ownable {
         //Main registry must be initialised with usd
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
+        isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
         baseCurrencies.push(baseCurrencyInformation.assetAddress);
+
         unchecked {
             ++baseCurrencyCounter;
         }
