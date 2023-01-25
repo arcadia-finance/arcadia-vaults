@@ -62,7 +62,8 @@ contract gasVaultAuction_2ERC202ERC721 is GasTestFixture {
                     / 100
             ),
             address(proxy),
-            vaultOwner, emptyBytes3
+            vaultOwner,
+            emptyBytes3
         );
         vm.stopPrank();
 

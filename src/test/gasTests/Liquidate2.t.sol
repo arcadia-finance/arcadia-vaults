@@ -46,7 +46,8 @@ contract gasLiquidate_2ERC20 is GasTestFixture {
         pool.borrow(
             uint128(((valueEth + valueLink) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100),
             address(proxy),
-            vaultOwner, emptyBytes3
+            vaultOwner,
+            emptyBytes3
         );
         vm.stopPrank();
 

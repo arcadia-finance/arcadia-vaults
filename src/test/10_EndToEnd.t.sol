@@ -19,7 +19,7 @@ abstract contract EndToEndTest is DeployArcadiaVaults {
     LendingPool pool;
     Tranche tranche;
     DebtToken debt;
-    
+
     bytes3 public emptyBytes3;
 
     // EVENTS
