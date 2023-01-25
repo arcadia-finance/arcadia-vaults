@@ -69,7 +69,7 @@ abstract contract FactoryGuardian is BaseGuardian {
      *  find a solution and unpause the protocol. If the protocol is not unpaused after 30 days,
      *  an emergency procedure can be started by any user to unpause the protocol.
      *  All users have now at least a two-day window to withdraw assets and close positions before
-     *  the protocol can again be paused (by or the owner or the guardian.
+     *  the protocol can again be paused (by the guardian).
      */
     function pause() external override onlyGuardian {
         require(block.timestamp > pauseTimestamp + 32 days, "G_P: Cannot pause");
