@@ -200,6 +200,7 @@ contract VaultV2 {
     function openTrustedMarginAccount(address protocol) public onlyOwner {
         require(!isTrustedCreditorSet, "V_OMA: ALREADY SET");
 
+        //openMarginAccount() is a view function, cannot modify state.
         (bool success, address baseCurrency_, address liquidator_) =
             ITrustedCreditor(protocol).openMarginAccount(vaultVersion);
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
@@ -219,6 +220,7 @@ contract VaultV2 {
      */
     function closeTrustedMarginAccount() public onlyOwner {
         require(isTrustedCreditorSet, "V_CMA: NOT SET");
+        //getOpenPosition() is a view function, cannot modify state.
         require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
 
         isTrustedCreditorSet = false;
@@ -301,6 +303,7 @@ contract VaultV2 {
     function getUsedMargin() public view returns (uint256 usedMargin) {
         if (!isTrustedCreditorSet) return 0;
 
+        //getOpenPosition() is a view function, cannot modify state.
         usedMargin = ITrustedCreditor(trustedCreditor).getOpenPosition(address(this));
     }
 
@@ -361,7 +364,8 @@ contract VaultV2 {
      * @notice Add or remove an Asset Manager.
      * @param assetManager the address of the Asset Manager
      * @param value A boolean giving permissions to or taking permissions from an Asset manager
-     * @dev Asset managers can potentially steal assets (as long as the vault position remains healthy), only set trusted addresses as Asset manager.
+     * @dev Only set trusted addresses as Asset manager, Asset managers can potentially steal assets (as long as the vault position remains healthy).
+     * @dev No need to set the Owner as Asset manager, owner will automattically have all permissions of an asset manager.
      */
     function setAssetManager(address assetManager, bool value) external onlyOwner {
         isAssetManager[assetManager] = value;
@@ -391,7 +395,7 @@ contract VaultV2 {
 
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
-        require(collValue > usedMargin, "VMA: coll. value too low");
+        require(collValue >= usedMargin, "VMA: coll. value too low");
     }
 
     /* ///////////////////////////////////////////////////////////////

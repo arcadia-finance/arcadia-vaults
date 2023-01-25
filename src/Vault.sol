@@ -200,6 +200,7 @@ contract Vault {
     function openTrustedMarginAccount(address protocol) public onlyOwner {
         require(!isTrustedCreditorSet, "V_OMA: ALREADY SET");
 
+        //openMarginAccount() is a view function, cannot modify state.
         (bool success, address baseCurrency_, address liquidator_) =
             ITrustedCreditor(protocol).openMarginAccount(vaultVersion);
         require(success, "V_OMA: OPENING ACCOUNT REVERTED");
@@ -219,6 +220,7 @@ contract Vault {
      */
     function closeTrustedMarginAccount() public onlyOwner {
         require(isTrustedCreditorSet, "V_CMA: NOT SET");
+        //getOpenPosition() is a view function, cannot modify state.
         require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
 
         isTrustedCreditorSet = false;
@@ -301,6 +303,7 @@ contract Vault {
     function getUsedMargin() public view returns (uint256 usedMargin) {
         if (!isTrustedCreditorSet) return 0;
 
+        //getOpenPosition() is a view function, cannot modify state.
         usedMargin = ITrustedCreditor(trustedCreditor).getOpenPosition(address(this));
     }
 
