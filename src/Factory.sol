@@ -13,8 +13,9 @@ import "../lib/solmate/src/tokens/ERC721.sol";
 import "./utils/Strings.sol";
 import "./utils/MerkleProofLib.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./security/FactoryGuardian.sol";
 
-contract Factory is ERC721, Ownable {
+contract Factory is ERC721, FactoryGuardian {
     using Strings for uint256;
 
     struct vaultVersionInfo {
@@ -46,7 +47,11 @@ contract Factory is ERC721, Ownable {
      * @param vaultVersion The Vault version.
      * @return vault The contract address of the proxy contract of the newly deployed vault.
      */
-    function createVault(uint256 salt, uint256 vaultVersion, address baseCurrency) external returns (address vault) {
+    function createVault(uint256 salt, uint256 vaultVersion, address baseCurrency)
+        external
+        whenCreateNotPaused
+        returns (address vault)
+    {
         vaultVersion = vaultVersion == 0 ? latestVaultVersion : vaultVersion;
 
         require(vaultVersion <= latestVaultVersion, "FTRY_CV: Unknown vault version");
@@ -227,7 +232,7 @@ contract Factory is ERC721, Ownable {
      * @dev This function is called by an external user or a bot to start the liquidation process of a vault.
      * @param vault Vault that needs to get liquidated.
      */
-    function liquidate(address vault) external {
+    function liquidate(address vault) external whenLiquidationNotPaused {
         require(isVault(vault), "FTRY: Not a vault");
 
         //liquidateVault(address) will check if the Vault is indeed susceptible for liquidation.
