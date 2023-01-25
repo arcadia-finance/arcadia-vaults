@@ -17,6 +17,7 @@ import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ILendingPool.sol";
 import "./interfaces/ITrustedCreditor.sol";
 import "./interfaces/IActionBase.sol";
+import {IFactory} from "./interfaces/IFactory.sol";
 import {ActionData} from "./actions/utils/ActionData.sol";
 
 /**
@@ -331,32 +332,34 @@ contract Vault {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Function called to start a vault liquidation.
+     * @notice Function called by Liquidator to start liquidation of the Vault.
+     * @return originalOwner The original owner of this vault.
+     * @return openDebt The open debt taken by `originalOwner` at moment of liquidation.
+     * @return baseCurrency_ The baseCurrency in which the vault is denominated.
+     * @return trustedCreditor_ The account or contract that is owed the debt.
      * @dev Requires an unhealthy vault (value / debt < liqThres).
      * Starts the vault auction on the liquidator contract.
      * Increases the life of the vault to indicate a liquidation has happened.
      * Transfers ownership of the proxy vault to the liquidator!
-     * @param liquidationInitiator Address of the keeper who initiated the liquidation process.
      * @dev trustedCreditor is a trusted contract.
-     * @dev After an auction is successfully started, interest acrual should stop.
-     * This must be implemented by trustedCreditor
-     * @dev If liquidateVault(address) is successfull, Factory will transfer ownership of the Vault to the Liquidator.
      */
-    function liquidateVault(address liquidationInitiator) public onlyFactory returns (address liquidator_) {
-        uint256 usedMargin = getUsedMargin();
+    function liquidateVault()
+        external
+        returns (address originalOwner, uint128 openDebt, address baseCurrency_, address trustedCreditor_)
+    {
+        require(msg.sender == liquidator, "V_LV: You are not the liquidator");
 
+        uint256 usedMargin = getUsedMargin();
         require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");
 
-        //Start the liquidation process
-        ILiquidator(liquidator).startAuction(
-            liquidationInitiator, owner, uint128(usedMargin), baseCurrency, trustedCreditor
-        );
+        //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
+        IFactory(IMainRegistry(registry).factoryAddress()).liquidate(msg.sender);
 
-        //Hook implemented on the trusted creditor contract to notify that the vault
-        //is being liquidated and trigger any necessary logic on the trustedCreditor.
-        ITrustedCreditor(trustedCreditor).liquidateVault(usedMargin);
+        //Transfer ownership of the Vault itself
+        originalOwner = owner;
+        _transferOwnership(msg.sender);
 
-        liquidator_ = liquidator;
+        return (originalOwner, uint128(usedMargin), baseCurrency, trustedCreditor);
     }
 
     /*///////////////////////////////////////////////////////////////

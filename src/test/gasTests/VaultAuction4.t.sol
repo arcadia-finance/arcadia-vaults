@@ -72,7 +72,7 @@ contract gasVaultAuction_2ERC202ERC721 is GasTestFixture {
         vm.stopPrank();
 
         vm.prank(liquidatorBot);
-        factory.liquidate(address(proxy));
+        liquidator.startAuction(address(proxy));
     }
 
     function testAuctionPriceStart() public {

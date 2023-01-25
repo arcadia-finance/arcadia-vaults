@@ -56,7 +56,7 @@ contract gasVaultAuction_1ERC201ERC721 is GasTestFixture {
         oracleWbaycToEth.transmit(int256(rateWbaycToEth) / 2);
 
         vm.prank(liquidatorBot);
-        factory.liquidate(address(proxy));
+        liquidator.startAuction(address(proxy));
     }
 
     function testAuctionPriceStart() public {

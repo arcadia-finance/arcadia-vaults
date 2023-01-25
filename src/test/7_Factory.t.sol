@@ -7,13 +7,11 @@
 pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
-import {TrustedCreditorMock} from "../mockups/TrustedCreditorMock.sol";
 
 contract FactoryTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     MainRegistry internal mainRegistry2;
-    TrustedCreditorMock trustedCreditor;
 
     //events
     event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 length);
@@ -169,7 +167,7 @@ contract FactoryTest is DeployArcadiaVaults {
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
 
         vm.startPrank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
@@ -202,7 +200,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != address(0));
 
         vm.prank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
         assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
@@ -705,44 +703,27 @@ contract FactoryTest is DeployArcadiaVaults {
                     VAULT LIQUIDATION LOGIC
     ///////////////////////////////////////////////////////////////*/
 
-    function testRevert_liquidate_NonVault(address liquidationInitiator, address nonVault) public {
-        vm.startPrank(liquidationInitiator);
+    function testRevert_liquidate_NonVault(address liquidator_, address nonVault) public {
+        vm.startPrank(nonVault);
         vm.expectRevert("FTRY: Not a vault");
-        factory.liquidate(nonVault);
+        factory.liquidate(liquidator_);
         vm.stopPrank();
     }
 
-    function testSuccess_liquidate(address liquidationInitiator, uint128 openPosition) public {
+    function testSuccess_liquidate(address liquidator_, uint128 openPosition) public {
         vm.assume(openPosition > 0);
 
-        vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
-        vm.stopPrank();
-
-        trustedCreditor = new TrustedCreditorMock();
-        trustedCreditor.setCallResult(true);
-        trustedCreditor.setLiquidator(address(liquidator));
-
-        vm.startPrank(vaultOwner);
+        vm.prank(vaultOwner);
         proxyAddr = factory.createVault(0, 0, address(0));
         proxy = Vault(proxyAddr);
-        proxy.openTrustedMarginAccount(address(trustedCreditor));
-        vm.stopPrank();
 
-        trustedCreditor.setOpenPosition(address(proxy), openPosition);
+        vm.prank(address(proxy));
+        factory.liquidate(liquidator_);
 
-        vm.prank(liquidationInitiator);
-        factory.liquidate(address(proxy));
-
-        assertEq(proxy.owner(), address(liquidator));
         assertEq(factory.balanceOf(vaultOwner), 0);
-        assertEq(factory.balanceOf(address(liquidator)), 1);
+        assertEq(factory.balanceOf(liquidator_), 1);
         uint256 index = factory.vaultIndex(address(proxy));
-        assertEq(factory.ownerOf(index), address(liquidator));
+        assertEq(factory.ownerOf(index), liquidator_);
     }
 
     /*///////////////////////////////////////////////////////////////

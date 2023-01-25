@@ -56,6 +56,6 @@ contract gasLiquidate_2ERC20 is GasTestFixture {
 
     function testLiquidate() public {
         vm.prank(liquidatorBot);
-        factory.liquidate(address(proxy));
+        liquidator.startAuction(address(proxy));
     }
 }

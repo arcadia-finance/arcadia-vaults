@@ -775,34 +775,41 @@ contract LiquidationLogicTest is vaultTests {
         openMarginAccount();
     }
 
-    function testRevert_liquidateVault_NotAuthorized(address unprivilegedAddress_, address liquidationInitiator)
-        public
-    {
-        vm.assume(unprivilegedAddress_ != address(factory));
+    function testRevert_liquidateVault_NotAuthorized(address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != address(liquidator));
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("V: You are not the factory");
-        vault_.liquidateVault(liquidationInitiator);
+        vm.expectRevert("V_LV: You are not the liquidator");
+        vault_.liquidateVault();
         vm.stopPrank();
     }
 
-    function testRevert_liquidateVault_VaultIsHealthy(address liquidationInitiator) public {
-        vm.startPrank(address(factory));
+    function testRevert_liquidateVault_VaultIsHealthy() public {
+        vm.startPrank(address(liquidator));
         vm.expectRevert("V_LV: This vault is healthy");
-        vault_.liquidateVault(liquidationInitiator);
+        vault_.liquidateVault();
         vm.stopPrank();
     }
 
-    function testSuccess_liquidateVault(address liquidationInitiator, uint128 usedMargin) public {
+    function testSuccess_liquidateVault(uint128 usedMargin) public {
         vm.assume(usedMargin > 0);
         stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(usedMargin);
         stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(usedMargin);
         stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
 
-        vm.prank(address(factory));
-        address liquidator_ = vault_.liquidateVault(liquidationInitiator);
+        vm.prank(address(liquidator));
+        (address originalOwner, uint128 openDebt, address baseCurrency, address trustedCreditor) =
+            vault_.liquidateVault();
 
-        assertEq(liquidator_, address(liquidator));
+        assertEq(originalOwner, vaultOwner);
+        assertEq(openDebt, usedMargin);
+        assertEq(baseCurrency, address(dai));
+        assertEq(trustedCreditor, address(pool));
+
+        assertEq(vault_.owner(), address(liquidator));
+
+        uint256 index = factory.vaultIndex(address(vault_));
+        assertEq(factory.ownerOf(index), address(liquidator));
     }
 }
 

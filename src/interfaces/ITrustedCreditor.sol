@@ -7,7 +7,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 interface ITrustedCreditor {
-    function liquidateVault(uint256 debt) external;
+    function liquidateVault(address vault, uint256 debt) external;
 
     function openMarginAccount(uint256 vaultVersion)
         external

@@ -58,6 +58,6 @@ contract gasLiquidate_1ERC201ERC721 is GasTestFixture {
 
     function testLiquidate() public {
         vm.prank(liquidatorBot);
-        factory.liquidate(address(proxy));
+        liquidator.startAuction(address(proxy));
     }
 }

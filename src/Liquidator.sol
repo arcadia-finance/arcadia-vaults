@@ -12,6 +12,7 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IVault.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./interfaces/ILendingPool.sol";
+import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
 
 /**
  * @title The liquidator holds the execution logic and storage or all things related to liquidating Arcadia Vaults
@@ -118,34 +119,32 @@ contract Liquidator is Ownable {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Starts an auction of a vault. Called by the vault itself.
-     * @param liquidationInitiator the keeper who triggered the auction. Gets a reward!
-     * @param originalOwner the original owner of this vault.
-     * @param openDebt the open debt taken by `originalOwner` at moment of liquidation.
-     * @param baseCurrency the baseCurrency in which the vault is denominated.
-     * @param trustedCreditor The account or contract that is owed the debt.
+     * @notice Starts an auction of a vault.
+     * @param vault The contract address of the Vault to liquidate
+     * @dev This function is called by an external user or a bot to start the liquidation process of a vault.
      */
-    function startAuction(
-        address liquidationInitiator,
-        address originalOwner,
-        uint128 openDebt,
-        address baseCurrency,
-        address trustedCreditor
-    ) public {
-        require(IFactory(factory).isVault(msg.sender), "LQ_SA: Not a vault");
-        require(!auctionInformation[msg.sender].inAuction, "LQ_SA: Auction already ongoing");
+    function startAuction(address vault) public {
+        require(IFactory(factory).isVault(vault), "LQ_SA: Not a vault");
+        require(!auctionInformation[vault].inAuction, "LQ_SA: Auction already ongoing");
 
-        auctionInformation[msg.sender].inAuction = true;
-        auctionInformation[msg.sender].startTime = uint128(block.timestamp);
-        auctionInformation[msg.sender].originalOwner = originalOwner;
-        auctionInformation[msg.sender].openDebt = openDebt;
-        auctionInformation[msg.sender].baseCurrency = baseCurrency;
-        auctionInformation[msg.sender].trustedCreditor = trustedCreditor;
+        (address originalOwner, uint128 openDebt, address baseCurrency, address trustedCreditor) =
+            IVault(vault).liquidateVault();
+
+        auctionInformation[vault].inAuction = true;
+        auctionInformation[vault].startTime = uint128(block.timestamp);
+        auctionInformation[vault].originalOwner = originalOwner;
+        auctionInformation[vault].openDebt = openDebt;
+        auctionInformation[vault].baseCurrency = baseCurrency;
+        auctionInformation[vault].trustedCreditor = trustedCreditor;
 
         //Initiator can immediately claim the initiator reward.
         //In edge cases, there might not be sufficient funds on the LiquidationEngine contract,
         //and the initiator will have to wait until the auction of collateral is finished.
-        openClaims[liquidationInitiator][baseCurrency] += calcLiquidationInitiatorReward(openDebt);
+        openClaims[msg.sender][baseCurrency] += calcLiquidationInitiatorReward(openDebt);
+
+        //Hook implemented on the trusted creditor contract to notify that the vault
+        //is being liquidated and trigger any necessary logic on the trustedCreditor.
+        ITrustedCreditor(trustedCreditor).liquidateVault(vault, openDebt);
     }
 
     /**

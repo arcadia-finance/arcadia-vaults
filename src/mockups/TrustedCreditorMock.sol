@@ -18,7 +18,7 @@ contract TrustedCreditorMock is TrustedCreditor {
 
     constructor() TrustedCreditor() {}
 
-    function liquidateVault(uint256) public override {}
+    function liquidateVault(address, uint256) public override {}
 
     function openMarginAccount(uint256)
         external

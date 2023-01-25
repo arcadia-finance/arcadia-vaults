@@ -236,43 +236,25 @@ contract Factory is ERC721, Ownable {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Function used by a keeper to start the liquidation of a vault.
-     * @dev This function is called by an external user or a bot to start the liquidation process of a vault.
-     * @param vault Vault that needs to get liquidated.
-     */
-    function liquidate(address vault) external {
-        require(isVault(vault), "FTRY: Not a vault");
-
-        //liquidateVault(address) will check if the Vault is indeed susceptible for liquidation.
-        //And if so, start the liquidation process.
-        //If not, the function will revert.
-        address liquidator = IVault(vault).liquidateVault(msg.sender);
-
-        //Transfer the vault proxy contract to the new owner.
-        IVault(vault).transferOwnership(liquidator);
-
-        //Transfer ownership of the ERC721.
-        _liquidateTransfer(vault, liquidator);
-    }
-
-    /**
-     * @notice Helper transfer function that allows the contract to transfer ownership of the erc721.
-     * @dev This function is called by the contract when a vault is liquidated.
+     * @notice Function called by a Vault at the start of a liquidation to transfer ownership.
+     * @param liquidator The contract address of the liquidator.
+     * @dev This function is called by the Vault when it is liquidated.
      * This includes a transfer of ownership of the vault.
      * We circumvent the ERC721 transfer function.
-     * @param vault Vault that needs to get transfered.
      */
-    function _liquidateTransfer(address vault, address liquidator) internal {
-        address from = ownerOf[vaultIndex[vault]];
+    function liquidate(address liquidator) external {
+        require(isVault(msg.sender), "FTRY: Not a vault");
+
+        address from = ownerOf[vaultIndex[msg.sender]];
         unchecked {
             balanceOf[from]--;
             balanceOf[liquidator]++;
         }
 
-        ownerOf[vaultIndex[vault]] = liquidator;
+        ownerOf[vaultIndex[msg.sender]] = liquidator;
 
-        delete getApproved[vaultIndex[vault]];
-        emit Transfer(from, liquidator, vaultIndex[vault]);
+        delete getApproved[vaultIndex[msg.sender]];
+        emit Transfer(from, liquidator, vaultIndex[msg.sender]);
     }
 
     /*///////////////////////////////////////////////////////////////
