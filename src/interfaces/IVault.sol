@@ -13,9 +13,9 @@ interface IVault {
 
     function initialize(address owner, address registry, uint16 latestVaultVersion, address baseCurrency) external;
 
-    function liquidateVault()
+    function liquidateVault(uint256 openDebt)
         external
-        returns (address originalOwner, uint128 openDebt, address baseCurrency, address trustedCreditor);
+        returns (address originalOwner, address baseCurrency, address trustedCreditor);
 
     function upgradeVault(address, uint16) external;
 
