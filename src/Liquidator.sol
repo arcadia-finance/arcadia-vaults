@@ -254,7 +254,6 @@ contract Liquidator is Ownable {
         }
 
         //Change ownership of the auctioned vault to the bidder.
-        //Todo: transfer a vault imediately on vault address instead of ID.
         IFactory(factory).safeTransferFrom(address(this), msg.sender, vaultAddress);
     }
 
