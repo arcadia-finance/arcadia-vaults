@@ -497,6 +497,33 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
+    function testRevert_batchProcessDeposit_Paused(uint128 amountEth, uint128 amountLink, address guardian) public {
+        // Given: Assets
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(link);
+
+        uint256[] memory assetIds = new uint256[](2);
+        assetIds[0] = 0;
+        assetIds[1] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](2);
+        assetAmounts[0] = amountEth;
+        assetAmounts[1] = amountLink;
+
+        // When: guardian pauses mainRegistry
+        vm.prank(creatorAddress);
+        mainRegistry.changeGuardian(guardian);
+        vm.warp(35 days);
+        vm.prank(guardian);
+        mainRegistry.pause();
+
+        // Then: batchProcessDeposit should reverted
+        vm.prank(proxyAddr);
+        vm.expectRevert("Guardian: deposit paused");
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+    }
+
     function testSuccess_batchProcessDeposit_SingleAsset(uint128 amount) public {
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -607,6 +634,34 @@ contract AssetManagementTest is MainRegistryTest {
 
         vm.startPrank(proxyAddr);
         vm.expectRevert("MR_BPW: LENGTH_MISMATCH");
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        vm.stopPrank();
+    }
+
+    function testRevert_batchProcessWithdrawal_Paused(uint128 amountLink, address guardian) public {
+        // Given: Assets are deposited
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        vm.prank(proxyAddr);
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+
+        // When: Main registry is paused
+        vm.prank(creatorAddress);
+        mainRegistry.changeGuardian(guardian);
+        vm.warp(35 days);
+        vm.prank(guardian);
+        mainRegistry.pause();
+
+        // Then: Withdrawal is reverted due to paused main registry
+        vm.startPrank(proxyAddr);
+        vm.expectRevert("Guardian: withdraw paused");
         mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
         vm.stopPrank();
     }

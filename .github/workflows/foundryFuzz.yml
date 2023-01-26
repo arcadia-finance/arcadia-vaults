@@ -1,13 +1,9 @@
 on:
-  pull_request:
+  push:
     branches:
       - main
-      - main_paper_trading
-      - main*
-      - refactor/arcadia-vault
-      - dev
 
-name: Foundry Tests
+name: Foundry High Fuzz Tests
 
 jobs:
   check:
@@ -27,11 +23,7 @@ jobs:
         run: forge fmt --check
 
       - name: Run tests
-        run: FOUNDRY_PROFILE=gh forge test -vvv
+        run: FOUNDRY_PROFILE=hf forge test -vvv
 
       - name: Run snapshot
         run: forge snapshot --match-contract gas
-
-concurrency:
-  group: ${{ github.head_ref }}
-  cancel-in-progress: true

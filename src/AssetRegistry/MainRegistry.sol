@@ -14,6 +14,7 @@ import "../interfaces/IPricingModule.sol";
 
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 import {RiskModule} from "../RiskModule.sol";
+import "../security/MainRegistryGuardian.sol";
 
 /**
  * @title Main Asset registry
@@ -21,7 +22,7 @@ import {RiskModule} from "../RiskModule.sol";
  * @notice The Main-registry stores basic information for each token that can, or could at some point, be deposited in the vaults
  * @dev No end-user should directly interact with the Main-registry, only vaults, Sub-Registries or the contract owner
  */
-contract MainRegistry is Ownable {
+contract MainRegistry is MainRegistryGuardian {
     using FixedPointMathLib for uint256;
 
     address immutable _this;
@@ -210,7 +211,7 @@ contract MainRegistry is Ownable {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) public onlyVault noDelegate {
+    ) public whenDepositNotPaused onlyVault noDelegate {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
@@ -235,6 +236,7 @@ contract MainRegistry is Ownable {
      */
     function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
         public
+        whenWithdrawNotPaused
         onlyVault
         noDelegate
     {
