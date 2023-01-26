@@ -18,6 +18,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     Tranche tranche;
     DebtToken debt;
 
+    bytes3 public emptyBytes3;
+
     address private liquidationInitiator = address(8);
     address private auctionBuyer = address(9);
 
@@ -336,7 +338,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -369,7 +371,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -412,7 +414,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -448,7 +450,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(newPrice));
@@ -487,7 +489,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint128 amountCredit = uint128(proxy.getFreeMargin());
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
         vm.prank(creatorAddress);
         liquidator.setBreakevenTime(breakevenTime);

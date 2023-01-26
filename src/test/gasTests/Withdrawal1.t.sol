@@ -11,6 +11,8 @@ import "../fixtures/GastTestFixture.f.sol";
 contract gasWithdrawal1_1ERC20 is GasTestFixture {
     using stdStorage for StdStorage;
 
+    bytes3 public emptyBytes3;
+
     //this is a before
     constructor() GasTestFixture() {}
 
@@ -45,7 +47,7 @@ contract gasWithdrawal1_1ERC20 is GasTestFixture {
 
     function testBorrow() public {
         vm.prank(vaultOwner);
-        pool.borrow(1, address(proxy), vaultOwner);
+        pool.borrow(1, address(proxy), vaultOwner, emptyBytes3);
     }
 
     function testGenerateAssetData() public view {

@@ -39,6 +39,8 @@ abstract contract vaultTests is DeployArcadiaVaults {
     Tranche tranche;
     DebtToken debt;
 
+    bytes3 public emptyBytes3;
+
     struct Assets {
         address[] assetAddresses;
         uint256[] assetIds;
@@ -114,7 +116,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
         depositERC20InVault(eth, amountEth, vaultOwner);
         vm.startPrank(vaultOwner);
         uint256 remainingCredit = vault_.getFreeMargin();
-        pool.borrow(uint128(remainingCredit), address(vault_), vaultOwner);
+        pool.borrow(uint128(remainingCredit), address(vault_), vaultOwner, emptyBytes3);
         vm.stopPrank();
 
         return remainingCredit;
@@ -726,7 +728,7 @@ contract MarginRequirementsTest is vaultTests {
         depositEthInVault(amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         uint256 actualRemainingCredit = vault_.getFreeMargin();
         uint256 expectedRemainingCredit = (depositValue * collFactor_) / 100 - amountCredit;
@@ -741,7 +743,7 @@ contract MarginRequirementsTest is vaultTests {
         depositERC20InVault(eth, amountEth, vaultOwner);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.prank(vaultOwner);
-        pool.borrow((((amountEth * collFactor_) / 100) * factor) / 255, address(vault_), vaultOwner);
+        pool.borrow((((amountEth * collFactor_) / 100) * factor) / 255, address(vault_), vaultOwner, emptyBytes3);
 
         uint256 currentValue = vault_.getVaultValue(address(dai));
         uint256 openDebt = vault_.getUsedMargin();
@@ -1660,7 +1662,7 @@ contract AssetManagementTest is vaultTests {
         Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         assetInfo.assetAmounts[0] = amountWithdraw;
         vm.expectRevert("V_W: coll. value too low!");
@@ -1685,7 +1687,7 @@ contract AssetManagementTest is vaultTests {
         uint128 maxAmountCredit = uint128(((assetIds.length - amountsWithdrawn) * rateInUsd * collFactor_) / 100);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(maxAmountCredit + 1, address(vault_), vaultOwner);
+        pool.borrow(maxAmountCredit + 1, address(vault_), vaultOwner, emptyBytes3);
 
         uint256[] memory withdrawalIds = new uint256[](amountsWithdrawn);
         address[] memory withdrawalAddresses = new address[](amountsWithdrawn);
@@ -1747,7 +1749,7 @@ contract AssetManagementTest is vaultTests {
 
         Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
         assetInfo.assetAmounts[0] = amountWithdraw;
         vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
         vm.stopPrank();
@@ -1790,7 +1792,7 @@ contract AssetManagementTest is vaultTests {
         vm.assume(amountCredit < ((valueOfDeposit - valueOfWithdrawal) * collFactor_) / 100);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         uint256[] memory withdrawalIds = new uint256[](randomAmounts);
         address[] memory withdrawalAddresses = new address[](randomAmounts);
@@ -1842,7 +1844,7 @@ contract DepreciatedTest is vaultTests {
         depositEthInVault(baseAmountDeposit, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         assertEq(dai.balanceOf(vaultOwner), amountCredit);
         assertEq(vault_.getUsedMargin(), amountCredit); //no blocks have passed
@@ -1858,7 +1860,7 @@ contract DepreciatedTest is vaultTests {
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert(stdError.arithmeticError);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
     }
 
     function testSuccess_MinCollValueUnchecked() public {
