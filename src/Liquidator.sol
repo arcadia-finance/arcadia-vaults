@@ -21,8 +21,11 @@ import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Ownable {
-    uint256 public maxAuctionTime = 14_400; //4 hours in seconds
     uint256 public startPriceMultiplier; //2 decimals
+    // @dev 18 decimals, it is calculated off-chain and set by the owner
+    // It is discount for auction per second passed after the auction.
+    // example: 999807477651317500, it is calculated based on the half-life of 1 hour
+    uint256 public discountRate;
 
     address public factory;
     address public registry;
@@ -84,14 +87,21 @@ contract Liquidator is Ownable {
     }
 
     /**
-     * @notice Sets the maximum auction time on the liquidator.
-     * @dev The maximum auction time is the time from starting an auction to
-     * the moment the price of the auction has decreased to 0.
-     * The maxAuctionTime controls the speed of decrease of the auction price.
-     * @param maxAuctionTime_ The new maximum auction time.
+     * @notice Sets the discount rate for the liquidator.
+     * @dev The discount rate is a multiplier that is used to decrease the price of the auction over time.
+     * @param discountRate_ The new discount rate.
      */
-    function setMaxAuctionTime(uint256 maxAuctionTime_) external onlyOwner {
-        maxAuctionTime = maxAuctionTime_;
+    function setDiscountRate(uint256 discountRate_) external onlyOwner {
+        discountRate = discountRate_;
+    }
+
+    /**
+     * @notice Sets the start price multiplier for the liquidator.
+     * @dev The start price multiplier is a multiplier that is used to increase the price of the auction over time.
+     * @param startPriceMultiplier_ The new start price multiplier.
+     */
+    function setStartPriceMultiplier(uint256 startPriceMultiplier_) external onlyOwner {
+        startPriceMultiplier = startPriceMultiplier;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -148,14 +158,12 @@ contract Liquidator is Ownable {
      * And immediately ends the auction.
      */
     function _calcPriceOfVault(uint256 startTime, uint256 openDebt) internal view returns (uint256 price) {
-        uint256 auctionTime = block.timestamp - startTime; //Can be unchecked
-
-        if (auctionTime > maxAuctionTime) {
-            //ヽ༼ຈʖ̯ຈ༽ﾉ
-            price = 0;
-        } else {
-            price = uint256(openDebt) * startPriceMultiplier * (maxAuctionTime - auctionTime) / maxAuctionTime / 100;
+        uint256 auctionTime;
+        unchecked {
+            auctionTime = (block.timestamp - startTime) * 1_000_000_000_000_000_000;
         }
+        price = uint256(openDebt) * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime)
+            / 1_000_000_000_000_000_000;
     }
 
     /**
