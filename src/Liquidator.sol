@@ -244,22 +244,29 @@ contract Liquidator is Ownable {
         returns (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder)
     {
         ClaimRatios memory claimRatios_ = claimRatios;
-        liquidationInitiatorReward = openDebt * claimRatios_.initiatorReward / 100;
 
-        if (priceOfVault < openDebt + liquidationInitiatorReward) {
-            badDebt = openDebt + liquidationInitiatorReward - priceOfVault;
-        } else {
-            liquidationPenalty = openDebt * claimRatios_.penalty / 100;
-            remainder = priceOfVault - openDebt - liquidationInitiatorReward;
+        //openDebt is a uint128 -> all calculations can be unchecked
+        unchecked {
+            //Liquidation Initiator Reward is always payed out, independant of the final auction price
+            liquidationInitiatorReward = openDebt * claimRatios_.initiatorReward / 100;
 
-            //Check if the remainder can cover the full liquidation penalty
-            if (liquidationPenalty > remainder) {
-                //If yes, calculate the final remainder
-                remainder -= liquidationPenalty;
+            //Final Auction price should at least cover the original debt and  Liquidation Initiator Reward.
+            //Otherwise there is bad debt.
+            if (priceOfVault < openDebt + liquidationInitiatorReward) {
+                badDebt = openDebt + liquidationInitiatorReward - priceOfVault;
             } else {
-                //If not, there is no remainder for the originalOwner.
-                remainder = 0;
-                liquidationPenalty = remainder;
+                liquidationPenalty = openDebt * claimRatios_.penalty / 100;
+                remainder = priceOfVault - openDebt - liquidationInitiatorReward;
+
+                //Check if the remainder can cover the full liquidation penalty
+                if (remainder > liquidationPenalty) {
+                    //If yes, calculate the final remainder
+                    remainder -= liquidationPenalty;
+                } else {
+                    //If not, there is no remainder for the originalOwner.
+                    liquidationPenalty = remainder;
+                    remainder = 0;
+                }
             }
         }
     }
