@@ -730,7 +730,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_liquidate_Paused(address liquidationInitiator, uint128 openPosition, address guardian) public {
+    function testRevert_liquidate_Paused(address liquidator_, uint128 openPosition, address guardian) public {
         // Given: guardian is the guardian of factory
         vm.prank(creatorAddress);
         factory.changeGuardian(guardian);
@@ -738,34 +738,19 @@ contract FactoryTest is DeployArcadiaVaults {
 
         vm.assume(openPosition > 0);
 
-        vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
-        vm.stopPrank();
-
-        trustedCreditor = new TrustedCreditorMock();
-        trustedCreditor.setCallResult(true);
-        trustedCreditor.setLiquidator(address(liquidator));
-
-        vm.startPrank(vaultOwner);
+        vm.prank(vaultOwner);
         proxyAddr = factory.createVault(0, 0, address(0));
         proxy = Vault(proxyAddr);
-        proxy.openTrustedMarginAccount(address(trustedCreditor));
-        vm.stopPrank();
 
-        trustedCreditor.setOpenPosition(address(proxy), openPosition);
-
-        // When: factory is paused
+        // And: factory is paused
         vm.prank(guardian);
         factory.pause();
 
+        // When: Vault liquidates itself
         // Then: liquidate reverts
         vm.expectRevert("Guardian: liquidate paused");
-        vm.prank(liquidationInitiator);
-        factory.liquidate(address(proxy));
+        vm.prank(address(proxy));
+        factory.liquidate(liquidator_);
     }
 
     function testSuccess_liquidate(address liquidator_, uint128 openPosition) public {

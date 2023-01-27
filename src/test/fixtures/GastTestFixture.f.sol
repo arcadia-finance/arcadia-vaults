@@ -203,7 +203,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
-        pool.addTranche(address(tranche), 50);
+        pool.addTranche(address(tranche), 50, 0);
         vm.stopPrank();
 
         vm.prank(liquidityProvider);

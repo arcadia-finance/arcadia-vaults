@@ -63,7 +63,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
-        pool.addTranche(address(tranche), 50);
+        pool.addTranche(address(tranche), 50, 0);
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
@@ -775,34 +775,27 @@ contract LiquidationLogicTest is vaultTests {
         openMarginAccount();
     }
 
-    function testRevert_liquidateVault_NotAuthorized(address unprivilegedAddress_) public {
+    function testRevert_liquidateVault_NotAuthorized(address unprivilegedAddress_, uint128 openDebt) public {
         vm.assume(unprivilegedAddress_ != address(liquidator));
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("V_LV: You are not the liquidator");
-        vault_.liquidateVault();
+        vault_.liquidateVault(openDebt);
         vm.stopPrank();
     }
 
     function testRevert_liquidateVault_VaultIsHealthy() public {
         vm.startPrank(address(liquidator));
         vm.expectRevert("V_LV: This vault is healthy");
-        vault_.liquidateVault();
+        vault_.liquidateVault(0);
         vm.stopPrank();
     }
 
-    function testSuccess_liquidateVault(uint128 usedMargin) public {
-        vm.assume(usedMargin > 0);
-        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(usedMargin);
-        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(usedMargin);
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
-
+    function testSuccess_liquidateVault(uint128 openDebt) public {
         vm.prank(address(liquidator));
-        (address originalOwner, uint128 openDebt, address baseCurrency, address trustedCreditor) =
-            vault_.liquidateVault();
+        (address originalOwner, address baseCurrency, address trustedCreditor) = vault_.liquidateVault(openDebt);
 
         assertEq(originalOwner, vaultOwner);
-        assertEq(openDebt, usedMargin);
         assertEq(baseCurrency, address(dai));
         assertEq(trustedCreditor, address(pool));
 

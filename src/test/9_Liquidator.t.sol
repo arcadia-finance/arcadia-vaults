@@ -40,7 +40,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
-        pool.addTranche(address(tranche), 50);
+        pool.addTranche(address(tranche), 50, 0);
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
@@ -139,38 +139,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(liquidator.factory(), factory_);
     }
 
-    function testRevert_setTreasury_NonOwner(address unprivilegedAddress_, address treasury_) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
-        liquidator.setTreasury(treasury_);
-        vm.stopPrank();
-    }
-
-    function testSuccess_setTreasury(address treasury_) public {
-        vm.prank(creatorAddress);
-        liquidator.setTreasury(treasury_);
-
-        assertEq(liquidator.treasury(), treasury_);
-    }
-
-    function testRevert_setReserveFund_NonOwner(address unprivilegedAddress_, address reserveFund_) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
-        liquidator.setReserveFund(reserveFund_);
-        vm.stopPrank();
-    }
-
-    function testSuccess_setReserveFund(address reserveFund_) public {
-        vm.prank(creatorAddress);
-        liquidator.setReserveFund(reserveFund_);
-
-        assertEq(liquidator.reserveFund(), reserveFund_);
-    }
-
     /*///////////////////////////////////////////////////////////////
                         MANAGE AUCTION SETTINGS
     ///////////////////////////////////////////////////////////////*/
@@ -216,74 +184,56 @@ contract LiquidatorTest is DeployArcadiaVaults {
                             AUCTION LOGIC
     ///////////////////////////////////////////////////////////////*/
 
-    function testRevert_startAuction_NonVault(address unprivilegedAddress_, address liquidationInitiator_) public {
+    function testRevert_startAuction_AuctionOngoing(uint128 openDebt) public {
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+
+        vm.startPrank(address(pool));
+        vm.expectRevert("LQ_SA: Auction already ongoing");
+        liquidator.startAuction(address(proxy), openDebt);
+        vm.stopPrank();
+    }
+
+    function testRevert_startAuction_NonVault(address unprivilegedAddress_, uint128 openDebt) public {
         vm.assume(unprivilegedAddress_ != address(proxy));
 
-        vm.startPrank(liquidationInitiator_);
+        vm.startPrank(address(pool));
         vm.expectRevert("LQ_SA: Not a vault");
-        liquidator.startAuction(unprivilegedAddress_);
+        liquidator.startAuction(unprivilegedAddress_, openDebt);
         vm.stopPrank();
     }
 
-    function testRevert_startAuction_AuctionOngoing(address liquidationInitiator_, uint128 openDebt) public {
-        vm.assume(openDebt > 0);
-        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(openDebt);
+    function testRevert_startAuction_NonCreditor(address unprivilegedAddress_, uint128 openDebt) public {
+        vm.assume(unprivilegedAddress_ != address(pool));
 
-        vm.prank(liquidationInitiator_);
-        liquidator.startAuction(address(proxy));
-
-        vm.startPrank(liquidationInitiator_);
-        vm.expectRevert("LQ_SA: Auction already ongoing");
-        liquidator.startAuction(address(proxy));
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("LQ_SA: Unauthorised");
+        liquidator.startAuction(address(proxy), openDebt);
         vm.stopPrank();
     }
 
-    function testSuccess_startAuction(address liquidationInitiator_, uint128 openDebt) public {
-        vm.assume(openDebt > 0);
-        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(openDebt);
-
-        vm.prank(liquidationInitiator_);
-        liquidator.startAuction(address(proxy));
+    function testSuccess_startAuction(uint128 openDebt) public {
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
 
         assertEq(proxy.owner(), address(liquidator));
         uint256 index = factory.vaultIndex(address(proxy));
         assertEq(factory.ownerOf(index), address(liquidator));
 
-        uint256 openClaim = liquidator.calcLiquidationInitiatorReward(openDebt);
-        assertEq(liquidator.openClaims(liquidationInitiator_, address(dai)), openClaim);
-
         (
             uint128 openDebt_,
-            uint128 startBlock,
+            uint128 startTime,
             bool inAuction,
             address baseCurrency,
             address originalOwner,
             address trustedCreditor
         ) = liquidator.auctionInformation(address(proxy));
         assertEq(openDebt_, openDebt);
-        assertEq(startBlock, uint128(block.number));
+        assertEq(startTime, uint128(block.timestamp));
         assertEq(inAuction, true);
         assertEq(baseCurrency, address(dai));
         assertEq(originalOwner, vaultOwner);
         assertEq(trustedCreditor, address(pool));
-
-        assertEq(debt.balanceOf(address(proxy)), 0);
-    }
-
-    function testSuccess_calcLiquidationInitiatorReward(uint128 openDebt, uint8 initiatorReward_) public {
-        vm.assume(initiatorReward_ <= 100);
-
-        vm.prank(creatorAddress);
-        liquidator.setClaimRatios(Liquidator.ClaimRatios({penalty: 0, initiatorReward: initiatorReward_}));
-
-        uint256 expectedReward = uint256(openDebt) * initiatorReward_ / 100;
-        uint256 actualReward = liquidator.calcLiquidationInitiatorReward(openDebt);
-
-        assertEq(actualReward, expectedReward);
     }
 
     function testSuccess_getPriceOfVault_NotForSale(address vaultAddress) public {
@@ -303,17 +253,10 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(currentTime > startTime);
         vm.assume(currentTime - startTime > maxAuctionTime);
 
-        vm.assume(openDebt > 0);
-
         stdstore.target(address(liquidator)).sig(liquidator.maxAuctionTime.selector).checked_write(maxAuctionTime);
         vm.warp(startTime);
 
-        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(openDebt);
-        stdstore.target(address(pool)).sig(pool.lastSyncedTimestamp.selector).checked_write(startTime);
-
-        vm.prank(liquidationInitiator_);
+        vm.prank(address(pool));
         liquidator.startAuction(address(proxy));
         vm.warp(currentTime);
 
@@ -334,20 +277,13 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(currentTime > startTime);
         vm.assume(currentTime - startTime <= maxAuctionTime);
 
-        vm.assume(openDebt > 0);
-
         stdstore.target(address(liquidator)).sig(liquidator.maxAuctionTime.selector).checked_write(maxAuctionTime);
         stdstore.target(address(liquidator)).sig(liquidator.startPriceMultiplier.selector).checked_write(
             startPriceMultiplier_
         );
         vm.warp(startTime);
 
-        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(openDebt);
-        stdstore.target(address(pool)).sig(pool.lastSyncedTimestamp.selector).checked_write(startTime);
-
-        vm.prank(liquidationInitiator_);
+        vm.prank(address(pool));
         liquidator.startAuction(address(proxy));
         vm.warp(currentTime);
 
@@ -372,74 +308,17 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     function testSuccess_buyVault_Remainder() public {}
 
-    /*///////////////////////////////////////////////////////////////
-                    CLAIM AUCTION PROCEEDS
-    ///////////////////////////////////////////////////////////////*/
+    // function testSuccess_calcLiquidationInitiatorReward(uint128 openDebt, uint8 initiatorReward_) public {
+    //     vm.assume(initiatorReward_ <= 100);
 
-    function testRevert_claim_InsufficientOpenClaims(
-        address claimer,
-        uint128 openClaim,
-        uint128 claimAmount,
-        uint128 liquidatorBalance
-    ) public {
-        vm.assume(claimAmount > openClaim);
+    //     vm.prank(creatorAddress);
+    //     liquidator.setClaimRatios(Liquidator.ClaimRatios({penalty: 0, initiatorReward: initiatorReward_}));
 
-        vm.prank(liquidityProvider);
-        dai.transfer(address(liquidator), liquidatorBalance);
+    //     uint256 expectedReward = uint256(openDebt) * initiatorReward_ / 100;
+    //     uint256 actualReward = liquidator.calcLiquidationInitiatorReward(openDebt);
 
-        stdstore.target(address(liquidator)).sig(liquidator.openClaims.selector).with_key(claimer).with_key(
-            address(dai)
-        ).checked_write(openClaim);
-
-        vm.startPrank(claimer);
-        vm.expectRevert(stdError.arithmeticError);
-        liquidator.claim(address(dai), claimAmount);
-        vm.stopPrank();
-    }
-
-    function testRevert_claim_InsufficientBalanceLiquidator(
-        address claimer,
-        uint128 openClaim,
-        uint128 claimAmount,
-        uint128 liquidatorBalance
-    ) public {
-        vm.assume(claimAmount <= openClaim);
-        vm.assume(claimAmount > liquidatorBalance);
-
-        vm.prank(liquidityProvider);
-        dai.transfer(address(liquidator), liquidatorBalance);
-
-        stdstore.target(address(liquidator)).sig(liquidator.openClaims.selector).with_key(claimer).with_key(
-            address(dai)
-        ).checked_write(openClaim);
-
-        vm.startPrank(claimer);
-        vm.expectRevert(stdError.arithmeticError);
-        liquidator.claim(address(dai), claimAmount);
-        vm.stopPrank();
-    }
-
-    function testSuccess_claim(address claimer, uint128 openClaim, uint128 claimAmount, uint128 liquidatorBalance)
-        public
-    {
-        vm.assume(claimAmount <= openClaim);
-        vm.assume(claimAmount <= liquidatorBalance);
-        vm.assume(claimer != liquidityProvider);
-
-        vm.prank(liquidityProvider);
-        dai.transfer(address(liquidator), liquidatorBalance);
-
-        stdstore.target(address(liquidator)).sig(liquidator.openClaims.selector).with_key(claimer).with_key(
-            address(dai)
-        ).checked_write(openClaim);
-
-        vm.prank(claimer);
-        liquidator.claim(address(dai), claimAmount);
-
-        assertEq(liquidator.openClaims(claimer, address(dai)), openClaim - claimAmount);
-        assertEq(dai.balanceOf(claimer), claimAmount);
-        assertEq(dai.balanceOf(address(liquidator)), liquidatorBalance - claimAmount);
-    }
+    //     assertEq(actualReward, expectedReward);
+    // }
 
     // /*///////////////////////////////////////////////////////////////
     //                         OLD TESTS
