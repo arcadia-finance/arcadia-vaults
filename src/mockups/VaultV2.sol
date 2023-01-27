@@ -39,6 +39,7 @@ contract VaultV2 {
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
      */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+    uint256 public constant ASSET_LIMIT = 15;
 
     bool public isTrustedCreditorSet;
 
@@ -332,33 +333,30 @@ contract VaultV2 {
 
     /**
      * @notice Function called by Liquidator to start liquidation of the Vault.
+     * @param openDebt The open debt taken by `originalOwner` at moment of liquidation at trustedCreditor
      * @return originalOwner The original owner of this vault.
-     * @return openDebt The open debt taken by `originalOwner` at moment of liquidation.
      * @return baseCurrency_ The baseCurrency in which the vault is denominated.
      * @return trustedCreditor_ The account or contract that is owed the debt.
-     * @dev Requires an unhealthy vault (value / debt < liqThres).
-     * Starts the vault auction on the liquidator contract.
-     * Increases the life of the vault to indicate a liquidation has happened.
-     * Transfers ownership of the proxy vault to the liquidator!
-     * @dev trustedCreditor is a trusted contract.
+     * @dev Requires an unhealthy vault (value / debt < liqFactor).
+     * @dev Transfers ownership of the proxy vault to the liquidator!
      */
-    function liquidateVault()
+    function liquidateVault(uint256 openDebt)
         external
-        returns (address originalOwner, uint128 openDebt, address baseCurrency_, address trustedCreditor_)
+        returns (address originalOwner, address baseCurrency_, address trustedCreditor_)
     {
         require(msg.sender == liquidator, "V_LV: You are not the liquidator");
 
-        uint256 usedMargin = getUsedMargin();
-        require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");
+        //In current Vault version, the vault can only have debt owed to a single creditor, the trustedCreditor
+        require(getLiquidationValue() < openDebt, "V_LV: This vault is healthy");
 
         //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
-        IFactory(IMainRegistry(registry).factoryAddress()).liquidate(liquidator);
+        IFactory(IMainRegistry(registry).factoryAddress()).liquidate(msg.sender);
 
         //Transfer ownership of the Vault itself
         originalOwner = owner;
-        _transferOwnership(liquidator);
+        _transferOwnership(msg.sender);
 
-        return (originalOwner, uint128(usedMargin), baseCurrency, trustedCreditor);
+        return (originalOwner, baseCurrency, trustedCreditor);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -436,6 +434,11 @@ contract VaultV2 {
         uint256[] calldata assetTypes
     ) external onlyOwner {
         uint256 assetAddressesLength = assetAddresses.length;
+
+        require(
+            erc20Stored.length + erc721Stored.length + erc1155Stored.length + assetAddressesLength <= ASSET_LIMIT,
+            "V_D: Too many assets"
+        );
 
         require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length

@@ -53,6 +53,7 @@ library Constants {
     uint256 internal constant oracleEthToUsdDecimals = 8;
     uint256 internal constant oracleLinkToUsdDecimals = 8;
     uint256 internal constant oracleSnxToEthDecimals = 18;
+    uint256 internal constant oracleSafemoonToUsdDecimals = 18;
     uint256 internal constant oracleWbaycToEthDecimals = 18;
     uint256 internal constant oracleWmaycToUsdDecimals = 8;
     uint256 internal constant oracleInterleaveToEthDecimals = 10;
@@ -61,6 +62,7 @@ library Constants {
     uint256 internal constant oracleEthToUsdUnit = 10 ** oracleEthToUsdDecimals;
     uint256 internal constant oracleLinkToUsdUnit = 10 ** oracleLinkToUsdDecimals;
     uint256 internal constant oracleSnxToEthUnit = 10 ** oracleSnxToEthDecimals;
+    uint256 internal constant oracleSafemoonToUsdUnit = 10 ** oracleSafemoonToUsdDecimals;
     uint256 internal constant oracleWbaycToEthUnit = 10 ** oracleWbaycToEthDecimals;
     uint256 internal constant oracleWmaycToUsdUnit = 10 ** oracleWmaycToUsdDecimals;
     uint256 internal constant oracleInterleaveToEthUnit = 10 ** oracleInterleaveToEthDecimals;
