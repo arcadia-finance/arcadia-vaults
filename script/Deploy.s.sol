@@ -152,7 +152,7 @@ contract ArcadiaVaultDeployer is Test {
 
         usdcBaseCurrencyInfo = MainRegistry.BaseCurrencyInformation({
             baseCurrencyToUsdOracleUnit: uint64(DeployNumbers.oracleUsdcToUsdUnit),
-            assetAddress: DeployAddresses.eth,
+            assetAddress: DeployAddresses.usdc,
             baseCurrencyToUsdOracle: address(DeployAddresses.oracleUsdcToUsd),
             baseCurrencyLabel: "USDC",
             baseCurrencyUnitCorrection: uint64(10 ** (18 - DeployNumbers.usdcDecimals))

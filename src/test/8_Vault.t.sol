@@ -39,6 +39,8 @@ abstract contract vaultTests is DeployArcadiaVaults {
     Tranche tranche;
     DebtToken debt;
 
+    bytes3 public emptyBytes3;
+
     struct Assets {
         address[] assetAddresses;
         uint256[] assetIds;
@@ -114,7 +116,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
         depositERC20InVault(eth, amountEth, vaultOwner);
         vm.startPrank(vaultOwner);
         uint256 remainingCredit = vault_.getFreeMargin();
-        pool.borrow(uint128(remainingCredit), address(vault_), vaultOwner);
+        pool.borrow(uint128(remainingCredit), address(vault_), vaultOwner, emptyBytes3);
         vm.stopPrank();
 
         return remainingCredit;
@@ -726,7 +728,7 @@ contract MarginRequirementsTest is vaultTests {
         depositEthInVault(amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         uint256 actualRemainingCredit = vault_.getFreeMargin();
         uint256 expectedRemainingCredit = (depositValue * collFactor_) / 100 - amountCredit;
@@ -741,7 +743,7 @@ contract MarginRequirementsTest is vaultTests {
         depositERC20InVault(eth, amountEth, vaultOwner);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.prank(vaultOwner);
-        pool.borrow((((amountEth * collFactor_) / 100) * factor) / 255, address(vault_), vaultOwner);
+        pool.borrow((((amountEth * collFactor_) / 100) * factor) / 255, address(vault_), vaultOwner, emptyBytes3);
 
         uint256 currentValue = vault_.getVaultValue(address(dai));
         uint256 openDebt = vault_.getUsedMargin();
@@ -1178,11 +1180,68 @@ contract AssetManagementTest is vaultTests {
         vm.stopPrank();
     }
 
+    function testRevert_deposit_tooManyAssets(uint8 arrLength) public {
+        vm.assume(arrLength > vault_.ASSET_LIMIT() && arrLength < 50);
+
+        address[] memory assetAddresses = new address[](arrLength);
+
+        uint256[] memory assetIds = new uint256[](arrLength);
+
+        uint256[] memory assetAmounts = new uint256[](arrLength);
+
+        uint256[] memory assetTypes = new uint256[](arrLength);
+
+        vm.prank(vaultOwner);
+        vm.expectRevert("V_D: Too many assets");
+        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+    }
+
+    function testRevert_deposit_tooManyAssetsNotAtOnce(uint8 arrLength) public {
+        vm.assume(uint256(arrLength) + 1 > vault_.ASSET_LIMIT() && arrLength < 50);
+
+        //deposit a single asset first
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 10 * 10 ** Constants.ethDecimals;
+
+        uint256[] memory assetTypes = new uint256[](1);
+        assetTypes[0] = 0;
+
+        vm.prank(vaultOwner);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.stopPrank();
+
+        assertEq(vault_.erc20Stored(0), address(eth));
+        assertEq(vault_.erc20Balances(address(eth)), eth.balanceOf(address(vault_)));
+
+        //then try to go over the asset limit
+        assetAddresses = new address[](arrLength);
+
+        assetIds = new uint256[](arrLength);
+
+        assetAmounts = new uint256[](arrLength);
+
+        assetTypes = new uint256[](arrLength);
+
+        vm.prank(vaultOwner);
+        vm.expectRevert("V_D: Too many assets");
+        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+    }
+
     //input as uint8 to prevent too long lists as fuzz input
     function testRevert_deposit_LengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen, uint8 typesLen)
         public
     {
         vm.assume((addrLen != idLen && addrLen != amountLen && addrLen != typesLen));
+        vm.assume(
+            addrLen <= vault_.ASSET_LIMIT() && idLen <= vault_.ASSET_LIMIT() && amountLen <= vault_.ASSET_LIMIT()
+                && typesLen <= vault_.ASSET_LIMIT()
+        );
 
         address[] memory assetAddresses = new address[](addrLen);
         for (uint256 i; i < addrLen; ++i) {
@@ -1603,7 +1662,7 @@ contract AssetManagementTest is vaultTests {
         Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         assetInfo.assetAmounts[0] = amountWithdraw;
         vm.expectRevert("V_W: coll. value too low!");
@@ -1615,7 +1674,7 @@ contract AssetManagementTest is vaultTests {
         uint128[] calldata tokenIdsDeposit,
         uint8 amountsWithdrawn
     ) public {
-        vm.assume(tokenIdsDeposit.length < 50); //test speed
+        vm.assume(tokenIdsDeposit.length < vault_.ASSET_LIMIT());
 
         (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
         vm.assume(assetIds.length >= amountsWithdrawn && assetIds.length > 1 && amountsWithdrawn > 1);
@@ -1628,7 +1687,7 @@ contract AssetManagementTest is vaultTests {
         uint128 maxAmountCredit = uint128(((assetIds.length - amountsWithdrawn) * rateInUsd * collFactor_) / 100);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(maxAmountCredit + 1, address(vault_), vaultOwner);
+        pool.borrow(maxAmountCredit + 1, address(vault_), vaultOwner, emptyBytes3);
 
         uint256[] memory withdrawalIds = new uint256[](amountsWithdrawn);
         address[] memory withdrawalAddresses = new address[](amountsWithdrawn);
@@ -1690,7 +1749,7 @@ contract AssetManagementTest is vaultTests {
 
         Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
         assetInfo.assetAmounts[0] = amountWithdraw;
         vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
         vm.stopPrank();
@@ -1704,7 +1763,7 @@ contract AssetManagementTest is vaultTests {
     function testSuccess_withdraw_ERC721AfterTakingCredit(uint128[] calldata tokenIdsDeposit, uint8 baseAmountCredit)
         public
     {
-        vm.assume(tokenIdsDeposit.length < 50); //test speed
+        vm.assume(tokenIdsDeposit.length < vault_.ASSET_LIMIT());
         uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.daiDecimals);
 
         (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
@@ -1733,7 +1792,7 @@ contract AssetManagementTest is vaultTests {
         vm.assume(amountCredit < ((valueOfDeposit - valueOfWithdrawal) * collFactor_) / 100);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         uint256[] memory withdrawalIds = new uint256[](randomAmounts);
         address[] memory withdrawalAddresses = new address[](randomAmounts);
@@ -1785,7 +1844,7 @@ contract DepreciatedTest is vaultTests {
         depositEthInVault(baseAmountDeposit, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         assertEq(dai.balanceOf(vaultOwner), amountCredit);
         assertEq(vault_.getUsedMargin(), amountCredit); //no blocks have passed
@@ -1801,7 +1860,7 @@ contract DepreciatedTest is vaultTests {
 
         vm.startPrank(unprivilegedAddress);
         vm.expectRevert(stdError.arithmeticError);
-        pool.borrow(amountCredit, address(vault_), vaultOwner);
+        pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
     }
 
     function testSuccess_MinCollValueUnchecked() public {

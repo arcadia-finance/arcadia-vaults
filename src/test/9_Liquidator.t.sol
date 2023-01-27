@@ -18,6 +18,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     Tranche tranche;
     DebtToken debt;
 
+    bytes3 public emptyBytes3;
+
     address private liquidationInitiator = address(8);
     address private auctionBuyer = address(9);
 
