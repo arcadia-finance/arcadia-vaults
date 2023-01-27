@@ -12,6 +12,7 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IVault.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./interfaces/ILendingPool.sol";
+import {LogExpMath} from "./utils/LogExpMath.sol";
 import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
 
 /**
@@ -21,11 +22,12 @@ import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Ownable {
-    uint256 public startPriceMultiplier; //2 decimals
+    uint256 public startPriceMultiplier; // 2 decimals
     // @dev 18 decimals, it is calculated off-chain and set by the owner
     // It is discount for auction per second passed after the auction.
     // example: 999807477651317500, it is calculated based on the half-life of 1 hour
     uint256 public discountRate;
+    uint256 public auctionCutoffTime;
 
     address public factory;
     address public registry;
@@ -89,10 +91,23 @@ contract Liquidator is Ownable {
     /**
      * @notice Sets the discount rate for the liquidator.
      * @dev The discount rate is a multiplier that is used to decrease the price of the auction over time.
-     * @param discountRate_ The new discount rate.
+     * @param halfLife The new half life
      */
-    function setDiscountRate(uint256 discountRate_) external onlyOwner {
-        discountRate = discountRate_;
+    function setDiscountRate(uint256 halfLife) external onlyOwner {
+        require(halfLife > 30 * 60, "LQ_DR: It must be in limits");
+        require(halfLife < 8 * 60 * 60, "LQ_DR: It must be in limits");
+        discountRate = 1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife));
+    }
+
+    /**
+     * @notice Sets the max cutoff time for the liquidator.
+     * @dev The max cutoff time is the maximum time an auction can run.
+     * @param auctionCutoffTime_ The new max cutoff time
+     */
+    function setAuctionCutoffTime(uint256 auctionCutoffTime_) external onlyOwner {
+        require(auctionCutoffTime_ > 1 * 60 * 60, "LQ_ACT: It must be in limits");
+        require(auctionCutoffTime_ < 8 * 60 * 60, "LQ_ACT: It must be in limits");
+        auctionCutoffTime = auctionCutoffTime_;
     }
 
     /**
@@ -100,8 +115,10 @@ contract Liquidator is Ownable {
      * @dev The start price multiplier is a multiplier that is used to increase the price of the auction over time.
      * @param startPriceMultiplier_ The new start price multiplier.
      */
-    function setStartPriceMultiplier(uint256 startPriceMultiplier_) external onlyOwner {
-        startPriceMultiplier = startPriceMultiplier;
+    function setStartPriceMultiplier(uint16 startPriceMultiplier_) external onlyOwner {
+        require(startPriceMultiplier_ > 100, "LQ_SPM: It must be in limits");
+        require(startPriceMultiplier_ < 301, "LQ_SPM: It must be in limits");
+        startPriceMultiplier = uint256(startPriceMultiplier_);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -146,24 +163,32 @@ contract Liquidator is Ownable {
             return (0, false);
         }
 
-        price = _calcPriceOfVault(auctionInformation[vault].startTime, auctionInformation[vault].openDebt);
+        uint256 timePassed;
+        unchecked {
+            timePassed = block.timestamp - auctionInformation[vault].startTime;
+        }
+        if (timePassed > auctionCutoffTime) {
+            return (0, false);
+        }
+
+        price = _calcPriceOfVault(timePassed, auctionInformation[vault].openDebt);
     }
 
     /**
      * @notice Function returns the current auction price given time passed and the openDebt.
-     * @param startTime The timestamp when the auction started.
+     * @param timePassed delta between current time and auction start time.
      * @param openDebt The open debt taken by `originalOwner`.
      * @return price The total price for which the vault can be purchased.
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
      * And immediately ends the auction.
      */
-    function _calcPriceOfVault(uint256 startTime, uint256 openDebt) internal view returns (uint256 price) {
+    function _calcPriceOfVault(uint256 timePassed, uint256 openDebt) internal view returns (uint256 price) {
         uint256 auctionTime;
         unchecked {
-            auctionTime = (block.timestamp - startTime) * 1_000_000_000_000_000_000;
+            auctionTime = timePassed * 1_000_000_000_000_000_000;
         }
         price = uint256(openDebt) * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime)
-            / 1_000_000_000_000_000_000;
+            / 100_000_000_000_000_000_000;
     }
 
     /**
