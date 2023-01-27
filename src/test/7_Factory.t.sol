@@ -161,7 +161,7 @@ contract FactoryTest is DeployArcadiaVaults {
         // Then: Reverted
         vm.prank(sender);
         vm.expectRevert("Guardian: create paused");
-        address actualDeployed = factory.createVault(salt, 0, address(0));
+        factory.createVault(salt, 0, address(0));
     }
 
     function testSuccess_isVault_positive() public {
@@ -755,6 +755,7 @@ contract FactoryTest is DeployArcadiaVaults {
 
     function testSuccess_liquidate(address liquidator_, uint128 openPosition) public {
         vm.assume(openPosition > 0);
+        vm.assume(liquidator_ != vaultOwner);
 
         vm.prank(vaultOwner);
         proxyAddr = factory.createVault(0, 0, address(0));

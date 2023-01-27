@@ -187,6 +187,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     ///////////////////////////////////////////////////////////////*/
 
     function testRevert_startAuction_AuctionOngoing(uint128 openDebt) public {
+        vm.assume(openDebt > 0);
+
         vm.prank(address(pool));
         liquidator.startAuction(address(proxy), openDebt);
 
@@ -206,6 +208,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     }
 
     function testRevert_startAuction_NonCreditor(address unprivilegedAddress_, uint128 openDebt) public {
+        vm.assume(openDebt > 0);
+
         vm.assume(unprivilegedAddress_ != address(pool));
 
         vm.startPrank(unprivilegedAddress_);
@@ -215,6 +219,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     }
 
     function testSuccess_startAuction(uint128 openDebt) public {
+        vm.assume(openDebt > 0);
+
         vm.prank(address(pool));
         liquidator.startAuction(address(proxy), openDebt);
 
@@ -249,17 +255,18 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint64 startTime,
         uint64 maxAuctionTime,
         uint64 currentTime,
-        address liquidationInitiator_,
         uint128 openDebt
     ) public {
         vm.assume(currentTime > startTime);
         vm.assume(currentTime - startTime > maxAuctionTime);
 
+        vm.assume(openDebt > 0);
+
         stdstore.target(address(liquidator)).sig(liquidator.maxAuctionTime.selector).checked_write(maxAuctionTime);
         vm.warp(startTime);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy));
+        liquidator.startAuction(address(proxy), openDebt);
         vm.warp(currentTime);
 
         (uint256 price, bool inAuction) = liquidator.getPriceOfVault(address(proxy));
@@ -272,12 +279,13 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint64 startTime,
         uint64 maxAuctionTime,
         uint64 currentTime,
-        address liquidationInitiator_,
         uint128 openDebt,
         uint8 startPriceMultiplier_
     ) public {
         vm.assume(currentTime > startTime);
         vm.assume(currentTime - startTime <= maxAuctionTime);
+
+        vm.assume(openDebt > 0);
 
         stdstore.target(address(liquidator)).sig(liquidator.maxAuctionTime.selector).checked_write(maxAuctionTime);
         stdstore.target(address(liquidator)).sig(liquidator.startPriceMultiplier.selector).checked_write(
@@ -286,7 +294,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.warp(startTime);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy));
+        liquidator.startAuction(address(proxy), openDebt);
         vm.warp(currentTime);
 
         uint256 auctionTime = currentTime - startTime;

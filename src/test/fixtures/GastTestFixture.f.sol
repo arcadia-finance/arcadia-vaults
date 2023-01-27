@@ -210,7 +210,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
         dai.approve(address(pool), type(uint256).max);
 
         vm.prank(address(tranche));
-        pool.depositInLendingPool(type(uint128).max, liquidityProvider);
+        pool.depositInLendingPool(type(uint120).max, liquidityProvider);
     }
 
     function setUp() public virtual {

@@ -794,6 +794,8 @@ contract LiquidationLogicTest is vaultTests {
     }
 
     function testSuccess_liquidateVault(uint128 openDebt) public {
+        vm.assume(openDebt > 0);
+
         vm.prank(address(liquidator));
         (address originalOwner, address baseCurrency, address trustedCreditor) = vault_.liquidateVault(openDebt);
 
