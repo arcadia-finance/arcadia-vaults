@@ -310,13 +310,11 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     function testRevert_buyVault_notForSale() public {}
 
-    function testSuccess_buyVault_Deficit() public {}
+    function testRevert_buyVault_InsufficientFunds() public {}
 
-    function testSuccess_buyVault_BadDebt() public {}
+    function testSuccess_buyVault() public {}
 
-    function testSuccess_buyVault_Penalty() public {}
-
-    function testSuccess_buyVault_Remainder() public {}
+    function testSuccess_calcLiquidationSettlementValues() public {}
 
     // function testSuccess_calcLiquidationInitiatorReward(uint128 openDebt, uint8 initiatorReward_) public {
     //     vm.assume(initiatorReward_ <= 100);

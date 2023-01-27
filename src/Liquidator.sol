@@ -136,17 +136,7 @@ contract Liquidator is Ownable {
             return (0, false);
         }
 
-        uint256 auctionTime = block.timestamp - auctionInformation[vault].startTime; //Can be unchecked
-
-        if (auctionTime > maxAuctionTime) {
-            //ヽ༼ຈʖ̯ຈ༽ﾉ
-            price = 0;
-        } else {
-            price = uint256(auctionInformation[vault].openDebt) * startPriceMultiplier * (maxAuctionTime - auctionTime)
-                / maxAuctionTime / 100;
-        }
-
-        return (price, inAuction);
+        price = _calcPriceOfVault(auctionInformation[vault].startTime, auctionInformation[vault].openDebt);
     }
 
     /**
@@ -193,7 +183,7 @@ contract Liquidator is Ownable {
         );
 
         (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder) =
-            _calcLiquidationSettlementValues(auctionInformation_.openDebt, priceOfVault);
+            calcLiquidationSettlementValues(auctionInformation_.openDebt, priceOfVault);
 
         ILendingPool(auctionInformation_.trustedCreditor).settleLiquidation(
             vault, auctionInformation_.originalOwner, badDebt, liquidationInitiatorReward, liquidationPenalty, remainder
@@ -215,8 +205,8 @@ contract Liquidator is Ownable {
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
      * And immediately ends the auction.
      */
-    function _calcLiquidationSettlementValues(uint256 openDebt, uint256 priceOfVault)
-        internal
+    function calcLiquidationSettlementValues(uint256 openDebt, uint256 priceOfVault)
+        public
         view
         returns (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder)
     {
