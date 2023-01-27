@@ -133,6 +133,22 @@ contract ExternalContractsTest is MainRegistryTest {
         // Then: address(factory) should be equal to factoryAddress
         assertEq(address(factory), mainRegistry.factoryAddress());
     }
+
+    function testSuccess_setAllowedAction_Owner(address action, bool allowed) public {
+        vm.prank(creatorAddress);
+        mainRegistry.setAllowedAction(action, allowed);
+
+        assertEq(mainRegistry.isActionAllowed(action), allowed);
+    }
+
+    function testRevert_setAllowedAction_NonOwner(address action, bool allowed, address nonAuthorized) public {
+        vm.assume(nonAuthorized != creatorAddress);
+
+        vm.startPrank(nonAuthorized);
+        vm.expectRevert("Ownable: caller is not the owner");
+        mainRegistry.setAllowedAction(action, allowed);
+        vm.stopPrank();
+    }
 }
 
 /* ///////////////////////////////////////////////////////////////
@@ -263,24 +279,24 @@ contract AssetManagementTest is MainRegistryTest {
             PricingModule.RiskVarInput({
                 baseCurrency: 0,
                 asset: address(0),
-                collateralFactor: collFactor,
-                liquidationThreshold: liqTresh
+                collateralFactor: collateralFactor,
+                liquidationFactor: liquidationFactor
             })
         );
         riskVars.push(
             PricingModule.RiskVarInput({
                 baseCurrency: 1,
                 asset: address(0),
-                collateralFactor: collFactor,
-                liquidationThreshold: liqTresh
+                collateralFactor: collateralFactor,
+                liquidationFactor: liquidationFactor
             })
         );
         riskVars.push(
             PricingModule.RiskVarInput({
                 baseCurrency: 2,
                 asset: address(0),
-                collateralFactor: collFactor,
-                liquidationThreshold: liqTresh
+                collateralFactor: collateralFactor,
+                liquidationFactor: liquidationFactor
             })
         );
 
@@ -301,7 +317,8 @@ contract AssetManagementTest is MainRegistryTest {
                     )
                 )
             ),
-            0
+            0,
+            address(0)
         );
         proxy = Vault(proxyAddr);
         vm.stopPrank();
@@ -480,6 +497,33 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
+    function testRevert_batchProcessDeposit_Paused(uint128 amountEth, uint128 amountLink, address guardian) public {
+        // Given: Assets
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(link);
+
+        uint256[] memory assetIds = new uint256[](2);
+        assetIds[0] = 0;
+        assetIds[1] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](2);
+        assetAmounts[0] = amountEth;
+        assetAmounts[1] = amountLink;
+
+        // When: guardian pauses mainRegistry
+        vm.prank(creatorAddress);
+        mainRegistry.changeGuardian(guardian);
+        vm.warp(35 days);
+        vm.prank(guardian);
+        mainRegistry.pause();
+
+        // Then: batchProcessDeposit should reverted
+        vm.prank(proxyAddr);
+        vm.expectRevert("Guardian: deposit paused");
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+    }
+
     function testSuccess_batchProcessDeposit_SingleAsset(uint128 amount) public {
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -590,6 +634,34 @@ contract AssetManagementTest is MainRegistryTest {
 
         vm.startPrank(proxyAddr);
         vm.expectRevert("MR_BPW: LENGTH_MISMATCH");
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        vm.stopPrank();
+    }
+
+    function testRevert_batchProcessWithdrawal_Paused(uint128 amountLink, address guardian) public {
+        // Given: Assets are deposited
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        vm.prank(proxyAddr);
+        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+
+        // When: Main registry is paused
+        vm.prank(creatorAddress);
+        mainRegistry.changeGuardian(guardian);
+        vm.warp(35 days);
+        vm.prank(guardian);
+        mainRegistry.pause();
+
+        // Then: Withdrawal is reverted due to paused main registry
+        vm.startPrank(proxyAddr);
+        vm.expectRevert("Guardian: withdraw paused");
         mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
         vm.stopPrank();
     }
@@ -1078,22 +1150,12 @@ contract PricingLogicTest is MainRegistryTest {
         assertTrue(CompareArrays.compareArrays(expectedListOfValuesPerAsset, actualListOfValuesPerAsset));
     }
 
-    function testSuccess_getCollateralValueAndLiquidationThreshold(
-        int64 rateEthToUsd_,
-        uint64 amountEth,
-        uint16 collateralFactor,
-        uint16 liquidationThreshold
-    ) public {
-        vm.assume(collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
+    function testSuccess_getCollateralValue(int64 rateEthToUsd_, uint64 amountEth, uint16 collateralFactor_) public {
+        vm.assume(collateralFactor_ <= RiskConstants.MAX_COLLATERAL_FACTOR);
         vm.assume(rateEthToUsd_ > 0);
 
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(rateEthToUsd_);
-
-        vm.assume(
-            liquidationThreshold <= RiskConstants.MAX_LIQUIDATION_THRESHOLD
-                && liquidationThreshold >= RiskConstants.MIN_LIQUIDATION_THRESHOLD
-        );
 
         uint256 ethValueInUsd = Constants.WAD * uint64(rateEthToUsd_) / 10 ** Constants.oracleEthToUsdDecimals
             * amountEth / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.usdDecimals);
@@ -1102,8 +1164,7 @@ contract PricingLogicTest is MainRegistryTest {
         PricingModule.RiskVarInput[] memory riskVarsInput = new PricingModule.RiskVarInput[](1);
         riskVarsInput[0].asset = address(eth);
         riskVarsInput[0].baseCurrency = uint8(Constants.UsdBaseCurrency);
-        riskVarsInput[0].collateralFactor = collateralFactor;
-        riskVarsInput[0].liquidationThreshold = liquidationThreshold;
+        riskVarsInput[0].collateralFactor = collateralFactor_;
 
         vm.startPrank(creatorAddress);
         standardERC20PricingModule.setBatchRiskVariables(riskVarsInput);
@@ -1117,13 +1178,47 @@ contract PricingLogicTest is MainRegistryTest {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amountEth;
 
-        (uint256 actualCollateralValue, uint256 actualLiquidationThreshold) =
-            mainRegistry.getCollateralValueAndLiquidationThreshold(assetAddresses, assetIds, assetAmounts, address(0));
+        uint256 actualCollateralValue =
+            mainRegistry.getCollateralValue(assetAddresses, assetIds, assetAmounts, address(0));
 
-        uint256 expectedCollateralValue = ethValueInUsd * collateralFactor / 100;
-        uint256 expectedLiquidationThreshold = liquidationThreshold;
+        uint256 expectedCollateralValue = ethValueInUsd * collateralFactor_ / 100;
 
         assertEq(expectedCollateralValue, actualCollateralValue);
-        assertEq(expectedLiquidationThreshold, actualLiquidationThreshold);
+    }
+
+    function testSuccess_getLiquidationValue(int64 rateEthToUsd_, uint64 amountEth, uint16 liquidationFactor_) public {
+        vm.assume(liquidationFactor_ <= RiskConstants.MAX_LIQUIDATION_FACTOR);
+        vm.assume(rateEthToUsd_ > 0);
+
+        vm.prank(oracleOwner);
+        oracleEthToUsd.transmit(rateEthToUsd_);
+
+        uint256 ethValueInUsd = Constants.WAD * uint64(rateEthToUsd_) / 10 ** Constants.oracleEthToUsdDecimals
+            * amountEth / 10 ** Constants.ethDecimals / 10 ** (18 - Constants.usdDecimals);
+        vm.assume(ethValueInUsd > 0);
+
+        PricingModule.RiskVarInput[] memory riskVarsInput = new PricingModule.RiskVarInput[](1);
+        riskVarsInput[0].asset = address(eth);
+        riskVarsInput[0].baseCurrency = uint8(Constants.UsdBaseCurrency);
+        riskVarsInput[0].liquidationFactor = liquidationFactor_;
+
+        vm.startPrank(creatorAddress);
+        standardERC20PricingModule.setBatchRiskVariables(riskVarsInput);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountEth;
+
+        uint256 actualLiquidationValue =
+            mainRegistry.getLiquidationValue(assetAddresses, assetIds, assetAmounts, address(0));
+
+        uint256 expectedLiquidationValue = ethValueInUsd * liquidationFactor_ / 100;
+
+        assertEq(expectedLiquidationValue, actualLiquidationValue);
     }
 }

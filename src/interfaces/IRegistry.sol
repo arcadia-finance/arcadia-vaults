@@ -38,19 +38,12 @@ interface IRegistry {
         address baseCurrency
     ) external view returns (uint256);
 
-    function getLiquidationThreshold(
+    function getLiquidationValue(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) external view returns (uint16);
-
-    function getCollateralValueAndLiquidationThreshold(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        address baseCurrency
-    ) external view returns (uint256, uint256);
+    ) external view returns (uint256);
 
     function assetToBaseCurrency(address baseCurrency) external view returns (uint8 baseCurrencyIdentifier);
 

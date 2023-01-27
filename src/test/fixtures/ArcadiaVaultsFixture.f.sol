@@ -77,8 +77,8 @@ contract DeployArcadiaVaults is Test {
     address[] public oracleWmaycToUsdArr = new address[](1);
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
 
-    uint16 public collFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-    uint16 public liqTresh = RiskConstants.DEFAULT_LIQUIDATION_THRESHOLD;
+    uint16 public collateralFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
+    uint16 public liquidationFactor = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
 
     PricingModule.RiskVarInput[] emptyRiskVarInput;
     PricingModule.RiskVarInput[] riskVars;
@@ -184,6 +184,17 @@ contract DeployArcadiaVaults is Test {
         oracleHub = new OracleHub();
         factory = new Factory();
 
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleDaiToUsdUnit),
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "DAI",
+                baseAsset: "USD",
+                oracle: address(oracleDaiToUsd),
+                quoteAssetAddress: address(dai),
+                baseAssetIsBaseCurrency: true
+            })
+        );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
@@ -300,29 +311,30 @@ contract DeployArcadiaVaults is Test {
             PricingModule.RiskVarInput({
                 baseCurrency: 0,
                 asset: address(0),
-                collateralFactor: collFactor,
-                liquidationThreshold: liqTresh
+                collateralFactor: collateralFactor,
+                liquidationFactor: liquidationFactor
             })
         );
         riskVars.push(
             PricingModule.RiskVarInput({
                 baseCurrency: 1,
                 asset: address(0),
-                collateralFactor: collFactor,
-                liquidationThreshold: liqTresh
+                collateralFactor: collateralFactor,
+                liquidationFactor: liquidationFactor
             })
         );
         riskVars.push(
             PricingModule.RiskVarInput({
                 baseCurrency: 2,
                 asset: address(0),
-                collateralFactor: collFactor,
-                liquidationThreshold: liqTresh
+                collateralFactor: collateralFactor,
+                liquidationFactor: liquidationFactor
             })
         );
 
         PricingModule.RiskVarInput[] memory riskVars_ = riskVars;
 
+        standardERC20PricingModule.addAsset(address(dai), oracleDaiToUsdArr, riskVars_, type(uint128).max);
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_, type(uint128).max);
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_, type(uint128).max);
         standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, riskVars_, type(uint128).max);

@@ -11,6 +11,8 @@ import "../fixtures/GastTestFixture.f.sol";
 contract gasVaultAuction_2ERC20 is GasTestFixture {
     using stdStorage for StdStorage;
 
+    bytes3 public emptyBytes3;
+
     //this is a before
     constructor() GasTestFixture() {}
 
@@ -42,9 +44,10 @@ contract gasVaultAuction_2ERC20 is GasTestFixture {
         uint256 valueLink = (((10 ** 18 * rateLinkToUsd) / 10 ** Constants.oracleLinkToUsdDecimals) * s_assetAmounts[1])
             / 10 ** Constants.linkDecimals;
         pool.borrow(
-            uint128(((valueEth + valueLink) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100),
+            uint128(((valueEth + valueLink) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100),
             address(proxy),
-            vaultOwner
+            vaultOwner,
+            emptyBytes3
         );
         vm.stopPrank();
 
@@ -59,31 +62,31 @@ contract gasVaultAuction_2ERC20 is GasTestFixture {
 
     function testAuctionPriceStart() public {
         vm.roll(1); //compile warning to make it a view
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 
     function testAuctionPriceBl100() public {
         vm.roll(100);
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 
     function testAuctionPriceBl500() public {
         vm.roll(500);
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 
     function testAuctionPriceBl1000() public {
         vm.roll(1000);
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 
     function testAuctionPriceBl1500() public {
         vm.roll(1500);
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 
     function testAuctionPriceBl2000() public {
         vm.roll(2000);
-        liquidator.getPriceOfVault(address(proxy), 0);
+        liquidator.getPriceOfVault(address(proxy));
     }
 }

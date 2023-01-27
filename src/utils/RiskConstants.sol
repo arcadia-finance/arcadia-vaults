@@ -12,11 +12,11 @@ library RiskConstants {
     uint16 public constant RISK_VARIABLES_UNIT = 100;
 
     uint16 public constant MIN_COLLATERAL_FACTOR = 0;
-    uint16 public constant MIN_LIQUIDATION_THRESHOLD = 100;
+    uint16 public constant MIN_LIQUIDATION_FACTOR = 0;
 
     uint16 public constant MAX_COLLATERAL_FACTOR = 100;
-    uint16 public constant MAX_LIQUIDATION_THRESHOLD = 10000;
+    uint16 public constant MAX_LIQUIDATION_FACTOR = 100;
 
     uint16 public constant DEFAULT_COLLATERAL_FACTOR = 50;
-    uint16 public constant DEFAULT_LIQUIDATION_THRESHOLD = 110;
+    uint16 public constant DEFAULT_LIQUIDATION_FACTOR = 90;
 }

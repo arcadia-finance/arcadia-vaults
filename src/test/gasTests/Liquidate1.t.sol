@@ -11,6 +11,8 @@ import "../fixtures/GastTestFixture.f.sol";
 contract gasLiquidate_1ERC20 is GasTestFixture {
     using stdStorage for StdStorage;
 
+    bytes3 public emptyBytes3;
+
     //this is a before
     constructor() GasTestFixture() {}
 
@@ -36,7 +38,10 @@ contract gasLiquidate_1ERC20 is GasTestFixture {
         uint256 valueEth = (((10 ** 18 * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * s_assetAmounts[0])
             / 10 ** Constants.ethDecimals;
         pool.borrow(
-            uint128((valueEth / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100), address(proxy), vaultOwner
+            uint128((valueEth / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100),
+            address(proxy),
+            vaultOwner,
+            emptyBytes3
         );
         vm.stopPrank();
 

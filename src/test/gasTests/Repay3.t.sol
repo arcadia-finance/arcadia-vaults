@@ -11,6 +11,8 @@ import "../fixtures/GastTestFixture.f.sol";
 contract gasRepay_1ERC201ERC721 is GasTestFixture {
     using stdStorage for StdStorage;
 
+    bytes3 public emptyBytes3;
+
     uint128 maxCredit;
 
     //this is a before
@@ -45,8 +47,8 @@ contract gasRepay_1ERC201ERC721 is GasTestFixture {
             (10 ** 18 * rateWbaycToEth * rateEthToUsd)
                 / 10 ** (Constants.oracleWbaycToEthDecimals + Constants.oracleEthToUsdDecimals)
         ) * s_assetAmounts[1];
-        maxCredit = uint128(((valueEth + valueBayc) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100);
-        pool.borrow(maxCredit, address(proxy), vaultOwner);
+        maxCredit = uint128(((valueEth + valueBayc) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100);
+        pool.borrow(maxCredit, address(proxy), vaultOwner, emptyBytes3);
         vm.stopPrank();
     }
 

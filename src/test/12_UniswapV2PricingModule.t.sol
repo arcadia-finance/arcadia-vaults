@@ -271,8 +271,8 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         riskVars_[0] = PricingModule.RiskVarInput({
             baseCurrency: 0,
             asset: address(0),
-            collateralFactor: collFactor,
-            liquidationThreshold: liqTresh
+            collateralFactor: collateralFactor,
+            liquidationFactor: liquidationFactor
         });
         //When: creator adds a new asset
         //Then: addAsset reverts with "APM_SRV: LENGTH_MISMATCH"
@@ -415,7 +415,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         uint256 amountIn,
         uint112 reserveIn,
         uint112 reserveOut
-    ) internal returns (uint256 profit) {
+    ) internal view returns (uint256 profit) {
         uint256 amountOut = uniswapV2PricingModule.getAmountOut(amountIn, reserveIn, reserveOut);
         if (amountOut > 0) vm.assume(priceTokenOut <= type(uint256).max / amountOut);
         vm.assume(priceTokenIn <= type(uint256).max / amountIn);

@@ -14,6 +14,7 @@ import "../interfaces/IPricingModule.sol";
 
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 import {RiskModule} from "../RiskModule.sol";
+import "../security/MainRegistryGuardian.sol";
 
 /**
  * @title Main Asset registry
@@ -21,7 +22,7 @@ import {RiskModule} from "../RiskModule.sol";
  * @notice The Main-registry stores basic information for each token that can, or could at some point, be deposited in the vaults
  * @dev No end-user should directly interact with the Main-registry, only vaults, Sub-Registries or the contract owner
  */
-contract MainRegistry is Ownable {
+contract MainRegistry is MainRegistryGuardian {
     using FixedPointMathLib for uint256;
 
     address immutable _this;
@@ -42,6 +43,8 @@ contract MainRegistry is Ownable {
     mapping(address => uint256) public assetToBaseCurrency;
     mapping(address => address) public assetToPricingModule;
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
+
+    mapping(address => bool) public isActionAllowed;
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
@@ -85,7 +88,9 @@ contract MainRegistry is Ownable {
         //Main registry must be initialised with usd
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
+        isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
         baseCurrencies.push(baseCurrencyInformation.assetAddress);
+
         unchecked {
             ++baseCurrencyCounter;
         }
@@ -101,6 +106,16 @@ contract MainRegistry is Ownable {
      */
     function setFactory(address _factoryAddress) external onlyOwner {
         factoryAddress = _factoryAddress;
+    }
+
+    /**
+     * @notice Sets an allowed action handler
+     * @param action The address of the action handler
+     * @param allowed Bool to indicate its status
+     * @dev Can only be called by owner.
+     */
+    function setAllowedAction(address action, bool allowed) public onlyOwner {
+        isActionAllowed[action] = allowed;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -196,7 +211,7 @@ contract MainRegistry is Ownable {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) public onlyVault noDelegate {
+    ) public whenDepositNotPaused onlyVault noDelegate {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
@@ -221,6 +236,7 @@ contract MainRegistry is Ownable {
      */
     function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
         public
+        whenWithdrawNotPaused
         onlyVault
         noDelegate
     {
@@ -400,8 +416,8 @@ contract MainRegistry is Ownable {
                 (
                     tempValueInUsd,
                     tempValueInBaseCurrency,
-                    valuesAndRiskVarPerAsset[i].collFactor,
-                    valuesAndRiskVarPerAsset[i].liqThreshold
+                    valuesAndRiskVarPerAsset[i].collateralFactor,
+                    valuesAndRiskVarPerAsset[i].liquidationFactor
                 ) = IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
                 //Check if baseCurrency is USD
                 if (baseCurrency == 0) {
@@ -454,54 +470,30 @@ contract MainRegistry is Ownable {
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 
-        collateralValue = RiskModule.calculateWeightedCollateralValue(valuesAndRiskVarPerAsset);
+        collateralValue = RiskModule.calculateCollateralValue(valuesAndRiskVarPerAsset);
     }
 
     /**
-     * @notice Calculate the liquidation threshold given the asset details in given baseCurrency
+     * @notice Calculate the getLiquidationValue given the asset details in given baseCurrency
      * @param assetAddresses The List of token addresses of the assets
      * @param assetIds The list of corresponding token Ids that needs to be checked
      * @dev For each token address, a corresponding id at the same index should be present,
      * for tokens without Id (ERC20 for instance), the Id should be set to 0
      * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An (address) of the BaseCurrency contract
-     * @return liquidationThreshold of the given assets
+     * @param baseCurrency An address of the BaseCurrency contract
+     * @return liquidationValue Liquidation value of the given assets denominated in BaseCurrency.
      */
-    function getLiquidationThreshold(
+
+    function getLiquidationValue(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 liquidationThreshold) {
-        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
+    ) public view returns (uint256 liquidationValue) {
+        //No need to Check that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 
-        liquidationThreshold = RiskModule.calculateWeightedLiquidationThreshold(valuesAndRiskVarPerAsset);
-    }
-
-    /**
-     * @notice Calculate the liquidation threshold given the asset details in given baseCurrency
-     * @param assetAddresses The List of token addresses of the assets
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An (address) of the BaseCurrency contract
-     * @return collateralValue Collateral value of the given assets denominated in BaseCurrency.
-     * @return liquidationThreshold of the given assets
-     */
-    function getCollateralValueAndLiquidationThreshold(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        address baseCurrency
-    ) public view returns (uint256 collateralValue, uint256 liquidationThreshold) {
-        //No need to check that all arrays are of equal length, already done in getListOfValuesPerAsset()
-        RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
-
-        (collateralValue, liquidationThreshold) =
-            RiskModule.calculateCollateralValueAndLiquidationThreshold(valuesAndRiskVarPerAsset);
+        liquidationValue = RiskModule.calculateLiquidationValue(valuesAndRiskVarPerAsset);
     }
 }

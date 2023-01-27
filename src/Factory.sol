@@ -13,8 +13,9 @@ import "../lib/solmate/src/tokens/ERC721.sol";
 import "./utils/Strings.sol";
 import "./utils/MerkleProofLib.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./security/FactoryGuardian.sol";
 
-contract Factory is ERC721, Ownable {
+contract Factory is ERC721, FactoryGuardian {
     using Strings for uint256;
 
     struct vaultVersionInfo {
@@ -46,7 +47,11 @@ contract Factory is ERC721, Ownable {
      * @param vaultVersion The Vault version.
      * @return vault The contract address of the proxy contract of the newly deployed vault.
      */
-    function createVault(uint256 salt, uint256 vaultVersion) external returns (address vault) {
+    function createVault(uint256 salt, uint256 vaultVersion, address baseCurrency)
+        external
+        whenCreateNotPaused
+        returns (address vault)
+    {
         vaultVersion = vaultVersion == 0 ? latestVaultVersion : vaultVersion;
 
         require(vaultVersion <= latestVaultVersion, "FTRY_CV: Unknown vault version");
@@ -54,7 +59,7 @@ contract Factory is ERC721, Ownable {
 
         vault = address(new Proxy{salt: bytes32(salt)}(vaultDetails[vaultVersion].logic));
 
-        IVault(vault).initialize(msg.sender, vaultDetails[vaultVersion].registry, uint16(vaultVersion));
+        IVault(vault).initialize(msg.sender, vaultDetails[vaultVersion].registry, uint16(vaultVersion), baseCurrency);
 
         allVaults.push(vault);
         vaultIndex[vault] = allVaults.length;
@@ -115,7 +120,8 @@ contract Factory is ERC721, Ownable {
      * @param id of the vault that is about to be transfered.
      */
     function safeTransferFrom(address from, address to, uint256 id) public override {
-        _safeTransferFrom(from, to, id);
+        IVault(allVaults[id - 1]).transferOwnership(to);
+        super.safeTransferFrom(from, to, id);
     }
 
     /**
@@ -127,7 +133,8 @@ contract Factory is ERC721, Ownable {
      * @param data additional data, only used for onERC721Received.
      */
     function safeTransferFrom(address from, address to, uint256 id, bytes memory data) public override {
-        _safeTransferFrom(from, to, id, data);
+        IVault(allVaults[id - 1]).transferOwnership(to);
+        super.safeTransferFrom(from, to, id, data);
     }
 
     /**
@@ -138,57 +145,6 @@ contract Factory is ERC721, Ownable {
      * @param id of the vault that is about to be transfered.
      */
     function transferFrom(address from, address to, uint256 id) public override {
-        _transferFrom(from, to, id);
-    }
-
-    /**
-     * @notice Internal function used to transfer a vault between users
-     * @dev This function is used to transfer a vault between users.
-     * Overriding to transfer ownership of linked vault.
-     * @param from sender.
-     * @param to target.
-     * @param id of the vault that is about to be transfered.
-     */
-    function _safeTransferFrom(address from, address to, uint256 id) internal {
-        IVault(allVaults[id - 1]).transferOwnership(to);
-        super.transferFrom(from, to, id);
-        require(
-            to.code.length == 0
-                || ERC721TokenReceiver(to).onERC721Received(msg.sender, from, id, "")
-                    == ERC721TokenReceiver.onERC721Received.selector,
-            "UNSAFE_RECIPIENT"
-        );
-    }
-
-    /**
-     * @notice Internal function used to transfer a vault between users
-     * @dev This function is used to transfer a vault between users.
-     * Overriding to transfer ownership of linked vault.
-     * @param from sender.
-     * @param to target.
-     * @param id of the vault that is about to be transfered.
-     * @param data additional data, only used for onERC721Received.
-     */
-    function _safeTransferFrom(address from, address to, uint256 id, bytes memory data) internal {
-        IVault(allVaults[id - 1]).transferOwnership(to);
-        super.transferFrom(from, to, id);
-        require(
-            to.code.length == 0
-                || ERC721TokenReceiver(to).onERC721Received(msg.sender, from, id, data)
-                    == ERC721TokenReceiver.onERC721Received.selector,
-            "UNSAFE_RECIPIENT"
-        );
-    }
-
-    /**
-     * @notice Internal function used to transfer a vault between users
-     * @dev This function is used to transfer a vault between users.
-     * Overriding to transfer ownership of linked vault.
-     * @param from sender.
-     * @param to target.
-     * @param id of the vault that is about to be transfered.
-     */
-    function _transferFrom(address from, address to, uint256 id) internal {
         IVault(allVaults[id - 1]).transferOwnership(to);
         super.transferFrom(from, to, id);
     }
@@ -276,22 +232,18 @@ contract Factory is ERC721, Ownable {
      * @dev This function is called by an external user or a bot to start the liquidation process of a vault.
      * @param vault Vault that needs to get liquidated.
      */
-    function liquidate(address vault) external {
+    function liquidate(address vault) external whenLiquidateNotPaused {
         require(isVault(vault), "FTRY: Not a vault");
-        _liquidate(vault, msg.sender);
-    }
 
-    /**
-     * @notice Internal function used to start the liquidation of a vault.
-     * @dev
-     * @param vault Vault that needs to get liquidated.
-     * @param sender The msg.sender of the liquidator. Also the 'keeper'
-     */
-    function _liquidate(address vault, address sender) internal {
-        (bool success, address liquidator) = IVault(vault).liquidateVault(sender);
-        require(success, "FTRY: Vault liquidation failed");
-        // Vault version read via Ivault?
+        //liquidateVault(address) will check if the Vault is indeed susceptible for liquidation.
+        //And if so, start the liquidation process.
+        //If not, the function will revert.
+        address liquidator = IVault(vault).liquidateVault(msg.sender);
+
+        //Transfer the vault proxy contract to the new owner.
         IVault(vault).transferOwnership(liquidator);
+
+        //Transfer ownership of the ERC721.
         _liquidateTransfer(vault, liquidator);
     }
 

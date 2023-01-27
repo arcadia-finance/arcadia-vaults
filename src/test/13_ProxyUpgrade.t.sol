@@ -23,23 +23,17 @@ contract VaultV2Test is DeployArcadiaVaults {
     Tranche tranche;
     DebtToken debt;
 
-    struct VaultInfo {
-        uint16 collFactor;
-        uint16 liqThres;
-        address baseCurrency;
-    }
-
     struct Checks {
-        address erc20Stored;
-        address erc721Stored;
-        address erc1155Stored;
-        uint256 erc721TokenIds;
-        uint256 erc1155TokenIds;
-        address registry;
-        address trustedProtocol;
-        uint256 life;
+        bool isTrustedCreditorSet;
+        uint16 vaultVersion;
+        address baseCurrency;
         address owner;
-        VaultInfo vaultVar;
+        address liquidator;
+        address registry;
+        address trustedCreditor;
+        address[] assetAddresses;
+        uint256[] assetIds;
+        uint256[] assetAmounts;
     }
 
     // EVENTS
@@ -81,7 +75,8 @@ contract VaultV2Test is DeployArcadiaVaults {
                     )
                 )
             ),
-            0
+            0,
+            address(0)
         );
         proxy = Vault(proxyAddr);
         proxy.openTrustedMarginAccount(address(pool));
@@ -112,7 +107,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
 
         vm.startPrank(address(123456789));
-        proxyAddr2 = factory.createVault(salt, 0);
+        proxyAddr2 = factory.createVault(salt, 0, address(0));
         vaultV2 = VaultV2(proxyAddr2);
         assertEq(vaultV2.returnFive(), 5);
         vm.stopPrank();
@@ -321,19 +316,14 @@ contract VaultV2Test is DeployArcadiaVaults {
 
     function createCompareStruct() public view returns (Checks memory) {
         Checks memory checks;
-        VaultInfo memory vaultVar;
 
-        checks.erc20Stored = proxy.erc20Stored(0); //ToDo; improve for whole list
-        checks.erc721Stored = proxy.erc721Stored(0);
-        checks.erc1155Stored = proxy.erc1155Stored(0);
-        checks.erc721TokenIds = proxy.erc721TokenIds(0);
-        checks.erc1155TokenIds = proxy.erc1155TokenIds(0);
-        checks.registry = proxy.registry();
-        checks.trustedProtocol = proxy.trustedProtocol();
-        checks.life = proxy.life();
+        checks.isTrustedCreditorSet = proxy.isTrustedCreditorSet();
+        checks.baseCurrency = proxy.baseCurrency();
         checks.owner = proxy.owner();
-        (vaultVar.liqThres, vaultVar.baseCurrency) = proxy.vault();
-        checks.vaultVar = vaultVar;
+        checks.liquidator = proxy.liquidator();
+        checks.registry = proxy.registry();
+        checks.trustedCreditor = proxy.trustedCreditor();
+        (checks.assetAddresses, checks.assetIds, checks.assetAmounts) = proxy.generateAssetData();
 
         return checks;
     }

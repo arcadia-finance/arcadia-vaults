@@ -11,6 +11,8 @@ import "../fixtures/GastTestFixture.f.sol";
 contract gasBuyVault_1ERC201ERC721 is GasTestFixture {
     using stdStorage for StdStorage;
 
+    bytes3 public emptyBytes3;
+
     //this is a before
     constructor() GasTestFixture() {}
 
@@ -44,9 +46,10 @@ contract gasBuyVault_1ERC201ERC721 is GasTestFixture {
                 / 10 ** (Constants.oracleWbaycToEthDecimals + Constants.oracleEthToUsdDecimals)
         ) * s_assetAmounts[1];
         pool.borrow(
-            uint128(((valueEth + valueBayc) / 10 ** (18 - Constants.daiDecimals) * collFactor) / 100),
+            uint128(((valueEth + valueBayc) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100),
             address(proxy),
-            vaultOwner
+            vaultOwner,
+            emptyBytes3
         );
         vm.stopPrank();
 
@@ -65,36 +68,36 @@ contract gasBuyVault_1ERC201ERC721 is GasTestFixture {
     function testBuyVaultStart() public {
         vm.roll(1); //compile warning to make it a view
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl100() public {
         vm.roll(100);
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl500() public {
         vm.roll(500);
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl1000() public {
         vm.roll(1000);
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl1500() public {
         vm.roll(1500);
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl2000() public {
         vm.roll(2000);
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 }
