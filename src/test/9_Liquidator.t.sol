@@ -166,7 +166,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(initiatorReward, claimRatios_.initiatorReward);
     }
 
-    function testRevert_setMaxAuctionTime_NonOwner(address unprivilegedAddress_, uint32 cutoffTime) public {
+    function testRevert_setMaxAuctionTime_NonOwner(address unprivilegedAddress_, uint16 cutoffTime) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
@@ -175,18 +175,29 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_setMaxAuctionTime_NotInLimits(uint32 cutoffTime) public {
+    function testRevert_setMaxAuctionTime_tooHigh(uint16 cutoffTime) public {
         // Preprocess: limit the fuzzing to acceptable levels
-        vm.assume(cutoffTime > 8 * 60 * 60 || cutoffTime < 1 * 60 * 60);
+        vm.assume(cutoffTime > 8 * 60 * 60);
 
         // Given When Then: a owner attempts to set the max auction time, but it is not in the limits
         vm.startPrank(creatorAddress);
-        vm.expectRevert("LQ_ACT: It must be in limits");
+        vm.expectRevert("LQ_ACT: cutoff too high");
         liquidator.setAuctionCutoffTime(cutoffTime);
         vm.stopPrank();
     }
 
-    function testSuccess_setMaxAuctionTime(uint32 cutoffTime) public {
+    function testRevert_setMaxAuctionTime_tooLow(uint16 cutoffTime) public {
+        // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(cutoffTime < 1 * 60 * 60);
+
+        // Given When Then: a owner attempts to set the max auction time, but it is not in the limits
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("LQ_ACT: cutoff too low");
+        liquidator.setAuctionCutoffTime(cutoffTime);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setMaxAuctionTime(uint16 cutoffTime) public {
         // Preprocess: limit the fuzzing to acceptable levels
         vm.assume(cutoffTime > 1 * 60 * 60);
         vm.assume(cutoffTime < 8 * 60 * 60);
@@ -207,16 +218,28 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_setDiscountRate_NotInLimits(uint256 halfLife) public {
+    function testRevert_setDiscountRate_tooHigh(uint256 halfLife) public {
         // Preprocess: limit the fuzzing to acceptable levels
-        vm.assume(halfLife > 8 * 60 * 60 || halfLife < 30 * 60);
+        vm.assume(halfLife > 8 * 60 * 60);
 
         // Given When Then: a owner attempts to set the discount rate, but it is not in the limits
         vm.startPrank(creatorAddress);
-        vm.expectRevert("LQ_DR: It must be in limits");
+        vm.expectRevert("LQ_DR: halfLife too high");
         liquidator.setDiscountRate(halfLife);
         vm.stopPrank();
     }
+
+    function testRevert_setDiscountRate_tooLow(uint256 halfLife) public {
+        // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(halfLife < 30 * 60);
+
+        // Given When Then: a owner attempts to set the discount rate, but it is not in the limits
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("LQ_DR: halfLife too low");
+        liquidator.setDiscountRate(halfLife);
+        vm.stopPrank();
+    }
+
 
     function testSuccess_setDiscountRate(uint256 halfLife) public {
         // Preprocess: limit the fuzzing to acceptable levels
@@ -240,13 +263,24 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_setStartPriceMultiplier_NotInLimits(uint16 priceMultiplier) public {
+    function testRevert_setStartPriceMultiplier_tooHigh(uint16 priceMultiplier) public {
         // Preprocess: limit the fuzzing to acceptable levels
-        vm.assume(priceMultiplier > 300 || priceMultiplier < 100);
+        vm.assume(priceMultiplier > 300 );
 
         // Given When Then: a owner attempts to set the start price multiplier, but it is not in the limits
         vm.startPrank(creatorAddress);
-        vm.expectRevert("LQ_SPM: It must be in limits");
+        vm.expectRevert("LQ_SPM: multiplier too high");
+        liquidator.setStartPriceMultiplier(priceMultiplier);
+        vm.stopPrank();
+    }
+
+    function testRevert_setStartPriceMultiplier_tooLow(uint16 priceMultiplier) public {
+        // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(priceMultiplier < 100);
+
+        // Given When Then: a owner attempts to set the start price multiplier, but it is not in the limits
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("LQ_SPM: multiplier too low");
         liquidator.setStartPriceMultiplier(priceMultiplier);
         vm.stopPrank();
     }
@@ -336,7 +370,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint64 startTime,
         uint64 halfLife,
         uint64 currentTime,
-        uint32 cutoffTime,
+        uint16 cutoffTime,
         uint128 openDebt
     ) public {
         // Preprocess: Set up the fuzzed variables
@@ -372,7 +406,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint64 startTime,
         uint64 halfLife,
         uint64 currentTime,
-        uint32 cutoffTime,
+        uint16 cutoffTime,
         uint128 openDebt
     ) public {
         // Preprocess: Set up the fuzzed variables

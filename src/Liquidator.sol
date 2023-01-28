@@ -27,7 +27,7 @@ contract Liquidator is Ownable {
     // It is discount for auction per second passed after the auction.
     // example: 999807477651317500, it is calculated based on the half-life of 1 hour
     uint64 public discountRate;
-    uint32 public auctionCutoffTime; // maximum auction time in seconds that auction can run from the start of auction
+    uint16 public auctionCutoffTime; // maximum auction time in seconds that auction can run from the start of auction, max 18 hours
 
     address public factory;
     address public registry;
@@ -94,8 +94,8 @@ contract Liquidator is Ownable {
      * @param halfLife The new half life
      */
     function setDiscountRate(uint256 halfLife) external onlyOwner {
-        require(halfLife > 30 * 60, "LQ_DR: It must be in limits"); // 30 minutes
-        require(halfLife < 8 * 60 * 60, "LQ_DR: It must be in limits"); // 8 hours
+        require(halfLife > 30 * 60, "LQ_DR: halfLife too low"); // 30 minutes
+        require(halfLife < 8 * 60 * 60, "LQ_DR: halfLife too high"); // 8 hours
         discountRate = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife)));
     }
 
@@ -104,9 +104,9 @@ contract Liquidator is Ownable {
      * @dev The max cutoff time is the maximum time an auction can run.
      * @param auctionCutoffTime_ The new max cutoff time. It is seconds that auction can run from the start of auction.
      */
-    function setAuctionCutoffTime(uint32 auctionCutoffTime_) external onlyOwner {
-        require(auctionCutoffTime_ > 1 * 60 * 60, "LQ_ACT: It must be in limits"); // 1 hour
-        require(auctionCutoffTime_ < 8 * 60 * 60, "LQ_ACT: It must be in limits"); // 8 hours
+    function setAuctionCutoffTime(uint16 auctionCutoffTime_) external onlyOwner {
+        require(auctionCutoffTime_ > 1 * 60 * 60, "LQ_ACT: cutoff too low"); // 1 hour
+        require(auctionCutoffTime_ < 8 * 60 * 60, "LQ_ACT: cutoff too high"); // 8 hours
         auctionCutoffTime = auctionCutoffTime_;
     }
 
@@ -116,8 +116,8 @@ contract Liquidator is Ownable {
      * @param startPriceMultiplier_ The new start price multiplier 2 decimal precision
      */
     function setStartPriceMultiplier(uint16 startPriceMultiplier_) external onlyOwner {
-        require(startPriceMultiplier_ > 100, "LQ_SPM: It must be in limits");
-        require(startPriceMultiplier_ < 301, "LQ_SPM: It must be in limits");
+        require(startPriceMultiplier_ > 100, "LQ_SPM: multiplier too low");
+        require(startPriceMultiplier_ < 301, "LQ_SPM: multiplier too high");
         startPriceMultiplier = startPriceMultiplier_;
     }
 
@@ -187,7 +187,7 @@ contract Liquidator is Ownable {
         unchecked {
             auctionTime = timePassed * 1e18;
         }
-        price = uint256(openDebt) * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime) / 1e20;
+        price = openDebt * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime) / 1e20;
     }
 
     /**
@@ -246,10 +246,10 @@ contract Liquidator is Ownable {
 
         //openDebt is a uint128 -> all calculations can be unchecked
         unchecked {
-            //Liquidation Initiator Reward is always payed out, independant of the final auction price
+            //Liquidation Initiator Reward is always paid out, independent of the final auction price
             liquidationInitiatorReward = openDebt * claimRatios_.initiatorReward / 100;
 
-            //Final Auction price should at least cover the original debt and  Liquidation Initiator Reward.
+            //Final Auction price should at least cover the original debt and Liquidation Initiator Reward.
             //Otherwise there is bad debt.
             if (priceOfVault < openDebt + liquidationInitiatorReward) {
                 badDebt = openDebt + liquidationInitiatorReward - priceOfVault;
