@@ -190,6 +190,7 @@ contract Liquidator is Ownable {
         price = openDebt * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime) / 1e20;
     }
 
+    event log(uint256 num);
     /**
      * @notice Function a user (the bidder) calls to buy the vault and end the auction.
      * @param vault The contract address of the vault.
@@ -200,8 +201,7 @@ contract Liquidator is Ownable {
         AuctionInformation memory auctionInformation_ = auctionInformation[vault];
         require(auctionInformation_.inAuction, "LQ_BV: Not for sale");
 
-        uint256 priceOfVault = _calcPriceOfVault(auctionInformation_.startTime, auctionInformation_.openDebt);
-
+        uint256 priceOfVault = _calcPriceOfVault(block.timestamp - auctionInformation_.startTime, auctionInformation_.openDebt);
         //Stop the auction, this will prevent any possible reentrance attacks.
         auctionInformation[vault].inAuction = false;
 
