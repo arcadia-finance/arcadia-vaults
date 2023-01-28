@@ -6,14 +6,13 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./Proxy.sol";
-import "./interfaces/IVault.sol";
-import "./interfaces/IMainRegistry.sol";
-import "../lib/solmate/src/tokens/ERC721.sol";
-import "./utils/Strings.sol";
-import "./utils/MerkleProofLib.sol";
-import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./security/FactoryGuardian.sol";
+import {Proxy} from "./Proxy.sol";
+import {IVault} from "./interfaces/IVault.sol";
+import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
+import {ERC721} from "../lib/solmate/src/tokens/ERC721.sol";
+import {Strings} from "./utils/Strings.sol";
+import {MerkleProofLib} from "./utils/MerkleProofLib.sol";
+import {FactoryGuardian} from "./security/FactoryGuardian.sol";
 
 contract Factory is ERC721, FactoryGuardian {
     using Strings for uint256;
@@ -68,13 +67,22 @@ contract Factory is ERC721, FactoryGuardian {
     }
 
     /**
-     * @notice View function to see if an address is a vault
-     * @dev Function is used to verify if certain calls are to be made to an actual vault or not.
-     * @param vaultAddr The address to be checked.
-     * @return bool whether the address is a vault or not.
+     * @notice View function returning if an address is a vault
+     * @param vault The address to be checked.
+     * @return bool Whether the address is a vault or not.
      */
-    function isVault(address vaultAddr) public view returns (bool) {
-        return vaultIndex[vaultAddr] > 0;
+    function isVault(address vault) public view returns (bool) {
+        return vaultIndex[vault] > 0;
+    }
+
+    /**
+     * @notice Returns the owner of a vault.
+     * @param vault The Vault address.
+     * @return owner_ The Vault owner.
+     * @dev Function does not revert when inexisting vault is passed, but returns zero-address as owner.
+     */
+    function ownerOfVault(address vault) public view returns (address owner_) {
+        owner_ = ownerOf[vaultIndex[vault]];
     }
 
     /**
@@ -247,16 +255,17 @@ contract Factory is ERC721, FactoryGuardian {
     function liquidate(address liquidator) external whenLiquidateNotPaused {
         require(isVault(msg.sender), "FTRY: Not a vault");
 
-        address from = ownerOf[vaultIndex[msg.sender]];
+        uint256 id = vaultIndex[msg.sender];
+        address from = ownerOf[id];
         unchecked {
             balanceOf[from]--;
             balanceOf[liquidator]++;
         }
 
-        ownerOf[vaultIndex[msg.sender]] = liquidator;
+        ownerOf[id] = liquidator;
 
-        delete getApproved[vaultIndex[msg.sender]];
-        emit Transfer(from, liquidator, vaultIndex[msg.sender]);
+        delete getApproved[id];
+        emit Transfer(from, liquidator, id);
     }
 
     /*///////////////////////////////////////////////////////////////

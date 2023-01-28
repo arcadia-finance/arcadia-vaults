@@ -10,8 +10,8 @@ import "../lib/forge-std/src/Test.sol";
 import {ArcadiaAddresses, ArcadiaContractAddresses} from "./Constants/TransferOwnershipConstants.sol";
 
 import "../src/Factory.sol";
-import "../src/AssetRegistry/MainRegistry.sol";
-import "../src/AssetRegistry/StandardERC20PricingModule.sol";
+import "../src/MainRegistry.sol";
+import {StandardERC20PricingModule} from "../src/PricingModules/StandardERC20PricingModule.sol";
 import "../src/Liquidator.sol";
 import "../src/OracleHub.sol";
 

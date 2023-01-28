@@ -91,6 +91,8 @@ abstract contract vaultTests is DeployArcadiaVaults {
         vm.stopPrank();
 
         stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault_)).checked_write(true);
+        stdstore.target(address(factory)).sig(factory.vaultIndex.selector).with_key(address(vault_)).checked_write(10);
+        stdstore.target(address(factory)).sig(factory.ownerOf.selector).with_key(uint256(10)).checked_write(vaultOwner);
     }
 
     function openMarginAccount() internal {

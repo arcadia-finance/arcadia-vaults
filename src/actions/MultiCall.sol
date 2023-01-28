@@ -6,10 +6,9 @@
  */
 pragma solidity >0.8.13;
 
-import "../actions/utils/ActionData.sol";
-import {ActionBase} from "./ActionBase.sol";
-import "../interfaces/IERC20.sol";
-import "../interfaces/IERC1155.sol";
+import {ActionBase, ActionData} from "./ActionBase.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
+import {IERC1155} from "../interfaces/IERC1155.sol";
 
 /**
  * @title Generic multicall action
@@ -24,9 +23,9 @@ contract ActionMultiCall is ActionBase {
 
     /**
      * @notice Calls a series of addresses with arbitrrary calldata
+     * @param actionData A bytes object containing two actionAssetData structs, an address array and a bytes array.
+     * @return incoming An actionAssetData struct with the balances of this ActionMultiCall address.
      * @dev input address is not used in this generic action.
-     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
-     * @return incoming a actionAssetData struct with the balances of this ActionMultiCall address.
      */
     function executeAction(bytes calldata actionData) external override returns (ActionData memory) {
         (, ActionData memory incoming, address[] memory to, bytes[] memory data) =

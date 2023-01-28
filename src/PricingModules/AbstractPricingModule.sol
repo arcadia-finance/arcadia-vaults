@@ -6,10 +6,9 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "../interfaces/IOraclesHub.sol";
-import "../interfaces/IMainRegistry.sol";
-import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import {Ownable} from "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {IOraclesHub} from "./interfaces/IOraclesHub.sol";
+import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
 import {RiskConstants} from "../utils/RiskConstants.sol";
 
 /**
@@ -20,8 +19,6 @@ import {RiskConstants} from "../utils/RiskConstants.sol";
  * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main-Registry
  */
 abstract contract PricingModule is Ownable {
-    using FixedPointMathLib for uint256;
-
     address public mainRegistry;
     address public oracleHub;
     address public riskManager;
@@ -209,7 +206,7 @@ abstract contract PricingModule is Ownable {
      * @notice Processes the deposit of tokens if it is white-listed
      * @param asset The address of the asset
      * param assetId The Id of the asset where applicable
-     * @param amount the amount of tokens
+     * @param amount The amount of tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
      */
     function processDeposit(address asset, uint256, uint256 amount) external virtual onlyMainReg {
@@ -221,7 +218,7 @@ abstract contract PricingModule is Ownable {
     /**
      * @notice Processes the withdrawal of tokens to increase the maxExposure
      * @param asset The address of the asset
-     * @param amount the amount of tokens
+     * @param amount The amount of tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens will ever be deposited
      */
     function processWithdrawal(address asset, uint256 amount) external virtual onlyMainReg {

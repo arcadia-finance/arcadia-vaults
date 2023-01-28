@@ -180,6 +180,17 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(expectedReturn, actualReturn);
     }
 
+    function testSuccess_ownerOfVault_NonVault(address nonVault) public {
+        assertEq(factory.ownerOfVault(nonVault), address(0));
+    }
+
+    function testSuccess_ownerOfVault_ExistingVault(address owner) public {
+        vm.prank(owner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+
+        assertEq(factory.ownerOfVault(proxyAddr), owner);
+    }
+
     //For tests upgradeVaultVersion, see 13_ProxyUpgrade.t.sol
 
     function testSuccess_safeTransferFrom_OnVaultAddress(address owner) public {
@@ -190,10 +201,10 @@ contract FactoryTest is DeployArcadiaVaults {
         proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -202,7 +213,7 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.safeTransferFrom(owner, receiver, proxyAddr);
 
         //Make sure vault itself is owned by receiver
-        assertEq(IVault(proxyAddr).owner(), receiver);
+        assertEq(Vault(proxyAddr).owner(), receiver);
 
         //Make sure erc721 is owned by receiver
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), receiver);
@@ -223,10 +234,10 @@ contract FactoryTest is DeployArcadiaVaults {
         proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -238,7 +249,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         //Make sure vault itself is still owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is still owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -252,10 +263,10 @@ contract FactoryTest is DeployArcadiaVaults {
         proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -264,7 +275,7 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.safeTransferFrom(owner, receiver, factory.vaultIndex(proxyAddr));
 
         //Make sure vault itself is owned by receiver
-        assertEq(IVault(proxyAddr).owner(), receiver);
+        assertEq(Vault(proxyAddr).owner(), receiver);
 
         //Make sure erc721 is owned by receiver
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), receiver);
@@ -283,10 +294,10 @@ contract FactoryTest is DeployArcadiaVaults {
         proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -299,7 +310,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         //Make sure vault itself is still owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is still owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -313,10 +324,10 @@ contract FactoryTest is DeployArcadiaVaults {
         proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -325,7 +336,7 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.safeTransferFrom(owner, receiver, factory.vaultIndex(proxyAddr), data);
 
         //Make sure vault itself is owned by receiver
-        assertEq(IVault(proxyAddr).owner(), receiver);
+        assertEq(Vault(proxyAddr).owner(), receiver);
 
         //Make sure erc721 is owned by receiver
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), receiver);
@@ -347,10 +358,10 @@ contract FactoryTest is DeployArcadiaVaults {
         proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -363,7 +374,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         //Make sure vault itself is still owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is still owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -377,10 +388,10 @@ contract FactoryTest is DeployArcadiaVaults {
         proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -389,7 +400,7 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.transferFrom(owner, receiver, factory.vaultIndex(proxyAddr));
 
         //Make sure vault itself is owned by receiver
-        assertEq(IVault(proxyAddr).owner(), receiver);
+        assertEq(Vault(proxyAddr).owner(), receiver);
 
         //Make sure erc721 is owned by receiver
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), receiver);
@@ -406,10 +417,10 @@ contract FactoryTest is DeployArcadiaVaults {
         proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -422,7 +433,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         //Make sure vault itself is still owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is still owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -730,13 +741,11 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_liquidate_Paused(address liquidator_, uint128 openPosition, address guardian) public {
+    function testRevert_liquidate_Paused(address liquidator_, address guardian) public {
         // Given: guardian is the guardian of factory
         vm.prank(creatorAddress);
         factory.changeGuardian(guardian);
         vm.warp(35 days);
-
-        vm.assume(openPosition > 0);
 
         vm.prank(vaultOwner);
         proxyAddr = factory.createVault(0, 0, address(0));
@@ -753,8 +762,7 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.liquidate(liquidator_);
     }
 
-    function testSuccess_liquidate(address liquidator_, uint128 openPosition) public {
-        vm.assume(openPosition > 0);
+    function testSuccess_liquidate(address liquidator_) public {
         vm.assume(liquidator_ != vaultOwner);
 
         vm.prank(vaultOwner);

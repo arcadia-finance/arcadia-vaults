@@ -7,15 +7,25 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 interface IFactory {
-    function isVault(address vaultAddress) external view returns (bool);
+    /**
+     * @notice View function returning if an address is a vault
+     * @param vault The address to be checked.
+     * @return bool Whether the address is a vault or not.
+     */
+    function isVault(address vault) external view returns (bool);
 
+    /**
+     * @notice Function used to transfer a vault between users
+     * @dev This method transfers a vault not on id but on address and also transfers the vault proxy contract to the new owner.
+     * @param from sender.
+     * @param to target.
+     * @param vault The address of the vault that is about to be transfered.
+     */
     function safeTransferFrom(address from, address to, address vault) external;
 
-    function safeTransferFrom(address from, address to, uint256 id) external;
-
+    /**
+     * @notice Function called by a Vault at the start of a liquidation to transfer ownership.
+     * @param liquidator The contract address of the liquidator.
+     */
     function liquidate(address liquidator) external;
-
-    function vaultIndex(address vaultAddress) external view returns (uint256);
-
-    function getCurrentRegistry() external view returns (address);
 }

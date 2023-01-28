@@ -6,13 +6,7 @@ interface IERC20 {
 
     function transfer(address to, uint256 amount) external returns (bool);
 
-    function balanceOf(address) external view returns (uint256);
-
-    function mint(address to, uint256 amount) external;
-
-    function burn(uint256 amount) external;
-
-    function approve(address spender, uint256 amount) external returns (bool);
+    function balanceOf(address owner) external view returns (uint256);
 
     function decimals() external view returns (uint256);
 }
