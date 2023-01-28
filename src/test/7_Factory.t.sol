@@ -7,13 +7,11 @@
 pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
-import {TrustedCreditorMock} from "../mockups/TrustedCreditorMock.sol";
 
 contract FactoryTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     MainRegistry internal mainRegistry2;
-    TrustedCreditorMock trustedCreditor;
 
     //events
     event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 length);
@@ -163,7 +161,7 @@ contract FactoryTest is DeployArcadiaVaults {
         // Then: Reverted
         vm.prank(sender);
         vm.expectRevert("Guardian: create paused");
-        address actualDeployed = factory.createVault(salt, 0, address(0));
+        factory.createVault(salt, 0, address(0));
     }
 
     function testSuccess_isVault_positive() public {
@@ -182,7 +180,80 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(expectedReturn, actualReturn);
     }
 
+    function testSuccess_ownerOfVault_NonVault(address nonVault) public {
+        assertEq(factory.ownerOfVault(nonVault), address(0));
+    }
+
+    function testSuccess_ownerOfVault_ExistingVault(address owner) public {
+        vm.prank(owner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+
+        assertEq(factory.ownerOfVault(proxyAddr), owner);
+    }
+
     //For tests upgradeVaultVersion, see 13_ProxyUpgrade.t.sol
+
+    function testSuccess_safeTransferFrom_OnVaultAddress(address owner) public {
+        vm.assume(owner != address(0));
+        address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
+
+        vm.startPrank(owner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+
+        //Make sure index in erc721 == vaultIndex
+        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+
+        //Make sure vault itself is owned by owner
+        assertEq(IVault(proxyAddr).owner(), owner);
+
+        //Make sure erc721 is owned by owner
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
+
+        //Transfer vault to another address
+        factory.safeTransferFrom(owner, receiver, proxyAddr);
+
+        //Make sure vault itself is owned by receiver
+        assertEq(IVault(proxyAddr).owner(), receiver);
+
+        //Make sure erc721 is owned by receiver
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), receiver);
+        vm.stopPrank();
+    }
+
+    function testRevert_safeTransferFrom_OnVaultAddress_NonOwner(
+        address owner,
+        address receiver,
+        address unprivilegedAddress_
+    ) public {
+        vm.assume(owner != unprivilegedAddress_);
+        vm.assume(owner != address(0));
+        vm.assume(receiver != address(0));
+        vm.assume(unprivilegedAddress_ != address(0));
+
+        vm.prank(owner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+
+        //Make sure index in erc721 == vaultIndex
+        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+
+        //Make sure vault itself is owned by owner
+        assertEq(IVault(proxyAddr).owner(), owner);
+
+        //Make sure erc721 is owned by owner
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
+
+        //Transfer vault to another address by not owner
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("NOT_AUTHORIZED");
+        factory.safeTransferFrom(owner, receiver, proxyAddr);
+        vm.stopPrank();
+
+        //Make sure vault itself is still owned by owner
+        assertEq(IVault(proxyAddr).owner(), owner);
+
+        //Make sure erc721 is still owned by owner
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
+    }
 
     function testSuccess_safeTransferFrom(address owner) public {
         vm.assume(owner != address(0));
@@ -663,82 +734,48 @@ contract FactoryTest is DeployArcadiaVaults {
                     VAULT LIQUIDATION LOGIC
     /////////////////////////////////////////////////////////////// */
 
-    function testRevert_liquidate_NonVault(address liquidationInitiator, address nonVault) public {
-        vm.startPrank(liquidationInitiator);
+    function testRevert_liquidate_NonVault(address liquidator_, address nonVault) public {
+        vm.startPrank(nonVault);
         vm.expectRevert("FTRY: Not a vault");
-        factory.liquidate(nonVault);
+        factory.liquidate(liquidator_);
         vm.stopPrank();
     }
 
-    function testRevert_liquidate_Paused(address liquidationInitiator, uint128 openPosition, address guardian) public {
+    function testRevert_liquidate_Paused(address liquidator_, address guardian) public {
         // Given: guardian is the guardian of factory
         vm.prank(creatorAddress);
         factory.changeGuardian(guardian);
         vm.warp(35 days);
 
-        vm.assume(openPosition > 0);
-
-        vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
-        vm.stopPrank();
-
-        trustedCreditor = new TrustedCreditorMock();
-        trustedCreditor.setCallResult(true);
-        trustedCreditor.setLiquidator(address(liquidator));
-
-        vm.startPrank(vaultOwner);
+        vm.prank(vaultOwner);
         proxyAddr = factory.createVault(0, 0, address(0));
         proxy = Vault(proxyAddr);
-        proxy.openTrustedMarginAccount(address(trustedCreditor));
-        vm.stopPrank();
 
-        trustedCreditor.setOpenPosition(address(proxy), openPosition);
-
-        // When: factory is paused
+        // And: factory is paused
         vm.prank(guardian);
         factory.pause();
 
+        // When: Vault liquidates itself
         // Then: liquidate reverts
         vm.expectRevert("Guardian: liquidate paused");
-        vm.prank(liquidationInitiator);
-        factory.liquidate(address(proxy));
+        vm.prank(address(proxy));
+        factory.liquidate(liquidator_);
     }
 
-    function testSuccess_liquidate(address liquidationInitiator, uint128 openPosition) public {
-        vm.assume(openPosition > 0);
+    function testSuccess_liquidate(address liquidator_) public {
+        vm.assume(liquidator_ != vaultOwner);
 
-        vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
-        vm.stopPrank();
-
-        trustedCreditor = new TrustedCreditorMock();
-        trustedCreditor.setCallResult(true);
-        trustedCreditor.setLiquidator(address(liquidator));
-
-        vm.startPrank(vaultOwner);
+        vm.prank(vaultOwner);
         proxyAddr = factory.createVault(0, 0, address(0));
         proxy = Vault(proxyAddr);
-        proxy.openTrustedMarginAccount(address(trustedCreditor));
-        vm.stopPrank();
 
-        trustedCreditor.setOpenPosition(address(proxy), openPosition);
+        vm.prank(address(proxy));
+        factory.liquidate(liquidator_);
 
-        vm.prank(liquidationInitiator);
-        factory.liquidate(address(proxy));
-
-        assertEq(proxy.owner(), address(liquidator));
         assertEq(factory.balanceOf(vaultOwner), 0);
-        assertEq(factory.balanceOf(address(liquidator)), 1);
+        assertEq(factory.balanceOf(liquidator_), 1);
         uint256 index = factory.vaultIndex(address(proxy));
-        assertEq(factory.ownerOf(index), address(liquidator));
+        assertEq(factory.ownerOf(index), liquidator_);
     }
 
     /* ///////////////////////////////////////////////////////////////

@@ -68,13 +68,22 @@ contract Factory is ERC721, FactoryGuardian {
     }
 
     /**
-     * @notice View function to see if an address is a vault
-     * @dev Function is used to verify if certain calls are to be made to an actual vault or not.
-     * @param vaultAddr The address to be checked.
-     * @return bool whether the address is a vault or not.
+     * @notice View function returning if an address is a vault
+     * @param vault The address to be checked.
+     * @return bool Whether the address is a vault or not.
      */
-    function isVault(address vaultAddr) public view returns (bool) {
-        return vaultIndex[vaultAddr] > 0;
+    function isVault(address vault) public view returns (bool) {
+        return vaultIndex[vault] > 0;
+    }
+
+    /**
+     * @notice Returns the owner of a vault.
+     * @param vault The Vault address.
+     * @return owner_ The Vault owner.
+     * @dev Function does not revert when inexisting vault is passed, but returns zero-address as owner.
+     */
+    function ownerOfVault(address vault) public view returns (address owner_) {
+        owner_ = ownerOf[vaultIndex[vault]];
     }
 
     /**
@@ -110,6 +119,19 @@ contract Factory is ERC721, FactoryGuardian {
      */
     function getVaultVersionRoot() public view returns (bytes32) {
         return vaultDetails[latestVaultVersion].versionRoot;
+    }
+
+    /**
+     * @notice Function used to transfer a vault between users
+     * @dev This method transfers a vault not on id but on address and also transfers the vault proxy contract to the new owner.
+     * @param from sender.
+     * @param to target.
+     * @param vault The address of the vault that is about to be transfered.
+     */
+    function safeTransferFrom(address from, address to, address vault) public {
+        uint256 id = vaultIndex[vault];
+        IVault(allVaults[id - 1]).transferOwnership(to);
+        super.safeTransferFrom(from, to, id);
     }
 
     /**
@@ -228,43 +250,23 @@ contract Factory is ERC721, FactoryGuardian {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Function used by a keeper to start the liquidation of a vault.
-     * @dev This function is called by an external user or a bot to start the liquidation process of a vault.
-     * @param vault Vault that needs to get liquidated.
+     * @notice Function called by a Vault at the start of a liquidation to transfer ownership.
+     * @param liquidator The contract address of the liquidator.
      */
-    function liquidate(address vault) external whenLiquidateNotPaused {
-        require(isVault(vault), "FTRY: Not a vault");
+    function liquidate(address liquidator) external whenLiquidateNotPaused {
+        require(isVault(msg.sender), "FTRY: Not a vault");
 
-        //liquidateVault(address) will check if the Vault is indeed susceptible for liquidation.
-        //And if so, start the liquidation process.
-        //If not, the function will revert.
-        address liquidator = IVault(vault).liquidateVault(msg.sender);
-
-        //Transfer the vault proxy contract to the new owner.
-        IVault(vault).transferOwnership(liquidator);
-
-        //Transfer ownership of the ERC721.
-        _liquidateTransfer(vault, liquidator);
-    }
-
-    /**
-     * @notice Helper transfer function that allows the contract to transfer ownership of the erc721.
-     * @dev This function is called by the contract when a vault is liquidated.
-     * This includes a transfer of ownership of the vault.
-     * We circumvent the ERC721 transfer function.
-     * @param vault Vault that needs to get transfered.
-     */
-    function _liquidateTransfer(address vault, address liquidator) internal {
-        address from = ownerOf[vaultIndex[vault]];
+        uint256 id = vaultIndex[msg.sender];
+        address from = ownerOf[id];
         unchecked {
             balanceOf[from]--;
             balanceOf[liquidator]++;
         }
 
-        ownerOf[vaultIndex[vault]] = liquidator;
+        ownerOf[id] = liquidator;
 
-        delete getApproved[vaultIndex[vault]];
-        emit Transfer(from, liquidator, vaultIndex[vault]);
+        delete getApproved[id];
+        emit Transfer(from, liquidator, id);
     }
 
     /*///////////////////////////////////////////////////////////////

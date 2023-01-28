@@ -48,7 +48,7 @@ abstract contract EndToEndTest is DeployArcadiaVaults {
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
-        pool.addTranche(address(tranche), 50);
+        pool.addTranche(address(tranche), 50, 0);
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
@@ -476,7 +476,6 @@ contract BorrowAndRepay is EndToEndTest {
         uint24 deltaTimestamp,
         uint128 toRepay
     ) public {
-        // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
         vm.assume(amountEth > 0);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor_);
@@ -495,13 +494,14 @@ contract BorrowAndRepay is EndToEndTest {
         vm.prank(vaultOwner);
         pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
+        uint256 _yearlyInterestRate = pool.interestRate();
+
         vm.warp(block.timestamp + deltaTimestamp);
 
         vm.assume(toRepay < amountCredit);
 
         vm.prank(vaultOwner);
         pool.repay(toRepay, address(proxy));
-        uint256 _yearlyInterestRate = pool.interestRate();
         uint128 base = uint128(_yearlyInterestRate) + 10 ** 18;
         uint128 exponent = uint128((uint128(deltaTimestamp) * 10 ** 18) / pool.YEARLY_SECONDS());
         uint128 expectedDebt = uint128((amountCredit * (LogExpMath.pow(base, exponent))) / 10 ** 18) - toRepay;

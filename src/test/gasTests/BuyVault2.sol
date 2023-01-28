@@ -57,7 +57,7 @@ contract gasBuyVault_2ERC20 is GasTestFixture {
         oracleLinkToUsd.transmit(int256(rateLinkToUsd) / 2);
 
         vm.prank(liquidatorBot);
-        factory.liquidate(address(proxy));
+        pool.liquidateVault(address(proxy));
 
         vm.prank(liquidityProvider);
         dai.transfer(vaultBuyer, 10 ** 10 * 10 ** 18);

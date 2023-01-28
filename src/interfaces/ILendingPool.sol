@@ -18,5 +18,12 @@ interface ILendingPool {
 
     function liquidateVault(address vault, uint256 debt) external;
 
-    function settleLiquidation(uint256 default_, uint256 deficit) external;
+    function settleLiquidation(
+        address vault,
+        address originalOwner,
+        uint256 badDebt,
+        uint256 liquidationInitiatorReward,
+        uint256 liquidationPenalty,
+        uint256 remainder
+    ) external;
 }

@@ -16,6 +16,7 @@ import "../interfaces/IRegistry.sol";
 import "../interfaces/IMainRegistry.sol";
 import "../interfaces/ITrustedCreditor.sol";
 import "../interfaces/IActionBase.sol";
+import {IFactory} from "../interfaces/IFactory.sol";
 import {ActionData} from "../actions/utils/ActionData.sol";
 
 /**
@@ -38,6 +39,7 @@ contract VaultV2 {
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
      */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+    uint256 public constant ASSET_LIMIT = 15;
 
     bool public isTrustedCreditorSet;
 
@@ -330,32 +332,31 @@ contract VaultV2 {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Function called to start a vault liquidation.
-     * @dev Requires an unhealthy vault (value / debt < liqThres).
-     * Starts the vault auction on the liquidator contract.
-     * Increases the life of the vault to indicate a liquidation has happened.
-     * Transfers ownership of the proxy vault to the liquidator!
-     * @param liquidationInitiator Address of the keeper who initiated the liquidation process.
-     * @dev trustedCreditor is a trusted contract.
-     * @dev After an auction is successfully started, interest acrual should stop.
-     * This must be implemented by trustedCreditor
-     * @dev If liquidateVault(address) is successfull, Factory will transfer ownership of the Vault to the Liquidator.
+     * @notice Function called by Liquidator to start liquidation of the Vault.
+     * @param openDebt The open debt taken by `originalOwner` at moment of liquidation at trustedCreditor
+     * @return originalOwner The original owner of this vault.
+     * @return baseCurrency_ The baseCurrency in which the vault is denominated.
+     * @return trustedCreditor_ The account or contract that is owed the debt.
+     * @dev Requires an unhealthy vault (value / debt < liqFactor).
+     * @dev Transfers ownership of the proxy vault to the liquidator!
      */
-    function liquidateVault(address liquidationInitiator) public onlyFactory returns (address liquidator_) {
-        uint256 usedMargin = getUsedMargin();
+    function liquidateVault(uint256 openDebt)
+        external
+        returns (address originalOwner, address baseCurrency_, address trustedCreditor_)
+    {
+        require(msg.sender == liquidator, "V_LV: You are not the liquidator");
 
-        require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");
+        //In current Vault version, the vault can only have debt owed to a single creditor, the trustedCreditor
+        require(getLiquidationValue() < openDebt, "V_LV: This vault is healthy");
 
-        //Start the liquidation process
-        ILiquidator(liquidator).startAuction(
-            liquidationInitiator, owner, uint128(usedMargin), baseCurrency, trustedCreditor
-        );
+        //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
+        IFactory(IMainRegistry(registry).factoryAddress()).liquidate(msg.sender);
 
-        //Hook implemented on the trusted creditor contract to notify that the vault
-        //is being liquidated and trigger any necessary logic on the trustedCreditor.
-        ITrustedCreditor(trustedCreditor).liquidateVault(usedMargin);
+        //Transfer ownership of the Vault itself
+        originalOwner = owner;
+        _transferOwnership(msg.sender);
 
-        liquidator_ = liquidator;
+        return (originalOwner, baseCurrency, trustedCreditor);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -435,6 +436,11 @@ contract VaultV2 {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
+            erc20Stored.length + erc721Stored.length + erc1155Stored.length + assetAddressesLength <= ASSET_LIMIT,
+            "V_D: Too many assets"
+        );
+
+        require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
                 && assetAddressesLength == assetTypes.length,
             "V_D: Length mismatch"
@@ -477,6 +483,7 @@ contract VaultV2 {
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
             if (assetAmounts[i] == 0) {
+                //skip if amount is 0 to prevent storing addresses that have 0 balance
                 unchecked {
                     ++i;
                 }
@@ -579,6 +586,7 @@ contract VaultV2 {
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
             if (assetAmounts[i] == 0) {
+                //skip if amount is 0 to prevent transferring 0 balances
                 unchecked {
                     ++i;
                 }
@@ -603,9 +611,7 @@ contract VaultV2 {
     /**
      * @notice Internal function used to deposit ERC20 tokens.
      * @dev Used for all tokens types = 0. Note the transferFrom, not the safeTransferFrom to allow legacy ERC20s.
-     * After successful transfer, the function checks whether the same asset has been deposited.
-     * This check is done using a loop: writing it in a mapping vs extra loops is in favor of extra loops in this case.
-     * If the address has not yet been seen, the ERC20 token address is stored.
+     * If the address has not yet been deposited, the ERC20 token address is stored.
      * @param from Address the tokens should be taken from. This address must have pre-approved the proxy vault.
      * @param ERC20Address The asset address that should be transferred.
      * @param amount The amount of ERC20 tokens to be transferred.
@@ -635,7 +641,6 @@ contract VaultV2 {
         IERC721(ERC721Address).transferFrom(from, address(this), id);
 
         erc721Stored.push(ERC721Address);
-        //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
         erc721TokenIds.push(id);
     }
 
@@ -644,7 +649,7 @@ contract VaultV2 {
      * @dev Used for all tokens types = 2. Note the safeTransferFrom.
      * After successful transfer, the function checks whether the combination of address & ID has already been stored.
      * If not, the function pushes the new address and ID to the stored arrays.
-     * This may cause duplicates in the ERC1155 stored addresses array, but this is intended.
+     * This may cause duplicates in the ERC1155 stored addresses array, this is intended.
      * @param from The Address the tokens should be taken from. This address must have pre-approved the proxy vault.
      * @param ERC1155Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
@@ -656,7 +661,7 @@ contract VaultV2 {
         uint256 currentBalance = erc1155Balances[ERC1155Address][id];
 
         if (currentBalance == 0) {
-            erc1155Stored.push(ERC1155Address); //TODO: see what the most gas efficient manner is to store/read/loop over this list to avoid duplicates
+            erc1155Stored.push(ERC1155Address);
             erc1155TokenIds.push(id);
         }
 
@@ -789,7 +794,7 @@ contract VaultV2 {
     /**
      * @notice Generates three arrays about the stored assets in the proxy vault
      * in the format needed for vault valuation functions.
-     * @dev No balances are stored on the contract. Both for gas savings upon deposit and to allow for rebasing/... tokens.
+     * @dev Balances are stored on the contract to prevent working around the deposit limits.
      * Loops through the stored asset addresses and fills the arrays.
      * The vault valuation function fetches the asset type through the asset registries.
      * There is no importance of the order in the arrays, but all indexes of the arrays correspond to the same asset.

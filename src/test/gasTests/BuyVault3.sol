@@ -59,7 +59,7 @@ contract gasBuyVault_1ERC201ERC721 is GasTestFixture {
         oracleWbaycToEth.transmit(int256(rateWbaycToEth) / 2);
 
         vm.prank(liquidatorBot);
-        factory.liquidate(address(proxy));
+        pool.liquidateVault(address(proxy));
 
         vm.prank(liquidityProvider);
         dai.transfer(vaultBuyer, 10 ** 10 * 10 ** 18);

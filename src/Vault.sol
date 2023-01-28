@@ -16,6 +16,7 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ITrustedCreditor.sol";
 import "./interfaces/IActionBase.sol";
+import {IFactory} from "./interfaces/IFactory.sol";
 import {ActionData} from "./actions/utils/ActionData.sol";
 
 /**
@@ -234,10 +235,10 @@ contract Vault {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Can be called by authorised applications to increase a margin position.
-     * @param baseCurrency_ The Base-currency in which the margin position is denominated
+     * @notice Called by trusted applications, checks if the Vault has sufficient free margin.
+     * @param baseCurrency_ The Base-currency in which the Vault is denominated.
      * @param amount The amount the position is increased.
-     * @return success Boolean indicating if there is sufficient free margin to increase the margin position
+     * @return success Boolean indicating if there is sufficient free margin to increase the margin position.
      */
     function increaseMarginPosition(address baseCurrency_, uint256 amount) public view returns (bool success) {
         if (baseCurrency_ != baseCurrency) {
@@ -331,32 +332,31 @@ contract Vault {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Function called to start a vault liquidation.
-     * @dev Requires an unhealthy vault (value / debt < liqThres).
-     * Starts the vault auction on the liquidator contract.
-     * Increases the life of the vault to indicate a liquidation has happened.
-     * Transfers ownership of the proxy vault to the liquidator!
-     * @param liquidationInitiator Address of the keeper who initiated the liquidation process.
-     * @dev trustedCreditor is a trusted contract.
-     * @dev After an auction is successfully started, interest acrual should stop.
-     * This must be implemented by trustedCreditor
-     * @dev If liquidateVault(address) is successfull, Factory will transfer ownership of the Vault to the Liquidator.
+     * @notice Function called by Liquidator to start liquidation of the Vault.
+     * @param openDebt The open debt taken by `originalOwner` at moment of liquidation at trustedCreditor
+     * @return originalOwner The original owner of this vault.
+     * @return baseCurrency_ The baseCurrency in which the vault is denominated.
+     * @return trustedCreditor_ The account or contract that is owed the debt.
+     * @dev Requires an unhealthy vault (value / debt < liqFactor).
+     * @dev Transfers ownership of the proxy vault to the liquidator!
      */
-    function liquidateVault(address liquidationInitiator) public onlyFactory returns (address liquidator_) {
-        uint256 usedMargin = getUsedMargin();
+    function liquidateVault(uint256 openDebt)
+        external
+        returns (address originalOwner, address baseCurrency_, address trustedCreditor_)
+    {
+        require(msg.sender == liquidator, "V_LV: You are not the liquidator");
 
-        require(getLiquidationValue() < usedMargin, "V_LV: This vault is healthy");
+        //In current Vault version, the Vault can only have debt owed to a single creditor, the trustedCreditor
+        require(getLiquidationValue() < openDebt, "V_LV: This vault is healthy");
 
-        //Start the liquidation process
-        ILiquidator(liquidator).startAuction(
-            liquidationInitiator, owner, uint128(usedMargin), baseCurrency, trustedCreditor
-        );
+        //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
+        IFactory(IMainRegistry(registry).factoryAddress()).liquidate(msg.sender);
 
-        //Hook implemented on the trusted creditor contract to notify that the vault
-        //is being liquidated and trigger any necessary logic on the trustedCreditor.
-        ITrustedCreditor(trustedCreditor).liquidateVault(usedMargin);
+        //Transfer ownership of the Vault itself to the Liquidator
+        originalOwner = owner;
+        _transferOwnership(msg.sender);
 
-        liquidator_ = liquidator;
+        return (originalOwner, baseCurrency, trustedCreditor);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -369,18 +369,22 @@ contract Vault {
      * @param value A boolean giving permissions to or taking permissions from an Asset manager
      * @dev Only set trusted addresses as Asset manager, Asset managers can potentially steal assets (as long as the vault position remains healthy).
      * @dev No need to set the Owner as Asset manager, owner will automattically have all permissions of an asset manager.
+     * @dev Potential use-cases of the asset manager might be to:
+     * - Automate actions by keeper networks,
+     * - Chain interactions with the Trusted Creditor together with vault actions (eg. borrow deposit and trade in one transaction).
      */
     function setAssetManager(address assetManager, bool value) external onlyOwner {
         isAssetManager[assetManager] = value;
     }
 
     /**
-     * @notice Calls external action handlers to execute and interact with external logic.
-     * @param actionHandler the address of the action handler to call
-     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
+     * @notice Calls external action handler to execute and interact with external logic.
+     * @param actionHandler The address of the action handler.
+     * @param actionData A bytes object containing two actionAssetData structs, an address array and a bytes array.
      * @dev Similar to flash loans, this function optimistically calls external logic and checks for the vault state at the very end.
-     * Potential use-cases of the asset manager might be automate actions by keeper networks,
-     * or to chain interactions with trusted creditor together with vault actions (eg. borrow deposit and trade in one transaction).
+     * @dev vaultManagementAction can interact with and chain together any DeFi protocol to swap, stake, claim...
+     * The only requirements are that the recipient tokens of the interactions are allowlisted, deposited back into the vault and
+     * that the Vault is in a healthy state at the end of the transaction.
      */
     function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyAssetManager {
         require(IMainRegistry(registry).isActionAllowed(actionHandler), "VL_VMA: Action is not allowlisted");

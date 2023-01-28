@@ -49,7 +49,7 @@ contract gasVaultAuction_1ERC20 is GasTestFixture {
         oracleEthToUsd.transmit(int256(rateEthToUsd) / 2);
 
         vm.prank(liquidatorBot);
-        factory.liquidate(address(proxy));
+        pool.liquidateVault(address(proxy));
     }
 
     function testAuctionPriceStart() public {

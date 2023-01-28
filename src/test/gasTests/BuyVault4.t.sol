@@ -75,7 +75,7 @@ contract gasBuyVault_2ERC202ERC721 is GasTestFixture {
         vm.stopPrank();
 
         vm.prank(liquidatorBot);
-        factory.liquidate(address(proxy));
+        pool.liquidateVault(address(proxy));
 
         vm.prank(liquidityProvider);
         dai.transfer(vaultBuyer, 10 ** 10 * 10 ** 18);

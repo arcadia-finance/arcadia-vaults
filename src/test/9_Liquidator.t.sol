@@ -42,14 +42,14 @@ contract LiquidatorTest is DeployArcadiaVaults {
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
-        pool.addTranche(address(tranche), 50);
+        pool.addTranche(address(tranche), 50, 0);
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
         dai.approve(address(pool), type(uint256).max);
 
         vm.prank(address(tranche));
-        pool.depositInLendingPool(type(uint128).max, liquidityProvider);
+        pool.depositInLendingPool(type(uint64).max, liquidityProvider);
     }
 
     //this is a before each
@@ -92,9 +92,10 @@ contract LiquidatorTest is DeployArcadiaVaults {
     function testSuccess_deployment() public {
         assertEq(liquidator.factory(), address(factory));
         assertEq(liquidator.registry(), address(mainRegistry));
-        (uint64 protocol, uint64 liquidationInitiator_) = liquidator.claimRatios();
-        assertEq(protocol, 5);
-        assertEq(liquidationInitiator_, 2);
+        (uint64 penalty, uint64 initiatorReward) = liquidator.claimRatios();
+        assertEq(penalty, 5);
+        assertEq(initiatorReward, 2);
+        assertEq(liquidator.startPriceMultiplier(), 110);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -140,475 +141,262 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(liquidator.factory(), factory_);
     }
 
-    function testRevert_setProtocolTreasury_NonOwner(address unprivilegedAddress_, address protocolTreasury_) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
-        liquidator.setProtocolTreasury(protocolTreasury_);
-        vm.stopPrank();
-    }
-
-    function testSuccess_setProtocolTreasury(address protocolTreasury_) public {
-        vm.prank(creatorAddress);
-        liquidator.setProtocolTreasury(protocolTreasury_);
-
-        assertEq(liquidator.protocolTreasury(), protocolTreasury_);
-    }
-
-    function testRevert_setReserveFund_NonOwner(address unprivilegedAddress_, address reserveFund_) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
-        liquidator.setReserveFund(reserveFund_);
-        vm.stopPrank();
-    }
-
-    function testSuccess_setReserveFund(address reserveFund_) public {
-        vm.prank(creatorAddress);
-        liquidator.setReserveFund(reserveFund_);
-
-        assertEq(liquidator.reserveFund(), reserveFund_);
-    }
-
     /*///////////////////////////////////////////////////////////////
                         MANAGE AUCTION SETTINGS
     ///////////////////////////////////////////////////////////////*/
 
-    function testRevert_setBreakevenTime_NonOwner(address unprivilegedAddress_, uint256 breakevenTime_) public {
+    function testRevert_setClaimRatios_NonOwner(
+        address unprivilegedAddress_,
+        Liquidator.ClaimRatios memory claimRatios_
+    ) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("Ownable: caller is not the owner");
-        liquidator.setBreakevenTime(breakevenTime_);
+        liquidator.setClaimRatios(claimRatios_);
         vm.stopPrank();
     }
 
-    function testSuccess_setBreakevenTime(uint256 breakevenTime_) public {
+    function testSuccess_setClaimRatios(Liquidator.ClaimRatios memory claimRatios_) public {
         vm.prank(creatorAddress);
-        liquidator.setBreakevenTime(breakevenTime_);
+        liquidator.setClaimRatios(claimRatios_);
 
-        assertEq(liquidator.breakevenTime(), breakevenTime_);
+        (uint64 penalty, uint64 initiatorReward) = liquidator.claimRatios();
+        assertEq(penalty, claimRatios_.penalty);
+        assertEq(initiatorReward, claimRatios_.initiatorReward);
+    }
+
+    function testRevert_setMaxAuctionTime_NonOwner(address unprivilegedAddress_, uint256 maxAuctionTime_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("Ownable: caller is not the owner");
+        liquidator.setMaxAuctionTime(maxAuctionTime_);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setMaxAuctionTime(uint256 maxAuctionTime_) public {
+        vm.prank(creatorAddress);
+        liquidator.setMaxAuctionTime(maxAuctionTime_);
+
+        assertEq(liquidator.maxAuctionTime(), maxAuctionTime_);
     }
 
     /*///////////////////////////////////////////////////////////////
                             AUCTION LOGIC
     ///////////////////////////////////////////////////////////////*/
 
-    function testRevert_startAuction_NonVault(
-        address unprivilegedAddress_,
-        address liquidationInitiator_,
-        uint128 openDebt
-    ) public {
+    function testRevert_startAuction_AuctionOngoing(uint128 openDebt) public {
+        vm.assume(openDebt > 0);
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+
+        vm.startPrank(address(pool));
+        vm.expectRevert("LQ_SA: Auction already ongoing");
+        liquidator.startAuction(address(proxy), openDebt);
+        vm.stopPrank();
+    }
+
+    function testRevert_startAuction_NonVault(address unprivilegedAddress_, uint128 openDebt) public {
         vm.assume(unprivilegedAddress_ != address(proxy));
 
-        vm.startPrank(unprivilegedAddress_);
+        vm.startPrank(address(pool));
         vm.expectRevert("LQ_SA: Not a vault");
-        liquidator.startAuction(liquidationInitiator_, vaultOwner, openDebt, address(dai), address(pool));
+        liquidator.startAuction(unprivilegedAddress_, openDebt);
         vm.stopPrank();
     }
 
-    function testRevert_startAuction_AuctionOngoing(address liquidationInitiator_, uint128 openDebt) public {
+    function testRevert_startAuction_NonCreditor(address unprivilegedAddress_, uint128 openDebt) public {
         vm.assume(openDebt > 0);
-        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(openDebt);
 
-        vm.prank(address(proxy));
-        liquidator.startAuction(liquidationInitiator_, vaultOwner, openDebt, address(dai), address(pool));
+        vm.assume(unprivilegedAddress_ != address(pool));
 
-        vm.startPrank(address(proxy));
-        vm.expectRevert("LQ_SA: Auction already ongoing");
-        liquidator.startAuction(liquidationInitiator_, vaultOwner, openDebt, address(dai), address(pool));
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("LQ_SA: Unauthorised");
+        liquidator.startAuction(address(proxy), openDebt);
         vm.stopPrank();
     }
 
-    function testSuccess_startAuction(address liquidationInitiator_, uint128 openDebt) public {
+    function testSuccess_startAuction(uint128 openDebt) public {
         vm.assume(openDebt > 0);
-        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(openDebt);
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(openDebt);
 
-        vm.prank(address(proxy));
-        liquidator.startAuction(liquidationInitiator_, vaultOwner, openDebt, address(dai), address(pool));
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
 
-        uint256 openClaim = liquidator.calcLiquidationInitiatorReward(openDebt);
-        assertEq(liquidator.openClaims(liquidationInitiator_, address(dai)), openClaim);
+        assertEq(proxy.owner(), address(liquidator));
+        uint256 index = factory.vaultIndex(address(proxy));
+        assertEq(factory.ownerOf(index), address(liquidator));
 
         (
             uint128 openDebt_,
-            uint128 startBlock,
+            uint128 startTime,
             bool inAuction,
             address baseCurrency,
             address originalOwner,
             address trustedCreditor
         ) = liquidator.auctionInformation(address(proxy));
         assertEq(openDebt_, openDebt);
-        assertEq(startBlock, uint128(block.number));
+        assertEq(startTime, uint128(block.timestamp));
         assertEq(inAuction, true);
         assertEq(baseCurrency, address(dai));
         assertEq(originalOwner, vaultOwner);
         assertEq(trustedCreditor, address(pool));
     }
 
-    /*///////////////////////////////////////////////////////////////
-                    CLAIM AUCTION PROCEEDS
-    ///////////////////////////////////////////////////////////////*/
+    function testSuccess_getPriceOfVault_NotForSale(address vaultAddress) public {
+        (uint256 price, bool inAuction) = liquidator.getPriceOfVault(vaultAddress);
 
-    function testRevert_claim_InsufficientOpenClaims(
-        address claimer,
-        uint128 openClaim,
-        uint128 claimAmount,
-        uint128 liquidatorBalance
+        assertEq(price, 0);
+        assertEq(inAuction, false);
+    }
+
+    function testSuccess_getPriceOfVault_AuctionTimeExceedingMaxTime(
+        uint64 startTime,
+        uint64 maxAuctionTime,
+        uint64 currentTime,
+        uint128 openDebt
     ) public {
-        vm.assume(claimAmount > openClaim);
+        vm.assume(currentTime > startTime);
+        vm.assume(currentTime - startTime > maxAuctionTime);
 
-        vm.prank(liquidityProvider);
-        dai.transfer(address(liquidator), liquidatorBalance);
+        vm.assume(openDebt > 0);
 
-        stdstore.target(address(liquidator)).sig(liquidator.openClaims.selector).with_key(claimer).with_key(
-            address(dai)
-        ).checked_write(openClaim);
+        stdstore.target(address(liquidator)).sig(liquidator.maxAuctionTime.selector).checked_write(maxAuctionTime);
+        vm.warp(startTime);
 
-        vm.startPrank(claimer);
-        vm.expectRevert(stdError.arithmeticError);
-        liquidator.claim(address(dai), claimAmount);
-        vm.stopPrank();
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+        vm.warp(currentTime);
+
+        (uint256 price, bool inAuction) = liquidator.getPriceOfVault(address(proxy));
+
+        assertEq(price, 0);
+        assertEq(inAuction, true);
     }
 
-    function testRevert_claim_InsufficientBalanceLiquidator(
-        address claimer,
-        uint128 openClaim,
-        uint128 claimAmount,
-        uint128 liquidatorBalance
+    function testSuccess_getPriceOfVault_AuctionTimeUnderMaxTime(
+        uint64 startTime,
+        uint64 maxAuctionTime,
+        uint64 currentTime,
+        uint128 openDebt,
+        uint8 startPriceMultiplier_
     ) public {
-        vm.assume(claimAmount <= openClaim);
-        vm.assume(claimAmount > liquidatorBalance);
+        vm.assume(currentTime > startTime);
+        vm.assume(currentTime - startTime <= maxAuctionTime);
+
+        vm.assume(openDebt > 0);
+
+        stdstore.target(address(liquidator)).sig(liquidator.maxAuctionTime.selector).checked_write(maxAuctionTime);
+        stdstore.target(address(liquidator)).sig(liquidator.startPriceMultiplier.selector).checked_write(
+            startPriceMultiplier_
+        );
+        vm.warp(startTime);
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+        vm.warp(currentTime);
+
+        uint256 auctionTime = currentTime - startTime;
+        uint256 startPrice = uint256(openDebt) * startPriceMultiplier_; //2 decimals
+        uint256 expectedPrice = startPrice * (maxAuctionTime - auctionTime) / maxAuctionTime; //2 decimals
+        expectedPrice = expectedPrice / 100; //0 decimals
+
+        (uint256 actualPrice, bool inAuction) = liquidator.getPriceOfVault(address(proxy));
+
+        assertEq(actualPrice, expectedPrice);
+        assertEq(inAuction, true);
+    }
+
+    function testRevert_buyVault_notForSale(address bidder) public {
+        vm.startPrank(bidder);
+        vm.expectRevert("LQ_BV: Not for sale");
+        liquidator.buyVault(address(proxy));
+        vm.stopPrank();
+    }
+
+    function testRevert_buyVault_InsufficientFunds(address bidder, uint128 openDebt, uint136 bidderfunds) public {
+        vm.assume(openDebt > 0);
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+
+        (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy));
+        vm.assume(priceOfVault > bidderfunds);
 
         vm.prank(liquidityProvider);
-        dai.transfer(address(liquidator), liquidatorBalance);
+        dai.transfer(bidder, bidderfunds);
 
-        stdstore.target(address(liquidator)).sig(liquidator.openClaims.selector).with_key(claimer).with_key(
-            address(dai)
-        ).checked_write(openClaim);
-
-        vm.startPrank(claimer);
+        vm.startPrank(bidder);
+        dai.approve(address(liquidator), type(uint256).max);
         vm.expectRevert(stdError.arithmeticError);
-        liquidator.claim(address(dai), claimAmount);
+        liquidator.buyVault(address(proxy));
         vm.stopPrank();
     }
 
-    function testSuccess_claim(address claimer, uint128 openClaim, uint128 claimAmount, uint128 liquidatorBalance)
-        public
-    {
-        vm.assume(claimAmount <= openClaim);
-        vm.assume(claimAmount <= liquidatorBalance);
-        vm.assume(claimer != liquidityProvider);
+    function testSuccess_buyVault(address bidder, uint128 openDebt, uint136 bidderfunds) public {
+        vm.assume(openDebt > 0);
+        vm.assume(bidder != address(0));
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+
+        (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy));
+        vm.assume(priceOfVault <= bidderfunds);
 
         vm.prank(liquidityProvider);
-        dai.transfer(address(liquidator), liquidatorBalance);
+        dai.transfer(bidder, bidderfunds);
 
-        stdstore.target(address(liquidator)).sig(liquidator.openClaims.selector).with_key(claimer).with_key(
-            address(dai)
-        ).checked_write(openClaim);
+        uint256 totalRealisedLiquidityBefore = pool.totalRealisedLiquidity();
+        uint256 availableLiquidityBefore = dai.balanceOf(address(pool));
 
-        vm.prank(claimer);
-        liquidator.claim(address(dai), claimAmount);
-
-        assertEq(liquidator.openClaims(claimer, address(dai)), openClaim - claimAmount);
-        assertEq(dai.balanceOf(claimer), claimAmount);
-        assertEq(dai.balanceOf(address(liquidator)), liquidatorBalance - claimAmount);
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                            OLD TESTS
-    ///////////////////////////////////////////////////////////////*/
-
-    function testSuccess_getPriceOfVault(uint128 amountEth, uint256 newPrice) public {
-        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
-        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
-        vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
-        vm.assume(amountEth < type(uint128).max / valueOfOneEth);
-
-        depositERC20InVault(eth, amountEth, vaultOwner);
-
-        uint128 amountCredit = uint128(proxy.getFreeMargin());
-
-        vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
-
-        vm.prank(oracleOwner);
-        oracleEthToUsd.transmit(int256(newPrice));
-
-        vm.prank(liquidationInitiator);
-        factory.liquidate(address(proxy));
-
-        uint16 liqThres = 150;
-
-        (uint256 vaultPrice,, bool forSale) = liquidator.getPriceOfVault(address(proxy));
-
-        uint256 expectedPrice = (amountCredit * liqThres) / 100;
-        assertTrue(forSale);
-        assertEq(vaultPrice, expectedPrice);
-    }
-
-    function testSuccess_liquidate_AuctionPriceDecrease(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll)
-        public
-    {
-        vm.assume(blocksToRoll < liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
-        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
-        vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
-        vm.assume(amountEth < type(uint128).max / valueOfOneEth);
-
-        depositERC20InVault(eth, amountEth, vaultOwner);
-
-        uint128 amountCredit = uint128(proxy.getFreeMargin());
-
-        vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
-
-        vm.prank(oracleOwner);
-        oracleEthToUsd.transmit(int256(newPrice));
-
-        vm.prank(liquidationInitiator);
-        factory.liquidate(address(proxy));
-
-        (uint128 openDebt,,,,,) = liquidator.auctionInformation(address(proxy));
-        uint16 liqThres = 150;
-        (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy));
-
-        vm.roll(block.number + blocksToRoll);
-        (uint256 vaultPriceAfter,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy));
-
-        uint256 expectedPrice = ((openDebt * liqThres) / 100)
-            - (
-                (blocksToRoll * ((openDebt * (liqThres - 100)) / 100))
-                    / (liquidator.hourlyBlocks() * liquidator.breakevenTime())
-            );
-
-        emit log_named_uint("expectedPrice", expectedPrice);
-
-        assertTrue(forSaleBefore);
-        assertTrue(forSaleAfter);
-        assertGe(vaultPriceBefore, vaultPriceAfter);
-        assertEq(vaultPriceAfter, expectedPrice);
-    }
-
-    function testSuccess_buyVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
-        vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
-        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
-        vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
-        vm.assume(amountEth < type(uint128).max / valueOfOneEth);
-
-        depositERC20InVault(eth, amountEth, vaultOwner);
-
-        uint128 amountCredit = uint128(proxy.getFreeMargin());
-
-        vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
-
-        vm.prank(oracleOwner);
-        oracleEthToUsd.transmit(int256(newPrice));
-
-        vm.prank(liquidationInitiator);
-        factory.liquidate(address(proxy));
-
-        (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy));
-        giveAsset(auctionBuyer, priceOfVault);
-
-        vm.prank(auctionBuyer);
+        vm.startPrank(bidder);
+        dai.approve(address(liquidator), type(uint256).max);
         liquidator.buyVault(address(proxy));
-
-        assertEq(proxy.owner(), auctionBuyer); //todo: check erc721 owner
-    }
-
-    function testSuccess_withdraw_FromPurchasedVault(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll) public {
-        vm.assume(blocksToRoll > liquidator.hourlyBlocks() * liquidator.breakevenTime());
-        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
-        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
-        vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
-        vm.assume(amountEth < type(uint128).max / valueOfOneEth);
-
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        ) = depositERC20InVault(eth, amountEth, vaultOwner);
-
-        uint128 amountCredit = uint128(proxy.getFreeMargin());
-
-        vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
-
-        vm.prank(oracleOwner);
-        oracleEthToUsd.transmit(int256(newPrice));
-
-        vm.prank(liquidationInitiator);
-        factory.liquidate(address(proxy));
-
-        (uint256 priceOfVault,,) = liquidator.getPriceOfVault(address(proxy));
-        giveAsset(auctionBuyer, priceOfVault);
-
-        vm.prank(auctionBuyer);
-        liquidator.buyVault(address(proxy));
-
-        assertEq(proxy.owner(), auctionBuyer);
-
-        vm.startPrank(auctionBuyer);
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(proxy), auctionBuyer, assetAmounts[0]);
-        proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
+
+        uint256 totalRealisedLiquidityAfter = pool.totalRealisedLiquidity();
+        uint256 availableLiquidityAfter = dai.balanceOf(address(pool));
+
+        assertEq(totalRealisedLiquidityAfter - totalRealisedLiquidityBefore, priceOfVault - openDebt);
+        assertEq(availableLiquidityAfter - availableLiquidityBefore, priceOfVault);
+        assertEq(dai.balanceOf(bidder), bidderfunds - priceOfVault);
+        uint256 index = factory.vaultIndex(address(proxy));
+        assertEq(factory.ownerOf(index), bidder);
+        assertEq(proxy.owner(), bidder);
     }
 
-    function testSuccess_Breakeven(uint128 amountEth, uint256 newPrice, uint64 blocksToRoll, uint8 breakevenTime)
-        public
-    {
-        vm.assume(blocksToRoll < liquidator.hourlyBlocks() * breakevenTime);
-        uint16 collFactorProxy = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint16 liqFactorProxy = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
-        vm.assume(newPrice / 100 * liqFactorProxy < rateEthToUsd / 100 * collFactorProxy);
-        vm.assume(amountEth > 0);
-        uint256 valueOfOneEth = rateEthToUsd * 10 ** (Constants.usdDecimals - Constants.oracleEthToUsdDecimals);
-        vm.assume(amountEth < type(uint128).max / valueOfOneEth);
+    function testSuccess_calcLiquidationSettlementValues(uint128 openDebt, uint256 priceOfVault) public {
+        (uint64 penaltyWeight, uint64 initiatorRewardWeight) = liquidator.claimRatios();
+        uint256 expectedLiquidationInitiatorReward = uint256(openDebt) * initiatorRewardWeight / 100;
+        uint256 expectedBadDebt;
+        uint256 expectedLiquidationPenalty;
+        uint256 expectedRemainder;
 
-        depositERC20InVault(eth, amountEth, vaultOwner);
+        if (priceOfVault < expectedLiquidationInitiatorReward + openDebt) {
+            expectedBadDebt = expectedLiquidationInitiatorReward + openDebt - priceOfVault;
+        } else {
+            expectedLiquidationPenalty = uint256(openDebt) * penaltyWeight / 100;
+            expectedRemainder = priceOfVault - openDebt - expectedLiquidationInitiatorReward;
 
-        uint128 amountCredit = uint128(proxy.getFreeMargin());
-
-        vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
-
-        vm.prank(creatorAddress);
-        liquidator.setBreakevenTime(breakevenTime);
-
-        vm.prank(oracleOwner);
-        oracleEthToUsd.transmit(int256(newPrice));
-
-        vm.prank(liquidationInitiator);
-        factory.liquidate(address(proxy));
-
-        (uint128 openDebt,,,,,) = liquidator.auctionInformation(address(proxy));
-        uint16 liqThres = 150;
-        (uint256 vaultPriceBefore,, bool forSaleBefore) = liquidator.getPriceOfVault(address(proxy));
-
-        vm.roll(block.number + blocksToRoll);
-        (uint256 vaultPriceAfter,, bool forSaleAfter) = liquidator.getPriceOfVault(address(proxy));
-
-        uint256 expectedPrice = ((openDebt * liqThres) / 100)
-            - ((blocksToRoll * ((openDebt * (liqThres - 100)) / 100)) / (liquidator.hourlyBlocks() * breakevenTime));
-
-        emit log_named_uint("expectedPrice", expectedPrice);
-
-        assertTrue(forSaleBefore);
-        assertTrue(forSaleAfter);
-        assertGe(vaultPriceBefore, vaultPriceAfter);
-        assertEq(vaultPriceAfter, expectedPrice);
-    }
-
-    function giveAsset(address addr, uint256 amount) public {
-        uint256 slot = stdstore.target(address(dai)).sig(dai.balanceOf.selector).with_key(addr).find();
-        bytes32 loc = bytes32(slot);
-        bytes32 newBalance = bytes32(abi.encode(amount));
-        vm.store(address(dai), loc, newBalance);
-    }
-
-    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](1);
-        assetAddresses[0] = address(token);
-
-        assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount;
-
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
-        vm.prank(tokenCreatorAddress);
-        token.mint(sender, amount);
-
-        vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
-    }
-
-    function depositERC721InVault(ERC721Mock token, uint128[] memory tokenIds, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](tokenIds.length);
-        assetIds = new uint256[](tokenIds.length);
-        assetAmounts = new uint256[](tokenIds.length);
-        assetTypes = new uint256[](tokenIds.length);
-
-        uint256 tokenIdToWorkWith;
-        for (uint256 i; i < tokenIds.length; ++i) {
-            tokenIdToWorkWith = tokenIds[i];
-            while (token.ownerOf(tokenIdToWorkWith) != address(0)) {
-                tokenIdToWorkWith++;
+            if (expectedRemainder > expectedLiquidationPenalty) {
+                expectedRemainder -= expectedLiquidationPenalty;
+            } else {
+                expectedLiquidationPenalty = expectedRemainder;
+                expectedRemainder = 0;
             }
-
-            token.mint(sender, tokenIdToWorkWith);
-            assetAddresses[i] = address(token);
-            assetIds[i] = tokenIdToWorkWith;
-            assetAmounts[i] = 1;
-            assetTypes[i] = 1;
         }
 
-        vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
-    }
+        (
+            uint256 actualBadDebt,
+            uint256 actualLiquidationInitiatorReward,
+            uint256 actualLiquidationPenalty,
+            uint256 actualRemainder
+        ) = liquidator.calcLiquidationSettlementValues(openDebt, priceOfVault);
 
-    function depositERC1155InVault(ERC1155Mock token, uint256 tokenId, uint256 amount, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](1);
-        assetIds = new uint256[](1);
-        assetAmounts = new uint256[](1);
-        assetTypes = new uint256[](1);
-
-        token.mint(sender, tokenId, amount);
-        assetAddresses[0] = address(token);
-        assetIds[0] = tokenId;
-        assetAmounts[0] = amount;
-        assetTypes[0] = 2;
-
-        vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
+        assertEq(actualBadDebt, expectedBadDebt);
+        assertEq(actualLiquidationInitiatorReward, expectedLiquidationInitiatorReward);
+        assertEq(actualLiquidationPenalty, expectedLiquidationPenalty);
+        assertEq(actualRemainder, expectedRemainder);
     }
 }
