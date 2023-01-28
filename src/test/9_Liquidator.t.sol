@@ -166,7 +166,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(initiatorReward, claimRatios_.initiatorReward);
     }
 
-    function testRevert_setMaxAuctionTime_NonOwner(address unprivilegedAddress_, uint256 cutoffTime) public {
+    function testRevert_setMaxAuctionTime_NonOwner(address unprivilegedAddress_, uint32 cutoffTime) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
@@ -175,7 +175,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_setMaxAuctionTime_NotInLimits(uint256 cutoffTime) public {
+    function testRevert_setMaxAuctionTime_NotInLimits(uint32 cutoffTime) public {
         // Preprocess: limit the fuzzing to acceptable levels
         vm.assume(cutoffTime > 8 * 60 * 60 || cutoffTime < 1 * 60 * 60);
 
@@ -186,7 +186,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_setMaxAuctionTime(uint256 cutoffTime) public {
+    function testSuccess_setMaxAuctionTime(uint32 cutoffTime) public {
         // Preprocess: limit the fuzzing to acceptable levels
         vm.assume(cutoffTime > 1 * 60 * 60);
         vm.assume(cutoffTime < 8 * 60 * 60);
@@ -336,20 +336,24 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint64 startTime,
         uint64 halfLife,
         uint64 currentTime,
-        uint64 cutoffTime,
+        uint32 cutoffTime,
         uint128 openDebt
     ) public {
         // Preprocess: Set up the fuzzed variables
         vm.assume(currentTime > startTime);
         vm.assume(halfLife > 1 * 60 * 60); // 1 hour
         vm.assume(halfLife < 4 * 60 * 60); // 4 hours
-        vm.assume(cutoffTime < 1 * 24 * 60 * 60); // 3 day
+        vm.assume(cutoffTime < 8 * 60 * 60); // 8 hours
+        vm.assume(cutoffTime > 1 * 60 * 60); // 1 hours
         vm.assume(currentTime - startTime < 5 * 24 * 60 * 60); // 5 day
         vm.assume(currentTime - startTime > cutoffTime);
         vm.assume(openDebt > 0);
 
         // Given: A vault is in auction
-        stdstore.target(address(liquidator)).sig(liquidator.auctionCutoffTime.selector).checked_write(cutoffTime);
+        vm.startPrank(creatorAddress);
+        liquidator.setDiscountRate(halfLife);
+        liquidator.setAuctionCutoffTime(cutoffTime);
+        vm.stopPrank();
         vm.warp(startTime);
 
         vm.prank(address(pool));
@@ -368,22 +372,26 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint64 startTime,
         uint64 halfLife,
         uint64 currentTime,
-        uint64 cutoffTime,
+        uint32 cutoffTime,
         uint128 openDebt
     ) public {
         // Preprocess: Set up the fuzzed variables
         vm.assume(currentTime > startTime);
         vm.assume(halfLife > 1 * 60 * 60); // 1 hour
         vm.assume(halfLife < 4 * 60 * 60); // 4 hours
-        vm.assume(cutoffTime > 5 * 24 * 60 * 60); // 1 day
-        vm.assume(currentTime - startTime < 5 * 24 * 60 * 60); // 5 day
+        vm.assume(cutoffTime < 8 * 60 * 60); // 8 hours
+        vm.assume(cutoffTime > 1 * 60 * 60); // 1 hours
+        vm.assume(currentTime - startTime < cutoffTime); // 5 day
         vm.assume(openDebt > 0);
 
         // Given: A vault is in auction
-        uint256 discountRate = 1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife));
+        uint64 discountRate = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife)));
 
-        stdstore.target(address(liquidator)).sig(liquidator.discountRate.selector).checked_write(discountRate);
-        stdstore.target(address(liquidator)).sig(liquidator.auctionCutoffTime.selector).checked_write(cutoffTime);
+        vm.startPrank(creatorAddress);
+        liquidator.setDiscountRate(halfLife);
+        liquidator.setAuctionCutoffTime(cutoffTime);
+        vm.stopPrank();
+
         vm.warp(startTime);
 
         vm.prank(address(pool));

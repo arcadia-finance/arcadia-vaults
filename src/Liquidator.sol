@@ -22,12 +22,12 @@ import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Ownable {
-    uint256 public startPriceMultiplier; // 2 decimals
+    uint16 public startPriceMultiplier; // 2 decimals
     // @dev 18 decimals, it is calculated off-chain and set by the owner
     // It is discount for auction per second passed after the auction.
     // example: 999807477651317500, it is calculated based on the half-life of 1 hour
-    uint256 public discountRate;
-    uint256 public auctionCutoffTime;
+    uint64 public discountRate;
+    uint32 public auctionCutoffTime; // maximum auction time in seconds that auction can run from the start of auction
 
     address public factory;
     address public registry;
@@ -94,31 +94,31 @@ contract Liquidator is Ownable {
      * @param halfLife The new half life
      */
     function setDiscountRate(uint256 halfLife) external onlyOwner {
-        require(halfLife > 30 * 60, "LQ_DR: It must be in limits");
-        require(halfLife < 8 * 60 * 60, "LQ_DR: It must be in limits");
-        discountRate = 1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife));
+        require(halfLife > 30 * 60, "LQ_DR: It must be in limits"); // 30 minutes
+        require(halfLife < 8 * 60 * 60, "LQ_DR: It must be in limits"); // 8 hours
+        discountRate = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife)));
     }
 
     /**
      * @notice Sets the max cutoff time for the liquidator.
      * @dev The max cutoff time is the maximum time an auction can run.
-     * @param auctionCutoffTime_ The new max cutoff time
+     * @param auctionCutoffTime_ The new max cutoff time. It is seconds that auction can run from the start of auction.
      */
-    function setAuctionCutoffTime(uint256 auctionCutoffTime_) external onlyOwner {
-        require(auctionCutoffTime_ > 1 * 60 * 60, "LQ_ACT: It must be in limits");
-        require(auctionCutoffTime_ < 8 * 60 * 60, "LQ_ACT: It must be in limits");
+    function setAuctionCutoffTime(uint32 auctionCutoffTime_) external onlyOwner {
+        require(auctionCutoffTime_ > 1 * 60 * 60, "LQ_ACT: It must be in limits"); // 1 hour
+        require(auctionCutoffTime_ < 8 * 60 * 60, "LQ_ACT: It must be in limits"); // 8 hours
         auctionCutoffTime = auctionCutoffTime_;
     }
 
     /**
      * @notice Sets the start price multiplier for the liquidator.
      * @dev The start price multiplier is a multiplier that is used to increase the price of the auction over time.
-     * @param startPriceMultiplier_ The new start price multiplier.
+     * @param startPriceMultiplier_ The new start price multiplier 2 decimal precision
      */
     function setStartPriceMultiplier(uint16 startPriceMultiplier_) external onlyOwner {
         require(startPriceMultiplier_ > 100, "LQ_SPM: It must be in limits");
         require(startPriceMultiplier_ < 301, "LQ_SPM: It must be in limits");
-        startPriceMultiplier = uint256(startPriceMultiplier_);
+        startPriceMultiplier = startPriceMultiplier_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -180,15 +180,14 @@ contract Liquidator is Ownable {
      * @param openDebt The open debt taken by `originalOwner`.
      * @return price The total price for which the vault can be purchased.
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
-     * And immediately ends the auction.
+     * And immediately ends the auction. Price decreases exponentially with discountRate per seconds.
      */
     function _calcPriceOfVault(uint256 timePassed, uint256 openDebt) internal view returns (uint256 price) {
         uint256 auctionTime;
         unchecked {
-            auctionTime = timePassed * 1_000_000_000_000_000_000;
+            auctionTime = timePassed * 1e18;
         }
-        price = uint256(openDebt) * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime)
-            / 100_000_000_000_000_000_000;
+        price = uint256(openDebt) * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime) / 1e20;
     }
 
     /**
