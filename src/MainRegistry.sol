@@ -6,7 +6,6 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-// import {Ownable} from "./../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {IChainLinkData} from "./interfaces/IChainLinkData.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 import {IPricingModule} from "./interfaces/IPricingModule.sol";
