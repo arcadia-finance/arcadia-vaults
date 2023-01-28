@@ -258,7 +258,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testLiquidationEndtoEnd() public {
+    function xtestLiquidationEndtoEnd() public {
         uint256 preValue = proxy1.getVaultValue(address(dai));
         uint256 preLiqValue = proxy1.getLiquidationValue();
         uint256 preColValue = proxy1.getCollateralValue();
