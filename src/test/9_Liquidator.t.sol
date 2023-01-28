@@ -317,6 +317,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     function testRevert_buyVault_InsufficientFunds(address bidder, uint128 openDebt, uint136 bidderfunds) public {
         vm.assume(openDebt > 0);
+        vm.assume(bidder != address(pool));
+        vm.assume(bidder != liquidityProvider);
 
         vm.prank(address(pool));
         liquidator.startAuction(address(proxy), openDebt);
@@ -337,6 +339,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
     function testSuccess_buyVault(address bidder, uint128 openDebt, uint136 bidderfunds) public {
         vm.assume(openDebt > 0);
         vm.assume(bidder != address(0));
+        vm.assume(bidder != address(pool));
 
         vm.prank(address(pool));
         liquidator.startAuction(address(proxy), openDebt);
