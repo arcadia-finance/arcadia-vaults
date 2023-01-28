@@ -8,10 +8,10 @@ pragma solidity >=0.4.22 <0.9.0;
 
 interface IPricingModule {
     struct GetValueInput {
-        address assetAddress;  //The contract address of the asset
-        uint256 assetId;       //The Id of the asset
-        uint256 assetAmount;   //The Amount of tokens
-        uint256 baseCurrency;  //Identifier of the BaseCurrency in which the value is ideally expressed
+        address assetAddress; //The contract address of the asset
+        uint256 assetId; //The Id of the asset
+        uint256 assetAmount; //The Amount of tokens
+        uint256 baseCurrency; //Identifier of the BaseCurrency in which the value is ideally expressed
     }
 
     /**

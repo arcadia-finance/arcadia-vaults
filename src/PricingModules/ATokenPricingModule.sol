@@ -6,11 +6,9 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./AbstractPricingModule.sol";
-import "../interfaces/IAToken.sol";
-import "../interfaces/IPricingModule.sol";
-import "../interfaces/IStandardERC20PricingModule.sol";
-import "../interfaces/IMainRegistry.sol";
+import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
+import "./interfaces/IAToken.sol";
+import "./interfaces/IStandardERC20PricingModule.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 

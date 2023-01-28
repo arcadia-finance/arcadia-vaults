@@ -11,7 +11,7 @@ import {ArcadiaAddresses, ArcadiaContractAddresses} from "./Constants/TransferOw
 
 import "../src/Factory.sol";
 import "../src/MainRegistry.sol";
-import "../src/PricingModules/StandardERC20PricingModule.sol";
+import {StandardERC20PricingModule} from "../src/PricingModules/StandardERC20PricingModule.sol";
 import "../src/Liquidator.sol";
 import "../src/OracleHub.sol";
 

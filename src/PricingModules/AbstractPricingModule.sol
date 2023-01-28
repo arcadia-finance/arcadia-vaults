@@ -6,10 +6,9 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "../interfaces/IOraclesHub.sol";
-import "../interfaces/IMainRegistry.sol";
-import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import {Ownable} from "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {IOraclesHub} from "./interfaces/IOraclesHub.sol";
+import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
 import {RiskConstants} from "../utils/RiskConstants.sol";
 
 /**
@@ -20,8 +19,6 @@ import {RiskConstants} from "../utils/RiskConstants.sol";
  * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main-Registry
  */
 abstract contract PricingModule is Ownable {
-    using FixedPointMathLib for uint256;
-
     address public mainRegistry;
     address public oracleHub;
     address public riskManager;

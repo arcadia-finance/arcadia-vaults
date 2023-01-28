@@ -7,7 +7,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "./UniswapV2PairMock.sol";
-import "../interfaces/IUniswapV2Pair.sol";
+import "../PricingModules/interfaces/IUniswapV2Pair.sol";
 
 interface IUniswapV2PairExtension is IUniswapV2Pair {
     function initialize(address _token0, address _token1) external;

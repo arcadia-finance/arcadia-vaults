@@ -6,9 +6,9 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./AbstractPricingModule.sol";
-import "../interfaces/IUniswapV2Pair.sol";
-import "../interfaces/IUniswapV2Factory.sol";
+import {PricingModule, IMainRegistry} from "./AbstractPricingModule.sol";
+import "./interfaces/IUniswapV2Pair.sol";
+import "./interfaces/IUniswapV2Factory.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 import {PRBMath} from "../utils/PRBMath.sol";
 

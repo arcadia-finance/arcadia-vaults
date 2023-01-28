@@ -15,13 +15,14 @@ import {ERC20Mock} from "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
 import "../../MainRegistry.sol";
-import "../../PricingModules/FloorERC721PricingModule.sol";
-import "../../PricingModules/StandardERC20PricingModule.sol";
-import "../../PricingModules/FloorERC1155PricingModule.sol";
+import {PricingModule, StandardERC20PricingModule} from "../../PricingModules/StandardERC20PricingModule.sol";
+import {FloorERC721PricingModule} from "../../PricingModules/FloorERC721PricingModule.sol";
+import {FloorERC1155PricingModule} from "../../PricingModules/FloorERC1155PricingModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
 import "../../utils/Constants.sol";
 import "../../mockups/ArcadiaOracle.sol";
+import {RiskConstants} from "../../utils/RiskConstants.sol";
 import ".././fixtures/ArcadiaOracleFixture.f.sol";
 
 contract DeployArcadiaVaults is Test {

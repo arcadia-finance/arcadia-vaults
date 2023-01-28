@@ -6,7 +6,7 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./AbstractPricingModule.sol";
+import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
 
 /**
  * @title Pricing Module for ERC721 tokens for which a oracle exists for the floor price of the collection

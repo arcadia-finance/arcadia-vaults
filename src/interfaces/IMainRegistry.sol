@@ -41,13 +41,6 @@ interface IMainRegistry {
     function isActionAllowed(address action) external view returns (bool);
 
     /**
-     * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True).
-     * @param asset The address of the asset.
-     * @return success A boolean if function was successfull.
-     */
-    function addAsset(address asset) external returns (bool);
-
-    /**
      * @notice Batch deposit multiple assets
      * @param assetAddresses An array of addresses of the assets
      * @param assetIds An array of asset ids

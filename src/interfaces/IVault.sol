@@ -42,7 +42,5 @@ interface IVault {
      * @return baseCurrency The baseCurrency in which the vault is denominated.
      * @return trustedCreditor The account or contract that is owed the debt.
      */
-    function liquidateVault(uint256 openDebt)
-        external
-        returns (address, address, address);
+    function liquidateVault(uint256 openDebt) external returns (address, address, address);
 }
