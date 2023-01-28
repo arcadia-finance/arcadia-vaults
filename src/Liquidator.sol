@@ -6,13 +6,11 @@
  */
 pragma solidity ^0.8.13;
 
-import "./interfaces/IFactory.sol";
-import "./interfaces/IMainRegistry.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/IVault.sol";
-import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./interfaces/ILendingPool.sol";
-import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
+import {IFactory} from "./interfaces/IFactory.sol";
+import {IERC20} from "./interfaces/IERC20.sol";
+import {IVault} from "./interfaces/IVault.sol";
+import {Ownable} from "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {ILendingPool} from "./interfaces/ILendingPool.sol";
 
 /**
  * @title The liquidator holds the execution logic and storage or all things related to liquidating Arcadia Vaults

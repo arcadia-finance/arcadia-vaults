@@ -6,10 +6,9 @@
  */
 pragma solidity >0.8.13;
 
-import "../actions/utils/ActionData.sol";
-import {ActionBase} from "./ActionBase.sol";
-import "../interfaces/IERC20.sol";
-import "../interfaces/IERC1155.sol";
+import {ActionBase, ActionData} from "./ActionBase.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
+import {IERC1155} from "../interfaces/IERC1155.sol";
 
 /**
  * @title Generic multicall action
