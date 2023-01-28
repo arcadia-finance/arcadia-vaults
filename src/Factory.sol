@@ -68,13 +68,22 @@ contract Factory is ERC721, FactoryGuardian {
     }
 
     /**
-     * @notice View function to see if an address is a vault
-     * @dev Function is used to verify if certain calls are to be made to an actual vault or not.
-     * @param vaultAddr The address to be checked.
-     * @return bool whether the address is a vault or not.
+     * @notice View function returning if an address is a vault
+     * @param vault The address to be checked.
+     * @return bool Whether the address is a vault or not.
      */
-    function isVault(address vaultAddr) public view returns (bool) {
-        return vaultIndex[vaultAddr] > 0;
+    function isVault(address vault) public view returns (bool) {
+        return vaultIndex[vault] > 0;
+    }
+
+    /**
+     * @notice Returns the owner of a vault.
+     * @param vault The Vault address.
+     * @return owner_ The Vault owner.
+     * @dev Function does not revert when inexisting vault is passed, but returns zero-address as owner.
+     */
+    function ownerOfVault(address vault) public view returns (address owner_) {
+        owner_ = ownerOf[vaultIndex[vault]];
     }
 
     /**

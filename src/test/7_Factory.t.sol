@@ -180,6 +180,17 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(expectedReturn, actualReturn);
     }
 
+    function testSuccess_ownerOfVault_NonVault(address nonVault) public {
+        assertEq(factory.ownerOfVault(nonVault), address(0));
+    }
+
+    function testSuccess_ownerOfVault_ExistingVault(address owner) public {
+        vm.prank(owner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+
+        assertEq(factory.ownerOfVault(proxyAddr), owner);
+    }
+
     //For tests upgradeVaultVersion, see 13_ProxyUpgrade.t.sol
 
     function testSuccess_safeTransferFrom_OnVaultAddress(address owner) public {
