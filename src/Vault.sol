@@ -11,8 +11,6 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IERC721.sol";
 import "./interfaces/IERC1155.sol";
 import "./interfaces/IERC4626.sol";
-import "./interfaces/ILiquidator.sol";
-import "./interfaces/IRegistry.sol";
 import "./interfaces/IMainRegistry.sol";
 import "./interfaces/ITrustedCreditor.sol";
 import "./interfaces/IActionBase.sol";
@@ -109,6 +107,7 @@ contract Vault {
      * @param owner_ The tx.origin: the sender of the 'createVault' on the factory
      * @param registry_ The 'beacon' contract to which should be looked at for external logic.
      * @param vaultVersion_ The version of the vault logic.
+     * @param baseCurrency_ The Base-currency in which the vault is denominated.
      */
     function initialize(address owner_, address registry_, uint16 vaultVersion_, address baseCurrency_) external {
         require(vaultVersion == 0, "V_I: Already initialized!");
@@ -120,7 +119,9 @@ contract Vault {
     }
 
     /**
-     * @dev Stores a new address in the EIP1967 implementation slot & updates the vault version.
+     * @notice Stores a new address in the EIP1967 implementation slot & updates the vault version.
+     * @param newImplementation The contract with the new vault logic.
+     * @param newVersion The new version of the vault logic.
      */
     function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
         vaultVersion = newVersion;
@@ -130,7 +131,7 @@ contract Vault {
     }
 
     /**
-     * @dev Returns an `AddressSlot` with member `value` located at `slot`.
+     * @notice Returns an `AddressSlot` with member `value` located at `slot`.
      */
     function _getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
         assembly {
@@ -143,8 +144,9 @@ contract Vault {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner via the factory.
+     * @notice Transfers ownership of the contract to a new account.
+     * @param newOwner The new owner of the Vault
+     * @dev Can only be called by the current owner via the factory.
      * A transfer of ownership of this vault by a transfer
      * of ownership of the accompanying ERC721 Vault NFT
      * issued by the factory. Owner of Vault NFT = owner of vault
@@ -157,7 +159,7 @@ contract Vault {
     }
 
     /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * @notice Transfers ownership of the contract to a new account (`newOwner`).
      * Internal function without access restriction.
      */
     function _transferOwnership(address newOwner) internal virtual {
@@ -260,7 +262,7 @@ contract Vault {
     function getVaultValue(address baseCurrency_) public view returns (uint256 vaultValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vaultValue = IRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency_);
+        vaultValue = IMainRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency_);
     }
 
     /**
@@ -277,7 +279,8 @@ contract Vault {
     function getCollateralValue() public view returns (uint256 collateralValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        collateralValue = IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        collateralValue =
+            IMainRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -294,7 +297,8 @@ contract Vault {
     function getLiquidationValue() public view returns (uint256 liquidationValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        liquidationValue = IRegistry(registry).getLiquidationValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        liquidationValue =
+            IMainRegistry(registry).getLiquidationValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -482,7 +486,7 @@ contract Vault {
         address from
     ) internal {
         //reverts in mainregistry if invalid input
-        IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        IMainRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
@@ -585,7 +589,7 @@ contract Vault {
         uint256[] memory assetTypes,
         address to
     ) internal {
-        IRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //reverts in mainregistry if invalid input
+        IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //reverts in mainregistry if invalid input
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {

@@ -6,7 +6,7 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./AbstractPricingModule.sol";
+import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
@@ -87,11 +87,11 @@ contract StandardERC20PricingModule is PricingModule {
     }
 
     /**
-     * @notice Returns the information that is stored in the Sub-registry for a given asset
-     * @dev struct is not taken into memory; saves gas
-     * @param asset The Token address of the asset
-     * @return assetUnit The unit (10 ** decimals) of the asset
-     * @return oracles The list of addresses of the oracles to get the exchange rate of the asset in USD
+     * @notice Returns the information that is stored in the StandardERC20PricingModule for a given ERC20 token.
+     * @dev struct is not taken into memory; saves gas.
+     * @param asset The Token address of the asset.
+     * @return assetUnit The unit (10 ** decimals) of the asset.
+     * @return oracles The list of addresses of the oracles to get the exchange rate of the asset in USD.
      */
     function getAssetInformation(address asset) external view returns (uint64, address[] memory) {
         return (assetToInformation[asset].assetUnit, assetToInformation[asset].oracles);

@@ -9,7 +9,7 @@ pragma solidity >0.8.10;
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 import "../mockups/UniswapV2FactoryMock.sol";
 import "../mockups/UniswapV2PairMock.sol";
-import "../AssetRegistry/UniswapV2PricingModule.sol";
+import {UniswapV2PricingModule} from "../PricingModules/UniswapV2PricingModule.sol";
 
 contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
     constructor(address mainRegistry_, address oracleHub_, address uniswapV2Factory_, address erc20PricingModule_)

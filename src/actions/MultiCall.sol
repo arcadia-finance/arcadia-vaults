@@ -24,9 +24,9 @@ contract ActionMultiCall is ActionBase {
 
     /**
      * @notice Calls a series of addresses with arbitrrary calldata
+     * @param actionData A bytes object containing two actionAssetData structs, an address array and a bytes array.
+     * @return incoming An actionAssetData struct with the balances of this ActionMultiCall address.
      * @dev input address is not used in this generic action.
-     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
-     * @return incoming a actionAssetData struct with the balances of this ActionMultiCall address.
      */
     function executeAction(bytes calldata actionData) external override returns (ActionData memory) {
         (, ActionData memory incoming, address[] memory to, bytes[] memory data) =

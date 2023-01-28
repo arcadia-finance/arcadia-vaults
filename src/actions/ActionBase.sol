@@ -15,5 +15,10 @@ abstract contract ActionBase {
         MAIN_REGISTRY = mainreg;
     }
 
+    /**
+     * @notice Calls a series of addresses with arbitrrary calldata.
+     * @param actionData A bytes object containing two actionAssetData structs, an address array and a bytes array.
+     * @return resultData An actionAssetData struct with the balances of this ActionMultiCall address.
+     */
     function executeAction(bytes calldata actionData) external virtual returns (ActionData memory resultData) {}
 }

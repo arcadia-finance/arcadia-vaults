@@ -6,11 +6,10 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./AbstractPricingModule.sol";
-import "../interfaces/IAToken.sol";
-import "../interfaces/IPricingModule.sol";
-import "../interfaces/IStandardERC20PricingModule.sol";
-import "../interfaces/IMainRegistry.sol";
+import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
+import "./interfaces/IAToken.sol";
+import "./interfaces/IStandardERC20PricingModule.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
 /**
@@ -71,7 +70,7 @@ contract ATokenPricingModule is PricingModule {
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
-        assetToInformation[asset].assetUnit = uint64(assetUnit); //Can safely cast to uint64, we previously checked it is smaller than 10e18
+        assetToInformation[asset].assetUnit = uint64(assetUnit); //Can unsafe cast to uint64, we previously checked it is smaller than 10e18
         assetToInformation[asset].underlyingAsset = underlyingAsset;
         assetToInformation[asset].underlyingAssetOracles = underlyingAssetOracles;
         _setRiskVariablesForAsset(asset, riskVars);
