@@ -741,13 +741,11 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_liquidate_Paused(address liquidator_, uint128 openPosition, address guardian) public {
+    function testRevert_liquidate_Paused(address liquidator_, address guardian) public {
         // Given: guardian is the guardian of factory
         vm.prank(creatorAddress);
         factory.changeGuardian(guardian);
         vm.warp(35 days);
-
-        vm.assume(openPosition > 0);
 
         vm.prank(vaultOwner);
         proxyAddr = factory.createVault(0, 0, address(0));
@@ -764,8 +762,7 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.liquidate(liquidator_);
     }
 
-    function testSuccess_liquidate(address liquidator_, uint128 openPosition) public {
-        vm.assume(openPosition > 0);
+    function testSuccess_liquidate(address liquidator_) public {
         vm.assume(liquidator_ != vaultOwner);
 
         vm.prank(vaultOwner);

@@ -214,10 +214,10 @@ contract Liquidator is Ownable {
 
         //openDebt is a uint128 -> all calculations can be unchecked
         unchecked {
-            //Liquidation Initiator Reward is always payed out, independant of the final auction price
+            //Liquidation Initiator Reward is always paid out, independent of the final auction price
             liquidationInitiatorReward = openDebt * claimRatios_.initiatorReward / 100;
 
-            //Final Auction price should at least cover the original debt and  Liquidation Initiator Reward.
+            //Final Auction price should at least cover the original debt and Liquidation Initiator Reward.
             //Otherwise there is bad debt.
             if (priceOfVault < openDebt + liquidationInitiatorReward) {
                 badDebt = openDebt + liquidationInitiatorReward - priceOfVault;

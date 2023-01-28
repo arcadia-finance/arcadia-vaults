@@ -256,16 +256,17 @@ contract Factory is ERC721, FactoryGuardian {
     function liquidate(address liquidator) external whenLiquidateNotPaused {
         require(isVault(msg.sender), "FTRY: Not a vault");
 
-        address from = ownerOf[vaultIndex[msg.sender]];
+        uint256 id = vaultIndex[msg.sender];
+        address from = ownerOf[id];
         unchecked {
             balanceOf[from]--;
             balanceOf[liquidator]++;
         }
 
-        ownerOf[vaultIndex[msg.sender]] = liquidator;
+        ownerOf[id] = liquidator;
 
-        delete getApproved[vaultIndex[msg.sender]];
-        emit Transfer(from, liquidator, vaultIndex[msg.sender]);
+        delete getApproved[id];
+        emit Transfer(from, liquidator, id);
     }
 
     /*///////////////////////////////////////////////////////////////

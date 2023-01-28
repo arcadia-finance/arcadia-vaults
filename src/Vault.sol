@@ -236,7 +236,7 @@ contract Vault {
 
     /**
      * @notice Called by trusted applications, checks if the Vault has sufficient free margin.
-     * @param baseCurrency_ The Base-currency in which the vault is denominated.
+     * @param baseCurrency_ The Base-currency in which the Vault is denominated.
      * @param amount The amount the position is increased.
      * @return success Boolean indicating if there is sufficient free margin to increase the margin position.
      */
@@ -346,13 +346,13 @@ contract Vault {
     {
         require(msg.sender == liquidator, "V_LV: You are not the liquidator");
 
-        //In current Vault version, the vault can only have debt owed to a single creditor, the trustedCreditor
+        //In current Vault version, the Vault can only have debt owed to a single creditor, the trustedCreditor
         require(getLiquidationValue() < openDebt, "V_LV: This vault is healthy");
 
         //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
         IFactory(IMainRegistry(registry).factoryAddress()).liquidate(msg.sender);
 
-        //Transfer ownership of the Vault itself
+        //Transfer ownership of the Vault itself to the Liquidator
         originalOwner = owner;
         _transferOwnership(msg.sender);
 
