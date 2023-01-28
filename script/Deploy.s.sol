@@ -13,8 +13,8 @@ import "../src/Factory.sol";
 import "../src/Proxy.sol";
 import "../src/Vault.sol";
 import {ERC20} from "../lib/solmate/src/tokens/ERC20.sol";
-import "../src/AssetRegistry/MainRegistry.sol";
-import "../src/AssetRegistry/StandardERC20PricingModule.sol";
+import "../src/MainRegistry.sol";
+import "../src/PricingModules/StandardERC20PricingModule.sol";
 import "../src/Liquidator.sol";
 import "../src/OracleHub.sol";
 
