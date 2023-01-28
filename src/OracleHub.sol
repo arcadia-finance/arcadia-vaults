@@ -6,8 +6,8 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./interfaces/IChainLinkData.sol";
+import {Ownable} from "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {IChainLinkData} from "./interfaces/IChainLinkData.sol";
 import {StringHelpers} from "./utils/StringHelpers.sol";
 import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
 

@@ -7,8 +7,7 @@
 
 pragma solidity ^0.8.0;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./BaseGuardian.sol";
+import {BaseGuardian} from "./BaseGuardian.sol";
 
 /**
  * @title Factory Guardian

@@ -7,7 +7,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./BaseGuardian.sol";
+import {BaseGuardian} from "./BaseGuardian.sol";
 
 /**
  * @title Main Registry Guardian

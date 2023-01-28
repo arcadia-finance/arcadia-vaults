@@ -6,14 +6,13 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./Proxy.sol";
-import "./interfaces/IVault.sol";
-import "./interfaces/IMainRegistry.sol";
-import "../lib/solmate/src/tokens/ERC721.sol";
-import "./utils/Strings.sol";
-import "./utils/MerkleProofLib.sol";
-import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./security/FactoryGuardian.sol";
+import {Proxy} from "./Proxy.sol";
+import {IVault} from "./interfaces/IVault.sol";
+import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
+import {ERC721} from "../lib/solmate/src/tokens/ERC721.sol";
+import {Strings} from "./utils/Strings.sol";
+import {MerkleProofLib} from "./utils/MerkleProofLib.sol";
+import {FactoryGuardian} from "./security/FactoryGuardian.sol";
 
 contract Factory is ERC721, FactoryGuardian {
     using Strings for uint256;

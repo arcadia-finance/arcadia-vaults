@@ -6,13 +6,12 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./interfaces/IChainLinkData.sol";
-import "./interfaces/IFactory.sol";
-import "./interfaces/IPricingModule.sol";
+import {IChainLinkData} from "./interfaces/IChainLinkData.sol";
+import {IFactory} from "./interfaces/IFactory.sol";
+import {IPricingModule} from "./interfaces/IPricingModule.sol";
 import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
 import {RiskModule} from "./RiskModule.sol";
-import "./security/MainRegistryGuardian.sol";
+import {MainRegistryGuardian} from "./security/MainRegistryGuardian.sol";
 
 /**
  * @title Main Asset registry

@@ -6,7 +6,7 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import "./utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
 import {RiskConstants} from "./utils/RiskConstants.sol";
 
 /**
