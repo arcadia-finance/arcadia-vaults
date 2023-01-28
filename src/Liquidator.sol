@@ -22,8 +22,8 @@ import {ILendingPool} from "./interfaces/ILendingPool.sol";
  */
 contract Liquidator is Ownable {
     uint16 public startPriceMultiplier; // 2 decimals
-    // @dev 18 decimals, it is calculated off-chain and set by the owner
-    // It is discount for auction per second passed after the auction.
+    // @dev 18 decimals
+    // It is the discount for an auction, per second passed after the auction.
     // example: 999807477651317500, it is calculated based on the half-life of 1 hour
     uint64 public discountRate;
     uint16 public auctionCutoffTime; // maximum auction time in seconds that auction can run from the start of auction, max 18 hours
@@ -189,14 +189,12 @@ contract Liquidator is Ownable {
         price = openDebt * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime) / 1e20;
     }
 
-    event log(uint256 num);
     /**
      * @notice Function a user (the bidder) calls to buy the vault and end the auction.
      * @param vault The contract address of the vault.
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
      * And immediately ends the auction.
      */
-
     function buyVault(address vault) external {
         AuctionInformation memory auctionInformation_ = auctionInformation[vault];
         require(auctionInformation_.inAuction, "LQ_BV: Not for sale");
