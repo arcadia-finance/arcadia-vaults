@@ -196,11 +196,13 @@ contract Liquidator is Ownable {
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
      * And immediately ends the auction.
      */
+
     function buyVault(address vault) external {
         AuctionInformation memory auctionInformation_ = auctionInformation[vault];
         require(auctionInformation_.inAuction, "LQ_BV: Not for sale");
 
-        uint256 priceOfVault = _calcPriceOfVault(block.timestamp - auctionInformation_.startTime, auctionInformation_.openDebt);
+        uint256 priceOfVault =
+            _calcPriceOfVault(block.timestamp - auctionInformation_.startTime, auctionInformation_.openDebt);
         //Stop the auction, this will prevent any possible reentrance attacks.
         auctionInformation[vault].inAuction = false;
 

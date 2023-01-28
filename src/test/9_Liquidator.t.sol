@@ -240,7 +240,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-
     function testSuccess_setDiscountRate(uint256 halfLife) public {
         // Preprocess: limit the fuzzing to acceptable levels
         vm.assume(halfLife > 1 * 60 * 60);
@@ -265,7 +264,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     function testRevert_setStartPriceMultiplier_tooHigh(uint16 priceMultiplier) public {
         // Preprocess: limit the fuzzing to acceptable levels
-        vm.assume(priceMultiplier > 300 );
+        vm.assume(priceMultiplier > 300);
 
         // Given When Then: a owner attempts to set the start price multiplier, but it is not in the limits
         vm.startPrank(creatorAddress);
