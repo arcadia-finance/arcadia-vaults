@@ -7,11 +7,10 @@
 
 pragma solidity >=0.4.22 <0.9.0;
 
-import {IERC20} from "./IERC20.sol";
-import {IScaledBalanceToken} from "./IScaledBalanceToken.sol";
-
-interface IAToken is IScaledBalanceToken {
+interface IAToken {
+    /**
+     * @notice Returns the underlying asset of the aToken.
+     * @return asset Contract address of the underlying ERC20.
+     */
     function UNDERLYING_ASSET_ADDRESS() external view returns (address);
-
-    function decimals() external view returns (uint256);
 }

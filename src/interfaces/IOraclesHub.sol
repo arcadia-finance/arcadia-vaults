@@ -7,7 +7,18 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 interface IOraclesHub {
-    function getRate(address[] memory, uint256) external view returns (uint256, uint256);
-
+    /**
+     * @notice Checks if a series of oracles adheres to a predefined ruleset
+     * @param oracles An array of addresses of oracle contracts
+     */
     function checkOracleSequence(address[] memory oracles) external view;
+
+    /**
+     * @notice Returns the exchange rate of a certain asset, denominated in USD or in another BaseCurrency
+     * @param oracles An array of addresses of oracle contracts
+     * @param baseCurrency The BaseCurrency (base-asset) in which the exchange rate is ideally expressed
+     * @return rateInUsd The exchange rate of the asset denominated in USD, integer with 18 Decimals precision
+     * @return rateInBaseCurrency The exchange rate of the asset denominated in a BaseCurrency different from USD, integer with 18 Decimals precision
+     */
+    function getRate(address[] memory oracles, uint256 baseCurrency) external view returns (uint256, uint256);
 }

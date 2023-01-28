@@ -9,6 +9,10 @@ pragma solidity >=0.4.22 <0.9.0;
 import "./UniswapV2PairMock.sol";
 import "../interfaces/IUniswapV2Pair.sol";
 
+interface IUniswapV2PairExtension is IUniswapV2Pair {
+    function initialize(address _token0, address _token1) external;
+}
+
 contract UniswapV2FactoryMock {
     address public feeTo;
     address public owner;
@@ -38,7 +42,7 @@ contract UniswapV2FactoryMock {
         assembly {
             pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
-        IUniswapV2Pair(pair).initialize(token0, token1);
+        IUniswapV2PairExtension(pair).initialize(token0, token1);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);

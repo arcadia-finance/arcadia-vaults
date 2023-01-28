@@ -11,8 +11,6 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/IERC721.sol";
 import "../interfaces/IERC1155.sol";
 import "../interfaces/IERC4626.sol";
-import "../interfaces/ILiquidator.sol";
-import "../interfaces/IRegistry.sol";
 import "../interfaces/IMainRegistry.sol";
 import "../interfaces/ITrustedCreditor.sol";
 import "../interfaces/IActionBase.sol";
@@ -260,7 +258,7 @@ contract VaultV2 {
     function getVaultValue(address baseCurrency_) public view returns (uint256 vaultValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        vaultValue = IRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency_);
+        vaultValue = IMainRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency_);
     }
 
     /**
@@ -277,7 +275,8 @@ contract VaultV2 {
     function getCollateralValue() public view returns (uint256 collateralValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        collateralValue = IRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        collateralValue =
+            IMainRegistry(registry).getCollateralValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -294,7 +293,8 @@ contract VaultV2 {
     function getLiquidationValue() public view returns (uint256 liquidationValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
-        liquidationValue = IRegistry(registry).getLiquidationValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
+        liquidationValue =
+            IMainRegistry(registry).getLiquidationValue(assetAddresses, assetIds, assetAmounts, baseCurrency);
     }
 
     /**
@@ -478,7 +478,7 @@ contract VaultV2 {
         address from
     ) internal {
         //reverts in mainregistry if invalid input
-        IRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        IMainRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
@@ -581,7 +581,7 @@ contract VaultV2 {
         uint256[] memory assetTypes,
         address to
     ) internal {
-        IRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //reverts in mainregistry if invalid input
+        IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //reverts in mainregistry if invalid input
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {

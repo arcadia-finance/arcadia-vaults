@@ -209,7 +209,7 @@ abstract contract PricingModule is Ownable {
      * @notice Processes the deposit of tokens if it is white-listed
      * @param asset The address of the asset
      * param assetId The Id of the asset where applicable
-     * @param amount the amount of tokens
+     * @param amount The amount of tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
      */
     function processDeposit(address asset, uint256, uint256 amount) external virtual onlyMainReg {
@@ -221,7 +221,7 @@ abstract contract PricingModule is Ownable {
     /**
      * @notice Processes the withdrawal of tokens to increase the maxExposure
      * @param asset The address of the asset
-     * @param amount the amount of tokens
+     * @param amount The amount of tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens will ever be deposited
      */
     function processWithdrawal(address asset, uint256 amount) external virtual onlyMainReg {

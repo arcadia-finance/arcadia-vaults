@@ -200,11 +200,11 @@ contract MainRegistry is MainRegistryGuardian {
     }
 
     /**
-     * @notice Batch process multiple assets
+     * @notice Batch deposit multiple assets
      * @param assetAddresses An array of addresses of the assets
      * @param assetIds An array of asset ids
      * @param amounts An array of amounts to be deposited
-     * @dev processDeposit in the pricing module checks whehter
+     * @dev processDeposit in the pricing module checks whether
      *    it's allowlisted and updates the maxExposure
      */
     function batchProcessDeposit(
@@ -229,7 +229,7 @@ contract MainRegistry is MainRegistryGuardian {
     }
 
     /**
-     * @notice Process a withdrawal for different assets
+     * @notice Batch withdrawal multiple assets
      * @param assetAddresses An array of addresses of the assets
      * @param amounts An array of amounts to be withdrawn
      * @dev batchProcessWithdrawal in the pricing module updates the maxExposure
@@ -459,7 +459,6 @@ contract MainRegistry is MainRegistryGuardian {
      * @param baseCurrency An address of the BaseCurrency contract
      * @return collateralValue Collateral value of the given assets denominated in BaseCurrency.
      */
-
     function getCollateralValue(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
@@ -483,7 +482,6 @@ contract MainRegistry is MainRegistryGuardian {
      * @param baseCurrency An address of the BaseCurrency contract
      * @return liquidationValue Liquidation value of the given assets denominated in BaseCurrency.
      */
-
     function getLiquidationValue(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,

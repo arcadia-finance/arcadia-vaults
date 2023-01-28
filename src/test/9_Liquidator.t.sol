@@ -336,10 +336,9 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_buyVault(address bidder, uint128 openDebt, uint136 bidderfunds) public {
+    function testSuccess_buyVault(uint128 openDebt, uint136 bidderfunds) public {
         vm.assume(openDebt > 0);
-        vm.assume(bidder != address(0));
-        vm.assume(bidder != address(pool));
+        address bidder = address(69); //Cannot fuzz the bidder address, since any existing contract without onERC721Received will revert
 
         vm.prank(address(pool));
         liquidator.startAuction(address(proxy), openDebt);
