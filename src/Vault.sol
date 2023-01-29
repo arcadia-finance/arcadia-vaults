@@ -212,7 +212,7 @@ contract Vault {
      * @param baseCurrency_ the new baseCurrency for the vault.
      * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
      */
-    function _setBaseCurrency(address baseCurrenacy_) private {
+    function _setBaseCurrency(address baseCurrency_) private {
         require(getUsedMargin() == 0, "V_SBC: Can't change baseCurrency when Used Margin > 0");
         require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
         baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
@@ -278,7 +278,6 @@ contract Vault {
         // Check that the collateral value is bigger than the sum  of the already used margin and the increase
         // ToDo: For trusted protocols, already pass usedMargin with the call -> avoid additional hop back to trusted protocol to fetch already open debt
         success = getCollateralValue() >= getUsedMargin() + amount;
-        emit MarginPositionUpdate(baseCurrency_, amount, success);
     }
 
     /**
