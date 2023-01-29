@@ -245,7 +245,7 @@ contract Liquidator is Ownable {
      * @param vault The contract address of the vault.
      * @param to The address to which the vault will be transferred.
      * @dev The auction will be stopped and the vault will be transferred to the provided address.
-     * The junior tranche of the liquidity pool will pay for the bad debt. 
+     * The junior tranche of the liquidity pool will pay for the bad debt.
      * The protocol will sell/auction the vault in another way to recover the debt.
      * The protocol can then "donate" these proceeds to the junior tranche.
      */
