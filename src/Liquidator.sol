@@ -88,20 +88,25 @@ contract Liquidator is Ownable {
     }
 
     /**
-     * @notice Sets the discount rate for the liquidator.
+     * @notice Sets the discount rate (DR) for the liquidator.
+     * @param halfLife The new half life time (T_hl), in seconds.
      * @dev The discount rate is a multiplier that is used to decrease the price of the auction over time.
-     * @param halfLife The new half life
+     * @dev Exponential decay is defined as: P(t) = P(0) * (1/2)^(t/T_hl)
+     * Or simplified: P(t) = P(O) * DR^t with DR = 1/[2^(1/T_hl)]
      */
     function setDiscountRate(uint256 halfLife) external onlyOwner {
         require(halfLife > 30 * 60, "LQ_DR: halfLife too low"); // 30 minutes
         require(halfLife < 8 * 60 * 60, "LQ_DR: halfLife too high"); // 8 hours
+        //Both the base and exponent of LogExpMath.pow have 18 decimals, and its result has 18 decimals as well.
+        //Since discountRate itself has 18 decimals and it is divided by a number with 18 decimals,
+        //we need to multiply with another 10e18.
         discountRate = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife)));
     }
 
     /**
      * @notice Sets the max cutoff time for the liquidator.
-     * @dev The max cutoff time is the maximum time an auction can run.
      * @param auctionCutoffTime_ The new max cutoff time. It is seconds that auction can run from the start of auction.
+     * @dev The max cutoff time is the maximum time an auction can run.
      */
     function setAuctionCutoffTime(uint16 auctionCutoffTime_) external onlyOwner {
         require(auctionCutoffTime_ > 1 * 60 * 60, "LQ_ACT: cutoff too low"); // 1 hour
@@ -111,8 +116,11 @@ contract Liquidator is Ownable {
 
     /**
      * @notice Sets the start price multiplier for the liquidator.
-     * @dev The start price multiplier is a multiplier that is used to increase the price of the auction over time.
-     * @param startPriceMultiplier_ The new start price multiplier 2 decimal precision
+     * @param startPriceMultiplier_ The new start price multiplier, with 2 decimals precision.
+     * @dev The start price multiplier is a multiplier that is used to increase the initial price of the auction.
+     * Since the value of all assets is dicounted with the liquidation factor, and because pricing modules will take a conservative
+     * approach to price assets (eg. floorprices for NFTs), the actual value of the assets being auctioned might be substantially higher
+     * as the open debt. Hence the auction starts at a multiplier of the opendebt, but decreases rapidly (exponential decay).
      */
     function setStartPriceMultiplier(uint16 startPriceMultiplier_) external onlyOwner {
         require(startPriceMultiplier_ > 100, "LQ_SPM: multiplier too low");
@@ -179,13 +187,16 @@ contract Liquidator is Ownable {
      * @param openDebt The open debt taken by `originalOwner`.
      * @return price The total price for which the vault can be purchased.
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
-     * And immediately ends the auction. Price decreases exponentially with discountRate per seconds.
+     * And immediately ends the auction.
+     * @dev Price decreases exponentially: P(t) = P(O) * DR^t with P(O) = openDebt * startPriceMultiplier.
      */
     function _calcPriceOfVault(uint256 timePassed, uint256 openDebt) internal view returns (uint256 price) {
         uint256 auctionTime;
         unchecked {
             auctionTime = timePassed * 1e18;
         }
+        //startPriceMultiplier has 2 decimals precision and LogExpMath.pow() has 18 decimals precision,
+        //hence we need to divide the result by 1e20.
         price = openDebt * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime) / 1e20;
     }
 
