@@ -46,8 +46,9 @@ contract Liquidator is Ownable {
 
     struct AuctionInformation {
         uint128 openDebt;
-        uint128 startTime;
+        uint32 startTime;
         bool inAuction;
+        uint88 maxInitiatorFee;
         address baseCurrency;
         address originalOwner;
         address trustedCreditor;
@@ -137,7 +138,7 @@ contract Liquidator is Ownable {
      * @param openDebt The open debt taken by `originalOwner`.
      * @dev This function is called by the Creditor who is owed the debt against the Vault.
      */
-    function startAuction(address vault, uint256 openDebt) public {
+    function startAuction(address vault, uint256 openDebt, uint88 maxInitiatorFee) public {
         require(!auctionInformation[vault].inAuction, "LQ_SA: Auction already ongoing");
         require(IFactory(factory).isVault(vault), "LQ_SA: Not a vault");
 
@@ -146,11 +147,12 @@ contract Liquidator is Ownable {
         //Check that msg.sender is indeed the Creditor of the Vault
         require(trustedCreditor == msg.sender, "LQ_SA: Unauthorised");
 
-        auctionInformation[vault].inAuction = true;
-        auctionInformation[vault].startTime = uint128(block.timestamp);
-        auctionInformation[vault].originalOwner = originalOwner;
         auctionInformation[vault].openDebt = uint128(openDebt);
+        auctionInformation[vault].startTime = uint32(block.timestamp);
+        auctionInformation[vault].inAuction = true;
+        auctionInformation[vault].maxInitiatorFee = maxInitiatorFee;
         auctionInformation[vault].baseCurrency = baseCurrency;
+        auctionInformation[vault].originalOwner = originalOwner;
         auctionInformation[vault].trustedCreditor = trustedCreditor;
     }
 
@@ -224,7 +226,7 @@ contract Liquidator is Ownable {
         );
 
         (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder) =
-            calcLiquidationSettlementValues(auctionInformation_.openDebt, priceOfVault);
+        calcLiquidationSettlementValues(auctionInformation_.openDebt, priceOfVault, auctionInformation_.maxInitiatorFee);
 
         ILendingPool(auctionInformation_.trustedCreditor).settleLiquidation(
             vault, auctionInformation_.originalOwner, badDebt, liquidationInitiatorReward, liquidationPenalty, remainder
@@ -246,7 +248,7 @@ contract Liquidator is Ownable {
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
      * And immediately ends the auction.
      */
-    function calcLiquidationSettlementValues(uint256 openDebt, uint256 priceOfVault)
+    function calcLiquidationSettlementValues(uint256 openDebt, uint256 priceOfVault, uint88 maxInitiatorFee)
         public
         view
         returns (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder)
@@ -257,6 +259,8 @@ contract Liquidator is Ownable {
         unchecked {
             //Liquidation Initiator Reward is always paid out, independent of the final auction price
             liquidationInitiatorReward = openDebt * claimRatios_.initiatorReward / 100;
+            liquidationInitiatorReward =
+                liquidationInitiatorReward > maxInitiatorFee ? maxInitiatorFee : liquidationInitiatorReward;
 
             //Final Auction price should at least cover the original debt and Liquidation Initiator Reward.
             //Otherwise there is bad debt.

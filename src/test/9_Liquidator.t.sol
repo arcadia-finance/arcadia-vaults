@@ -39,6 +39,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
         pool.setVaultVersion(1, true);
+        pool.setMaxInitiatorFee(type(uint88).max);
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
@@ -304,11 +305,11 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(openDebt > 0);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt);
+        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
 
         vm.startPrank(address(pool));
         vm.expectRevert("LQ_SA: Auction already ongoing");
-        liquidator.startAuction(address(proxy), openDebt);
+        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
         vm.stopPrank();
     }
 
@@ -317,7 +318,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
         vm.startPrank(address(pool));
         vm.expectRevert("LQ_SA: Not a vault");
-        liquidator.startAuction(unprivilegedAddress_, openDebt);
+        liquidator.startAuction(unprivilegedAddress_, openDebt, type(uint88).max);
         vm.stopPrank();
     }
 
@@ -328,7 +329,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("LQ_SA: Unauthorised");
-        liquidator.startAuction(address(proxy), openDebt);
+        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
         vm.stopPrank();
     }
 
@@ -336,7 +337,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(openDebt > 0);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt);
+        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
 
         assertEq(proxy.owner(), address(liquidator));
         uint256 index = factory.vaultIndex(address(proxy));
@@ -346,6 +347,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
             uint128 openDebt_,
             uint128 startTime,
             bool inAuction,
+            uint88 maxInitiatorFee,
             address baseCurrency,
             address originalOwner,
             address trustedCreditor
@@ -356,6 +358,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(baseCurrency, address(dai));
         assertEq(originalOwner, vaultOwner);
         assertEq(trustedCreditor, address(pool));
+        assertEq(maxInitiatorFee, pool.maxInitiatorFee());
     }
 
     function testSuccess_getPriceOfVault_NotForSale(address vaultAddress) public {
@@ -390,7 +393,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.warp(startTime);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt);
+        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
         vm.warp(currentTime);
 
         // When: Get the price of the vault
@@ -428,7 +431,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.warp(startTime);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt);
+        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
         vm.warp(currentTime);
 
         // When: Get the price of the vault
@@ -457,7 +460,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(bidder != liquidityProvider);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt);
+        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
 
         (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy));
         vm.assume(priceOfVault > bidderfunds);
@@ -477,7 +480,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         address bidder = address(69); //Cannot fuzz the bidder address, since any existing contract without onERC721Received will revert
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt);
+        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
 
         (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy));
         vm.assume(priceOfVault <= bidderfunds);
@@ -504,9 +507,13 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(proxy.owner(), bidder);
     }
 
-    function testSuccess_calcLiquidationSettlementValues(uint128 openDebt, uint256 priceOfVault) public {
+    function testSuccess_calcLiquidationSettlementValues(uint128 openDebt, uint256 priceOfVault, uint88 maxInitiatorFee)
+        public
+    {
         (uint64 penaltyWeight, uint64 initiatorRewardWeight) = liquidator.claimRatios();
         uint256 expectedLiquidationInitiatorReward = uint256(openDebt) * initiatorRewardWeight / 100;
+        expectedLiquidationInitiatorReward =
+            expectedLiquidationInitiatorReward > maxInitiatorFee ? maxInitiatorFee : expectedLiquidationInitiatorReward;
         uint256 expectedBadDebt;
         uint256 expectedLiquidationPenalty;
         uint256 expectedRemainder;
@@ -530,7 +537,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
             uint256 actualLiquidationInitiatorReward,
             uint256 actualLiquidationPenalty,
             uint256 actualRemainder
-        ) = liquidator.calcLiquidationSettlementValues(openDebt, priceOfVault);
+        ) = liquidator.calcLiquidationSettlementValues(openDebt, priceOfVault, maxInitiatorFee);
 
         assertEq(actualBadDebt, expectedBadDebt);
         assertEq(actualLiquidationInitiatorReward, expectedLiquidationInitiatorReward);
