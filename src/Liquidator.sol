@@ -209,8 +209,7 @@ contract Liquidator is Ownable {
         }
         require(timePassed <= auctionCutoffTime, "LQ_BV: Auction expired");
 
-        uint256 priceOfVault =
-            _calcPriceOfVault(timePassed, auctionInformation_.openDebt);
+        uint256 priceOfVault = _calcPriceOfVault(timePassed, auctionInformation_.openDebt);
         //Stop the auction, this will prevent any possible reentrance attacks.
         auctionInformation[vault].inAuction = false;
 

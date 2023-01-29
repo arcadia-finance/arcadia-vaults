@@ -579,12 +579,11 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
         uint256 trancheBalancePost = pool.realisedLiquidityOf(address(tranche));
 
-        (,,bool inAuction,,,) = liquidator.auctionInformation(address(proxy));
+        (,, bool inAuction,,,) = liquidator.auctionInformation(address(proxy));
 
         assertEq(inAuction, false);
         assertEq(factory.ownerOfVault(address(proxy)), creatorAddress);
     }
-
 
     function testSuccess_calcLiquidationSettlementValues(uint128 openDebt, uint256 priceOfVault) public {
         (uint64 penaltyWeight, uint64 initiatorRewardWeight) = liquidator.claimRatios();
