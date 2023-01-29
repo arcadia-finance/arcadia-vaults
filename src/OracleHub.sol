@@ -28,13 +28,14 @@ contract OracleHub is Ownable {
     mapping(address => OracleInformation) public oracleToOracleInformation;
 
     struct OracleInformation {
+        bool isActive;
         uint64 oracleUnit;
         uint8 baseAssetBaseCurrency;
         bool baseAssetIsBaseCurrency;
-        string quoteAsset;
-        string baseAsset;
         address oracle;
         address quoteAssetAddress;
+        string quoteAsset;
+        string baseAsset;
     }
 
     /**
@@ -143,6 +144,9 @@ contract OracleHub is Ownable {
 
         for (uint256 i; i < oraclesLength;) {
             oracleAddressAtIndex = oracles[i];
+
+            if (!oracleToOracleInformation[oracleAddressAtIndex].isActive) return (0, 0);
+
             (, tempRate,,,) = IChainLinkData(oracleAddressAtIndex).latestRoundData();
             require(tempRate >= 0, "OH_GR: Negative Rate");
 
@@ -166,5 +170,27 @@ contract OracleHub is Ownable {
         }
         //Since all series of oracles must end with USD, it should be impossible to arrive at this point
         revert("OH_GR: No bAsset in USD or bCurr");
+    }
+
+    function decomissionOracle(address oracle) external {
+        require(inOracleHub[oracle], "OH_DO: Oracle not in Hub");
+
+        bool oracleIsInUse = true;
+
+        try IChainLinkData(oracle).latestRoundData() returns (uint80, int256 answer, uint256, uint256 updatedAt, uint80) {
+            int192 min = IChainLinkData(IChainLinkData(oracle).aggregator()).minAnswer();
+            if (answer <= min) {
+                oracleIsInUse = false;
+            }
+
+            if (updatedAt <= block.timestamp - 1 weeks) {
+                oracleIsInUse = false;
+            }
+
+        } catch {
+            oracleIsInUse = false;
+        }
+
+        oracleToOracleInformation[oracle].isActive = oracleIsInUse;
     }
 }
