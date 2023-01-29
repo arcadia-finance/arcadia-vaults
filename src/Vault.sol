@@ -66,6 +66,32 @@ contract Vault {
 
     event Upgraded(address indexed implementation);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event Initialized(uint16 indexed vaultVersion_, address indexed registry_, address owner_, address baseCurrency_);
+    event BaseCurrencyUpdated(address indexed oldBaseCurrency, address indexed newBaseCurrency);
+    event TrustedMarginAccountOpened(
+        address indexed owner, address indexed protocol, address indexed liquidator, address baseCurrency
+    );
+    event MarginPositionUpdate(address baseCurrency_, uint256 amount, bool success);
+    event TrustedMarginAccountClosed(address owner, address protocol, address liquidator, address baseCurrency_);
+    event LiquidationStarted(
+        address indexed originalOwner, address indexed liquidator, address trustedCreditor, address baseCurrency
+    );
+    event AssetManagerSet(address indexed assetManager, bool value);
+    event VaultManagementAction(address indexed actionHandler, bytes actionData);
+    event Withdraw(
+        address indexed owner,
+        address[] assetAddresses,
+        uint256[] assetIds,
+        uint256[] assetAmounts,
+        uint256[] assetTypes
+    );
+    event Deposit(
+        address indexed owner,
+        address[] assetAddresses,
+        uint256[] assetIds,
+        uint256[] assetAmounts,
+        uint256[] assetTypes
+    );
 
     /**
      * @dev Throws if called by any account other than the factory adress.
@@ -115,6 +141,7 @@ contract Vault {
         registry = registry_;
         vaultVersion = vaultVersion_;
         _setBaseCurrency(baseCurrency_);
+        emit Initialized(vaultVersion_, registry_, owner_, baseCurrency_);
     }
 
     /**
@@ -176,6 +203,7 @@ contract Vault {
      * @param baseCurrency_ the new baseCurrency for the vault.
      */
     function setBaseCurrency(address baseCurrency_) public onlyOwner {
+        emit BaseCurrencyUpdated(baseCurrency, baseCurrency_);
         _setBaseCurrency(baseCurrency_);
     }
 
@@ -184,7 +212,7 @@ contract Vault {
      * @param baseCurrency_ the new baseCurrency for the vault.
      * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
      */
-    function _setBaseCurrency(address baseCurrency_) private {
+    function _setBaseCurrency(address baseCurrenacy_) private {
         require(getUsedMargin() == 0, "V_SBC: Can't change baseCurrency when Used Margin > 0");
         require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
         baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
@@ -216,6 +244,7 @@ contract Vault {
             _setBaseCurrency(baseCurrency_);
         }
         isTrustedCreditorSet = true;
+        emit TrustedMarginAccountOpened(owner, protocol, liquidator, baseCurrency_);
     }
 
     /**
@@ -227,8 +256,8 @@ contract Vault {
         require(isTrustedCreditorSet, "V_CMA: NOT SET");
         //getOpenPosition() is a view function, cannot modify state.
         require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
-
         isTrustedCreditorSet = false;
+        emit TrustedMarginAccountClosed(owner, trustedCreditor, liquidator, baseCurrency);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -249,6 +278,7 @@ contract Vault {
         // Check that the collateral value is bigger than the sum  of the already used margin and the increase
         // ToDo: For trusted protocols, already pass usedMargin with the call -> avoid additional hop back to trusted protocol to fetch already open debt
         success = getCollateralValue() >= getUsedMargin() + amount;
+        emit MarginPositionUpdate(baseCurrency_, amount, success);
     }
 
     /**
@@ -359,6 +389,7 @@ contract Vault {
         originalOwner = owner;
         _transferOwnership(msg.sender);
 
+        emit LiquidationStarted(originalOwner, msg.sender, trustedCreditor_, baseCurrency);
         return (originalOwner, baseCurrency, trustedCreditor);
     }
 
@@ -378,6 +409,7 @@ contract Vault {
      */
     function setAssetManager(address assetManager, bool value) external onlyOwner {
         isAssetManager[assetManager] = value;
+        emit AssetManagerSet(assetManager, value);
     }
 
     /**
@@ -406,6 +438,8 @@ contract Vault {
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
         require(collValue >= usedMargin, "VMA: coll. value too low");
+
+        emit VaultManagementAction(actionHandler, actionData);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -454,6 +488,8 @@ contract Vault {
         );
 
         _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+
+        emit Deposit(msg.sender, assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
     /**
@@ -556,6 +592,8 @@ contract Vault {
         if (usedMargin != 0) {
             require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
+
+        emit Withdraw(msg.sender, assetAddresses, assetIds, assetAmounts, assetTypes);
     }
 
     /**
