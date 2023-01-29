@@ -193,7 +193,8 @@ contract DeployArcadiaVaults is Test {
                 baseAsset: "USD",
                 oracle: address(oracleDaiToUsd),
                 quoteAssetAddress: address(dai),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -204,7 +205,8 @@ contract DeployArcadiaVaults is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -215,7 +217,8 @@ contract DeployArcadiaVaults is Test {
                 baseAsset: "USD",
                 oracle: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -226,7 +229,8 @@ contract DeployArcadiaVaults is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -237,7 +241,8 @@ contract DeployArcadiaVaults is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleWbaycToEth),
                 quoteAssetAddress: address(wbayc),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -248,7 +253,8 @@ contract DeployArcadiaVaults is Test {
                 baseAsset: "USD",
                 oracle: address(oracleWmaycToUsd),
                 quoteAssetAddress: address(wmayc),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -259,7 +265,8 @@ contract DeployArcadiaVaults is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
 

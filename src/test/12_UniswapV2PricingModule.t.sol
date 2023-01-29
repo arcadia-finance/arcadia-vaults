@@ -720,7 +720,8 @@ contract PricingLogic is UniswapV2PricingModuleTest {
                 baseAsset: "USD",
                 oracle: address(oracleTokenToUsd),
                 quoteAssetAddress: address(token),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         standardERC20PricingModule.addAsset(address(token), oracleTokenToUsdArr, emptyRiskVarInput, type(uint128).max);

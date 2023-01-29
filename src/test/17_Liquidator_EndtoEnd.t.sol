@@ -80,7 +80,8 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
                 baseAsset: "USD",
                 oracle: address(oracleSafemoonToUsd),
                 quoteAssetAddress: address(safemoon),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
 
