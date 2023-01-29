@@ -179,6 +179,38 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
+    function testRevert_addBaseCurrency_duplicateBaseCurrency() public {
+        vm.startPrank(creatorAddress);
+        mainRegistry.addPricingModule(address(standardERC20PricingModule));
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
+        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
+
+        // When: creatorAddress calls addBaseCurrency
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        // and: creatorAddress calls addBaseCurrency again with the same baseCurrency
+        // then: addBaseCurrency should revert with "MR_ABC: BaseCurrency exists"
+        vm.expectRevert("MR_ABC: BaseCurrency exists");
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+        vm.stopPrank();
+    }
+
     function testSuccess_addBaseCurrency() public {
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(standardERC20PricingModule));

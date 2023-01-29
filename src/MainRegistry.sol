@@ -120,21 +120,24 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Add a new baseCurrency (a unit in which price is measured, like USD or ETH) to the Main Registry, or overwrite an existing one
+     * @notice Add a new baseCurrency (a unit in which price is measured, like USD or ETH) to the Main Registry
      * @param baseCurrencyInformation A Struct with information about the BaseCurrency
      * - baseCurrencyToUsdOracleUnit: The unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
      * - baseCurrencyUnit: The unit of the baseCurrency, equal to 10 to the power of the number of decimals of the baseCurrency
      * - assetAddress: The contract address of the baseCurrency,
      * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
-     * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
+     * @dev If the BaseCurrency has no native token, baseCurrencyDecimals is 0 and assetAddress the null address.
      * Tokens pegged to the native token do not count as native tokens
      * - USDC is not a native token for USD as BaseCurrency
      * - WETH is a native token for ETH as BaseCurrency
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be set through the pricing modules!
      * @dev Risk variable have 2 decimals precision
+     * @dev A baseCurrency cannot be added twice, as that would result in the ability to overwrite the baseCurrencyToUsdOracle
      */
     function addBaseCurrency(BaseCurrencyInformation calldata baseCurrencyInformation) external onlyOwner {
+        require(!isBaseCurrency[baseCurrencyInformation.assetAddress], "MR_ABC: BaseCurrency exists");
+
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
