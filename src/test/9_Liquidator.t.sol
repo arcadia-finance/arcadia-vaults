@@ -369,7 +369,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(inAuction, false);
     }
 
-
     function testSuccess_getPriceOfVault(
         uint64 startTime,
         uint64 halfLife,
