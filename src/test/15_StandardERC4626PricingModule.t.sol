@@ -161,38 +161,6 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testSuccess_addAsset_FullListRiskVariables() public {
-        vm.startPrank(creatorAddress);
-        standardERC4626PricingModule.addAsset(address(ybEth), riskVars, type(uint128).max);
-        vm.stopPrank();
-
-        assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
-    }
-
-    function testRevert_syncOracles_AssetUnknown(address sender, address asset) public {
-        vm.startPrank(sender);
-        vm.expectRevert("PM4626_SO: asset unknown");
-        standardERC4626PricingModule.syncOracles(asset);
-        vm.stopPrank();
-    }
-
-    function testSuccess_syncOracles(address sender) public {
-        vm.startPrank(creatorAddress);
-        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, type(uint128).max);
-
-        //Given: oracle sequence of underlying asset is modified
-        standardERC20PricingModule.setOracles(address(eth), oracleLinkToUsdArr);
-        vm.stopPrank();
-
-        vm.prank(sender);
-        standardERC4626PricingModule.syncOracles(address(ybEth));
-
-        (,, address[] memory oracles) = standardERC4626PricingModule.getAssetInformation(address(ybEth));
-        for (uint256 i; i < oracleLinkToUsdArr.length; ++i) {
-            assertEq(oracles[i], oracleLinkToUsdArr[i]);
-        }
-    }
-
     /*///////////////////////////////////////////////////////////////
                         WHITE LIST MANAGEMENT
     ///////////////////////////////////////////////////////////////*/

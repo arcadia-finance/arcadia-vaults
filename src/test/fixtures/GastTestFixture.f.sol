@@ -177,7 +177,8 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
                 baseAsset: "ETH",
                 oracle: address(oracleGenericStoreFrontToEth),
                 quoteAssetAddress: address(genericStoreFront),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
 

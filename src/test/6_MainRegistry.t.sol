@@ -356,36 +356,6 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
-    function testSuccess_assetsUpdatable_DefaultTrue() public {
-        // Given: All necessary contracts deployed on setup
-        // When:
-        // Then: assetsUpdatable should return true
-        assertTrue(mainRegistry.assetsUpdatable());
-    }
-
-    function testRevert_setAssetsToNonUpdatable_NonOwner(address unprivilegedAddress_) public {
-        // Given: unprivilegedAddress_ is not creatorAddress
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-        vm.startPrank(unprivilegedAddress_);
-        // When: unprivilegedAddress_ calls setAssetsToNonUpdatable
-
-        // Then: setAssetsToNonUpdatable should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
-        mainRegistry.setAssetsToNonUpdatable();
-        vm.stopPrank();
-    }
-
-    function testSuccess_setAssetsToNonUpdatable() public {
-        // Given: All necessary contracts deployed on setup
-        vm.startPrank(creatorAddress);
-        // When: creatorAddress calls setAssetsToNonUpdatable
-        mainRegistry.setAssetsToNonUpdatable();
-        vm.stopPrank();
-
-        // Then: assetsUpdatable should return false
-        assertTrue(!mainRegistry.assetsUpdatable());
-    }
-
     function testRevert_addAsset_NonPricingModule(address unprivilegedAddress_) public {
         // Given: unprivilegedAddress_ is not address(standardERC20PricingModule), address(floorERC721PricingModule) or address(floorERC1155PricingModule)
         vm.assume(unprivilegedAddress_ != address(standardERC20PricingModule));
@@ -399,10 +369,11 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
-    function testSuccess_addAsset_EmptyListRiskVariables() public {
+    function testSuccess_addAsset_EmptyListRiskVariables(address newAsset) public {
+        vm.assume(mainRegistry.inMainRegistry(newAsset) == false);
         // When: standardERC20PricingModule calls addAsset with input of address(eth)
         vm.startPrank(address(standardERC20PricingModule));
-        mainRegistry.addAsset(address(eth));
+        mainRegistry.addAsset(address(newAsset));
         vm.stopPrank();
 
         // Then: inMainRegistry for address(eth) should return true
@@ -413,7 +384,6 @@ contract AssetManagementTest is MainRegistryTest {
         // Given: creatorAddress calls addPricingModule and setAssetsToNonUpdatable,
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        mainRegistry.setAssetsToNonUpdatable();
         vm.stopPrank();
 
         // When: standardERC20PricingModule has eth added as asset
@@ -423,35 +393,12 @@ contract AssetManagementTest is MainRegistryTest {
 
         vm.startPrank(address(floorERC721PricingModule));
         // When: floorERC721PricingModule calls addAsset
-        // Then: addAsset should revert with "MR_AA: Asset not updatable"
-        vm.expectRevert("MR_AA: Asset not updatable");
+        // Then: addAsset should revert with "MR_AA: Asset already in mainreg"
+        vm.expectRevert("MR_AA: Asset already in mainreg");
         mainRegistry.addAsset(address(eth));
         vm.stopPrank();
 
         assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
-    }
-
-    function testSuccess_addAsset_OverwriteAssetPositive() public {
-        // Given: creatorAddress calls addPricingModule for floorERC721PricingModule, standardERC20PricingModule calls addAsset
-        vm.startPrank(creatorAddress);
-        mainRegistry.addPricingModule(address(floorERC721PricingModule));
-        vm.stopPrank();
-
-        // When: standardERC20PricingModule calls addAsset
-        vm.startPrank(address(standardERC20PricingModule));
-        mainRegistry.addAsset(address(eth));
-        vm.stopPrank();
-
-        // Then: assetToPricingModule for address(eth) should return standardERC20PricingModule
-        assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
-
-        // When: floorERC721PricingModule calls addAsset
-        vm.startPrank(address(floorERC721PricingModule));
-        mainRegistry.addAsset(address(eth));
-        vm.stopPrank();
-
-        // Then: assetToPricingModule for address(eth) should return address(floorERC721PricingModule)
-        assertEq(address(floorERC721PricingModule), mainRegistry.assetToPricingModule(address(eth)));
     }
 
     function testRevert_batchProcessDeposit_NonVault(address unprivilegedAddress_) public {

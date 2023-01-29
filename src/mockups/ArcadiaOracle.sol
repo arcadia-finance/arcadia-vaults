@@ -112,4 +112,14 @@ contract ArcadiaOracle is Ownable {
             roundId
         );
     }
+
+    function aggregator() public view returns (address) {
+        return address(this);
+    }
+
+    int192 public minAnswer = 100;
+
+    function setMinAnswer(int192 minAnswer_) public {
+        minAnswer = minAnswer_;
+    }
 }

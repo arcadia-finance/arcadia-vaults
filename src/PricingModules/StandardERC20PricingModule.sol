@@ -76,17 +76,6 @@ contract StandardERC20PricingModule is PricingModule {
     }
 
     /**
-     * @notice Sets the oracle addresses for the given asset.
-     * @param asset The contract address of the asset.
-     * @param oracles An array of oracle addresses for the asset.
-     */
-    function setOracles(address asset, address[] calldata oracles) external onlyOwner {
-        require(inPricingModule[asset], "PM20_SO: asset unknown");
-        IOraclesHub(oracleHub).checkOracleSequence(oracles);
-        assetToInformation[asset].oracles = oracles;
-    }
-
-    /**
      * @notice Returns the information that is stored in the StandardERC20PricingModule for a given ERC20 token.
      * @dev struct is not taken into memory; saves gas.
      * @param asset The Token address of the asset.

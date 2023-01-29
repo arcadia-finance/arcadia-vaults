@@ -14,7 +14,7 @@ interface IMainRegistry {
     function baseCurrencyCounter() external view returns (uint256);
 
     /**
-     * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True).
+     * @notice Add a new asset to the Main Registry.
      * @param asset The address of the asset.
      * @return success A boolean if function was successfull.
      */

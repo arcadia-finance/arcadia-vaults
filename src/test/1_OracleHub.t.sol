@@ -14,6 +14,12 @@ import "../utils/Constants.sol";
 import "../mockups/ArcadiaOracle.sol";
 import "./fixtures/ArcadiaOracleFixture.f.sol";
 
+contract RevertingOracle {
+    function latestRoundData() public pure returns (uint80, int256, uint256, uint256, uint80) {
+        revert();
+    }
+}
+
 contract OracleHubTest is Test {
     using stdStorage for StdStorage;
 
@@ -82,20 +88,22 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
 
         // Then: oracleEthToUsd should return true to inOracleHub
         assertTrue(oracleHub.inOracleHub(address(oracleEthToUsd)));
         (
+            bool isActive,
             uint64 oracleUnit,
             uint8 baseAssetBaseCurrency,
             bool baseAssetIsBaseCurrency,
-            string memory quoteAsset,
-            string memory baseAsset,
             ,
-            address quoteAssetAddress
+            address quoteAssetAddress,
+            string memory quoteAsset,
+            string memory baseAsset
         ) = oracleHub.oracleToOracleInformation(address(oracleEthToUsd));
         assertEq(oracleUnit, oracleEthToUsdUnit);
         assertEq(baseAssetBaseCurrency, uint8(Constants.UsdBaseCurrency));
@@ -103,6 +111,7 @@ contract OracleHubTest is Test {
         assertEq(quoteAsset, "ETH");
         assertEq(baseAsset, "USD");
         assertEq(quoteAssetAddress, address(eth));
+        assertEq(isActive, true);
     }
 
     function testRevert_addOracle_OverwriteOracle() public {
@@ -116,7 +125,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         // When: creatorAddress addOracle
@@ -131,7 +141,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -152,7 +163,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -173,7 +185,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -190,7 +203,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -211,7 +225,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -222,7 +237,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -244,7 +260,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -276,7 +293,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -287,7 +305,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleLinkToUsd),
                 quoteAssetAddress: address(link),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -310,7 +329,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -340,7 +360,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -383,7 +404,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -429,7 +451,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -483,7 +506,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -494,7 +518,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -548,7 +573,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -559,7 +585,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -612,7 +639,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -623,7 +651,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -667,7 +696,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -678,7 +708,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -732,7 +763,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -743,7 +775,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -795,7 +828,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -806,7 +840,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -862,7 +897,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -873,7 +909,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -927,7 +964,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -938,7 +976,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -991,7 +1030,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -1002,7 +1042,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -1046,7 +1087,8 @@ contract OracleHubTest is Test {
                 baseAsset: "ETH",
                 oracle: address(oracleSnxToEth),
                 quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
@@ -1057,7 +1099,8 @@ contract OracleHubTest is Test {
                 baseAsset: "USD",
                 oracle: address(oracleEthToUsd),
                 quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         vm.stopPrank();
@@ -1080,5 +1123,244 @@ contract OracleHubTest is Test {
         // Then: expectedRateInUsd should be equal to actualRateInUsd, expectedRateInNumeraire should be equal to actualRateInNumeraire
         assertEq(expectedRateInUsd, actualRateInUsd);
         assertEq(expectedRateInBaseCurrency, actualRateInBaseCurrency);
+    }
+
+    //
+    //Oracle failsafe tests
+    //
+    function testRevert_decommissionOracle_notInHub(address sender, address oracle) public {
+        vm.assume(oracle != address(oracleEthToUsd));
+        vm.assume(oracle != address(oracleLinkToUsd));
+        vm.assume(oracle != address(oracleSnxToEth));
+
+        vm.startPrank(sender);
+        vm.expectRevert("OH_DO: Oracle not in Hub");
+        oracleHub.decommissionOracle(oracle);
+        vm.stopPrank();
+    }
+
+    function testSuccess_decommissionOracle_NonExistingContract(address sender) public {
+        RevertingOracle revertingOracle = new RevertingOracle();
+
+        vm.prank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 10 ** 18,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "REVERT",
+                baseAsset: "USD",
+                oracle: address(revertingOracle),
+                quoteAssetAddress: address(0),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+
+        vm.prank(sender);
+        oracleHub.decommissionOracle(address(revertingOracle));
+
+        (bool isActive,,,,,,,) = oracleHub.oracleToOracleInformation(address(revertingOracle));
+        assertEq(isActive, false);
+
+        address[] memory oracles = new address[](1);
+        oracles[0] = address(revertingOracle);
+
+        (uint256 rateInUsd, uint256 rateInBaseCurrency) = oracleHub.getRate(oracles, Constants.UsdBaseCurrency);
+
+        assertEq(rateInUsd, 0);
+        assertEq(rateInBaseCurrency, 0);
+    }
+
+    function testSuccess_decommissionOracle_answerTooLow(address sender) public {
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 10 ** 18,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracle: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 10 ** 18,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracle: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.warp(2 weeks); //to not run into an underflow
+
+        vm.startPrank(oracleOwner);
+        //minAnswer is set to 100 in the oracle mocks
+        oracleSnxToEth.transmit(int256(1));
+        oracleEthToUsd.transmit(int256(500000000000));
+        vm.stopPrank();
+
+        (bool isActive,,,,,,,) = oracleHub.oracleToOracleInformation(address(oracleSnxToEth));
+        assertEq(isActive, true);
+
+        vm.prank(sender);
+        oracleHub.decommissionOracle(address(oracleSnxToEth));
+
+        (isActive,,,,,,,) = oracleHub.oracleToOracleInformation(address(oracleSnxToEth));
+        assertEq(isActive, false);
+
+        address[] memory oracles = new address[](2);
+        oracles[0] = address(oracleSnxToEth);
+        oracles[1] = address(oracleEthToUsd);
+
+        (uint256 rateInUsd, uint256 rateInBaseCurrency) = oracleHub.getRate(oracles, Constants.UsdBaseCurrency);
+
+        assertEq(rateInUsd, 0);
+        assertEq(rateInBaseCurrency, 0);
+    }
+
+    function testSuccess_decommissionOracle_updatedAtTooOld(address sender, uint32 timePassed) public {
+        vm.assume(timePassed > 1 weeks);
+
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 10 ** 18,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracle: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 10 ** 18,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracle: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.warp(2 weeks); //to not run into an underflow
+
+        vm.startPrank(oracleOwner);
+        //minAnswer is set to 100 in the oracle mocks
+        oracleSnxToEth.transmit(int256(500000000000));
+        oracleEthToUsd.transmit(int256(500000000000));
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + timePassed);
+
+        (bool isActive,,,,,,,) = oracleHub.oracleToOracleInformation(address(oracleSnxToEth));
+        assertEq(isActive, true);
+
+        vm.prank(sender);
+        oracleHub.decommissionOracle(address(oracleSnxToEth));
+
+        (isActive,,,,,,,) = oracleHub.oracleToOracleInformation(address(oracleSnxToEth));
+        assertEq(isActive, false);
+
+        address[] memory oracles = new address[](2);
+        oracles[0] = address(oracleSnxToEth);
+        oracles[1] = address(oracleEthToUsd);
+
+        (uint256 rateInUsd, uint256 rateInBaseCurrency) = oracleHub.getRate(oracles, Constants.UsdBaseCurrency);
+
+        assertEq(rateInUsd, 0);
+        assertEq(rateInBaseCurrency, 0);
+    }
+
+    function testSuccess_decommissionOracle_resetOralceInUse(address sender, uint32 timePassed) public {
+        vm.assume(timePassed > 1 weeks);
+
+        vm.startPrank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 10 ** 18,
+                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                quoteAsset: "SNX",
+                baseAsset: "ETH",
+                oracle: address(oracleSnxToEth),
+                quoteAssetAddress: address(snx),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 10 ** 18,
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracle: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.warp(2 weeks); //to not run into an underflow
+
+        vm.startPrank(oracleOwner);
+        //minAnswer is set to 100 in the oracle mocks
+        oracleSnxToEth.transmit(int256(500000000000));
+        oracleEthToUsd.transmit(int256(500000000000)); //only one of the two is needed to fail
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + timePassed);
+
+        (bool isActive,,,,,,,) = oracleHub.oracleToOracleInformation(address(oracleSnxToEth));
+        assertEq(isActive, true);
+
+        vm.prank(sender);
+        oracleHub.decommissionOracle(address(oracleSnxToEth));
+
+        (isActive,,,,,,,) = oracleHub.oracleToOracleInformation(address(oracleSnxToEth));
+        assertEq(isActive, false);
+
+        address[] memory oracles = new address[](2);
+        oracles[0] = address(oracleSnxToEth);
+        oracles[1] = address(oracleEthToUsd);
+
+        (uint256 rateInUsd, uint256 rateInBaseCurrency) = oracleHub.getRate(oracles, Constants.UsdBaseCurrency);
+
+        assertEq(rateInUsd, 0);
+        assertEq(rateInBaseCurrency, 0);
+
+        vm.startPrank(oracleOwner);
+        //minAnswer is set to 100 in the oracle mocks
+        oracleSnxToEth.transmit(int256(500000000000));
+        oracleEthToUsd.transmit(int256(500000000000)); //only one of the two is needed to fail
+        vm.stopPrank();
+
+        vm.prank(sender);
+        oracleHub.decommissionOracle(address(oracleSnxToEth));
+
+        (isActive,,,,,,,) = oracleHub.oracleToOracleInformation(address(oracleSnxToEth));
+        assertEq(isActive, true);
+
+        oracles = new address[](2);
+        oracles[0] = address(oracleSnxToEth);
+        oracles[1] = address(oracleEthToUsd);
+
+        (rateInUsd, rateInBaseCurrency) = oracleHub.getRate(oracles, Constants.UsdBaseCurrency);
+
+        assertEq(rateInUsd, 250000);
     }
 }
