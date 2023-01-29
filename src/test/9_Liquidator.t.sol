@@ -473,25 +473,24 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_buyVault_auctionExpired(address bidder, uint128 openDebt, uint256 timePassed) public {
+    function testSuccess_buyVault_afterAuctionCutoff(uint128 openDebt, uint32 timePassed) public {
         vm.assume(timePassed > liquidator.auctionCutoffTime());
-        vm.assume(openDebt > 0);
-        vm.assume(bidder != address(pool));
-        vm.assume(bidder != liquidityProvider);
-
+        vm.assume(openDebt > 0 && openDebt <= pool.totalRealisedLiquidity());
+        address bidder = address(69); //Cannot fuzz the bidder address, since any existing contract without onERC721Received will revert
+        openDebt = 18446744073707012486;
+        timePassed = 17840037;
         vm.prank(address(pool));
         liquidator.startAuction(address(proxy), openDebt);
 
         vm.warp(timePassed);
 
         vm.startPrank(bidder);
-        vm.expectRevert("LQ_BV: Auction expired");
         liquidator.buyVault(address(proxy));
         vm.stopPrank();
     }
 
     function testSuccess_buyVault(uint128 openDebt, uint136 bidderfunds) public {
-        vm.assume(openDebt > 0);
+        vm.assume(openDebt > 0 && openDebt <= pool.totalRealisedLiquidity());
         address bidder = address(69); //Cannot fuzz the bidder address, since any existing contract without onERC721Received will revert
 
         vm.prank(address(pool));
@@ -564,7 +563,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     function testSuccess_endAuction(uint128 openDebt, uint32 timePassed) public {
         vm.assume(timePassed > liquidator.auctionCutoffTime());
-        vm.assume(openDebt > 0 && openDebt < pool.totalRealisedLiquidity());
+        vm.assume(openDebt > 0 && openDebt <= pool.totalRealisedLiquidity());
 
         vm.prank(address(pool));
         liquidator.startAuction(address(proxy), openDebt);

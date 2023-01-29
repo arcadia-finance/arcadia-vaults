@@ -106,6 +106,8 @@ contract Liquidator is Ownable {
      * @notice Sets the max cutoff time for the liquidator.
      * @param auctionCutoffTime_ The new max cutoff time. It is seconds that auction can run from the start of auction.
      * @dev The max cutoff time is the maximum time an auction can run.
+     * Setting a very short auctionCutoffTime can be used by rogue owners to rug the junior tranche!!
+     * Therefore the auctionCutoffTime has hardcoded constraints.
      */
     function setAuctionCutoffTime(uint16 auctionCutoffTime_) external onlyOwner {
         require(auctionCutoffTime_ > 1 * 60 * 60, "LQ_ACT: cutoff too low"); // 1 hour
@@ -197,10 +199,6 @@ contract Liquidator is Ownable {
         //startPriceMultiplier has 2 decimals precision and LogExpMath.pow() has 18 decimals precision,
         //hence we need to divide the result by 1e20.
         price = openDebt * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime) / 1e20;
-
-        if (timePassed > auctionCutoffTime) {
-            price = 0;
-        }
     }
 
     /**
@@ -217,7 +215,6 @@ contract Liquidator is Ownable {
         unchecked {
             timePassed = block.timestamp - auctionInformation_.startTime;
         }
-        require(timePassed <= auctionCutoffTime, "LQ_BV: Auction expired");
 
         uint256 priceOfVault = _calcPriceOfVault(timePassed, auctionInformation_.openDebt);
         //Stop the auction, this will prevent any possible reentrance attacks.
@@ -243,6 +240,15 @@ contract Liquidator is Ownable {
         IFactory(factory).safeTransferFrom(address(this), msg.sender, vault);
     }
 
+    /**
+     * @notice End an unsuccessful auction after the auctionCutoffTime has passed.
+     * @param vault The contract address of the vault.
+     * @param to The address to which the vault will be transferred.
+     * @dev The auction will be stopped and the vault will be transferred to the provided address.
+     * The junior tranche of the liquidity pool will pay for the bad debt. 
+     * The protocol will sell/auction the vault in another way to recover the debt.
+     * The protocol can then "donate" these proceeds to the junior tranche.
+     */
     function endAuction(address vault, address to) external onlyOwner {
         AuctionInformation memory auctionInformation_ = auctionInformation[vault];
         require(auctionInformation_.inAuction, "LQ_EA: Not for sale");
@@ -257,7 +263,7 @@ contract Liquidator is Ownable {
         auctionInformation[vault].inAuction = false;
 
         (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder) =
-            calcLiquidationSettlementValues(auctionInformation_.openDebt, 0);
+            calcLiquidationSettlementValues(auctionInformation_.openDebt, 0); //price is zero
 
         ILendingPool(auctionInformation_.trustedCreditor).settleLiquidation(
             vault, auctionInformation_.originalOwner, badDebt, liquidationInitiatorReward, liquidationPenalty, remainder
