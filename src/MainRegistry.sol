@@ -194,6 +194,7 @@ contract MainRegistry is MainRegistryGuardian {
      * assets are no longer updatable.
      */
     event AssetAdded(address assetAddress);
+
     function addAsset(address assetAddress) external onlyPricingModule returns (bool) {
         if (inMainRegistry[assetAddress]) {
             require(assetsUpdatable, "MR_AA: Asset not updatable");

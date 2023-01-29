@@ -37,6 +37,8 @@ contract OracleHub is Ownable {
         address quoteAssetAddress;
     }
 
+    event OracleAdded(address oracle, string quoteAsset, string baseAsset);
+
     /**
      * @notice Constructor
      */
@@ -66,6 +68,7 @@ contract OracleHub is Ownable {
         require(oracleInformation.oracleUnit <= 1000000000000000000, "OH_AO: Maximal 18 decimals");
         inOracleHub[oracle] = true;
         oracleToOracleInformation[oracle] = oracleInformation;
+        emit OracleAdded(oracle, oracleInformation.quoteAsset, oracleInformation.baseAsset);
     }
 
     /**
