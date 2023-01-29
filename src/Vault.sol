@@ -126,6 +126,13 @@ contract Vault {
         vaultVersion = newVersion;
         _getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
 
+        if (isTrustedCreditorSet) {
+            //If a trustedCreditor is set, new version should be compatible.
+            //openMarginAccount() is a view function, cannot modify state.
+            (bool success,,) = ITrustedCreditor(trustedCreditor).openMarginAccount(newVersion);
+            require(success, "V_UV: Invalid vault version");
+        }
+
         emit Upgraded(newImplementation);
     }
 

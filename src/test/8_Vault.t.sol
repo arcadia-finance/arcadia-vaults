@@ -286,9 +286,15 @@ contract VaultManagementTest is vaultTests {
     function testSuccess_upgradeVault(address newImplementation, uint16 newVersion) public {
         vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
 
-        vm.startPrank(address(factory));
+        //TrustedCreditor is set
+        vm.prank(vaultOwner);
+        vault_.openTrustedMarginAccount(address(pool));
+
+        vm.prank(creatorAddress);
+        pool.setVaultVersion(newVersion, true);
+
+        vm.prank(address(factory));
         vault_.upgradeVault(newImplementation, newVersion);
-        vm.stopPrank();
 
         uint16 expectedVersion = vault_.vaultVersion();
 
@@ -304,6 +310,20 @@ contract VaultManagementTest is vaultTests {
 
         vm.startPrank(nonOwner);
         vm.expectRevert("V: You are not the factory");
+        vault_.upgradeVault(newImplementation, newVersion);
+        vm.stopPrank();
+    }
+
+    function testRevert_upgradeVault_InvalidVaultVersion(address newImplementation, uint16 newVersion) public {
+        vm.assume(newVersion != 1);
+        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
+
+        //TrustedCreditor is set
+        vm.prank(vaultOwner);
+        vault_.openTrustedMarginAccount(address(pool));
+
+        vm.startPrank(address(factory));
+        vm.expectRevert("V_UV: Invalid vault version");
         vault_.upgradeVault(newImplementation, newVersion);
         vm.stopPrank();
     }

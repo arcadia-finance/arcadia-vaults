@@ -133,6 +133,10 @@ contract VaultV2Test is DeployArcadiaVaults {
         bytes32[] memory proofs = new bytes32[](1);
         proofs[0] = Constants.upgradeProof1To2;
 
+        vm.startPrank(creatorAddress);
+        pool.setVaultVersion(factory.latestVaultVersion(), true);
+        vm.stopPrank();
+
         vm.startPrank(vaultOwner);
         factory.upgradeVaultVersion(address(proxy), factory.latestVaultVersion(), proofs);
         vm.stopPrank();
