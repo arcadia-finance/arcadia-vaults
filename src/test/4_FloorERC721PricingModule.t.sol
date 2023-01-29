@@ -158,35 +158,6 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC721PricingModule.inPricingModule(address(bayc)));
     }
 
-    function testRevert_setOracles_NonOwner(address unprivilegedAddress_, address asset) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
-        floorERC721PricingModule.setOracles(asset, new address[](0));
-        vm.stopPrank();
-    }
-
-    function testRevert_setOracles_AssetUnknown(address asset) public {
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PM721_SO: asset unknown");
-        floorERC721PricingModule.setOracles(asset, new address[](0));
-        vm.stopPrank();
-    }
-
-    function testSuccess_setOracles() public {
-        stdstore.target(address(floorERC721PricingModule)).sig(floorERC721PricingModule.inPricingModule.selector)
-            .with_key(address(bayc)).checked_write(true);
-
-        vm.prank(creatorAddress);
-        floorERC721PricingModule.setOracles(address(bayc), oracleWbaycToEthEthToUsd);
-
-        (,, address[] memory oracles) = floorERC721PricingModule.getAssetInformation(address(bayc));
-        for (uint256 i; i < oracleWbaycToEthEthToUsd.length; ++i) {
-            assertEq(oracles[i], oracleWbaycToEthEthToUsd[i]);
-        }
-    }
-
     /*///////////////////////////////////////////////////////////////
                         WHITE LIST MANAGEMENT
     ///////////////////////////////////////////////////////////////*/

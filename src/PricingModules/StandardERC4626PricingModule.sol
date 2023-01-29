@@ -82,19 +82,6 @@ contract StandardERC4626PricingModule is PricingModule {
     }
 
     /**
-     * @notice Synchronizes the oracle addresses for the given asset with its underlying asset.
-     * @param asset The contract address of the asset.
-     * @dev This function can by called by anyone, however since it reads from the Pricing Module of the underlying asset,
-     * unprivileged users can't mis-use it.
-     */
-    function syncOracles(address asset) external {
-        require(inPricingModule[asset], "PM4626_SO: asset unknown");
-        (, address[] memory underlyingAssetOracles) = IStandardERC20PricingModule(erc20PricingModule)
-            .getAssetInformation(assetToInformation[asset].underlyingAsset);
-        assetToInformation[asset].underlyingAssetOracles = underlyingAssetOracles;
-    }
-
-    /**
      * @notice Returns the information that is stored in the Sub-registry for a given asset
      * @dev struct is not taken into memory; saves 6613 gas
      * @param asset The Token address of the asset

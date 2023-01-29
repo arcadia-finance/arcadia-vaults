@@ -24,8 +24,6 @@ contract MainRegistry is MainRegistryGuardian {
 
     address immutable _this;
 
-    bool public assetsUpdatable = true;
-
     uint256 public baseCurrencyCounter;
 
     address public factoryAddress;
@@ -164,33 +162,16 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Disables the updatability of assets. In the disabled states, asset properties become immutable
-     *
-     */
-    function setAssetsToNonUpdatable() external onlyOwner {
-        assetsUpdatable = false;
-    }
-
-    /**
-     * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
+     * @notice Add a new asset to the Main Registry
      * @param assetAddress The address of the asset
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
-     * the number of assets added to the Main Registry,or the list must have length 0.
-     * If the list has length zero, the risk variables of the baseCurrency for all assets
-     * is initiated as default (safest lowest rating).
-     * @dev Risk variable are variables with 2 decimals precision
-     * @dev By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     * (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
-     * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
-     * assets are no longer updatable.
+     * @dev Assets that are already present in the mainreg cannot be updated,
+     * as that would make it possible for devs to change the asset pricing.
      */
     function addAsset(address assetAddress) external onlyPricingModule returns (bool) {
-        if (inMainRegistry[assetAddress]) {
-            require(assetsUpdatable, "MR_AA: Asset not updatable");
-        } else {
-            inMainRegistry[assetAddress] = true;
-            assetsInMainRegistry.push(assetAddress);
-        }
+        require(!inMainRegistry[assetAddress], "MR_AA: Asset already in mainreg");
+
+        inMainRegistry[assetAddress] = true;
+        assetsInMainRegistry.push(assetAddress);
         assetToPricingModule[assetAddress] = msg.sender;
 
         return true;

@@ -150,35 +150,6 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
     }
 
-    function testRevert_setOracles_NonOwner(address unprivilegedAddress_, address asset) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
-        standardERC20PricingModule.setOracles(asset, new address[](0));
-        vm.stopPrank();
-    }
-
-    function testRevert_setOracles_AssetUnknown(address asset) public {
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PM20_SO: asset unknown");
-        standardERC20PricingModule.setOracles(asset, new address[](0));
-        vm.stopPrank();
-    }
-
-    function testSuccess_setOracles() public {
-        stdstore.target(address(standardERC20PricingModule)).sig(standardERC20PricingModule.inPricingModule.selector)
-            .with_key(address(eth)).checked_write(true);
-
-        vm.prank(creatorAddress);
-        standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr);
-
-        (, address[] memory oracles) = standardERC20PricingModule.getAssetInformation(address(eth));
-        for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
-            assertEq(oracles[i], oracleEthToUsdArr[i]);
-        }
-    }
-
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/

@@ -168,30 +168,6 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
     }
 
-    function testRevert_syncOracles_AssetUnknown(address sender, address asset) public {
-        vm.startPrank(sender);
-        vm.expectRevert("PMAT_SO: asset unknown");
-        aTokenPricingModule.syncOracles(asset);
-        vm.stopPrank();
-    }
-
-    function testSuccess_syncOracles(address sender) public {
-        vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint128).max);
-
-        //Given: oracle sequence of underlying asset is modified
-        standardERC20PricingModule.setOracles(address(eth), oracleLinkToUsdArr);
-        vm.stopPrank();
-
-        vm.prank(sender);
-        aTokenPricingModule.syncOracles(address(aEth));
-
-        (,, address[] memory oracles) = aTokenPricingModule.getAssetInformation(address(aEth));
-        for (uint256 i; i < oracleLinkToUsdArr.length; ++i) {
-            assertEq(oracles[i], oracleLinkToUsdArr[i]);
-        }
-    }
-
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/
