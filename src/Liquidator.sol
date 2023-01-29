@@ -7,7 +7,6 @@
 pragma solidity ^0.8.13;
 
 import {LogExpMath} from "./utils/LogExpMath.sol";
-import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IVault} from "./interfaces/IVault.sol";
