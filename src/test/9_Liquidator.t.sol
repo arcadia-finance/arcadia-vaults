@@ -369,43 +369,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(inAuction, false);
     }
 
-    function testSuccess_getPriceOfVault_AuctionTimeExceedsMaxTime(
-        uint64 startTime,
-        uint64 halfLife,
-        uint64 currentTime,
-        uint16 cutoffTime,
-        uint128 openDebt
-    ) public {
-        // Preprocess: Set up the fuzzed variables
-        vm.assume(currentTime > startTime);
-        vm.assume(halfLife > 1 * 60 * 60); // 1 hour
-        vm.assume(halfLife < 4 * 60 * 60); // 4 hours
-        vm.assume(cutoffTime < 8 * 60 * 60); // 8 hours
-        vm.assume(cutoffTime > 1 * 60 * 60); // 1 hours
-        vm.assume(currentTime - startTime < 5 * 24 * 60 * 60); // 5 day
-        vm.assume(currentTime - startTime > cutoffTime);
-        vm.assume(openDebt > 0);
 
-        // Given: A vault is in auction
-        vm.startPrank(creatorAddress);
-        liquidator.setDiscountRate(halfLife);
-        liquidator.setAuctionCutoffTime(cutoffTime);
-        vm.stopPrank();
-        vm.warp(startTime);
-
-        vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
-        vm.warp(currentTime);
-
-        // When: Get the price of the vault
-        (uint256 price, bool inAuction) = liquidator.getPriceOfVault(address(proxy));
-
-        // Then: The price is calculated correctly
-        assertEq(price, 0);
-        assertEq(inAuction, false);
-    }
-
-    function testSuccess_getPriceOfVault_AuctionTimeUnderMaxTime(
+    function testSuccess_getPriceOfVault(
         uint64 startTime,
         uint64 halfLife,
         uint64 currentTime,

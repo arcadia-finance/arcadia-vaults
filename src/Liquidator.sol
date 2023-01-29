@@ -177,9 +177,6 @@ contract Liquidator is Ownable {
         unchecked {
             timePassed = block.timestamp - auctionInformation[vault].startTime;
         }
-        if (timePassed > auctionCutoffTime) {
-            return (0, false);
-        }
 
         price = _calcPriceOfVault(timePassed, auctionInformation[vault].openDebt);
     }
