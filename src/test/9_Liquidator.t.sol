@@ -39,6 +39,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
         pool.setVaultVersion(1, true);
+        liquidator.setAuctionCutoffTime(14_400);
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
@@ -472,8 +473,23 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
+    function testSuccess_buyVault_afterAuctionCutoff(uint128 openDebt, uint32 timePassed) public {
+        vm.assume(timePassed > liquidator.auctionCutoffTime());
+        vm.assume(openDebt > 0 && openDebt <= pool.totalRealisedLiquidity());
+        address bidder = address(69); //Cannot fuzz the bidder address, since any existing contract without onERC721Received will revert
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+
+        vm.warp(timePassed);
+
+        vm.startPrank(bidder);
+        liquidator.buyVault(address(proxy));
+        vm.stopPrank();
+    }
+
     function testSuccess_buyVault(uint128 openDebt, uint136 bidderfunds) public {
-        vm.assume(openDebt > 0);
+        vm.assume(openDebt > 0 && openDebt <= pool.totalRealisedLiquidity());
         address bidder = address(69); //Cannot fuzz the bidder address, since any existing contract without onERC721Received will revert
 
         vm.prank(address(pool));
@@ -502,6 +518,71 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint256 index = factory.vaultIndex(address(proxy));
         assertEq(factory.ownerOf(index), bidder);
         assertEq(proxy.owner(), bidder);
+    }
+
+    function testRevert_endAuction_notAuthorized(address bidder, uint128 openDebt, uint32 timePassed) public {
+        vm.assume(timePassed <= liquidator.auctionCutoffTime());
+        vm.assume(openDebt > 0);
+        vm.assume(bidder != address(pool));
+        vm.assume(bidder != liquidityProvider);
+        vm.assume(bidder != creatorAddress);
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+
+        vm.warp(timePassed);
+
+        vm.startPrank(bidder);
+        vm.expectRevert("Ownable: caller is not the owner");
+        liquidator.endAuction(address(proxy), bidder);
+        vm.stopPrank();
+    }
+
+    function testRevert_endAuction_notForSale() public {
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("LQ_EA: Not for sale");
+        liquidator.endAuction(address(proxy), creatorAddress);
+        vm.stopPrank();
+    }
+
+    function testRevert_endAuction_auctionNotExpired(uint128 openDebt, uint32 timePassed) public {
+        vm.assume(timePassed <= liquidator.auctionCutoffTime() && timePassed > 0);
+        vm.assume(openDebt > 0);
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+
+        vm.warp(timePassed);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("LQ_EA: Auction not expired");
+        liquidator.endAuction(address(proxy), creatorAddress);
+        vm.stopPrank();
+    }
+
+    function testSuccess_endAuction(uint128 openDebt, uint32 timePassed) public {
+        vm.assume(timePassed > liquidator.auctionCutoffTime());
+        (uint256 badDebt,,,) = liquidator.calcLiquidationSettlementValues(openDebt, 0);
+        vm.assume(openDebt > 0 && badDebt <= pool.totalRealisedLiquidity());
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+
+        vm.warp(block.timestamp + timePassed);
+
+        uint256 trancheBalancePre = pool.realisedLiquidityOf(address(tranche));
+
+        vm.startPrank(creatorAddress);
+        liquidator.endAuction(address(proxy), creatorAddress);
+        vm.stopPrank();
+
+        uint256 trancheBalancePost = pool.realisedLiquidityOf(address(tranche));
+
+        (,, bool inAuction,,,) = liquidator.auctionInformation(address(proxy));
+
+        assertEq(inAuction, false);
+        assertEq(trancheBalancePre - trancheBalancePost, badDebt);
+        assertEq(factory.ownerOfVault(address(proxy)), creatorAddress);
     }
 
     function testSuccess_calcLiquidationSettlementValues(uint128 openDebt, uint256 priceOfVault) public {
