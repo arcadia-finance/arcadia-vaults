@@ -1260,8 +1260,8 @@ contract OracleHubTest is Test {
 
         vm.startPrank(oracleOwner);
         //minAnswer is set to 100 in the oracle mocks
-        oracleSnxToEth.transmit(int256(1));
-        oracleEthToUsd.transmit(int256(500000000000)); //only one of the two is needed to fail
+        oracleSnxToEth.transmit(int256(500000000000));
+        oracleEthToUsd.transmit(int256(500000000000));
         vm.stopPrank();
 
         vm.warp(block.timestamp + timePassed);
@@ -1319,7 +1319,7 @@ contract OracleHubTest is Test {
 
         vm.startPrank(oracleOwner);
         //minAnswer is set to 100 in the oracle mocks
-        oracleSnxToEth.transmit(int256(1));
+        oracleSnxToEth.transmit(int256(500000000000));
         oracleEthToUsd.transmit(int256(500000000000)); //only one of the two is needed to fail
         vm.stopPrank();
 
