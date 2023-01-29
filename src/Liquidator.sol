@@ -257,7 +257,8 @@ contract Liquidator is Ownable {
 
         //openDebt is a uint128 -> all calculations can be unchecked
         unchecked {
-            //Liquidation Initiator Reward is always paid out, independent of the final auction price
+            //Liquidation Initiator Reward is always paid out, independent of the final auction price.
+            //The reward is calculated as a fixed percentage of open debt, but capped on the upside.
             liquidationInitiatorReward = openDebt * claimRatios_.initiatorReward / 100;
             liquidationInitiatorReward =
                 liquidationInitiatorReward > maxInitiatorFee ? maxInitiatorFee : liquidationInitiatorReward;
