@@ -244,10 +244,14 @@ contract Liquidator is Ownable {
      * @notice End an unsuccessful auction after the auctionCutoffTime has passed.
      * @param vault The contract address of the vault.
      * @param to The address to which the vault will be transferred.
-     * @dev The auction will be stopped and the vault will be transferred to the provided address.
+     * @dev This is an emergency process, and can not be triggered under normal operation.
+     * The auction will be stopped and the vault will be transferred to the provided address.
      * The junior tranche of the liquidity pool will pay for the bad debt.
      * The protocol will sell/auction the vault in another way to recover the debt.
-     * The protocol can then "donate" these proceeds to the junior tranche.
+     * The protocol will later "donate" these proceeds back to the junior tranche and/or other
+     * impacted Tranches, this last step is not enforced by the smart contract.
+     * While this process is not fully trustless, it is only to solve an extreme unhappy flow,
+     * where an auction did not end within auctionCutoffTime (due to market or technical reasons).
      */
     function endAuction(address vault, address to) external onlyOwner {
         AuctionInformation memory auctionInformation_ = auctionInformation[vault];
@@ -263,7 +267,7 @@ contract Liquidator is Ownable {
         auctionInformation[vault].inAuction = false;
 
         (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder) =
-            calcLiquidationSettlementValues(auctionInformation_.openDebt, 0); //price is zero
+            calcLiquidationSettlementValues(auctionInformation_.openDebt, 0); //priceOfVault is zero
 
         ILendingPool(auctionInformation_.trustedCreditor).settleLiquidation(
             vault, auctionInformation_.originalOwner, badDebt, liquidationInitiatorReward, liquidationPenalty, remainder
