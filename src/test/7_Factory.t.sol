@@ -185,6 +185,7 @@ contract FactoryTest is DeployArcadiaVaults {
     }
 
     function testSuccess_ownerOfVault_ExistingVault(address owner) public {
+        vm.assume(owner != address(0));
         vm.prank(owner);
         proxyAddr = factory.createVault(0, 0, address(0));
 
