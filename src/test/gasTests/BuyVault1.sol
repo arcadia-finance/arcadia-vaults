@@ -62,31 +62,31 @@ contract gasBuyVault_1ERC20 is GasTestFixture {
     }
 
     function testBuyVaultBl100() public {
-        vm.roll(100);
+        vm.warp(100);
         vm.prank(vaultBuyer);
         liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl500() public {
-        vm.roll(500);
+        vm.warp(500);
         vm.prank(vaultBuyer);
         liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl1000() public {
-        vm.roll(1000);
+        vm.warp(1000);
         vm.prank(vaultBuyer);
         liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl1500() public {
-        vm.roll(1500);
+        vm.warp(1500);
         vm.prank(vaultBuyer);
         liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl2000() public {
-        vm.roll(2000);
+        vm.warp(14401);
         vm.prank(vaultBuyer);
         liquidator.buyVault(address(proxy));
     }

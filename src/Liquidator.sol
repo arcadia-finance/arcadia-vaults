@@ -187,6 +187,10 @@ contract Liquidator is Ownable {
             auctionTime = timePassed * 1e18;
         }
         price = openDebt * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime) / 1e20;
+
+        if (timePassed > auctionCutoffTime) {
+            price = 0;
+        }
     }
 
     /**
@@ -199,8 +203,14 @@ contract Liquidator is Ownable {
         AuctionInformation memory auctionInformation_ = auctionInformation[vault];
         require(auctionInformation_.inAuction, "LQ_BV: Not for sale");
 
+        uint256 timePassed;
+        unchecked {
+            timePassed = block.timestamp - auctionInformation_.startTime;
+        }
+        require(timePassed <= auctionCutoffTime, "LQ_BV: Auction expired");
+
         uint256 priceOfVault =
-            _calcPriceOfVault(block.timestamp - auctionInformation_.startTime, auctionInformation_.openDebt);
+            _calcPriceOfVault(timePassed, auctionInformation_.openDebt);
         //Stop the auction, this will prevent any possible reentrance attacks.
         auctionInformation[vault].inAuction = false;
 
@@ -222,6 +232,30 @@ contract Liquidator is Ownable {
 
         //Change ownership of the auctioned vault to the bidder.
         IFactory(factory).safeTransferFrom(address(this), msg.sender, vault);
+    }
+
+    function endAuction(address vault, address to) external onlyOwner {
+        AuctionInformation memory auctionInformation_ = auctionInformation[vault];
+        require(auctionInformation_.inAuction, "LQ_EA: Not for sale");
+
+        uint256 timePassed;
+        unchecked {
+            timePassed = block.timestamp - auctionInformation_.startTime;
+        }
+        require(timePassed > auctionCutoffTime, "LQ_EA: Auction not expired");
+
+        //Stop the auction, this will prevent any possible reentrance attacks.
+        auctionInformation[vault].inAuction = false;
+
+        (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder) =
+            calcLiquidationSettlementValues(auctionInformation_.openDebt, 0);
+
+        ILendingPool(auctionInformation_.trustedCreditor).settleLiquidation(
+            vault, auctionInformation_.originalOwner, badDebt, liquidationInitiatorReward, liquidationPenalty, remainder
+        );
+
+        //Change ownership of the auctioned vault to the protocol owner.
+        IFactory(factory).safeTransferFrom(address(this), to, vault);
     }
 
     /**
