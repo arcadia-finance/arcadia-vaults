@@ -51,6 +51,11 @@ contract MainRegistry is MainRegistryGuardian {
         string baseCurrencyLabel;
     }
 
+    event ActionAllowed(address action, bool allowed);
+    event BaseCurrencyAdded(uint256 baseCurrencyId, address assetAddress);
+    event PricingModuleAdded(address subAssetRegistryAddress);
+    event AssetUpdatabilityDisabled();
+
     /**
      * @dev Only Sub-registries can call functions marked by this modifier.
      *
@@ -113,6 +118,7 @@ contract MainRegistry is MainRegistryGuardian {
      */
     function setAllowedAction(address action, bool allowed) public onlyOwner {
         isActionAllowed[action] = allowed;
+        emit ActionAllowed(action, allowed);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -143,6 +149,7 @@ contract MainRegistry is MainRegistryGuardian {
         unchecked {
             ++baseCurrencyCounter;
         }
+        emit BaseCurrencyAdded(baseCurrencyCounter, baseCurrencyInformation.assetAddress);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -157,6 +164,7 @@ contract MainRegistry is MainRegistryGuardian {
         require(!isPricingModule[subAssetRegistryAddress], "MR_APM: PriceMod. not unique");
         isPricingModule[subAssetRegistryAddress] = true;
         pricingModules.push(subAssetRegistryAddress);
+        emit PricingModuleAdded(subAssetRegistryAddress);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -169,6 +177,7 @@ contract MainRegistry is MainRegistryGuardian {
      */
     function setAssetsToNonUpdatable() external onlyOwner {
         assetsUpdatable = false;
+        emit AssetUpdatabilityDisabled();
     }
 
     /**
@@ -184,6 +193,7 @@ contract MainRegistry is MainRegistryGuardian {
      * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
      * assets are no longer updatable.
      */
+    event AssetAdded(address assetAddress);
     function addAsset(address assetAddress) external onlyPricingModule returns (bool) {
         if (inMainRegistry[assetAddress]) {
             require(assetsUpdatable, "MR_AA: Asset not updatable");
@@ -192,7 +202,7 @@ contract MainRegistry is MainRegistryGuardian {
             assetsInMainRegistry.push(assetAddress);
         }
         assetToPricingModule[assetAddress] = msg.sender;
-
+        emit AssetAdded(assetAddress);
         return true;
     }
 
