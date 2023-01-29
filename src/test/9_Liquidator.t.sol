@@ -477,8 +477,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(timePassed > liquidator.auctionCutoffTime());
         vm.assume(openDebt > 0 && openDebt <= pool.totalRealisedLiquidity());
         address bidder = address(69); //Cannot fuzz the bidder address, since any existing contract without onERC721Received will revert
-        openDebt = 18446744073707012486;
-        timePassed = 17840037;
+
         vm.prank(address(pool));
         liquidator.startAuction(address(proxy), openDebt);
 
@@ -521,6 +520,24 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(proxy.owner(), bidder);
     }
 
+    function testRevert_endAuction_notAuthorized(address bidder, uint128 openDebt, uint32 timePassed) public {
+        vm.assume(timePassed <= liquidator.auctionCutoffTime());
+        vm.assume(openDebt > 0);
+        vm.assume(bidder != address(pool));
+        vm.assume(bidder != liquidityProvider);
+        vm.assume(bidder != creatorAddress);
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt);
+
+        vm.warp(timePassed);
+
+        vm.startPrank(bidder);
+        vm.expectRevert("Ownable: caller is not the owner");
+        liquidator.endAuction(address(proxy), bidder);
+        vm.stopPrank();
+    }
+
     function testRevert_endAuction_notForSale() public {
         vm.startPrank(creatorAddress);
         vm.expectRevert("LQ_EA: Not for sale");
@@ -543,27 +560,10 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_endAuction_notAuthorized(address bidder, uint128 openDebt, uint32 timePassed) public {
-        vm.assume(timePassed <= liquidator.auctionCutoffTime());
-        vm.assume(openDebt > 0);
-        vm.assume(bidder != address(pool));
-        vm.assume(bidder != liquidityProvider);
-        vm.assume(bidder != creatorAddress);
-
-        vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt);
-
-        vm.warp(timePassed);
-
-        vm.startPrank(bidder);
-        vm.expectRevert("Ownable: caller is not the owner");
-        liquidator.endAuction(address(proxy), bidder);
-        vm.stopPrank();
-    }
-
     function testSuccess_endAuction(uint128 openDebt, uint32 timePassed) public {
         vm.assume(timePassed > liquidator.auctionCutoffTime());
-        vm.assume(openDebt > 0 && openDebt <= pool.totalRealisedLiquidity());
+        (uint256 badDebt,,,) = liquidator.calcLiquidationSettlementValues(openDebt, 0);
+        vm.assume(openDebt > 0 && badDebt <= pool.totalRealisedLiquidity());
 
         vm.prank(address(pool));
         liquidator.startAuction(address(proxy), openDebt);
@@ -581,6 +581,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         (,, bool inAuction,,,) = liquidator.auctionInformation(address(proxy));
 
         assertEq(inAuction, false);
+        assertEq(trancheBalancePre - trancheBalancePost, badDebt);
         assertEq(factory.ownerOfVault(address(proxy)), creatorAddress);
     }
 
