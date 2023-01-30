@@ -197,7 +197,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         proofs[0] = Constants.upgradeProof1To2;
 
         vm.startPrank(sender);
-        vm.expectRevert("FTRY_UVV: You are not the owner");
+        vm.expectRevert("FTRY_UVV: Only Owner");
         factory.upgradeVaultVersion(address(proxy), 2, proofs);
         vm.stopPrank();
     }
