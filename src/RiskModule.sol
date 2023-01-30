@@ -33,9 +33,9 @@ library RiskModule {
     {
         uint256 valuesAndRiskVarPerAssetLength = valuesAndRiskVarPerAsset.length;
         for (uint256 i; i < valuesAndRiskVarPerAssetLength;) {
+            collateralValue +=
+                valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].collateralFactor;
             unchecked {
-                collateralValue +=
-                    valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].collateralFactor;
                 ++i;
             }
         }
@@ -54,9 +54,9 @@ library RiskModule {
     {
         uint256 valuesAndRiskVarPerAssetLength = valuesAndRiskVarPerAsset.length;
         for (uint256 i; i < valuesAndRiskVarPerAssetLength;) {
+            liquidationValue +=
+                valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].liquidationFactor;
             unchecked {
-                liquidationValue +=
-                    valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].liquidationFactor;
                 ++i;
             }
         }
