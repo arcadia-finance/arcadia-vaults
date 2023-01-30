@@ -265,7 +265,6 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetAmounts,
         uint256 baseCurrency
     ) public view returns (uint256 valueInBaseCurrency) {
-        uint256 valueInUsd;
 
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
 
@@ -277,6 +276,7 @@ contract MainRegistry is MainRegistryGuardian {
         IPricingModule.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
 
+        uint256 valueInUsd;
         address assetAddress;
         uint256 tempValueInUsd;
         uint256 tempValueInBaseCurrency;
