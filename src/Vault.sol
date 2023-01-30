@@ -353,7 +353,7 @@ contract Vault {
     {
         require(msg.sender == liquidator, "V_LV: Only Liquidator");
 
-        //If getLiquidationValue (total value discounted with liquidation factor) is smaller than openDebt.
+        //If getLiquidationValue (total value discounted with liquidation factor) is smaller than openDebt,
         //the Vault is unhealthy and is succesfully liquidated.
         //Liquidations are triggered by the trustedCreditor (via Liquidator), the openDebt is
         //passed to avoid the need of another contract call back to trustedCreditor.
