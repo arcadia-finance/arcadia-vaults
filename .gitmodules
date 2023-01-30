@@ -11,3 +11,6 @@
 [submodule "lib/arcadia-lending"]
 	path = lib/arcadia-lending
 	url = https://github.com/arcadia-finance/arcadia-lending
+[submodule "lib/v2-periphery"]
+	path = lib/v2-periphery
+	url = https://github.com/Uniswap/v2-periphery
