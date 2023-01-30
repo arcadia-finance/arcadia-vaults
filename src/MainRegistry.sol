@@ -16,8 +16,8 @@ import {MainRegistryGuardian} from "./security/MainRegistryGuardian.sol";
 /**
  * @title Main Asset registry
  * @author Arcadia Finance
- * @notice The Main-registry stores basic information for each token that can, or could at some point, be deposited in the vaults
- * @dev No end-user should directly interact with the Main-registry, only vaults, Sub-Registries or the contract owner
+ * @notice The Main Registry stores basic information for each token that can, or could at some point, be deposited in the vaults
+ * @dev No end-user should directly interact with the Main Registry, only vaults, Sub-Registries or the contract owner
  */
 contract MainRegistry is MainRegistryGuardian {
     using FixedPointMathLib for uint256;
@@ -76,7 +76,7 @@ contract MainRegistry is MainRegistryGuardian {
      */
     constructor(BaseCurrencyInformation memory baseCurrencyInformation, address factory_) {
         _this = address(this);
-        //Main registry must be initialised with usd
+        //Main Registry must be initialised with usd
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
@@ -433,7 +433,7 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetAmounts,
         address baseCurrency
     ) public view returns (uint256 collateralValue) {
-        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
+        //No need to check that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 
