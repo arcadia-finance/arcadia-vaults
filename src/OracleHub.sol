@@ -14,7 +14,7 @@ import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
 /**
  * @title Oracle Hub
  * @author Arcadia Finance
- * @notice The Oracle Hub stores the addressesses and other necessary information of the Price Oracles and returns rates of assets
+ * @notice The Oracle Hub stores the addresses and other necessary information of the Price Oracles and returns rates of assets
  * @dev No end-user should directly interact with the Oracle-Hub, only the Main Registry, Sub-Registries or the contract owner.
  */
 contract OracleHub is Ownable {
