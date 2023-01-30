@@ -16,8 +16,8 @@ import {MainRegistryGuardian} from "./security/MainRegistryGuardian.sol";
 /**
  * @title Main Asset registry
  * @author Arcadia Finance
- * @notice The Main-registry stores basic information for each token that can, or could at some point, be deposited in the vaults
- * @dev No end-user should directly interact with the Main-registry, only vaults, Sub-Registries or the contract owner
+ * @notice The Main Registry stores basic information for each token that can, or could at some point, be deposited in the vaults
+ * @dev No end-user should directly interact with the Main Registry, only vaults, Pricing Modules or the contract owner
  */
 contract MainRegistry is MainRegistryGuardian {
     using FixedPointMathLib for uint256;
@@ -26,9 +26,9 @@ contract MainRegistry is MainRegistryGuardian {
 
     uint256 public baseCurrencyCounter;
 
-    address public factoryAddress;
+    address public immutable factory;
 
-    address[] private pricingModules;
+    address[] public pricingModules;
     address[] public assetsInMainRegistry;
     address[] public baseCurrencies;
 
@@ -43,28 +43,24 @@ contract MainRegistry is MainRegistryGuardian {
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
-        uint64 baseCurrencyUnitCorrection;
         address assetAddress;
+        uint64 baseCurrencyUnitCorrection;
         address baseCurrencyToUsdOracle;
         string baseCurrencyLabel;
     }
 
     /**
-     * @dev Only Sub-registries can call functions marked by this modifier.
+     * @dev Only Pricing Modules can call functions marked by this modifier.
      *
      */
     modifier onlyPricingModule() {
-        require(isPricingModule[msg.sender], "Caller is not a Price Module.");
+        require(isPricingModule[msg.sender], "MR: Only PriceMod.");
         _;
     }
 
     modifier onlyVault() {
-        require(IFactory(factoryAddress).isVault(msg.sender), "Caller is not a Vault.");
-        _;
-    }
-
-    modifier noDelegate() {
-        require(address(this) == _this, "Delegate calls not allowed.");
+        require(IFactory(factory).isVault(msg.sender), "MR: Only Vaults.");
+        require(address(this) == _this, "MR: No delegate.");
         _;
     }
 
@@ -73,14 +69,14 @@ contract MainRegistry is MainRegistryGuardian {
      * @dev Since the BaseCurrency USD has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
      * @param baseCurrencyInformation A Struct with information about the BaseCurrency USD
      * - baseCurrencyToUsdOracleUnit: Since there is no price oracle for usd to USD, this is 0 by default for USD
-     * - baseCurrencyUnit: Since there is no native token for USD, this is 0 by default for USD
+     * - baseCurrencyUnitCorrection: Since there is no native token for USD, this is 0 by default for USD
      * - assetAddress: Since there is no native token for usd, this is 0 address by default for USD
      * - baseCurrencyToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      */
-    constructor(BaseCurrencyInformation memory baseCurrencyInformation) {
+    constructor(BaseCurrencyInformation memory baseCurrencyInformation, address factory_) {
         _this = address(this);
-        //Main registry must be initialised with usd
+        //Main Registry must be initialised with usd
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
@@ -89,6 +85,8 @@ contract MainRegistry is MainRegistryGuardian {
         unchecked {
             ++baseCurrencyCounter;
         }
+
+        factory = factory_;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -96,20 +94,12 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Sets the Factory address
-     * @param _factoryAddress The address of the Factory
-     */
-    function setFactory(address _factoryAddress) external onlyOwner {
-        factoryAddress = _factoryAddress;
-    }
-
-    /**
      * @notice Sets an allowed action handler
      * @param action The address of the action handler
      * @param allowed Bool to indicate its status
      * @dev Can only be called by owner.
      */
-    function setAllowedAction(address action, bool allowed) public onlyOwner {
+    function setAllowedAction(address action, bool allowed) external onlyOwner {
         isActionAllowed[action] = allowed;
     }
 
@@ -121,7 +111,7 @@ contract MainRegistry is MainRegistryGuardian {
      * @notice Add a new baseCurrency (a unit in which price is measured, like USD or ETH) to the Main Registry
      * @param baseCurrencyInformation A Struct with information about the BaseCurrency
      * - baseCurrencyToUsdOracleUnit: The unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
-     * - baseCurrencyUnit: The unit of the baseCurrency, equal to 10 to the power of the number of decimals of the baseCurrency
+     * - baseCurrencyUnitCorrection: The unit correction needed to get the baseCurrency to 1e18 units
      * - assetAddress: The contract address of the baseCurrency,
      * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
@@ -151,13 +141,13 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Add a Sub-registry Address to the list of Sub-Registries
-     * @param subAssetRegistryAddress Address of the Sub-Registry
+     * @notice Add a Pricing Module Address to the list of Pricing Modules
+     * @param pricingModule Address of the Pricing Module
      */
-    function addPricingModule(address subAssetRegistryAddress) external onlyOwner {
-        require(!isPricingModule[subAssetRegistryAddress], "MR_APM: PriceMod. not unique");
-        isPricingModule[subAssetRegistryAddress] = true;
-        pricingModules.push(subAssetRegistryAddress);
+    function addPricingModule(address pricingModule) external onlyOwner {
+        require(!isPricingModule[pricingModule], "MR_APM: PriceMod. not unique");
+        isPricingModule[pricingModule] = true;
+        pricingModules.push(pricingModule);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -186,13 +176,13 @@ contract MainRegistry is MainRegistryGuardian {
      * @param assetIds An array of asset ids
      * @param amounts An array of amounts to be deposited
      * @dev processDeposit in the pricing module checks whether
-     *    it's allowlisted and updates the maxExposure
+     *    it's allowlisted and updates the exposure
      */
     function batchProcessDeposit(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) public whenDepositNotPaused onlyVault noDelegate {
+    ) external whenDepositNotPaused onlyVault {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
@@ -213,13 +203,12 @@ contract MainRegistry is MainRegistryGuardian {
      * @notice Batch withdrawal multiple assets
      * @param assetAddresses An array of addresses of the assets
      * @param amounts An array of amounts to be withdrawn
-     * @dev batchProcessWithdrawal in the pricing module updates the maxExposure
+     * @dev batchProcessWithdrawal in the pricing module updates the exposure
      */
     function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
-        public
+        external
         whenWithdrawNotPaused
         onlyVault
-        noDelegate
     {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
@@ -255,7 +244,7 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 valueInBaseCurrency) {
+    ) external view returns (uint256 valueInBaseCurrency) {
         valueInBaseCurrency = getTotalValue(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
 
@@ -268,7 +257,6 @@ contract MainRegistry is MainRegistryGuardian {
      * @param assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency An identifier (uint256) of the BaseCurrency
      * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
-     * @dev ToDo: value sum unchecked. Cannot overflow on 1e18 decimals
      */
     function getTotalValue(
         address[] calldata assetAddresses,
@@ -276,8 +264,6 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetAmounts,
         uint256 baseCurrency
     ) public view returns (uint256 valueInBaseCurrency) {
-        uint256 valueInUsd;
-
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
 
         uint256 assetAddressesLength = assetAddresses.length;
@@ -288,6 +274,7 @@ contract MainRegistry is MainRegistryGuardian {
         IPricingModule.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
 
+        uint256 valueInUsd;
         address assetAddress;
         uint256 tempValueInUsd;
         uint256 tempValueInBaseCurrency;
@@ -301,14 +288,14 @@ contract MainRegistry is MainRegistryGuardian {
 
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
-                valueInBaseCurrency = valueInBaseCurrency
-                    + assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //assetAmounts can have a variable decimal precision -> bring to 18 decimals
+                valueInBaseCurrency +=
+                    assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //assetAmounts can have a variable decimal precision -> bring to 18 decimals
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
                 (tempValueInUsd, tempValueInBaseCurrency,,) =
                     IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
-                valueInUsd = valueInUsd + tempValueInUsd;
-                valueInBaseCurrency = valueInBaseCurrency + tempValueInBaseCurrency;
+                valueInUsd += tempValueInUsd;
+                valueInBaseCurrency += tempValueInBaseCurrency;
             }
             unchecked {
                 ++i;
@@ -323,8 +310,9 @@ contract MainRegistry is MainRegistryGuardian {
             (, int256 rate,,,) =
                 IChainLinkData(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle).latestRoundData();
             //Add valueInUsd to valueInBaseCurrency
-            valueInBaseCurrency = valueInBaseCurrency
-                + valueInUsd.mulDivDown(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit, uint256(rate));
+            valueInBaseCurrency += valueInUsd.mulDivDown(
+                baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit, uint256(rate)
+            );
         }
         //Bring from internal 18 decimals to the number of decimals of baseCurrency
         return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
@@ -345,7 +333,7 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset) {
+    ) external view returns (RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset) {
         valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
@@ -445,10 +433,10 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 collateralValue) {
-        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
+    ) external view returns (uint256 collateralValue) {
+        //No need to check that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
 
         collateralValue = RiskModule.calculateCollateralValue(valuesAndRiskVarPerAsset);
     }
@@ -468,10 +456,10 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 liquidationValue) {
+    ) external view returns (uint256 liquidationValue) {
         //No need to Check that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
 
         liquidationValue = RiskModule.calculateLiquidationValue(valuesAndRiskVarPerAsset);
     }
