@@ -277,7 +277,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         uint256 tokenIdToWorkWith;
         for (uint256 i; i < tokenIds.length; ++i) {
             tokenIdToWorkWith = tokenIds[i];
-            while (token.ownerOf(tokenIdToWorkWith) != address(0)) {
+            while (token.getOwnerOf(tokenIdToWorkWith) != address(0)) {
                 tokenIdToWorkWith++;
             }
 

@@ -78,7 +78,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         assertEq(abstractPricingModule.riskManager(), creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         abstractPricingModule.setRiskManager(newRiskManager);
         vm.stopPrank();
 

@@ -82,7 +82,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @dev Function does not revert when inexisting vault is passed, but returns zero-address as owner.
      */
     function ownerOfVault(address vault) external view returns (address owner_) {
-        owner_ = ownerOf[vaultIndex[vault]];
+        owner_ = _ownerOf[vaultIndex[vault]];
     }
 
     /**
@@ -95,7 +95,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @param proofs The merkle proofs that prove the compatibility of the upgrade.
      */
     function upgradeVaultVersion(address vault, uint16 version, bytes32[] calldata proofs) external {
-        require(ownerOf[vaultIndex[vault]] == msg.sender, "FTRY_UVV: You are not the owner");
+        require(_ownerOf[vaultIndex[vault]] == msg.sender, "FTRY_UVV: You are not the owner");
         require(!vaultVersionBlocked[version], "FTRY_UVV: Vault version blocked");
         uint256 currentVersion = IVault(vault).vaultVersion();
 
@@ -154,7 +154,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @param id of the vault that is about to be transfered.
      * @param data additional data, only used for onERC721Received.
      */
-    function safeTransferFrom(address from, address to, uint256 id, bytes memory data) public override {
+        function safeTransferFrom(address from, address to, uint256 id, bytes calldata data) public override {
         IVault(allVaults[id - 1]).transferOwnership(to);
         super.safeTransferFrom(from, to, id, data);
     }
@@ -254,13 +254,13 @@ contract Factory is ERC721, FactoryGuardian {
         require(isVault(msg.sender), "FTRY: Not a vault");
 
         uint256 id = vaultIndex[msg.sender];
-        address from = ownerOf[id];
+        address from = _ownerOf[id];
         unchecked {
-            balanceOf[from]--;
-            balanceOf[liquidator]++;
+            _balanceOf[from]--;
+            _balanceOf[liquidator]++;
         }
 
-        ownerOf[id] = liquidator;
+        _ownerOf[id] = liquidator;
 
         delete getApproved[id];
         emit Transfer(from, liquidator, id);
@@ -308,7 +308,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @return uri The token uri.
      */
     function tokenURI(uint256 tokenId) public view override returns (string memory uri) {
-        require(ownerOf[tokenId] != address(0), "ERC721Metadata: URI query for nonexistent token");
+        require(_ownerOf[tokenId] != address(0), "ERC721Metadata: URI query for nonexistent token");
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
     }
 

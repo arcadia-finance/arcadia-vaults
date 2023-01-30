@@ -153,8 +153,8 @@ contract OracleHubTest is Test {
         vm.assume(unprivilegedAddress != creatorAddress);
         // When: unprivilegedAddress addOracle
         vm.startPrank(unprivilegedAddress);
-        // Then: addOracle should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addOracle should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),

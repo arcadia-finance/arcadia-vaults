@@ -91,7 +91,7 @@ contract ExternalContractsTest is MainRegistryTest {
         vm.assume(nonAuthorized != creatorAddress);
 
         vm.startPrank(nonAuthorized);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         mainRegistry.setAllowedAction(action, allowed);
         vm.stopPrank();
     }
@@ -111,8 +111,8 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addBaseCurrency
 
-        // Then: addBaseCurrency should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addBaseCurrency should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -194,8 +194,8 @@ contract PriceModuleManagementTest is MainRegistryTest {
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addPricingModule
 
-        // Then: addPricingModule should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addPricingModule should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         vm.stopPrank();
     }

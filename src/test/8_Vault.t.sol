@@ -92,7 +92,8 @@ abstract contract vaultTests is DeployArcadiaVaults {
 
         stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault_)).checked_write(true);
         stdstore.target(address(factory)).sig(factory.vaultIndex.selector).with_key(address(vault_)).checked_write(10);
-        stdstore.target(address(factory)).sig(factory.ownerOf.selector).with_key(uint256(10)).checked_write(vaultOwner);
+        factory.setOwnerOf(vaultOwner, 10);
+//        stdstore.target(address(factory)).sig(factory._ownerOf.selector).with_key(uint256(10)).checked_write(vaultOwner);
     }
 
     function openMarginAccount() internal {
@@ -222,7 +223,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
         uint256 tokenIdToWorkWith;
         for (uint256 i; i < tokenIds.length; ++i) {
             tokenIdToWorkWith = tokenIds[i];
-            while (bayc.ownerOf(tokenIdToWorkWith) != address(0)) {
+            while (bayc.getOwnerOf(tokenIdToWorkWith) != address(0)) {
                 tokenIdToWorkWith++;
             }
 

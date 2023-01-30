@@ -25,8 +25,14 @@ import "../../mockups/ArcadiaOracle.sol";
 import {RiskConstants} from "../../utils/RiskConstants.sol";
 import ".././fixtures/ArcadiaOracleFixture.f.sol";
 
+contract FactoryExtension is Factory {
+    function setOwnerOf(address owner, uint256 vaultId) public {
+        _ownerOf[vaultId] = owner;
+    }
+}
+
 contract DeployArcadiaVaults is Test {
-    Factory public factory;
+    FactoryExtension public factory;
     Vault public vault;
     Vault public proxy;
     address public proxyAddr;
@@ -183,7 +189,7 @@ contract DeployArcadiaVaults is Test {
         //Deploy Arcadia Vaults contracts
         vm.startPrank(creatorAddress);
         oracleHub = new OracleHub();
-        factory = new Factory();
+        factory = new FactoryExtension();
 
         oracleHub.addOracle(
             OracleHub.OracleInformation({

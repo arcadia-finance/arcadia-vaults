@@ -210,9 +210,9 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         //When: unprivilegedAddress_ adds a new asset
-        //Then: addAsset reverts with "Ownable: caller is not the owner"
+        //Then: addAsset reverts with "UNAUTHORIZED"
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
     }
@@ -220,7 +220,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
     function testRevert_addAsset_NonWhiteListedUnderlyingAsset() public {
         //Given: One of the underlying assets is not whitelisted (SafeMoon)
         //When: creator adds a new asset
-        //Then: addAsset reverts with "Ownable: caller is not the owner"
+        //Then: addAsset reverts with "UNAUTHORIZED"
         vm.startPrank(creatorAddress);
         vm.expectRevert("PMUV2_AA: TOKENO_NOT_WHITELISTED");
         uniswapV2PricingModule.addAsset(address(pairSafemoonEth), emptyRiskVarInput, type(uint128).max);

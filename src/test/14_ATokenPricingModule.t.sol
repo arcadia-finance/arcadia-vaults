@@ -91,7 +91,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     function testRevert_addAsset_NonOwner(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
     }

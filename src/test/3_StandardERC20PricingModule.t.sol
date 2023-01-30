@@ -63,8 +63,8 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addAsset
 
-        // Then: addAsset should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addAsset should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
     }

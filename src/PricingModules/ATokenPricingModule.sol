@@ -10,7 +10,7 @@ import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule
 import {IAToken} from "./interfaces/IAToken.sol";
 import {IStandardERC20PricingModule} from "./interfaces/IStandardERC20PricingModule.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
-import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 /**
  * @title Pricing Module for Aave Yield Bearing ERC20 tokens
