@@ -6,10 +6,10 @@
  */
 pragma solidity ^0.8.13;
 
-import {Ownable} from "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {IOraclesHub} from "./interfaces/IOraclesHub.sol";
 import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
 import {RiskConstants} from "../utils/RiskConstants.sol";
+import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 /**
  * @title Abstract Pricing Module
@@ -18,7 +18,7 @@ import {RiskConstants} from "../utils/RiskConstants.sol";
  * @dev No end-user should directly interact with Sub-Registries, only the Main Registry, Oracle-Hub or the contract owner
  * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main Registry
  */
-abstract contract PricingModule is Ownable {
+abstract contract PricingModule is Owned {
     address public immutable mainRegistry;
     address public immutable oracleHub;
     address public riskManager;
@@ -70,7 +70,7 @@ abstract contract PricingModule is Ownable {
      * @param oracleHub_ The address of the Oracle-Hub
      * @param riskManager_ The address of the Risk Manager
      */
-    constructor(address mainRegistry_, address oracleHub_, address riskManager_) {
+    constructor(address mainRegistry_, address oracleHub_, address riskManager_) Owned(msg.sender) {
         mainRegistry = mainRegistry_;
         oracleHub = oracleHub_;
         riskManager = riskManager_;

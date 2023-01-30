@@ -8,7 +8,7 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "../../lib/solmate/src/tokens/ERC20.sol";
 import "../PricingModules/interfaces/IUniswapV2Factory.sol";
-import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 contract UniswapV2PairMock is ERC20 {
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;

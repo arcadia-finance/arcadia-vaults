@@ -20,7 +20,7 @@ contract gasDeploys is GasTestFixture {
     }
 
     function testDeployFactory() public {
-        new Factory();
+        new FactoryExtension();
     }
 
     function testDeployVaultLogic() public {

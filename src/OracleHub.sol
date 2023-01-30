@@ -6,9 +6,9 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {Ownable} from "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {IChainLinkData} from "./interfaces/IChainLinkData.sol";
-import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 /**
  * @title Oracle Hub
@@ -16,7 +16,7 @@ import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
  * @notice The Oracle Hub stores the addresses and other necessary information of the Price Oracles and returns rates of assets
  * @dev No end-user should directly interact with the Oracle-Hub, only the Main Registry, Sub-Registries or the contract owner.
  */
-contract OracleHub is Ownable {
+contract OracleHub is Owned {
     using FixedPointMathLib for uint256;
 
     mapping(address => bool) public inOracleHub;
@@ -36,7 +36,7 @@ contract OracleHub is Ownable {
     /**
      * @notice Constructor
      */
-    constructor() {}
+    constructor() Owned(msg.sender) {}
 
     /*///////////////////////////////////////////////////////////////
                           ORACLE MANAGEMENT

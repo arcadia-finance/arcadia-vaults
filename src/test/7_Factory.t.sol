@@ -22,7 +22,7 @@ contract FactoryTest is DeployArcadiaVaults {
     //this is a before each
     function setUp() public {
         vm.startPrank(creatorAddress);
-        factory = new Factory();
+        factory = new FactoryExtension();
         mainRegistry = new mainRegistryExtension(address(factory));
 
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
@@ -38,7 +38,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(to != address(0));
 
         vm.prank(owner);
-        Factory factoryContr_m = new Factory();
+        Factory factoryContr_m = new FactoryExtension();
         assertEq(owner, factoryContr_m.owner());
 
         vm.prank(owner);
@@ -50,11 +50,11 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != owner);
 
         vm.prank(owner);
-        Factory factoryContr_m = new Factory();
+        Factory factoryContr_m = new FactoryExtension();
         assertEq(owner, factoryContr_m.owner());
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         factoryContr_m.transferOwnership(to);
         vm.stopPrank();
 
@@ -439,7 +439,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         factory.setNewVaultInfo(address(mainRegistry), address(proxyAddr), Constants.upgradeProof1To2);
         vm.stopPrank();
     }
@@ -529,7 +529,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(logic != address(0));
 
         vm.prank(creatorAddress);
-        factory = new Factory();
+        factory = new FactoryExtension();
         assertTrue(factory.getVaultVersionRoot() == bytes32(0));
         assertTrue(!factory.newVaultInfoSet());
 
@@ -626,7 +626,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         factory.confirmNewVaultInfo();
         vm.stopPrank();
     }
@@ -637,7 +637,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(logic != address(0));
 
         vm.prank(creatorAddress);
-        factory = new Factory();
+        factory = new FactoryExtension();
         assertTrue(factory.getVaultVersionRoot() == bytes32(0));
         assertEq(0, factory.latestVaultVersion());
 
@@ -687,7 +687,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(vaultVersion != 0);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         factory.blockVaultVersion(vaultVersion);
         vm.stopPrank();
     }
@@ -793,7 +793,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(address(unprivilegedAddress_) != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         factory.setBaseURI(uri);
         vm.stopPrank();
     }
