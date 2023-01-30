@@ -122,7 +122,7 @@ abstract contract PricingModule is Ownable {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Returns the risk variable arrays of an asset
+     * @notice Returns the risk variables of an asset
      * @param asset The address of the asset
      * @return assetCollateralFactors The collateral factor for the asset
      * @return assetLiquidationFactors The liquidation factor for the asset
