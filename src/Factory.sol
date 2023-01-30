@@ -81,7 +81,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @return owner_ The Vault owner.
      * @dev Function does not revert when inexisting vault is passed, but returns zero-address as owner.
      */
-    function ownerOfVault(address vault) public view returns (address owner_) {
+    function ownerOfVault(address vault) external view returns (address owner_) {
         owner_ = ownerOf[vaultIndex[vault]];
     }
 
