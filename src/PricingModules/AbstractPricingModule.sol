@@ -19,8 +19,8 @@ import {RiskConstants} from "../utils/RiskConstants.sol";
  * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main-Registry
  */
 abstract contract PricingModule is Ownable {
-    address public mainRegistry;
-    address public oracleHub;
+    address public immutable mainRegistry;
+    address public immutable oracleHub;
     address public riskManager;
 
     address[] public assetsInPricingModule;
