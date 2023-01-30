@@ -176,14 +176,11 @@ contract Factory is ERC721, FactoryGuardian {
 
     /**
      * @notice Function to set new contracts to be used for new deployed vaults
-     * @dev Two step function to confirm new logic to be used for new deployed vaults.
-     * Changing any of the contracts does NOT change the contracts for already deployed vaults,
-     * unless the vault owner explicitly choose to upgrade their vault version to a newer version
-     * ToDo Add a time lock between setting a new vault version, and confirming a new vault version
-     * Changing any of the logic contracts with this function does NOT immediately take effect,
-     * only after the function 'confirmNewVaultInfo' is called.
+     * @dev Two step function to confirm new logic to be used for newly deployed vaults.
+     * Changing any of the contracts does NOT change the contracts for existing deployed vaults,
+     * unless the vault owner explicitly chooses to upgrade their vault to a newer version
      * If a new Main Registry contract is set, all the BaseCurrencies currently stored in the Factory
-     * (and the corresponding Liquidity Pool Contracts) must also be stored in the new Main registry contract.
+     * are checked against the new Main Registry contract. If they do not match, the function reverts.
      * @param registry The contract addres of the Main Registry
      * @param logic The contract address of the Vault logic
      * @param versionRoot The root of the merkle tree of all the compatible vault versions
