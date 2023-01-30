@@ -4,12 +4,13 @@ pragma solidity >=0.4.22 <0.9.0;
 /**
  * @title Proxy
  * @author Arcadia Finance
+ * @dev Implementation based on ERC-1967: Proxy Storage Slots
+ * See https://eips.ethereum.org/EIPS/eip-1967
  */
 contract Proxy {
     /**
      * @dev Storage slot with the address of the current implementation.
-     * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1, and is
-     * validated in the constructor.
+     * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
      */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
@@ -25,19 +26,19 @@ contract Proxy {
     }
 
     /**
-     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if call data
-     * is empty.
+     * @dev Fallback function that delegates calls to the implementation address.
+     * Will run if call data is empty.
      */
     receive() external payable virtual {
-        _fallback();
+        _delegate(_getAddressSlot(_IMPLEMENTATION_SLOT).value);
     }
 
     /**
-     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if no other
-     * function in the contract matches the call data.
+     * @dev Fallback function that delegates calls to the implementation address.
+     * Will run if no other function in the contract matches the call data.
      */
     fallback() external payable virtual {
-        _fallback();
+        _delegate(_getAddressSlot(_IMPLEMENTATION_SLOT).value);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -53,24 +54,9 @@ contract Proxy {
         }
     }
 
-    /**
-     * @dev Returns the implementation address.
-     */
-    function _implementation() internal view returns (address) {
-        return _getAddressSlot(_IMPLEMENTATION_SLOT).value;
-    }
-
     /*///////////////////////////////////////////////////////////////
                         DELEGATION LOGIC
     ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @dev Delegates the current call to the address returned by `_implementation()`.
-     * This function does not return to its internal call site, it will return directly to the external caller.
-     */
-    function _fallback() internal virtual {
-        _delegate(_implementation());
-    }
 
     /**
      * @dev Delegates the current call to `implementation`.
