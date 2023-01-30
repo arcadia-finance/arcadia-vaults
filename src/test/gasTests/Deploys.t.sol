@@ -35,7 +35,7 @@ contract gasDeploys is GasTestFixture {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
+            }), address(factory)
         );
     }
 
