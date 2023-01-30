@@ -19,9 +19,9 @@ library RiskModule {
     using FixedPointMathLib for uint256;
 
     struct AssetValueAndRiskVariables {
-        uint256 valueInBaseCurrency;
-        uint256 collateralFactor;
-        uint256 liquidationFactor;
+        uint224 valueInBaseCurrency;
+        uint16 collateralFactor;
+        uint16 liquidationFactor;
     }
 
     /**
