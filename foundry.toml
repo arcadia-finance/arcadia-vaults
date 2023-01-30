@@ -10,7 +10,7 @@ gas_reports = ['Vault', 'Factory', 'FloorERC721PricingModule', 'InterestRateModu
 auto_detect_solc = true
 
 [profile.dev]
-fuzz = { runs = 1, max_test_rejects = 100_000_000}
+fuzz = { runs = 50, max_test_rejects = 100_000_000}
 
 [profile.gh]
 fuzz = { runs = 200, max_test_rejects = 100_000_000}
