@@ -176,7 +176,7 @@ contract MainRegistry is MainRegistryGuardian {
      * @param assetIds An array of asset ids
      * @param amounts An array of amounts to be deposited
      * @dev processDeposit in the pricing module checks whether
-     *    it's allowlisted and updates the maxExposure
+     *    it's allowlisted and updates the exposure
      */
     function batchProcessDeposit(
         address[] calldata assetAddresses,
@@ -203,7 +203,7 @@ contract MainRegistry is MainRegistryGuardian {
      * @notice Batch withdrawal multiple assets
      * @param assetAddresses An array of addresses of the assets
      * @param amounts An array of amounts to be withdrawn
-     * @dev batchProcessWithdrawal in the pricing module updates the maxExposure
+     * @dev batchProcessWithdrawal in the pricing module updates the exposure
      */
     function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
         public
