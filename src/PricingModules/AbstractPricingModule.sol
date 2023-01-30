@@ -15,8 +15,8 @@ import {RiskConstants} from "../utils/RiskConstants.sol";
  * @title Abstract Pricing Module
  * @author Arcadia Finance
  * @notice Sub-Registries have the pricing logic and basic information for tokens that can, or could at some point, be deposited in the vaults
- * @dev No end-user should directly interact with Sub-Registries, only the Main-registry, Oracle-Hub or the contract owner
- * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main-Registry
+ * @dev No end-user should directly interact with Sub-Registries, only the Main Registry, Oracle-Hub or the contract owner
+ * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main Registry
  */
 abstract contract PricingModule is Ownable {
     address public immutable mainRegistry;
@@ -65,8 +65,8 @@ abstract contract PricingModule is Ownable {
     }
 
     /**
-     * @notice A Pricing Module must always be initialised with the address of the Main-Registry and the Oracle-Hub
-     * @param mainRegistry_ The address of the Main-registry
+     * @notice A Pricing Module must always be initialised with the address of the Main Registry and the Oracle-Hub
+     * @param mainRegistry_ The address of the Main Registry
      * @param oracleHub_ The address of the Oracle-Hub
      * @param riskManager_ The address of the Risk Manager
      */
