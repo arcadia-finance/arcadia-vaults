@@ -6,6 +6,7 @@ on:
       - main*
       - refactor/arcadia-vault
       - dev
+      - fix/fixes
 
 name: Foundry Tests
 

@@ -206,7 +206,7 @@ contract ArcadiaVaultDeployer is Test {
         oracleHub.addOracle(usdcToUsdOracleInfo);
         oracleHub.addOracle(btcToEthEthToUsdOracleInfo);
 
-        mainRegistry = new MainRegistry(usdBaseCurrencyInfo);
+        mainRegistry = new MainRegistry(usdBaseCurrencyInfo, address(factory));
         mainRegistry.addBaseCurrency(ethBaseCurrencyInfo);
         mainRegistry.addBaseCurrency(usdcBaseCurrencyInfo);
 
@@ -233,7 +233,6 @@ contract ArcadiaVaultDeployer is Test {
         vault = new Vault();
         factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1);
         factory.confirmNewVaultInfo();
-        mainRegistry.setFactory(address(factory));
 
         vm.stopBroadcast();
     }

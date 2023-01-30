@@ -71,7 +71,7 @@ contract Vault {
      * @dev Throws if called by any account other than the factory adress.
      */
     modifier onlyFactory() {
-        require(msg.sender == IMainRegistry(registry).factoryAddress(), "V: You are not the factory");
+        require(msg.sender == IMainRegistry(registry).factory(), "V: You are not the factory");
         _;
     }
 
@@ -360,7 +360,7 @@ contract Vault {
         require(getLiquidationValue() < openDebt, "V_LV: This vault is healthy");
 
         //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
-        IFactory(IMainRegistry(registry).factoryAddress()).liquidate(msg.sender);
+        IFactory(IMainRegistry(registry).factory()).liquidate(msg.sender);
 
         //Transfer ownership of the Vault itself to the Liquidator
         originalOwner = owner;
