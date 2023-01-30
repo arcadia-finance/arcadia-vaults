@@ -94,7 +94,6 @@ abstract contract PricingModule is Ownable {
     /**
      * @notice Checks for a token address and the corresponding Id if it is white-listed
      * @param asset The address of the asset
-     * @param id The Id of the asset, needed for erc721 and erc1155
      * @dev For assets without Id (ERC20, ERC4626...), the Id should be set to 0
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
