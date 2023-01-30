@@ -46,7 +46,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @param vaultVersion The Vault version.
      * @return vault The contract address of the proxy contract of the newly deployed vault.
      */
-    function createVault(uint256 salt, uint256 vaultVersion, address baseCurrency)
+    function createVault(uint256 salt, uint16 vaultVersion, address baseCurrency)
         external
         whenCreateNotPaused
         returns (address vault)
@@ -54,7 +54,7 @@ contract Factory is ERC721, FactoryGuardian {
         vaultVersion = vaultVersion == 0 ? latestVaultVersion : vaultVersion;
 
         require(vaultVersion <= latestVaultVersion, "FTRY_CV: Unknown vault version");
-        require(vaultVersionBlocked[vaultVersion] == false, "FTRY_CV: This vault version cannot be created");
+        require(!vaultVersionBlocked[vaultVersion], "FTRY_CV: Vault version blocked");
 
         vault = address(new Proxy{salt: bytes32(salt)}(vaultDetails[vaultVersion].logic));
 
@@ -81,7 +81,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @return owner_ The Vault owner.
      * @dev Function does not revert when inexisting vault is passed, but returns zero-address as owner.
      */
-    function ownerOfVault(address vault) public view returns (address owner_) {
+    function ownerOfVault(address vault) external view returns (address owner_) {
         owner_ = ownerOf[vaultIndex[vault]];
     }
 
@@ -96,13 +96,14 @@ contract Factory is ERC721, FactoryGuardian {
      */
     function upgradeVaultVersion(address vault, uint16 version, bytes32[] calldata proofs) external {
         require(ownerOf[vaultIndex[vault]] == msg.sender, "FTRY_UVV: Only Owner");
+        require(!vaultVersionBlocked[version], "FTRY_UVV: Vault version blocked");
         uint256 currentVersion = IVault(vault).vaultVersion();
 
         bool canUpgrade = MerkleProofLib.verify(
             proofs, getVaultVersionRoot(), keccak256(abi.encodePacked(currentVersion, uint256(version)))
         );
 
-        require(canUpgrade, "FTR_UVV: Cannot upgrade to this version");
+        require(canUpgrade, "FTR_UVV: Version not allowed");
 
         address newImplementation = vaultDetails[version].logic;
         //TODO: add registry update to the vault
@@ -176,14 +177,11 @@ contract Factory is ERC721, FactoryGuardian {
 
     /**
      * @notice Function to set new contracts to be used for new deployed vaults
-     * @dev Two step function to confirm new logic to be used for new deployed vaults.
-     * Changing any of the contracts does NOT change the contracts for already deployed vaults,
-     * unless the vault owner explicitly choose to upgrade their vault version to a newer version
-     * ToDo Add a time lock between setting a new vault version, and confirming a new vault version
-     * Changing any of the logic contracts with this function does NOT immediately take effect,
-     * only after the function 'confirmNewVaultInfo' is called.
+     * @dev Two step function to confirm new logic to be used for newly deployed vaults.
+     * Changing any of the contracts does NOT change the contracts for existing deployed vaults,
+     * unless the vault owner explicitly chooses to upgrade their vault to a newer version
      * If a new Main Registry contract is set, all the BaseCurrencies currently stored in the Factory
-     * (and the corresponding Liquidity Pool Contracts) must also be stored in the new Main registry contract.
+     * are checked against the new Main Registry contract. If they do not match, the function reverts.
      * @param registry The contract addres of the Main Registry
      * @param logic The contract address of the Vault logic
      * @param versionRoot The root of the merkle tree of all the compatible vault versions
@@ -202,11 +200,11 @@ contract Factory is ERC721, FactoryGuardian {
             address oldRegistry = vaultDetails[latestVaultVersion].registry;
             uint256 oldCounter = IMainRegistry(oldRegistry).baseCurrencyCounter();
             uint256 newCounter = IMainRegistry(registry).baseCurrencyCounter();
-            require(oldCounter <= newCounter, "FTRY_SNVI:No match baseCurrencies MR");
+            require(oldCounter <= newCounter, "FTRY_SNVI: counter mismatch");
             for (uint256 i; i < oldCounter;) {
                 require(
                     IMainRegistry(oldRegistry).baseCurrencies(i) == IMainRegistry(registry).baseCurrencies(i),
-                    "FTRY_SNVI:No match baseCurrencies MR"
+                    "FTRY_SNVI: no baseCurrency match"
                 );
                 unchecked {
                     ++i;

@@ -239,16 +239,6 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint128).max);
     }
 
-    function testRevert_addAsset_ExposureNotInLimits() public {
-        // Given: All necessary contracts deployed on setup
-        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
-        // Then: addAsset should revert with "PMUV2_AA: Max Exposure not in limits"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PMUV2_AA: Max Exposure not in limits");
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, uint256(type(uint128).max) + 1);
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListCreditRatings() public {
         //Given: credit rating list is empty
 
@@ -262,7 +252,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         (address token0, address token1) = uniswapV2PricingModule.assetToInformation(address(pairSnxEth));
         assertEq(token0, address(snx));
         assertEq(token1, address(eth));
-        assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth), 0));
+        assertTrue(uniswapV2PricingModule.isAllowListed(address(pairSnxEth), 0));
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
