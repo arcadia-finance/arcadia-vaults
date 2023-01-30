@@ -52,7 +52,7 @@ contract StandardERC20PricingModule is PricingModule {
      * @dev The assets are added in the Main-Registry as well.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint256 maxExposure)
+    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint128 maxExposure)
         external
         onlyOwner
     {
@@ -70,8 +70,7 @@ contract StandardERC20PricingModule is PricingModule {
         assetToInformation[asset].oracles = oracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        require(maxExposure <= type(uint128).max, "PM20_AA: Max Exposure not in limits");
-        exposure[asset].maxExposure = uint128(maxExposure);
+        exposure[asset].maxExposure = maxExposure;
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
