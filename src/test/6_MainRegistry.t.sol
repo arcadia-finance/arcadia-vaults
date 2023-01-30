@@ -26,7 +26,7 @@ abstract contract MainRegistryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
+            }), address(factory)
         );
 
         standardERC20PricingModule = new StandardERC20PricingModule(
@@ -78,60 +78,6 @@ contract DeploymentTest is MainRegistryTest {
 contract ExternalContractsTest is MainRegistryTest {
     function setUp() public override {
         super.setUp();
-    }
-
-    function testRevert_setFactory_NonOwner(address unprivilegedAddress_) public {
-        // Given: unprivilegedAddress_ is not creatorAddress, creatorAddress deploys Factory contract, calls setNewVaultInfo and confirmNewVaultInfo
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-        vm.startPrank(creatorAddress);
-        factory = new Factory();
-        factory.setNewVaultInfo(
-            address(mainRegistry), 0x0000000000000000000000000000001234567890, Constants.upgradeProof1To2
-        );
-        factory.confirmNewVaultInfo();
-        vm.stopPrank();
-
-        vm.startPrank(unprivilegedAddress_);
-        // When: unprivilegedAddress_ calls setFactory
-
-        // Then: setFactory should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
-        mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-    }
-
-    function testSuccess_setFactory_MultipleBaseCurrencies() public {
-        // Given: creatorAddress calls addBaseCurrency, deploys Factory contract, calls setNewVaultInfo and confirmNewVaultInfo
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            })
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
-        );
-        factory = new Factory();
-        factory.setNewVaultInfo(
-            address(mainRegistry), 0x0000000000000000000000000000001234567890, Constants.upgradeProof1To2
-        );
-        factory.confirmNewVaultInfo();
-        // When: creatorAddress calls setFactory with address(factory)
-        mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-
-        // Then: address(factory) should be equal to factoryAddress
-        assertEq(address(factory), mainRegistry.factoryAddress());
     }
 
     function testSuccess_setAllowedAction_Owner(address action, bool allowed) public {
@@ -337,7 +283,6 @@ contract AssetManagementTest is MainRegistryTest {
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_, type(uint128).max);
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_, type(uint128).max);
 
-        mainRegistry.setFactory(address(factory));
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);

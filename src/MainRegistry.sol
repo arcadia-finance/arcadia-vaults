@@ -26,7 +26,7 @@ contract MainRegistry is MainRegistryGuardian {
 
     uint256 public baseCurrencyCounter;
 
-    address public factoryAddress;
+    address public immutable factory;
 
     address[] private pricingModules;
     address[] public assetsInMainRegistry;
@@ -59,7 +59,7 @@ contract MainRegistry is MainRegistryGuardian {
     }
 
     modifier onlyVault() {
-        require(IFactory(factoryAddress).isVault(msg.sender), "Caller is not a Vault.");
+        require(IFactory(factory).isVault(msg.sender), "Caller is not a Vault.");
         _;
     }
 
@@ -78,7 +78,7 @@ contract MainRegistry is MainRegistryGuardian {
      * - baseCurrencyToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      */
-    constructor(BaseCurrencyInformation memory baseCurrencyInformation) {
+    constructor(BaseCurrencyInformation memory baseCurrencyInformation, address factory_) {
         _this = address(this);
         //Main registry must be initialised with usd
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
@@ -89,19 +89,13 @@ contract MainRegistry is MainRegistryGuardian {
         unchecked {
             ++baseCurrencyCounter;
         }
+
+        factory = factory_;
     }
 
     /* ///////////////////////////////////////////////////////////////
                         EXTERNAL CONTRACTS
     /////////////////////////////////////////////////////////////// */
-
-    /**
-     * @notice Sets the Factory address
-     * @param _factoryAddress The address of the Factory
-     */
-    function setFactory(address _factoryAddress) external onlyOwner {
-        factoryAddress = _factoryAddress;
-    }
 
     /**
      * @notice Sets an allowed action handler
