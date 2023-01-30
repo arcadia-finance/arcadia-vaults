@@ -46,7 +46,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @param vaultVersion The Vault version.
      * @return vault The contract address of the proxy contract of the newly deployed vault.
      */
-    function createVault(uint256 salt, uint256 vaultVersion, address baseCurrency)
+    function createVault(uint256 salt, uint16 vaultVersion, address baseCurrency)
         external
         whenCreateNotPaused
         returns (address vault)
