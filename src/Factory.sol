@@ -202,11 +202,11 @@ contract Factory is ERC721, FactoryGuardian {
             address oldRegistry = vaultDetails[latestVaultVersion].registry;
             uint256 oldCounter = IMainRegistry(oldRegistry).baseCurrencyCounter();
             uint256 newCounter = IMainRegistry(registry).baseCurrencyCounter();
-            require(oldCounter <= newCounter, "FTRY_SNVI:No match baseCurrencies MR");
+            require(oldCounter <= newCounter, "FTRY_SNVI: no baseCurrency match");
             for (uint256 i; i < oldCounter;) {
                 require(
                     IMainRegistry(oldRegistry).baseCurrencies(i) == IMainRegistry(registry).baseCurrencies(i),
-                    "FTRY_SNVI:No match baseCurrencies MR"
+                    "FTRY_SNVI: no baseCurrency match"
                 );
                 unchecked {
                     ++i;
