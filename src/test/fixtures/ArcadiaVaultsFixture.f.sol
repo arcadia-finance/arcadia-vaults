@@ -261,7 +261,7 @@ contract DeployArcadiaVaults is Test {
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "INTRLVE",
+                quoteAsset: "INTERLEAVE",
                 baseAsset: "ETH",
                 oracle: address(oracleInterleaveToEth),
                 quoteAssetAddress: address(interleave),
