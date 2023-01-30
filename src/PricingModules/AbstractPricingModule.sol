@@ -198,7 +198,7 @@ abstract contract PricingModule is Ownable {
      * @notice Set the maximum exposure for an asset
      * @param asset The address of the asset
      * @param maxExposure The maximum exposure for the asset
-     * @dev This function can only be called by the contract owner. It sets the maximum exposure for the given asset in the exposure mapping.
+     * @dev This function can only be called by the risk manager. It sets the maximum exposure for the given asset in the exposure mapping.
      */
     function setExposureOfAsset(address asset, uint256 maxExposure) public virtual onlyRiskManager {
         require(maxExposure <= type(uint128).max, "APM_SEA: Max Exp. not in limits");
