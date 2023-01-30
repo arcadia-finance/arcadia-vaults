@@ -19,15 +19,7 @@ abstract contract MainRegistryTest is DeployArcadiaVaults {
     //this is a before each
     function setUp() public virtual {
         vm.startPrank(creatorAddress);
-        mainRegistry = new mainRegistryExtension(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            }), address(factory)
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
@@ -876,8 +868,8 @@ contract PricingLogicTest is MainRegistryTest {
         assetAmounts[1] = 10;
         // When: getTotalValue called
 
-        // Then: getTotalValue should revert with "MR_GLV: Unknown BaseCurrency"
-        vm.expectRevert("MR_GLV: Unknown BaseCurrency");
+        // Then: getTotalValue should revert with "" ("EvmError: Revert")
+        vm.expectRevert();
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.SafemoonBaseCurrency);
     }
 
@@ -918,8 +910,8 @@ contract PricingLogicTest is MainRegistryTest {
         assetAmounts[1] = 10;
         // When: getTotalValue called
 
-        // Then: getTotalValue should revert with "MR_GLV: Unknown asset"
-        vm.expectRevert("MR_GLV: Unknown asset");
+        // Then: getTotalValue should revert with "" ("EvmError: Revert")
+        vm.expectRevert();
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 

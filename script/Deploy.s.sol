@@ -141,14 +141,6 @@ contract ArcadiaVaultDeployer is Test {
             isActive: true
         });
 
-        usdBaseCurrencyInfo = MainRegistry.BaseCurrencyInformation({
-            baseCurrencyToUsdOracleUnit: 0,
-            assetAddress: 0x0000000000000000000000000000000000000000,
-            baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-            baseCurrencyLabel: "USD",
-            baseCurrencyUnitCorrection: uint64(10 ** (18 - DeployNumbers.usdDecimals))
-        });
-
         ethBaseCurrencyInfo = MainRegistry.BaseCurrencyInformation({
             baseCurrencyToUsdOracleUnit: uint64(DeployNumbers.oracleEthToUsdUnit),
             assetAddress: DeployAddresses.eth,
@@ -206,7 +198,7 @@ contract ArcadiaVaultDeployer is Test {
         oracleHub.addOracle(usdcToUsdOracleInfo);
         oracleHub.addOracle(btcToEthEthToUsdOracleInfo);
 
-        mainRegistry = new MainRegistry(usdBaseCurrencyInfo, address(factory));
+        mainRegistry = new MainRegistry(address(factory));
         mainRegistry.addBaseCurrency(ethBaseCurrencyInfo);
         mainRegistry.addBaseCurrency(usdcBaseCurrencyInfo);
 

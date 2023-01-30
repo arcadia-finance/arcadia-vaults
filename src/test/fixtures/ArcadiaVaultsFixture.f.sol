@@ -28,7 +28,7 @@ import ".././fixtures/ArcadiaOracleFixture.f.sol";
 contract mainRegistryExtension is MainRegistry {
     using FixedPointMathLib for uint256;
 
-    constructor(BaseCurrencyInformation memory baseCurrencyInformation, address factory_) MainRegistry(baseCurrencyInformation, factory_) {}
+    constructor(address factory_) MainRegistry(factory_) {}
 
     /**
      * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
@@ -85,12 +85,12 @@ contract mainRegistryExtension is MainRegistry {
             getValueInput.assetId = assetIds[i];
             getValueInput.assetAmount = assetAmounts[i];
 
-            if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) { //The asset to price is the basecurrency
+            if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
+                //The asset to price is the basecurrency
                 //assetAmounts can have a variable decimal precision -> bring to 18 decimals
                 //
                 valueInBaseCurrency +=
                     assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
                 (tempValueInUsd, tempValueInBaseCurrency,,) =
@@ -365,15 +365,7 @@ contract DeployArcadiaVaults is Test {
             })
         );
 
-        mainRegistry = new mainRegistryExtension(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            }), address(factory)
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),

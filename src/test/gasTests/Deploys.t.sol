@@ -28,15 +28,7 @@ contract gasDeploys is GasTestFixture {
     }
 
     function testDeployMainRegistry() public {
-        new mainRegistryExtension(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            }), address(factory)
-        );
+        new mainRegistryExtension(address(factory));
     }
 
     function testDeployPricingModuleERC20() public {
