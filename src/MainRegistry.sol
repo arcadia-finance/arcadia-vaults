@@ -73,7 +73,7 @@ contract MainRegistry is MainRegistryGuardian {
      * @dev Since the BaseCurrency USD has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
      * @param baseCurrencyInformation A Struct with information about the BaseCurrency USD
      * - baseCurrencyToUsdOracleUnit: Since there is no price oracle for usd to USD, this is 0 by default for USD
-     * - baseCurrencyUnit: Since there is no native token for USD, this is 0 by default for USD
+     * - baseCurrencyUnitCorrection: Since there is no native token for USD, this is 0 by default for USD
      * - assetAddress: Since there is no native token for usd, this is 0 address by default for USD
      * - baseCurrencyToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
@@ -115,7 +115,7 @@ contract MainRegistry is MainRegistryGuardian {
      * @notice Add a new baseCurrency (a unit in which price is measured, like USD or ETH) to the Main Registry
      * @param baseCurrencyInformation A Struct with information about the BaseCurrency
      * - baseCurrencyToUsdOracleUnit: The unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
-     * - baseCurrencyUnit: The unit of the baseCurrency, equal to 10 to the power of the number of decimals of the baseCurrency
+     * - baseCurrencyUnitCorrection: The unit correction needed to get the baseCurrency to 1e18 units
      * - assetAddress: The contract address of the baseCurrency,
      * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
