@@ -294,14 +294,14 @@ contract MainRegistry is MainRegistryGuardian {
                 (valuesAndRiskVarPerAsset[i].collateralFactor, valuesAndRiskVarPerAsset[i].liquidationFactor) =
                     IPricingModule(assetToPricingModule[assetAddress]).getRiskVariables(assetAddress, baseCurrency);
 
-            //Else we need to fetch the value in the assets' PricingModule
+                //Else we need to fetch the value in the assets' PricingModule
             } else {
                 //Prepare input
                 getValueInput.assetAddress = assetAddress;
                 getValueInput.assetId = assetIds[i];
                 getValueInput.assetAmount = assetAmounts[i];
 
-                //Fetch the Value and the risk variables in the PricingModule 
+                //Fetch the Value and the risk variables in the PricingModule
                 (
                     valueInUsd,
                     valueInBaseCurrency,
@@ -315,7 +315,7 @@ contract MainRegistry is MainRegistryGuardian {
                     //Since internal precision of value calculations is also 18 decimals, no need for a unit correction.
                     valuesAndRiskVarPerAsset[i].valueInBaseCurrency = valueInUsd;
 
-                //If the baseCurrency is different from USD, both valueInUsd and valueInBaseCurrency can be non-zero.
+                    //If the baseCurrency is different from USD, both valueInUsd and valueInBaseCurrency can be non-zero.
                 } else {
                     if (valueInBaseCurrency > 0) {
                         //Bring value from internal 18 decimals to the actual number of decimals of the baseCurrency
