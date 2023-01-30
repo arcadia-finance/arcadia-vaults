@@ -23,7 +23,6 @@ contract AbstractPricingModuleExtension is PricingModule {
         exposure[asset].exposure = exposure_;
         exposure[asset].maxExposure = maxExposure;
     }
-
 }
 
 contract AbstractPricingModuleTest is DeployArcadiaVaults {
