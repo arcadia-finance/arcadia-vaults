@@ -115,7 +115,7 @@ abstract contract PricingModule is Ownable {
      * one denominated in USD and the other one in the different BaseCurrency).
      * @dev All price feeds should be fetched in the Oracle-Hub
      */
-    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) {}
+    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256);
 
     /*///////////////////////////////////////////////////////////////
                     RISK VARIABLES MANAGEMENT
