@@ -109,7 +109,7 @@ contract StandardERC20PricingModule is PricingModule {
      * Only one of the two values can be different from 0.
      * @dev Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
      * @dev If the asset is not first added to PricingModule this function will return value 0 without throwing an error.
-     * However no check in StandardERC20PricingModule is necessary, since the check if the asset is whitelisted (and hence added to PricingModule)
+     * However no check in StandardERC20PricingModule is necessary, since the check if the asset is allow listed (and hence added to PricingModule)
      * is already done in the Main-Registry.
      */
     function getValue(GetValueInput memory getValueInput)
