@@ -45,7 +45,7 @@ contract StandardERC20PricingModule is PricingModule {
      * @param oracles An array of addresses of oracle contracts, to price the asset in USD
      * @param riskVars An array of Risk Variables for the asset
      * @param maxExposure The maximum exposure of the asset in its own decimals
-     * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.
+     * @dev Only the Collateral Factor, Liquidation Threshold and Base Currency are taken into account.
      * If no risk variables are provided, the asset is added with the risk variables set to zero, meaning it can't be used as collateral.
      * @dev RiskVarInput.asset can be zero as it is not taken into account.
      * @dev Risk variable are variables with 2 decimals precision
@@ -56,10 +56,10 @@ contract StandardERC20PricingModule is PricingModule {
         external
         onlyOwner
     {
+        require(!inPricingModule[asset], "PM20_AA: already added");
         //View function, reverts in OracleHub if sequence is not correct
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
-        require(!inPricingModule[asset], "PM20_AA: already added");
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
