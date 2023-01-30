@@ -29,7 +29,7 @@ abstract contract PricingModule is Ownable {
     mapping(address => Exposure) public exposure;
     mapping(address => mapping(uint256 => RiskVars)) public assetRiskVars;
 
-    //struct with input variables necessary to avoid stack to deep error
+    //struct with input variables necessary to avoid stack too deep error
     struct GetValueInput {
         address asset;
         uint256 assetId;
