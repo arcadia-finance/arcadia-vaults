@@ -83,7 +83,7 @@ abstract contract PricingModule is Ownable {
      * @notice Sets a new Risk Manager
      * @param riskManager_ The address of the new Risk Manager
      */
-    function setRiskManager(address riskManager_) external onlyRiskManager {
+    function setRiskManager(address riskManager_) external onlyOwner {
         riskManager = riskManager_;
     }
 
