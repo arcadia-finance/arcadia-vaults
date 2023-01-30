@@ -798,11 +798,11 @@ contract FactoryTest is DeployArcadiaVaults {
                         ERC-721 LOGIC
     /////////////////////////////////////////////////////////////// */
 
-    function testSuccess_setBaseURI(string calldata uri) public {
+    function testSuccess_setBaseURI(bytes32 uri) public {
         vm.prank(creatorAddress);
         factory.setBaseURI(uri);
 
-        string memory expectedUri = factory.baseURI();
+        bytes32 expectedUri = factory.baseURI();
 
         assertEq(expectedUri, uri);
     }
