@@ -14,6 +14,7 @@ import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
 import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
 import {IActionBase} from "./interfaces/IActionBase.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
+import {IVault} from "./interfaces/IVault.sol";
 import {ActionData} from "./actions/utils/ActionData.sol";
 
 /**
@@ -30,7 +31,7 @@ import {ActionData} from "./actions/utils/ActionData.sol";
  * Arcadia's vault functions will guarantee you a certain value of the vault.
  * For whitelists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
-contract Vault {
+contract Vault is IVault {
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
