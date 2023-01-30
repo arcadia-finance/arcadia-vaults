@@ -7,7 +7,6 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import {IChainLinkData} from "./interfaces/IChainLinkData.sol";
-import {StringHelpers} from "./utils/StringHelpers.sol";
 import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
@@ -19,7 +18,6 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
  */
 contract OracleHub is Owned {
     using FixedPointMathLib for uint256;
-    using StringHelpers for string;
 
     mapping(address => bool) public inOracleHub;
     mapping(address => OracleInformation) public oracleToOracleInformation;
@@ -31,8 +29,8 @@ contract OracleHub is Owned {
         bool baseAssetIsBaseCurrency;
         address oracle;
         address quoteAssetAddress;
-        string quoteAsset;
-        string baseAsset;
+        bytes16 quoteAsset;
+        bytes16 baseAsset;
     }
 
     /**
@@ -85,18 +83,12 @@ contract OracleHub is Owned {
             require(inOracleHub[oracle], "OH_COS: Unknown Oracle");
             if (i > 0) {
                 require(
-                    StringHelpers.compareStrings(
-                        oracleToOracleInformation[oracles[i - 1]].baseAsset,
-                        oracleToOracleInformation[oracle].quoteAsset
-                    ),
+                    oracleToOracleInformation[oracles[i - 1]].baseAsset == oracleToOracleInformation[oracle].quoteAsset,
                     "OH_COS: No Match qAsset and bAsset"
                 );
             }
             if (i == oracleAdressesLength - 1) {
-                require(
-                    StringHelpers.compareStrings(oracleToOracleInformation[oracle].baseAsset, "USD"),
-                    "OH_COS: Last bAsset not USD"
-                );
+                require(oracleToOracleInformation[oracle].baseAsset == "USD", "OH_COS: Last bAsset not USD");
             }
             unchecked {
                 ++i;

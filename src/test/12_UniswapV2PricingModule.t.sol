@@ -706,7 +706,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** oracleTokenToUsdDecimals),
                 baseAssetBaseCurrency: 0,
-                quoteAsset: label,
+                quoteAsset: bytes8(abi.encodePacked(label)),
                 baseAsset: "USD",
                 oracle: address(oracleTokenToUsd),
                 quoteAssetAddress: address(token),
