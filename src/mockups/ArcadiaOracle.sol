@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity >=0.8.0;
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
+import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 contract ArcadiaOracle is Owned {
     // Configs
@@ -70,9 +70,7 @@ contract ArcadiaOracle is Owned {
      * @dev Throws if called by any account other than the transmitter.
      */
     modifier onlyTransmitter() {
-        require(
-            offchain_connectors[msg.sender].role == Role.Transmitter, "Oracle: caller is not the valid transmitter"
-        );
+        require(offchain_connectors[msg.sender].role == Role.Transmitter, "Oracle: caller is not the valid transmitter");
         require(offchain_connectors[msg.sender].isActive, "Oracle: transmitter is not active");
         _;
     }

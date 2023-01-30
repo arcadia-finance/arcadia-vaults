@@ -154,7 +154,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @param id of the vault that is about to be transfered.
      * @param data additional data, only used for onERC721Received.
      */
-        function safeTransferFrom(address from, address to, uint256 id, bytes calldata data) public override {
+    function safeTransferFrom(address from, address to, uint256 id, bytes calldata data) public override {
         IVault(allVaults[id - 1]).transferOwnership(to);
         super.safeTransferFrom(from, to, id, data);
     }
