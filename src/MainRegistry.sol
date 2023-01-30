@@ -50,14 +50,17 @@ contract MainRegistry is MainRegistryGuardian {
     }
 
     /**
-     * @dev Only Pricing Modules can call functions marked by this modifier.
-     *
+     * @dev Only Pricing Modules can call functions mwith this modifier.
      */
     modifier onlyPricingModule() {
         require(isPricingModule[msg.sender], "MR: Only PriceMod.");
         _;
     }
 
+    /**
+     * @dev Only Vaults can call functions with this modifier.
+     * @dev Cannot be called via delegatecalls.
+     */
     modifier onlyVault() {
         require(IFactory(factory).isVault(msg.sender), "MR: Only Vaults.");
         require(address(this) == _this, "MR: No delegate.");
@@ -160,14 +163,12 @@ contract MainRegistry is MainRegistryGuardian {
      * @dev Assets that are already present in the mainreg cannot be updated,
      * as that would make it possible for devs to change the asset pricing.
      */
-    function addAsset(address assetAddress) external onlyPricingModule returns (bool) {
+    function addAsset(address assetAddress) external onlyPricingModule {
         require(!inMainRegistry[assetAddress], "MR_AA: Asset already in mainreg");
 
         inMainRegistry[assetAddress] = true;
         assetsInMainRegistry.push(assetAddress);
         assetToPricingModule[assetAddress] = msg.sender;
-
-        return true;
     }
 
     /**

@@ -16,7 +16,6 @@ interface IMainRegistry {
     /**
      * @notice Add a new asset to the Main Registry.
      * @param asset The address of the asset.
-     * @return success A boolean if function was successfull.
      */
-    function addAsset(address asset) external returns (bool);
+    function addAsset(address asset) external;
 }
