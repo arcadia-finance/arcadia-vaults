@@ -95,7 +95,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @param proofs The merkle proofs that prove the compatibility of the upgrade.
      */
     function upgradeVaultVersion(address vault, uint16 version, bytes32[] calldata proofs) external {
-        require(ownerOf[vaultIndex[vault]] == msg.sender, "FTRY_UVV: You are not the owner");
+        require(ownerOf[vaultIndex[vault]] == msg.sender, "FTRY_UVV: Only Owner");
         require(!vaultVersionBlocked[version], "FTRY_UVV: Vault version blocked");
         uint256 currentVersion = IVault(vault).vaultVersion();
 

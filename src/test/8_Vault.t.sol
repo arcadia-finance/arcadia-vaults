@@ -309,7 +309,7 @@ contract VaultManagementTest is vaultTests {
         vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
 
         vm.startPrank(nonOwner);
-        vm.expectRevert("V: You are not the factory");
+        vm.expectRevert("V: Only Factory");
         vault_.upgradeVault(newImplementation, newVersion);
         vm.stopPrank();
     }
@@ -343,7 +343,7 @@ contract OwnershipManagementTest is vaultTests {
         assertEq(vaultOwner, vault_.owner());
 
         vm.startPrank(sender);
-        vm.expectRevert("V: You are not the factory");
+        vm.expectRevert("V: Only Factory");
         vault_.transferOwnership(to);
         vm.stopPrank();
 
@@ -396,7 +396,7 @@ contract BaseCurrencyLogicTest is vaultTests {
         vm.assume(unprivilegedAddress_ != vaultOwner);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("V: You are not the owner");
+        vm.expectRevert("V: Only Owner");
         vault_.setBaseCurrency(address(eth));
         vm.stopPrank();
 
@@ -410,7 +410,7 @@ contract BaseCurrencyLogicTest is vaultTests {
         stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(addDebt);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_SBC: Can't change baseCurrency when Used Margin > 0");
+        vm.expectRevert("V_SBC: Non-zero open position");
         vault_.setBaseCurrency(address(eth));
         vm.stopPrank();
 
@@ -448,7 +448,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.assume(unprivilegedAddress_ != vaultOwner);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("V: You are not the owner");
+        vm.expectRevert("V: Only Owner");
         vault_.openTrustedMarginAccount(trustedCreditor_);
         vm.stopPrank();
     }
@@ -458,7 +458,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vault_.openTrustedMarginAccount(address(pool));
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_OMA: ALREADY SET");
+        vm.expectRevert("V_OTMA: ALREADY SET");
         vault_.openTrustedMarginAccount(trustedCreditor_);
         vm.stopPrank();
     }
@@ -467,7 +467,7 @@ contract MarginAccountSettingsTest is vaultTests {
         trustedCreditor = new TrustedCreditorMock();
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_OMA: OPENING ACCOUNT REVERTED");
+        vm.expectRevert("V_OTMA: Invalid Version");
         vault_.openTrustedMarginAccount(address(trustedCreditor));
         vm.stopPrank();
     }
@@ -502,14 +502,14 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.assume(nonOwner != vaultOwner);
 
         vm.startPrank(nonOwner);
-        vm.expectRevert("V: You are not the owner");
+        vm.expectRevert("V: Only Owner");
         vault_.closeTrustedMarginAccount();
         vm.stopPrank();
     }
 
     function testRevert_closeTrustedMarginAccount_NonSetTrustedMarginAccount() public {
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_CMA: NOT SET");
+        vm.expectRevert("V_CTMA: NOT SET");
         vault_.closeTrustedMarginAccount();
         vm.stopPrank();
     }
@@ -524,7 +524,7 @@ contract MarginAccountSettingsTest is vaultTests {
         stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(addDebt);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_CMA: NON-ZERO OPEN POSITION");
+        vm.expectRevert("V_CTMA: NON-ZERO OPEN POSITION");
         vault_.closeTrustedMarginAccount();
         vm.stopPrank();
     }
@@ -803,14 +803,14 @@ contract LiquidationLogicTest is vaultTests {
         vm.assume(unprivilegedAddress_ != address(liquidator));
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("V_LV: You are not the liquidator");
+        vm.expectRevert("V_LV: Only Liquidator");
         vault_.liquidateVault(openDebt);
         vm.stopPrank();
     }
 
     function testRevert_liquidateVault_VaultIsHealthy() public {
         vm.startPrank(address(liquidator));
-        vm.expectRevert("V_LV: This vault is healthy");
+        vm.expectRevert("V_LV: Vault is healthy");
         vault_.liquidateVault(0);
         vm.stopPrank();
     }
@@ -906,7 +906,7 @@ contract VaultActionTest is vaultTests {
         vm.assume(nonOwner != vaultOwner);
 
         vm.startPrank(nonOwner);
-        vm.expectRevert("V: You are not the owner");
+        vm.expectRevert("V: Only Owner");
         vault_.setAssetManager(assetManager, value);
         vm.stopPrank();
     }
@@ -929,7 +929,7 @@ contract VaultActionTest is vaultTests {
         proxy_.setAssetManager(assetManager, true);
 
         vm.startPrank(sender);
-        vm.expectRevert("V: You are not an asset manager");
+        vm.expectRevert("V: Only Asset Manager");
         proxy_.vaultManagementAction(address(action), new bytes(0));
         vm.stopPrank();
     }
@@ -938,7 +938,7 @@ contract VaultActionTest is vaultTests {
         vm.assume(action_ != address(action));
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("VL_VMA: Action is not allowlisted");
+        vm.expectRevert("V_VMA: Action not allowed");
         proxy_.vaultManagementAction(action_, new bytes(0));
         vm.stopPrank();
     }
@@ -1167,7 +1167,7 @@ contract VaultActionTest is vaultTests {
         bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("VMA: coll. value too low");
+        vm.expectRevert("V_VMA: coll. value too low");
         proxy_.vaultManagementAction(address(action), callData);
         vm.stopPrank();
     }
@@ -1199,7 +1199,7 @@ contract AssetManagementTest is vaultTests {
         assetTypes[0] = 0;
 
         vm.startPrank(sender);
-        vm.expectRevert("V: You are not the owner");
+        vm.expectRevert("V: Only Owner");
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
@@ -1581,7 +1581,7 @@ contract AssetManagementTest is vaultTests {
 
         assetInfo.assetAmounts[0] = withdrawalAmount * 10 ** Constants.ethDecimals;
         vm.startPrank(sender);
-        vm.expectRevert("V: You are not the owner");
+        vm.expectRevert("V: Only Owner");
         vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
     }
 

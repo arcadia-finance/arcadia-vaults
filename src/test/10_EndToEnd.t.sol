@@ -687,7 +687,7 @@ contract DoActionWithLeverage is EndToEndTest {
 
         //Do swap on leverage
         vm.startPrank(vaultOwner);
-        vm.expectRevert("VMA: coll. value too low");
+        vm.expectRevert("V_VMA: coll. value too low");
         pool.doActionWithLeverage(daiMargin, address(proxy), address(action), callData, emptyBytes3);
         vm.stopPrank();
     }
