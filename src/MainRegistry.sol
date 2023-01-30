@@ -182,7 +182,7 @@ contract MainRegistry is MainRegistryGuardian {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) public whenDepositNotPaused onlyVault {
+    ) external whenDepositNotPaused onlyVault {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
@@ -206,7 +206,7 @@ contract MainRegistry is MainRegistryGuardian {
      * @dev batchProcessWithdrawal in the pricing module updates the exposure
      */
     function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
-        public
+        external
         whenWithdrawNotPaused
         onlyVault
     {
@@ -244,7 +244,7 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 valueInBaseCurrency) {
+    ) external view returns (uint256 valueInBaseCurrency) {
         valueInBaseCurrency = getTotalValue(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
 
@@ -257,7 +257,6 @@ contract MainRegistry is MainRegistryGuardian {
      * @param assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency An identifier (uint256) of the BaseCurrency
      * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
-     * @dev ToDo: value sum unchecked. Cannot overflow on 1e18 decimals
      */
     function getTotalValue(
         address[] calldata assetAddresses,
@@ -332,7 +331,7 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset) {
+    ) external view returns (RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset) {
         valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
@@ -432,10 +431,10 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 collateralValue) {
+    ) external view returns (uint256 collateralValue) {
         //No need to check that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
 
         collateralValue = RiskModule.calculateCollateralValue(valuesAndRiskVarPerAsset);
     }
@@ -455,10 +454,10 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 liquidationValue) {
+    ) external view returns (uint256 liquidationValue) {
         //No need to Check that all arrays are of equal length, already done in getListOfValuesPerAsset()
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
 
         liquidationValue = RiskModule.calculateLiquidationValue(valuesAndRiskVarPerAsset);
     }
