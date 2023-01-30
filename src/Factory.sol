@@ -102,7 +102,7 @@ contract Factory is ERC721, FactoryGuardian {
             proofs, getVaultVersionRoot(), keccak256(abi.encodePacked(currentVersion, uint256(version)))
         );
 
-        require(canUpgrade, "FTR_UVV: Cannot upgrade to this version");
+        require(canUpgrade, "FTR_UVV: Version not allowed");
 
         address newImplementation = vaultDetails[version].logic;
         //TODO: add registry update to the vault
