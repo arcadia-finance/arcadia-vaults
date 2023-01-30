@@ -85,23 +85,6 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_ExposureNotInLimits() public {
-        // Given: All necessary contracts deployed on setup
-        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
-        // Then: addAsset should revert with "PM721_AA: Max Exposure not in limits"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PM721_AA: Max Exposure not in limits");
-        floorERC721PricingModule.addAsset(
-            address(bayc),
-            0,
-            type(uint256).max,
-            oracleWbaycToEthEthToUsd,
-            emptyRiskVarInput,
-            uint256(type(uint128).max) + 1
-        );
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListRiskVariables() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
@@ -121,7 +104,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleWbaycToEthEthToUsd.length; ++i) {
             assertEq(oracles[i], oracleWbaycToEthEthToUsd[i]);
         }
-        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 0));
+        assertTrue(floorERC721PricingModule.isAllowListed(address(bayc), 0));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {
@@ -162,7 +145,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
                         WHITE LIST MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
-    function testSuccess_isWhiteListed_Positive() public {
+    function testSuccess_isAllowListed_Positive() public {
         // Given: All necessary contracts deployed on setup
         vm.prank(creatorAddress);
         // When: creatorAddress calls addAsset
@@ -170,21 +153,21 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
             address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
 
-        // Then: address(bayc) should return true on isWhiteListed for id's 0 to 9999
-        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 0));
-        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 9999));
-        assertTrue(floorERC721PricingModule.isWhiteListed(address(bayc), 5000));
+        // Then: address(bayc) should return true on isAllowListed for id's 0 to 9999
+        assertTrue(floorERC721PricingModule.isAllowListed(address(bayc), 0));
+        assertTrue(floorERC721PricingModule.isAllowListed(address(bayc), 9999));
+        assertTrue(floorERC721PricingModule.isAllowListed(address(bayc), 5000));
     }
 
     function testSuccess_isWhiteListed_NegativeWrongAddress(address randomAsset) public {
         // Given: All necessary contracts deployed on setup
         // When: input is randomAsset
 
-        // Then: isWhiteListed for randomAsset should return false
-        assertTrue(!floorERC721PricingModule.isWhiteListed(randomAsset, 0));
+        // Then: isAllowListed for randomAsset should return false
+        assertTrue(!floorERC721PricingModule.isAllowListed(randomAsset, 0));
     }
 
-    function testSuccess_isWhiteListed_NegativeIdOutsideRange(uint256 id) public {
+    function testSuccess_isAllowListed_NegativeIdOutsideRange(uint256 id) public {
         // Given: id is lower than 10 or bigger than 1000
         vm.assume(id < 10 || id > 1000);
         vm.prank(creatorAddress);
@@ -193,8 +176,8 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
             address(bayc), 10, 999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
 
-        // Then: isWhiteListed for address(bayc) should return false
-        assertTrue(!floorERC721PricingModule.isWhiteListed(address(bayc), id));
+        // Then: isAllowListed for address(bayc) should return false
+        assertTrue(!floorERC721PricingModule.isAllowListed(address(bayc), id));
     }
 
     /*///////////////////////////////////////////////////////////////

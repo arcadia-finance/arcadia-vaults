@@ -78,7 +78,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         assertEq(abstractPricingModule.riskManager(), creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("APM: ONLY_RISK_MANAGER");
+        vm.expectRevert("Ownable: caller is not the owner");
         abstractPricingModule.setRiskManager(newRiskManager);
         vm.stopPrank();
 
@@ -89,23 +89,23 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
                         WHITE LIST MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
-    function testSuccess_isWhiteListed_Positive(address asset, uint128 maxExposure) public {
+    function testSuccess_isAllowListed_Positive(address asset, uint128 maxExposure) public {
         // Given: asset is white listed
         vm.assume(maxExposure > 0);
         abstractPricingModule.setExposure(asset, 0, maxExposure);
 
-        // When: isWhiteListed(asset, 0) is called
+        // When: isAllowListed(asset, 0) is called
         // Then: It should return true
-        assertTrue(abstractPricingModule.isWhiteListed(asset, 0));
+        assertTrue(abstractPricingModule.isAllowListed(asset, 0));
     }
 
-    function testSuccess_isWhiteListed_Negative(address asset) public {
+    function testSuccess_isAllowListed_Negative(address asset) public {
         // Given: All necessary contracts deployed on setup
         // And: asset is non whitelisted
 
         // When: isWhiteListed(asset, 0) is called
         // Then: It should return false
-        assertTrue(!abstractPricingModule.isWhiteListed(asset, 0));
+        assertTrue(!abstractPricingModule.isAllowListed(asset, 0));
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -213,7 +213,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         );
 
         vm.startPrank(creatorAddress);
-        vm.expectRevert("APM_SBRV: BaseCurrency not in limits");
+        vm.expectRevert("APM_SBRV: BaseCur. not in limits");
         abstractPricingModule.setBatchRiskVariables(riskVarInputs);
         vm.stopPrank();
     }
@@ -254,7 +254,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         );
 
         vm.startPrank(creatorAddress);
-        vm.expectRevert("APM_SRVFA: BaseCurrency not in limits");
+        vm.expectRevert("APM_SRVFA: BaseCur not in limits");
         abstractPricingModule.setRiskVariablesForAsset(asset, riskVarInputs);
         vm.stopPrank();
     }
@@ -288,21 +288,12 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     function testRevert_setExposureOfAsset_NonRiskManager(
         address unprivilegedAddress_,
         address asset,
-        uint248 maxExposure
+        uint128 maxExposure
     ) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("APM: ONLY_RISK_MANAGER");
-        abstractPricingModule.setExposureOfAsset(asset, maxExposure);
-        vm.stopPrank();
-    }
-
-    function testRevert_setExposureOfAsset_uint256(address asset, uint256 maxExposure) public {
-        vm.assume(maxExposure > type(uint128).max);
-
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("APM_SEA: Max Exposure not in limits");
         abstractPricingModule.setExposureOfAsset(asset, maxExposure);
         vm.stopPrank();
     }
@@ -315,7 +306,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         assertEq(actualMaxExposure, maxExposure);
     }
 
-    function testRevert_processDeposit_NonMainRegistry(address unprivilegedAddress_, address asset, uint256 amount)
+    function testRevert_processDeposit_NonMainRegistry(address unprivilegedAddress_, address asset, uint128 amount)
         public
     {
         vm.assume(unprivilegedAddress_ != address(mainRegistry));
@@ -356,7 +347,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         assertEq(actualExposure, expectedExposure);
     }
 
-    function testRevert_processWithdrawal_NonMainRegistry(address unprivilegedAddress_, address asset, uint256 amount)
+    function testRevert_processWithdrawal_NonMainRegistry(address unprivilegedAddress_, address asset, uint128 amount)
         public
     {
         vm.assume(unprivilegedAddress_ != address(mainRegistry));

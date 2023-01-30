@@ -117,16 +117,6 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_ExposureNotInLimits() public {
-        // Given: All necessary contracts deployed on setup
-        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
-        // Then: addAsset should revert with "PMAT_AA: Max Exposure not in limits"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PMAT_AA: Max Exposure not in limits");
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, uint256(type(uint128).max) + 1);
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint128).max);
@@ -141,7 +131,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
-        assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
+        assertTrue(aTokenPricingModule.isAllowListed(address(aEth), 0));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {

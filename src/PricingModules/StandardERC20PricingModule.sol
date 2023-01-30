@@ -4,9 +4,11 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
-import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
+import {PricingModule} from "./AbstractPricingModule.sol";
+import {IOraclesHub} from "./interfaces/IOraclesHub.sol";
+import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
 
@@ -43,21 +45,21 @@ contract StandardERC20PricingModule is PricingModule {
      * @param oracles An array of addresses of oracle contracts, to price the asset in USD
      * @param riskVars An array of Risk Variables for the asset
      * @param maxExposure The maximum exposure of the asset in its own decimals
-     * @dev Only the Collateral Factor, Liquidation Threshold and basecurrency are taken into account.
+     * @dev Only the Collateral Factor, Liquidation Threshold and Base Currency are taken into account.
      * If no risk variables are provided, the asset is added with the risk variables set to zero, meaning it can't be used as collateral.
      * @dev RiskVarInput.asset can be zero as it is not taken into account.
      * @dev Risk variable are variables with 2 decimals precision
      * @dev The assets are added in the Main-Registry as well.
      * @dev Assets can't have more than 18 decimals.
      */
-    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint256 maxExposure)
+    function addAsset(address asset, address[] calldata oracles, RiskVarInput[] calldata riskVars, uint128 maxExposure)
         external
         onlyOwner
     {
+        require(!inPricingModule[asset], "PM20_AA: already added");
         //View function, reverts in OracleHub if sequence is not correct
         IOraclesHub(oracleHub).checkOracleSequence(oracles);
 
-        require(!inPricingModule[asset], "PM20_AA: already added");
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
@@ -68,8 +70,7 @@ contract StandardERC20PricingModule is PricingModule {
         assetToInformation[asset].oracles = oracles;
         _setRiskVariablesForAsset(asset, riskVars);
 
-        require(maxExposure <= type(uint128).max, "PM20_AA: Max Exposure not in limits");
-        exposure[asset].maxExposure = uint128(maxExposure);
+        exposure[asset].maxExposure = maxExposure;
 
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset);
@@ -77,7 +78,6 @@ contract StandardERC20PricingModule is PricingModule {
 
     /**
      * @notice Returns the information that is stored in the StandardERC20PricingModule for a given ERC20 token.
-     * @dev struct is not taken into memory; saves gas.
      * @param asset The Token address of the asset.
      * @return assetUnit The unit (10 ** decimals) of the asset.
      * @return oracles The list of addresses of the oracles to get the exchange rate of the asset in USD.
@@ -106,8 +106,8 @@ contract StandardERC20PricingModule is PricingModule {
      * will return the value of the asset in USD.
      * Only one of the two values can be different from 0.
      * @dev Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
-     * @dev If the asset is not first added to PricingModule this function will return value 0 without throwing an error.
-     * However no check in StandardERC20PricingModule is necessary, since the check if the asset is whitelisted (and hence added to PricingModule)
+     * @dev If the asset is not added to PricingModule this function will return value 0 without throwing an error.
+     * However no check in StandardERC20PricingModule is necessary, since the check if the asset is allow listed (and hence added to PricingModule)
      * is already done in the Main-Registry.
      */
     function getValue(GetValueInput memory getValueInput)

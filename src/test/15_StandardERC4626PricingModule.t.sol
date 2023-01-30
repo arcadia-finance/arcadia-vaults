@@ -118,16 +118,6 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testRevert_addAsset_ExposureNotInLimits() public {
-        // Given: All necessary contracts deployed on setup
-        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
-        // Then: addAsset should revert with "PM4626_AA: Max Exposure not in limits"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PM4626_AA: Max Exposure not in limits");
-        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, uint256(type(uint128).max) + 1);
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, type(uint128).max);
@@ -142,7 +132,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
-        assertTrue(standardERC4626PricingModule.isWhiteListed(address(ybEth), 0));
+        assertTrue(standardERC4626PricingModule.isAllowListed(address(ybEth), 0));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {
