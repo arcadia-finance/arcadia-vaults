@@ -46,8 +46,8 @@ library RiskModule {
     }
 
     /**
-     * @notice Calculate the weighted liquidation value given a combination of asset values and corresponding collateral factors.
-     * @param valuesAndRiskVarPerAsset List of asset values and corresponding collateral factors.
+     * @notice Calculate the weighted liquidation value given a combination of asset values and corresponding liquidation factors.
+     * @param valuesAndRiskVarPerAsset List of asset values and corresponding liquidation factors.
      * @return liquidationValue The value of a combination of assets, each discounted with a liquidation factor
      */
     function calculateLiquidationValue(AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset)
