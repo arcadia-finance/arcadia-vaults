@@ -17,7 +17,7 @@ import {MainRegistryGuardian} from "./security/MainRegistryGuardian.sol";
  * @title Main Asset registry
  * @author Arcadia Finance
  * @notice The Main Registry stores basic information for each token that can, or could at some point, be deposited in the vaults
- * @dev No end-user should directly interact with the Main Registry, only vaults, Sub-Registries or the contract owner
+ * @dev No end-user should directly interact with the Main Registry, only vaults, Pricing Modules or the contract owner
  */
 contract MainRegistry is MainRegistryGuardian {
     using FixedPointMathLib for uint256;
@@ -50,7 +50,7 @@ contract MainRegistry is MainRegistryGuardian {
     }
 
     /**
-     * @dev Only Sub-registries can call functions marked by this modifier.
+     * @dev Only Pricing Modules can call functions marked by this modifier.
      *
      */
     modifier onlyPricingModule() {
@@ -141,13 +141,13 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Add a Sub-registry Address to the list of Sub-Registries
-     * @param subAssetRegistryAddress Address of the Sub-Registry
+     * @notice Add a Pricing Module Address to the list of Pricing Modules
+     * @param pricingModule Address of the Pricing Module
      */
-    function addPricingModule(address subAssetRegistryAddress) external onlyOwner {
-        require(!isPricingModule[subAssetRegistryAddress], "MR_APM: PriceMod. not unique");
-        isPricingModule[subAssetRegistryAddress] = true;
-        pricingModules.push(subAssetRegistryAddress);
+    function addPricingModule(address pricingModule) external onlyOwner {
+        require(!isPricingModule[pricingModule], "MR_APM: PriceMod. not unique");
+        isPricingModule[pricingModule] = true;
+        pricingModules.push(pricingModule);
     }
 
     /* ///////////////////////////////////////////////////////////////
