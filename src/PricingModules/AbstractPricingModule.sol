@@ -160,6 +160,11 @@ abstract contract PricingModule is Ownable {
         }
     }
 
+    /**
+     * @dev Sets risk variables for the asset specified
+     * @param asset The address of the asset
+     * @param riskVarInputs Array of RiskVarInput structs with all the required risk variables
+     */
     function _setRiskVariablesForAsset(address asset, RiskVarInput[] memory riskVarInputs) internal virtual {
         uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
         uint256 riskVarInputsLength = riskVarInputs.length;
