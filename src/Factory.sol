@@ -54,7 +54,7 @@ contract Factory is ERC721, FactoryGuardian {
         vaultVersion = vaultVersion == 0 ? latestVaultVersion : vaultVersion;
 
         require(vaultVersion <= latestVaultVersion, "FTRY_CV: Unknown vault version");
-        require(vaultVersionBlocked[vaultVersion] == false, "FTRY_CV: Vault version blocked");
+        require(!vaultVersionBlocked[vaultVersion], "FTRY_CV: Vault version blocked");
 
         vault = address(new Proxy{salt: bytes32(salt)}(vaultDetails[vaultVersion].logic));
 
@@ -96,6 +96,7 @@ contract Factory is ERC721, FactoryGuardian {
      */
     function upgradeVaultVersion(address vault, uint16 version, bytes32[] calldata proofs) external {
         require(ownerOf[vaultIndex[vault]] == msg.sender, "FTRY_UVV: You are not the owner");
+        require(!vaultVersionBlocked[version], "FTRY_UVV: Vault version blocked");
         uint256 currentVersion = IVault(vault).vaultVersion();
 
         bool canUpgrade = MerkleProofLib.verify(
