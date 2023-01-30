@@ -570,6 +570,7 @@ contract FactoryTest is DeployArcadiaVaults {
         address logic
     ) public {
         vm.assume(logic != address(0));
+        vm.assume(newAssetAddress != address(0));
         assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
