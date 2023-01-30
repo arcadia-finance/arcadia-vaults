@@ -17,7 +17,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
     //this is a before each
     function setUp() public {
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
+        mainRegistry = new mainRegistryExtension(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,

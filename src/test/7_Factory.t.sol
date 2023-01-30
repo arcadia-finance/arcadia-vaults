@@ -23,7 +23,7 @@ contract FactoryTest is DeployArcadiaVaults {
     function setUp() public {
         vm.startPrank(creatorAddress);
         factory = new Factory();
-        mainRegistry = new MainRegistry(
+        mainRegistry = new mainRegistryExtension(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
@@ -487,7 +487,7 @@ contract FactoryTest is DeployArcadiaVaults {
             })
         );
 
-        mainRegistry2 = new MainRegistry(
+        mainRegistry2 = new mainRegistryExtension(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
@@ -512,7 +512,7 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
-        mainRegistry2 = new MainRegistry(
+        mainRegistry2 = new mainRegistryExtension(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: randomAssetAddress,
@@ -584,7 +584,7 @@ contract FactoryTest is DeployArcadiaVaults {
             })
         );
 
-        mainRegistry2 = new MainRegistry(
+        mainRegistry2 = new mainRegistryExtension(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,
@@ -617,7 +617,7 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
-        mainRegistry2 = new MainRegistry(
+        mainRegistry2 = new mainRegistryExtension(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: 0x0000000000000000000000000000000000000000,

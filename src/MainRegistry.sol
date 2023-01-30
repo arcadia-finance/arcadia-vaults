@@ -230,95 +230,6 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
-     * @param assetAddresses The List of token addresses of the assets
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency The contract address of the BaseCurrency
-     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
-     */
-    function getTotalValue(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        address baseCurrency
-    ) external view returns (uint256 valueInBaseCurrency) {
-        valueInBaseCurrency = getTotalValue(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
-    }
-
-    /**
-     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
-     * @param assetAddresses The List of token addresses of the assets
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An identifier (uint256) of the BaseCurrency
-     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
-     */
-    function getTotalValue(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        uint256 baseCurrency
-    ) public view returns (uint256 valueInBaseCurrency) {
-        require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
-
-        uint256 assetAddressesLength = assetAddresses.length;
-        require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
-            "MR_GTV: LENGTH_MISMATCH"
-        );
-        IPricingModule.GetValueInput memory getValueInput;
-        getValueInput.baseCurrency = baseCurrency;
-
-        uint256 valueInUsd;
-        address assetAddress;
-        uint256 tempValueInUsd;
-        uint256 tempValueInBaseCurrency;
-        for (uint256 i; i < assetAddressesLength;) {
-            assetAddress = assetAddresses[i];
-            require(inMainRegistry[assetAddress], "MR_GTV: Unknown asset");
-
-            getValueInput.assetAddress = assetAddress;
-            getValueInput.assetId = assetIds[i];
-            getValueInput.assetAmount = assetAmounts[i];
-
-            if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
-                //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
-                valueInBaseCurrency +=
-                    assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //assetAmounts can have a variable decimal precision -> bring to 18 decimals
-            } else {
-                //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
-                (tempValueInUsd, tempValueInBaseCurrency,,) =
-                    IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
-                valueInUsd += tempValueInUsd;
-                valueInBaseCurrency += tempValueInBaseCurrency;
-            }
-            unchecked {
-                ++i;
-            }
-        }
-        //Check if baseCurrency is USD
-        if (baseCurrency == 0) {
-            //Bring from internal 18 decimals to the number of decimals of baseCurrency
-            return valueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-        } else if (valueInUsd > 0) {
-            //Get the BaseCurrency-USD rate
-            (, int256 rate,,,) =
-                IChainLinkData(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle).latestRoundData();
-            //Add valueInUsd to valueInBaseCurrency
-            valueInBaseCurrency += valueInUsd.mulDivDown(
-                baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit, uint256(rate)
-            );
-        }
-        //Bring from internal 18 decimals to the number of decimals of baseCurrency
-        return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-    }
-
-    /**
      * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
      * @param assetAddresses The List of token addresses of the assets
      * @param assetIds The list of corresponding token Ids that needs to be checked
@@ -379,8 +290,10 @@ contract MainRegistry is MainRegistryGuardian {
             getValueInput.assetAmount = assetAmounts[i];
 
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
-                //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
+                //The asset to price is the basecurrency
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency = assetAmounts[i];
+                (valuesAndRiskVarPerAsset[i].collateralFactor, valuesAndRiskVarPerAsset[i].liquidationFactor) =
+                    IPricingModule(assetToPricingModule[assetAddress]).getRiskVariables(assetAddress, baseCurrency);
             } else {
                 (
                     tempValueInUsd,
@@ -393,14 +306,17 @@ contract MainRegistry is MainRegistryGuardian {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
                     valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
                         tempValueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-                } else if (tempValueInBaseCurrency > 0) {
+                } else {
+                if (tempValueInBaseCurrency > 0) {
                     //Bring from internal 18 decimals to the number of decimals of baseCurrency
                     valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
                         tempValueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-                } else {
+                }
+                if (tempValueInUsd > 0) {
+                    //both tempValueInUsd and tempValueInBaseCurrency can be non-zero
                     //Check if the BaseCurrency-USD rate is already fetched
                     if (rateBaseCurrencyToUsd == 0) {
-                        //Get the BaseCurrency-USD rate ToDo: Ask via the OracleHub?
+                        //Get the BaseCurrency-USD rate
                         (, rateBaseCurrencyToUsd,,,) = IChainLinkData(
                             baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
                         ).latestRoundData();
@@ -409,6 +325,7 @@ contract MainRegistry is MainRegistryGuardian {
                         baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
                         uint256(rateBaseCurrencyToUsd)
                     ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //Bring from internal 18 decimals to the number of decimals of baseCurrency
+                }
                 }
             }
             unchecked {
