@@ -496,7 +496,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             }), address(factory)
         );
-        vm.expectRevert("FTRY_SNVI: no baseCurrency match");
+        vm.expectRevert("FTRY_SNVI: counter mismatch");
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
 
