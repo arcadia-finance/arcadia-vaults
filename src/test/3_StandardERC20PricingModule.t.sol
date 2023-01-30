@@ -17,15 +17,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
     //this is a before each
     function setUp() public {
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            }), address(factory)
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),

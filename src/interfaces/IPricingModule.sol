@@ -25,6 +25,15 @@ interface IPricingModule {
     function getValue(GetValueInput memory input) external view returns (uint256, uint256, uint256, uint256);
 
     /**
+     * @notice Returns the risk variables of an asset
+     * @param asset The address of the asset
+     * @param baseCurrency An identifier (uint256) of the BaseCurrency
+     * @return assetCollateralFactors The collateral factor for the asset for a given baseCurrency
+     * @return assetLiquidationFactors The liquidation factor for the asset for a given baseCurrency
+     */
+    function getRiskVariables(address asset, uint256 baseCurrency) external view returns (uint16, uint16);
+
+    /**
      * @notice Processes the deposit of tokens if it is white-listed
      * @param asset The address of the asset
      * @param id The Id of the asset where applicable

@@ -23,15 +23,7 @@ contract FactoryTest is DeployArcadiaVaults {
     function setUp() public {
         vm.startPrank(creatorAddress);
         factory = new FactoryExtension();
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            }), address(factory)
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
 
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
@@ -487,15 +479,7 @@ contract FactoryTest is DeployArcadiaVaults {
             })
         );
 
-        mainRegistry2 = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            }), address(factory)
-        );
+        mainRegistry2 = new mainRegistryExtension(address(factory));
         vm.expectRevert("FTRY_SNVI: counter mismatch");
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
@@ -512,14 +496,27 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
-        mainRegistry2 = new MainRegistry(
+        //Add eth as second basecurrency
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
+                assetAddress: address(eth),
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+            })
+        );
+
+        mainRegistry2 = new mainRegistryExtension(address(factory));
+        //Add randomAssetAddress as second basecurrency
+        mainRegistry2.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: randomAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            }), address(factory)
+                baseCurrencyLabel: "RANDOM",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+            })
         );
         vm.expectRevert("FTRY_SNVI: no baseCurrency match");
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
@@ -584,15 +581,7 @@ contract FactoryTest is DeployArcadiaVaults {
             })
         );
 
-        mainRegistry2 = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            }), address(factory)
-        );
+        mainRegistry2 = new mainRegistryExtension(address(factory));
         mainRegistry2.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
@@ -617,15 +606,7 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
-        mainRegistry2 = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            }), address(factory)
-        );
+        mainRegistry2 = new mainRegistryExtension(address(factory));
         mainRegistry2.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,

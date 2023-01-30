@@ -124,8 +124,9 @@ abstract contract PricingModule is Owned {
     /**
      * @notice Returns the risk variables of an asset
      * @param asset The address of the asset
-     * @return assetCollateralFactors The collateral factor for the asset
-     * @return assetLiquidationFactors The liquidation factor for the asset
+     * @param baseCurrency An identifier (uint256) of the BaseCurrency
+     * @return assetCollateralFactors The collateral factor for the asset for a given baseCurrency
+     * @return assetLiquidationFactors The liquidation factor for the asset for a given baseCurrency
      */
     function getRiskVariables(address asset, uint256 baseCurrency) public view virtual returns (uint16, uint16) {
         return

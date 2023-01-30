@@ -19,15 +19,7 @@ abstract contract MainRegistryTest is DeployArcadiaVaults {
     //this is a before each
     function setUp() public virtual {
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            }), address(factory)
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
@@ -839,63 +831,6 @@ contract PricingLogicTest is MainRegistryTest {
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
     }
 
-    function testRevert_getTotalValue_NegativeNonEqualInputLists() public {
-        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(bayc);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](2);
-        assetAmounts[0] = 10;
-        assetAmounts[1] = 10;
-
-        // Then: getTotalValue should revert with "MR_GTV: LENGTH_MISMATCH"
-        vm.expectRevert("MR_GTV: LENGTH_MISMATCH");
-        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
-
-        assetIds = new uint256[](2);
-        assetIds[0] = 0;
-        assetIds[1] = 0;
-
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = 10;
-
-        vm.expectRevert("MR_GTV: LENGTH_MISMATCH");
-        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
-    }
-
-    function testRevert_getListOfValuesPerAsset_NonEqualInputLists() public {
-        // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(bayc);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](2);
-        assetAmounts[0] = 10;
-        assetAmounts[1] = 10;
-        // When: getListOfValuesPerAsset called
-
-        // Then: getListOfValuesPerAsset should revert with "MR_GLV: LENGTH_MISMATCH"
-        vm.expectRevert("MR_GLV: LENGTH_MISMATCH");
-        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
-
-        assetIds = new uint256[](2);
-        assetIds[0] = 0;
-        assetIds[1] = 0;
-
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = 10;
-
-        vm.expectRevert("MR_GLV: LENGTH_MISMATCH");
-        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
-    }
-
     function testRevert_getTotalValue_UnknownBaseCurrency() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
@@ -933,8 +868,8 @@ contract PricingLogicTest is MainRegistryTest {
         assetAmounts[1] = 10;
         // When: getTotalValue called
 
-        // Then: getTotalValue should revert with "MR_GLV: Unknown BaseCurrency"
-        vm.expectRevert("MR_GLV: Unknown BaseCurrency");
+        // Then: getTotalValue should revert with "" ("EvmError: Revert")
+        vm.expectRevert();
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.SafemoonBaseCurrency);
     }
 
@@ -975,8 +910,8 @@ contract PricingLogicTest is MainRegistryTest {
         assetAmounts[1] = 10;
         // When: getTotalValue called
 
-        // Then: getTotalValue should revert with "MR_GLV: Unknown asset"
-        vm.expectRevert("MR_GLV: Unknown asset");
+        // Then: getTotalValue should revert with "" ("EvmError: Revert")
+        vm.expectRevert();
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 
