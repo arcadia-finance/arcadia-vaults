@@ -98,7 +98,7 @@ abstract contract PricingModule is Ownable {
      * @dev For assets without Id (ERC20, ERC4626...), the Id should be set to 0
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isAllowListed(address asset, uint256 id) public view virtual returns (bool) {
+    function isAllowListed(address asset, uint256) public view virtual returns (bool) {
         return exposure[asset].maxExposure != 0;
     }
 
