@@ -49,9 +49,9 @@ contract DeploymentTest is MainRegistryTest {
         // Given: All necessary contracts deployed on setup
         // When:
         // Then: baseCurrencyLabel should return "USD"
-        (, address assetaddress,,, string memory baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
+        (, address assetaddress,,, bytes8 baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
         assertEq(assetaddress, address(0));
-        assertTrue(StringHelpers.compareStrings("USD", baseCurrencyLabel));
+        assertTrue(bytes8("USD") == baseCurrencyLabel);
         assertEq(mainRegistry.assetToBaseCurrency(address(0)), 0);
         assertEq(mainRegistry.baseCurrencies(0), address(0));
     }
