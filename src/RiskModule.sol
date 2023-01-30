@@ -6,7 +6,6 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
 import {RiskConstants} from "./utils/RiskConstants.sol";
 
 /**
@@ -16,7 +15,6 @@ import {RiskConstants} from "./utils/RiskConstants.sol";
  * @dev No end-user should directly interact with the Risk Module
  */
 library RiskModule {
-    using FixedPointMathLib for uint256;
 
     struct AssetValueAndRiskVariables {
         uint256 valueInBaseCurrency;
