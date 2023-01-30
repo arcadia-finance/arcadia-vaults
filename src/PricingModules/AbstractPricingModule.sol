@@ -161,8 +161,6 @@ abstract contract PricingModule is Ownable {
     }
 
     function _setRiskVariablesForAsset(address asset, RiskVarInput[] memory riskVarInputs) internal virtual {
-        // Check: Valid length of arrays
-
         uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
         uint256 riskVarInputsLength = riskVarInputs.length;
 
