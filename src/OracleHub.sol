@@ -122,9 +122,7 @@ contract OracleHub is Ownable {
             int192 min = IChainLinkData(IChainLinkData(oracle).aggregator()).minAnswer();
             if (answer <= min) {
                 oracleIsInUse = false;
-            }
-
-            else if (updatedAt <= block.timestamp - 1 weeks) {
+            } else if (updatedAt <= block.timestamp - 1 weeks) {
                 oracleIsInUse = false;
             }
         } catch {
