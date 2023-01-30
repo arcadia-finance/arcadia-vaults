@@ -169,12 +169,12 @@ contract VaultV2Test is DeployArcadiaVaults {
         proofs[0] = Constants.upgradeProof1To2;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("FTR_UVV: Cannot upgrade to this version");
+        vm.expectRevert("FTR_UVV: Version not allowed");
         factory.upgradeVaultVersion(address(proxy), 0, proofs);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("FTR_UVV: Cannot upgrade to this version");
+        vm.expectRevert("FTR_UVV: Version not allowed");
         factory.upgradeVaultVersion(address(proxy), 3, proofs);
         vm.stopPrank();
 

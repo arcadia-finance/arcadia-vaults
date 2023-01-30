@@ -99,7 +99,7 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(Vault(actualDeployed).owner(), address(sender));
     }
 
-    function testRevert_createVault_CreateNonExistingVaultVersion(uint256 vaultVersion) public {
+    function testRevert_createVault_CreateNonExistingVaultVersion(uint16 vaultVersion) public {
         uint256 currentVersion = factory.latestVaultVersion();
         vm.assume(vaultVersion > currentVersion);
 
@@ -134,7 +134,7 @@ contract FactoryTest is DeployArcadiaVaults {
             if (versionsToBlock[z] == 0 || versionsToBlock[z] > factory.latestVaultVersion()) {
                 continue;
             }
-            vm.expectRevert("FTRY_CV: This vault version cannot be created");
+            vm.expectRevert("FTRY_CV: Vault version blocked");
             factory.createVault(
                 uint256(keccak256(abi.encodePacked(versionsToBlock[z], block.timestamp))),
                 versionsToBlock[z],
@@ -496,7 +496,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             }), address(factory)
         );
-        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
+        vm.expectRevert("FTRY_SNVI: counter mismatch");
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
 
@@ -521,7 +521,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
             }), address(factory)
         );
-        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
+        vm.expectRevert("FTRY_SNVI: no baseCurrency match");
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
         vm.stopPrank();
 
