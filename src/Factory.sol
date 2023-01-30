@@ -54,7 +54,7 @@ contract Factory is ERC721, FactoryGuardian {
         vaultVersion = vaultVersion == 0 ? latestVaultVersion : vaultVersion;
 
         require(vaultVersion <= latestVaultVersion, "FTRY_CV: Unknown vault version");
-        require(vaultVersionBlocked[vaultVersion] == false, "FTRY_CV: This vault version cannot be created");
+        require(vaultVersionBlocked[vaultVersion] == false, "FTRY_CV: Vault version blocked");
 
         vault = address(new Proxy{salt: bytes32(salt)}(vaultDetails[vaultVersion].logic));
 
