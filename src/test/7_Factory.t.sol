@@ -30,12 +30,11 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
+            }), address(factory)
         );
 
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
-        mainRegistry.setFactory(address(factory));
         vm.stopPrank();
     }
 
@@ -495,7 +494,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
+            }), address(factory)
         );
         vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
@@ -520,7 +519,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
+            }), address(factory)
         );
         vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
         factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
@@ -571,6 +570,7 @@ contract FactoryTest is DeployArcadiaVaults {
         address logic
     ) public {
         vm.assume(logic != address(0));
+        vm.assume(newAssetAddress != address(0));
         assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
@@ -591,7 +591,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
+            }), address(factory)
         );
         mainRegistry2.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
@@ -613,6 +613,7 @@ contract FactoryTest is DeployArcadiaVaults {
         address logic
     ) public {
         vm.assume(logic != address(0));
+        vm.assume(newAssetAddress != address(0));
         assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
@@ -623,7 +624,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
                 baseCurrencyLabel: "USD",
                 baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
+            }), address(factory)
         );
         mainRegistry2.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
