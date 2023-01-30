@@ -63,8 +63,8 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addAsset
 
-        // Then: addAsset should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addAsset should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         floorERC1155PricingModule.addAsset(
             address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );

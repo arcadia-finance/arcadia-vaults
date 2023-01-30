@@ -75,7 +75,7 @@ contract ArcadiaOracleTest is Test {
         vm.startPrank(nonCreator);
 
         // then: should not be able to add new transmitter
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         oracle.setOffchainTransmitter(nonTransmitter);
         vm.stopPrank();
     }

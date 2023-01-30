@@ -9,7 +9,7 @@ pragma solidity >=0.4.22 <0.9.0;
 import {IChainLinkData} from "./interfaces/IChainLinkData.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 import {IPricingModule} from "./interfaces/IPricingModule.sol";
-import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 import {RiskModule} from "./RiskModule.sol";
 import {MainRegistryGuardian} from "./security/MainRegistryGuardian.sol";
 

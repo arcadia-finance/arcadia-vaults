@@ -10,8 +10,8 @@ import {LogExpMath} from "./utils/LogExpMath.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IVault} from "./interfaces/IVault.sol";
-import {Ownable} from "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ILendingPool} from "./interfaces/ILendingPool.sol";
+import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 /**
  * @title The liquidator holds the execution logic and storage or all things related to liquidating Arcadia Vaults
@@ -19,7 +19,7 @@ import {ILendingPool} from "./interfaces/ILendingPool.sol";
  * @notice Ensure your total value denomination remains above the liquidation threshold, or risk being liquidated!
  * @dev contact: dev at arcadia.finance
  */
-contract Liquidator is Ownable {
+contract Liquidator is Owned {
     uint16 public startPriceMultiplier; // 2 decimals
     // @dev 18 decimals
     // It is the discount for an auction, per second passed after the auction.
@@ -54,7 +54,7 @@ contract Liquidator is Ownable {
         address trustedCreditor;
     }
 
-    constructor(address factory_, address registry_) {
+    constructor(address factory_, address registry_) Owned(msg.sender) {
         factory = factory_;
         registry = registry_;
         claimRatios = ClaimRatios({penalty: 5, initiatorReward: 2});

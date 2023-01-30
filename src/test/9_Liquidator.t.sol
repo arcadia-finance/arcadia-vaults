@@ -117,7 +117,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         liquidator.transferOwnership(to);
 
         assertEq(creatorAddress, liquidator.owner());
@@ -131,7 +131,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         liquidator.setFactory(factory_);
         vm.stopPrank();
     }
@@ -154,7 +154,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         liquidator.setClaimRatios(claimRatios_);
         vm.stopPrank();
     }
@@ -172,7 +172,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         liquidator.setAuctionCutoffTime(cutoffTime);
         vm.stopPrank();
     }
@@ -215,7 +215,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         liquidator.setDiscountRate(halfLife);
         vm.stopPrank();
     }
@@ -259,7 +259,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         liquidator.setStartPriceMultiplier(priceMultiplier);
         vm.stopPrank();
     }
