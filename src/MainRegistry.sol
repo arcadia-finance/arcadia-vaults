@@ -43,8 +43,8 @@ contract MainRegistry is MainRegistryGuardian {
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyToUsdOracleUnit;
-        uint64 baseCurrencyUnitCorrection;
         address assetAddress;
+        uint64 baseCurrencyUnitCorrection;
         address baseCurrencyToUsdOracle;
         string baseCurrencyLabel;
     }
