@@ -83,7 +83,9 @@ contract Vault {
      * @dev Throws if called by any account other than an asset manager or the owner.
      */
     modifier onlyAssetManager() {
-        require(msg.sender == owner || msg.sender == trustedCreditor || isAssetManager[msg.sender], "V: Only Asset Manager");
+        require(
+            msg.sender == owner || msg.sender == trustedCreditor || isAssetManager[msg.sender], "V: Only Asset Manager"
+        );
         _;
     }
 
