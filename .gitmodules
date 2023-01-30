@@ -8,3 +8,6 @@
 	path = lib/v3-periphery
 	url = https://github.com/Uniswap/v3-periphery
 	branch = v1.3.0
+[submodule "lib/arcadia-lending"]
+	path = lib/arcadia-lending
+	url = https://github.com/arcadia-finance/arcadia-lending
