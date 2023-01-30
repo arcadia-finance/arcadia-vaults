@@ -29,7 +29,7 @@ contract Factory is ERC721, FactoryGuardian {
 
     bool public newVaultInfoSet;
     uint16 public latestVaultVersion;
-    string public baseURI;
+    bytes32 public baseURI;
 
     address[] public allVaults;
 
@@ -298,7 +298,7 @@ contract Factory is ERC721, FactoryGuardian {
      * as such no URI freeze is added.
      * @param newBaseURI the new base URI to store
      */
-    function setBaseURI(string calldata newBaseURI) external onlyOwner {
+    function setBaseURI(bytes32 newBaseURI) external onlyOwner {
         baseURI = newBaseURI;
     }
 
@@ -309,7 +309,7 @@ contract Factory is ERC721, FactoryGuardian {
      */
     function tokenURI(uint256 tokenId) public view override returns (string memory uri) {
         require(ownerOf[tokenId] != address(0), "ERC721Metadata: URI query for nonexistent token");
-        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
+        return baseURI.length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
