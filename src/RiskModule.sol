@@ -12,7 +12,6 @@ import {RiskConstants} from "./utils/RiskConstants.sol";
  * @title Risk Module
  * @author Arcadia Finance
  * @notice The Risk Module manages the supported asset related risks, collateral factor, liquidity threshold
- * @dev No end-user should directly interact with the Risk Module
  */
 library RiskModule {
 
