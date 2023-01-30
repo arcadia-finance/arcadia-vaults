@@ -72,7 +72,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than the factory adress.
      */
     modifier onlyFactory() {
-        require(msg.sender == IMainRegistry(registry).factory(), "V: You are not the factory");
+        require(msg.sender == IMainRegistry(registry).factory(), "V: Only Factory");
         _;
     }
 
@@ -80,7 +80,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner, "V: You are not the owner");
+        require(msg.sender == owner, "V: Only Owner");
         _;
     }
 
@@ -88,7 +88,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than an asset manager or the owner.
      */
     modifier onlyAssetManager() {
-        require(msg.sender == owner || isAssetManager[msg.sender], "V: You are not an asset manager");
+        require(msg.sender == owner || isAssetManager[msg.sender], "V: Only Asset Manager");
         _;
     }
 
@@ -193,7 +193,7 @@ contract VaultV2 {
      * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
      */
     function _setBaseCurrency(address baseCurrency_) private {
-        require(getUsedMargin() == 0, "V_SBC: Can't change baseCurrency when Used Margin > 0");
+        require(getUsedMargin() == 0, "V_SBC: Non-zero open position");
         require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
         baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
     }
@@ -211,12 +211,12 @@ contract VaultV2 {
      * The protocol has significant authorisation: use margin (-> trigger liquidation)
      */
     function openTrustedMarginAccount(address protocol) public onlyOwner {
-        require(!isTrustedCreditorSet, "V_OMA: ALREADY SET");
+        require(!isTrustedCreditorSet, "V_OTMA: ALREADY SET");
 
         //openMarginAccount() is a view function, cannot modify state.
         (bool success, address baseCurrency_, address liquidator_) =
             ITrustedCreditor(protocol).openMarginAccount(vaultVersion);
-        require(success, "V_OMA: OPENING ACCOUNT REVERTED");
+        require(success, "V_OTMA: Invalid Version");
 
         liquidator = liquidator_;
         trustedCreditor = protocol;
@@ -232,9 +232,9 @@ contract VaultV2 {
      * @dev Currently only one trusted protocol can be set.
      */
     function closeTrustedMarginAccount() public onlyOwner {
-        require(isTrustedCreditorSet, "V_CMA: NOT SET");
+        require(isTrustedCreditorSet, "V_CTMA: NOT SET");
         //getOpenPosition() is a view function, cannot modify state.
-        require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
+        require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CTMA: NON-ZERO OPEN POSITION");
 
         isTrustedCreditorSet = false;
     }
@@ -355,10 +355,10 @@ contract VaultV2 {
         external
         returns (address originalOwner, address baseCurrency_, address trustedCreditor_)
     {
-        require(msg.sender == liquidator, "V_LV: You are not the liquidator");
+        require(msg.sender == liquidator, "V_LV: Only Liquidator");
 
         //In current Vault version, the Vault can only have debt owed to a single creditor, the trustedCreditor
-        require(getLiquidationValue() < openDebt, "V_LV: This vault is healthy");
+        require(getLiquidationValue() < openDebt, "V_LV: Vault is healthy");
 
         //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
         IFactory(IMainRegistry(registry).factory()).liquidate(msg.sender);
@@ -398,7 +398,7 @@ contract VaultV2 {
      * that the Vault is in a healthy state at the end of the transaction.
      */
     function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyAssetManager {
-        require(IMainRegistry(registry).isActionAllowed(actionHandler), "VL_VMA: Action is not allowlisted");
+        require(IMainRegistry(registry).isActionAllowed(actionHandler), "V_VMA: Action not allowed");
 
         (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
 
@@ -413,7 +413,7 @@ contract VaultV2 {
 
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
-        require(collValue >= usedMargin, "VMA: coll. value too low");
+        require(collValue >= usedMargin, "V_VMA: coll. value too low");
     }
 
     /* ///////////////////////////////////////////////////////////////
