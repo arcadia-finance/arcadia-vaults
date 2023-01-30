@@ -116,7 +116,7 @@ abstract contract PricingModule is Ownable {
      * one denominated in USD and the other one in the different BaseCurrency).
      * @dev All price feeds should be fetched in the Oracle-Hub
      */
-    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256);
+    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) {};
 
     /*///////////////////////////////////////////////////////////////
                     RISK VARIABLES MANAGEMENT
@@ -190,7 +190,6 @@ abstract contract PricingModule is Ownable {
     function _setRiskVariables(address asset, uint256 baseCurrency, RiskVars memory riskVars) internal virtual {
         require(riskVars.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR, "APM_SRV: Coll.Fact not in limits");
         require(riskVars.liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR, "APM_SRV: Liq.Fact not in limits");
-        require(riskVars.collateralFactor > riskVars.liquidationFactor, "APM_SRV: Coll.Fact > Liq.Fact");
 
         assetRiskVars[asset][baseCurrency] = riskVars;
     }
