@@ -121,8 +121,8 @@ contract mainRegistryExtension is MainRegistry {
 }
 
 contract FactoryExtension is Factory {
-    function setOwnerOf(address owner, uint256 vaultId) public {
-        _ownerOf[vaultId] = owner;
+    function setOwnerOf(address owner_, uint256 vaultId) public {
+        _ownerOf[vaultId] = owner_;
     }
 }
 
