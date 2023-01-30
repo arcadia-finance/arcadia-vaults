@@ -308,8 +308,8 @@ contract AssetManagementTest is MainRegistryTest {
         vm.assume(unprivilegedAddress_ != address(floorERC1155PricingModule));
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addAsset
-        // Then: addAsset should revert with "Caller is not a Price Module."
-        vm.expectRevert("Caller is not a Price Module.");
+        // Then: addAsset should revert with "MR: Only PriceMod."
+        vm.expectRevert("MR: Only PriceMod.");
         mainRegistry.addAsset(address(eth));
         vm.stopPrank();
     }
@@ -359,7 +359,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = 1;
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Caller is not a Vault.");
+        vm.expectRevert("MR: Only Vaults.");
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
@@ -519,7 +519,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amountLink;
 
         vm.startPrank(proxyAddr);
-        vm.expectRevert("Delegate calls not allowed.");
+        vm.expectRevert("MR: No delegate.");
         (bool success,) = address(mainRegistry).delegatecall(
             abi.encodeWithSignature(
                 "batchProcessDeposit(address[] calldata,uint256[] calldata,uint256[] calldata)",
@@ -543,7 +543,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = 1;
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Caller is not a Vault.");
+        vm.expectRevert("MR: Only Vaults.");
         mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
         vm.stopPrank();
     }
@@ -653,7 +653,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amountLink;
 
         vm.startPrank(proxyAddr);
-        vm.expectRevert("Delegate calls not allowed.");
+        vm.expectRevert("MR: No delegate.");
         (bool success,) = address(mainRegistry).delegatecall(
             abi.encodeWithSignature(
                 "batchProcessWithdrawal(address[] calldata,uint256[] calldata)", assetAddresses, assetAmounts

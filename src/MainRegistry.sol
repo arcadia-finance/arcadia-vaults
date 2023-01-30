@@ -54,13 +54,13 @@ contract MainRegistry is MainRegistryGuardian {
      *
      */
     modifier onlyPricingModule() {
-        require(isPricingModule[msg.sender], "Caller is not a Price Module.");
+        require(isPricingModule[msg.sender], "MR: Only PriceMod.");
         _;
     }
 
     modifier onlyVault() {
-        require(IFactory(factory).isVault(msg.sender), "Caller is not a Vault.");
-        require(address(this) == _this, "Delegate calls not allowed.");
+        require(IFactory(factory).isVault(msg.sender), "MR: Only Vaults.");
+        require(address(this) == _this, "MR: No delegate.");
         _;
     }
 
