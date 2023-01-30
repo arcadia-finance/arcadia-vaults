@@ -99,7 +99,7 @@ contract MainRegistry is MainRegistryGuardian {
      * @param allowed Bool to indicate its status
      * @dev Can only be called by owner.
      */
-    function setAllowedAction(address action, bool allowed) public onlyOwner {
+    function setAllowedAction(address action, bool allowed) external onlyOwner {
         isActionAllowed[action] = allowed;
     }
 
