@@ -28,7 +28,7 @@ contract MainRegistry is MainRegistryGuardian {
 
     address public immutable factory;
 
-    address[] private pricingModules;
+    address[] public pricingModules;
     address[] public assetsInMainRegistry;
     address[] public baseCurrencies;
 
