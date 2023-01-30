@@ -71,7 +71,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @param vault The address to be checked.
      * @return bool Whether the address is a vault or not.
      */
-    function isVault(address vault) public view returns (bool) {
+    function isVault(address vault) external view returns (bool) {
         return vaultIndex[vault] > 0;
     }
 
@@ -253,7 +253,7 @@ contract Factory is ERC721, FactoryGuardian {
      * @param liquidator The contract address of the liquidator.
      */
     function liquidate(address liquidator) external whenLiquidateNotPaused {
-        require(isVault(msg.sender), "FTRY: Not a vault");
+        require(this.isVault(msg.sender), "FTRY: Not a vault");
 
         uint256 id = vaultIndex[msg.sender];
         address from = ownerOf[id];
