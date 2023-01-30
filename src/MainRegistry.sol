@@ -46,7 +46,7 @@ contract MainRegistry is MainRegistryGuardian {
         address assetAddress;
         uint64 baseCurrencyUnitCorrection;
         address baseCurrencyToUsdOracle;
-        string baseCurrencyLabel;
+        bytes8 baseCurrencyLabel;
     }
 
     /**

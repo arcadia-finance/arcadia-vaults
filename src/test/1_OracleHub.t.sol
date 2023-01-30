@@ -102,14 +102,14 @@ contract OracleHubTest is Test {
             bool baseAssetIsBaseCurrency,
             ,
             address quoteAssetAddress,
-            string memory quoteAsset,
-            string memory baseAsset
+            bytes16 quoteAsset,
+            bytes16 baseAsset
         ) = oracleHub.oracleToOracleInformation(address(oracleEthToUsd));
         assertEq(oracleUnit, oracleEthToUsdUnit);
         assertEq(baseAssetBaseCurrency, uint8(Constants.UsdBaseCurrency));
         assertEq(baseAssetIsBaseCurrency, true);
-        assertEq(quoteAsset, "ETH");
-        assertEq(baseAsset, "USD");
+        assertEq(quoteAsset, bytes16(abi.encodePacked("ETH")));
+        assertEq(baseAsset, bytes16(abi.encodePacked("USD")));
         assertEq(quoteAssetAddress, address(eth));
         assertEq(isActive, true);
     }
