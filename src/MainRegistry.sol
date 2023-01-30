@@ -60,10 +60,6 @@ contract MainRegistry is MainRegistryGuardian {
 
     modifier onlyVault() {
         require(IFactory(factory).isVault(msg.sender), "Caller is not a Vault.");
-        _;
-    }
-
-    modifier noDelegate() {
         require(address(this) == _this, "Delegate calls not allowed.");
         _;
     }
@@ -186,7 +182,7 @@ contract MainRegistry is MainRegistryGuardian {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) public whenDepositNotPaused onlyVault noDelegate {
+    ) public whenDepositNotPaused onlyVault {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
@@ -213,7 +209,6 @@ contract MainRegistry is MainRegistryGuardian {
         public
         whenWithdrawNotPaused
         onlyVault
-        noDelegate
     {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
