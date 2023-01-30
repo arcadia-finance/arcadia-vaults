@@ -264,7 +264,6 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetAmounts,
         uint256 baseCurrency
     ) public view returns (uint256 valueInBaseCurrency) {
-
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
 
         uint256 assetAddressesLength = assetAddresses.length;
@@ -289,7 +288,8 @@ contract MainRegistry is MainRegistryGuardian {
 
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
-                valueInBaseCurrency += assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //assetAmounts can have a variable decimal precision -> bring to 18 decimals
+                valueInBaseCurrency +=
+                    assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //assetAmounts can have a variable decimal precision -> bring to 18 decimals
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
                 (tempValueInUsd, tempValueInBaseCurrency,,) =
@@ -310,7 +310,9 @@ contract MainRegistry is MainRegistryGuardian {
             (, int256 rate,,,) =
                 IChainLinkData(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle).latestRoundData();
             //Add valueInUsd to valueInBaseCurrency
-            valueInBaseCurrency += valueInUsd.mulDivDown(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit, uint256(rate));
+            valueInBaseCurrency += valueInUsd.mulDivDown(
+                baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit, uint256(rate)
+            );
         }
         //Bring from internal 18 decimals to the number of decimals of baseCurrency
         return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
