@@ -17,7 +17,7 @@ interface IMainRegistry {
      * @notice Returns the Factory address.
      * @return factory The Factory address.
      */
-    function factoryAddress() external view returns (address);
+    function factory() external view returns (address);
 
     /**
      * @notice Returns the contract of a basecurrency.
