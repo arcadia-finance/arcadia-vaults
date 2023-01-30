@@ -143,7 +143,7 @@ abstract contract PricingModule is Ownable {
         uint256 riskVarInputsLength = riskVarInputs.length;
 
         for (uint256 i; i < riskVarInputsLength;) {
-            require(riskVarInputs[i].baseCurrency < baseCurrencyCounter, "APM_SBRV: BaseCurrency not in limits");
+            require(riskVarInputs[i].baseCurrency < baseCurrencyCounter, "APM_SBRV: BaseCur. not in limits");
 
             _setRiskVariables(
                 riskVarInputs[i].asset,
@@ -165,7 +165,7 @@ abstract contract PricingModule is Ownable {
         uint256 riskVarInputsLength = riskVarInputs.length;
 
         for (uint256 i; i < riskVarInputsLength;) {
-            require(baseCurrencyCounter > riskVarInputs[i].baseCurrency, "APM_SRVFA: BaseCurrency not in limits");
+            require(baseCurrencyCounter > riskVarInputs[i].baseCurrency, "APM_SRVFA: BaseCur not in limits");
             _setRiskVariables(
                 asset,
                 riskVarInputs[i].baseCurrency,
@@ -196,7 +196,7 @@ abstract contract PricingModule is Ownable {
      * @dev This function can only be called by the contract owner. It sets the maximum exposure for the given asset in the exposure mapping.
      */
     function setExposureOfAsset(address asset, uint256 maxExposure) public virtual onlyRiskManager {
-        require(maxExposure <= type(uint128).max, "APM_SEA: Max Exposure not in limits");
+        require(maxExposure <= type(uint128).max, "APM_SEA: Max Exp. not in limits");
         exposure[asset].maxExposure = uint128(maxExposure);
     }
 
