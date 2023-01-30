@@ -14,7 +14,6 @@ import {RiskConstants} from "./utils/RiskConstants.sol";
  * @notice The Risk Module is responsible for calculating the collateral value and liquidation value of a given combination of assets.
  */
 library RiskModule {
-
     struct AssetValueAndRiskVariables {
         uint256 valueInBaseCurrency;
         uint256 collateralFactor;
