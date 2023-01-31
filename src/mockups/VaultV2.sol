@@ -926,9 +926,7 @@ contract VaultV2 {
      * param data Arbitrary data, can contain instructions to execute in thos function.
      * @dev If upgradeHook() is implemented, it MUST be verified that msg.sender == address(this)
      */
-    function upgradeHook(address, address oldRegistry, uint16, bytes calldata)
-        external
-    {
+    function upgradeHook(address, address oldRegistry, uint16, bytes calldata) external {
         require(msg.sender == address(this), "Not the right address");
         IMainRegistry(oldRegistry).batchProcessWithdrawal(new address[](0), new uint256[](0), new uint256[](0));
         IMainRegistry(registry).batchProcessDeposit(new address[](0), new uint256[](0), new uint256[](0));
