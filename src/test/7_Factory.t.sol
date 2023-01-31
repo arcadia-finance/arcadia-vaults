@@ -24,6 +24,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         factory = new FactoryExtension();
         mainRegistry = new mainRegistryExtension(address(factory));
+        liquidator = new Liquidator(address(factory));
 
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         vm.stopPrank();
@@ -692,6 +693,7 @@ contract FactoryTest is DeployArcadiaVaults {
 
     function testSuccess_liquidate(address liquidator_) public {
         vm.assume(liquidator_ != vaultOwner);
+        vm.assume(liquidator_ != address(0));
 
         vm.prank(vaultOwner);
         proxyAddr = factory.createVault(0, 0, address(0));
