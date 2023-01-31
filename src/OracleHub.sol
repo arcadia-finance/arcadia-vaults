@@ -33,7 +33,7 @@ contract OracleHub is Owned {
         bytes16 baseAsset;
     }
 
-    event OracleAdded(address oracle, string quoteAsset, string baseAsset);
+    event OracleAdded(address oracle, address quoteAsset, bytes16 baseAsset);
     event OracleDecommissioned(address oracle, bool isActive);
 
     /**
@@ -66,7 +66,7 @@ contract OracleHub is Owned {
         require(oracleInformation.oracleUnit <= 1000000000000000000, "OH_AO: Maximal 18 decimals");
         inOracleHub[oracle] = true;
         oracleToOracleInformation[oracle] = oracleInformation;
-        emit OracleAdded(oracle, oracleInformation.quoteAsset, oracleInformation.baseAsset);
+        emit OracleAdded(oracle, oracleInformation.quoteAssetAddress, oracleInformation.baseAsset);
     }
 
     /**

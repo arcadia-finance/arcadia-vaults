@@ -50,8 +50,9 @@ contract MainRegistry is MainRegistryGuardian {
     }
 
     event ActionAllowed(address action, bool allowed);
-    event BaseCurrencyAdded(uint256 baseCurrencyId, address assetAddress);
+    event BaseCurrencyAdded(address assetAddress, uint256 baseCurrencyId);
     event PricingModuleAdded(address subAssetRegistryAddress);
+    event AssetAdded(address assetAddress);
 
     /**
      * @dev Only Pricing Modules can call functions mwith this modifier.
