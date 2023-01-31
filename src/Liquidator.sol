@@ -133,12 +133,9 @@ contract Liquidator is Owned {
     }
 
     /**
-     * @notice Sets the start price multiplier for the liquidator.
-     * @param minPriceMultiplier_ The new start price multiplier, with 2 decimals precision.
-     * @dev The start price multiplier is a multiplier that is used to increase the initial price of the auction.
-     * Since the value of all assets is dicounted with the liquidation factor, and because pricing modules will take a conservative
-     * approach to price assets (eg. floorprices for NFTs), the actual value of the assets being auctioned might be substantially higher
-     * as the open debt. Hence the auction starts at a multiplier of the opendebt, but decreases rapidly (exponential decay).
+     * @notice Sets the minimum price multiplier for the liquidator.
+     * @param minPriceMultiplier_ The new minimum price multiplier, with 2 decimals precision.
+     * @dev The minimum price multiplier sets a lower bound to which the auction price converges. 
      */
     function setMinimumPriceMultiplier(uint8 minPriceMultiplier_) external onlyOwner {
         require(minPriceMultiplier_ < 91, "LQ_SMPM: multiplier too high");
