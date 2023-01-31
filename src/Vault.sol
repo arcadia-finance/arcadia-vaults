@@ -15,6 +15,7 @@ import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
 import {IActionBase} from "./interfaces/IActionBase.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 import {IVault} from "./interfaces/IVault.sol";
+import {IOraclesHub} from "./PricingModules/interfaces/IOraclesHub.sol";
 import {ActionData} from "./actions/utils/ActionData.sol";
 
 /**
