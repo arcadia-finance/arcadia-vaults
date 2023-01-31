@@ -435,14 +435,18 @@ contract MainRegistry is MainRegistryGuardian {
                 //The asset to price is the basecurrency
                 //assetAmounts can have a variable decimal precision -> bring to 18 decimals
                 //
-                valueInBaseCurrency +=
-                    assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                unchecked {
+                    valueInBaseCurrency +=
+                        assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                }
             } else {
                 //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
-                (tempValueInUsd, tempValueInBaseCurrency,,) =
-                    IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
-                valueInUsd += tempValueInUsd;
-                valueInBaseCurrency += tempValueInBaseCurrency;
+                unchecked {
+                    (tempValueInUsd, tempValueInBaseCurrency,,) =
+                        IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
+                    valueInUsd += tempValueInUsd;
+                    valueInBaseCurrency += tempValueInBaseCurrency;
+                }
             }
             unchecked {
                 ++i;
@@ -451,15 +455,19 @@ contract MainRegistry is MainRegistryGuardian {
         //Check if baseCurrency is USD
         if (baseCurrency == 0) {
             //Bring from internal 18 decimals to the number of decimals of baseCurrency
-            return valueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+            unchecked {
+                return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+            }
         } else if (valueInUsd > 0) {
             //Get the BaseCurrency-USD rate
             (, int256 rate,,,) =
                 IChainLinkData(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle).latestRoundData();
             //Add valueInUsd to valueInBaseCurrency
-            valueInBaseCurrency += valueInUsd.mulDivDown(
-                baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit, uint256(rate)
-            );
+            unchecked {
+                valueInBaseCurrency += valueInUsd.mulDivDown(
+                    baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit, uint256(rate)
+                );
+            }
         }
         //Bring from internal 18 decimals to the number of decimals of baseCurrency
         return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
