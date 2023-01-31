@@ -54,6 +54,15 @@ contract Liquidator is Owned {
         address trustedCreditor;
     }
 
+    event FactorySet(address factory_);
+    event ClaimRatiosSet(ClaimRatios claimRatios_);
+    event DiscountRateSet(uint64 discountRate);
+    event AuctionCutoffTimeSet(uint16 auctionCutoffTime_);
+    event StartPriceMultiplierSet(uint16 startPriceMultiplier_);
+    event AuctionStarted(address indexed vault, address indexed originalOwner, uint256 openDebt, address baseCurrency);
+    event AuctionBought(address indexed vault, address indexed originalOwner, address indexed bidder, uint256 price);
+    event AuctionExpired(address indexed vault, address indexed originalOwner, address indexed to);
+
     constructor(address factory_, address registry_) Owned(msg.sender) {
         factory = factory_;
         registry = registry_;
@@ -71,6 +80,7 @@ contract Liquidator is Owned {
      */
     function setFactory(address factory_) external onlyOwner {
         factory = factory_;
+        emit FactorySet(factory_);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -85,6 +95,7 @@ contract Liquidator is Owned {
     function setClaimRatios(ClaimRatios memory claimRatios_) external onlyOwner {
         //ToDo: set upper bounds?
         claimRatios = claimRatios_;
+        emit ClaimRatiosSet(claimRatios_);
     }
 
     /**
@@ -101,6 +112,7 @@ contract Liquidator is Owned {
         //Since discountRate itself has 18 decimals and it is divided by a number with 18 decimals,
         //we need to multiply with another 10e18.
         discountRate = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife)));
+        emit DiscountRateSet(discountRate);
     }
 
     /**
@@ -114,6 +126,7 @@ contract Liquidator is Owned {
         require(auctionCutoffTime_ > 1 * 60 * 60, "LQ_ACT: cutoff too low"); // 1 hour
         require(auctionCutoffTime_ < 8 * 60 * 60, "LQ_ACT: cutoff too high"); // 8 hours
         auctionCutoffTime = auctionCutoffTime_;
+        emit AuctionCutoffTimeSet(auctionCutoffTime_);
     }
 
     /**
@@ -128,6 +141,7 @@ contract Liquidator is Owned {
         require(startPriceMultiplier_ > 100, "LQ_SPM: multiplier too low");
         require(startPriceMultiplier_ < 301, "LQ_SPM: multiplier too high");
         startPriceMultiplier = startPriceMultiplier_;
+        emit StartPriceMultiplierSet(startPriceMultiplier_);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -156,6 +170,7 @@ contract Liquidator is Owned {
         auctionInformation[vault].baseCurrency = baseCurrency;
         auctionInformation[vault].originalOwner = originalOwner;
         auctionInformation[vault].trustedCreditor = trustedCreditor;
+        emit AuctionStarted(vault, originalOwner, openDebt, baseCurrency);
     }
 
     /**
@@ -237,6 +252,7 @@ contract Liquidator is Owned {
 
         //Change ownership of the auctioned vault to the bidder.
         IFactory(factory).safeTransferFrom(address(this), msg.sender, vault);
+        emit AuctionBought(vault, auctionInformation_.originalOwner, msg.sender, priceOfVault);
     }
 
     /**
@@ -274,6 +290,7 @@ contract Liquidator is Owned {
 
         //Change ownership of the auctioned vault to the protocol owner.
         IFactory(factory).safeTransferFrom(address(this), to, vault);
+        emit AuctionExpired(vault, auctionInformation_.originalOwner, to);
     }
 
     /**
