@@ -207,9 +207,8 @@ contract Liquidator is Owned {
      * @param timePassed delta between current time and auction start time.
      * @param openDebt The open debt taken by `originalOwner`.
      * @return price The total price for which the vault can be purchased.
-     * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
-     * And immediately ends the auction.
-     * @dev Price decreases exponentially: P(t) = openDebt * [(SPM - MPM) * base^t + MPM]
+     * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault and immediately ends the auction
+     * @dev Price P(t) decreases exponentially over time: P(t) = openDebt * [(SPM - MPM) * base^t + MPM]
      * SPM: The startPriceMultiplier defines the initial price: P(0) = openDebt * SPM (2 decimals precision)
      * MPM: The minPriceMultiplier defines the assymptotic end price for P(∞) = openDebt * MPM (2 decimals precision)
      * base: defines how fast the exponential curve decreases (18 decimals precision)
@@ -220,7 +219,7 @@ contract Liquidator is Owned {
         unchecked {
             exponent = timePassed * 1e18;
         }
-        //startPriceMultiplier has 2 decimals precision and LogExpMath.pow() has 18 decimals precision,
+        //Multipliers have 2 decimals precision and LogExpMath.pow() has 18 decimals precision,
         //hence we need to divide the result by 1e20.
         price = openDebt
             * ((startPriceMultiplier - minPriceMultiplier) * LogExpMath.pow(base, exponent) + minPriceMultiplier) / 1e20;
