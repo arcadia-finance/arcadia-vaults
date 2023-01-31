@@ -212,7 +212,7 @@ abstract contract PricingModule is Owned {
      * @param amount The amount of tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
      */
-    function processDeposit(address asset, uint256, uint256 amount) external virtual onlyMainReg {
+    function processDeposit(address vault, address asset, uint256, uint256 amount) external virtual onlyMainReg {
         require(
             exposure[asset].exposure + uint128(amount) <= exposure[asset].maxExposure, "APM_PD: Exposure not in limits"
         );
@@ -225,7 +225,7 @@ abstract contract PricingModule is Owned {
      * @param amount the amount of tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens will ever be deposited
      */
-    function processWithdrawal(address asset, uint256, uint256 amount) external virtual onlyMainReg {
+    function processWithdrawal(address vault, address asset, uint256, uint256 amount) external virtual onlyMainReg {
         exposure[asset].exposure -= uint128(amount);
     }
 }

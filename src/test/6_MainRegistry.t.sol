@@ -525,7 +525,7 @@ contract AssetManagementTest is MainRegistryTest {
         success; //avoid warning
     }
 
-    function testRevert_batchProcessWithdrawal_NonVault(address unprivilegedAddress_) public {
+    function testRevert_batchProcessWithdrawal_NonVault(address unprivilegedAddress_, address vault) public {
         vm.assume(unprivilegedAddress_ != proxyAddr);
 
         address[] memory assetAddresses = new address[](1);
@@ -543,7 +543,7 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
-    function testRevert_batchProcessWithdrawal_lengthMismatch() public {
+    function testRevert_batchProcessWithdrawal_lengthMismatch(address vault) public {
         address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(dai);

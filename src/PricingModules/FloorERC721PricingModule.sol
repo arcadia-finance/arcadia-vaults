@@ -136,7 +136,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param assetId The Id of the asset
      * @dev amount of a deposit in ERC721 pricing module is always 1
      */
-    function processDeposit(address asset, uint256 assetId, uint256) external override onlyMainReg {
+    function processDeposit(address vault, address asset, uint256 assetId, uint256) external override onlyMainReg {
         require(isIdInRange(asset, assetId), "PM721_PD: ID not allowed");
 
         exposure[asset].exposure += 1;
@@ -148,7 +148,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param asset The address of the asset
      * @dev amount of a deposit in ERC721 pricing module is always 1
      */
-    function processWithdrawal(address asset, uint256, uint256) external override onlyMainReg {
+    function processWithdrawal(address vault, address asset, uint256, uint256) external override onlyMainReg {
         exposure[asset].exposure -= 1;
     }
 

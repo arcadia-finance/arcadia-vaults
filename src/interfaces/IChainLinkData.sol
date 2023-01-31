@@ -18,4 +18,10 @@ interface IChainLinkData {
         external
         view
         returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
+
+    // @notice Returns the aggregator, added by arcadia
+    function aggregator() external view returns (address);
+
+    // @notice Returns the minimum answer, added by arcadia
+    function minAnswer() external view returns (int192);
 }

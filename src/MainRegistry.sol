@@ -192,7 +192,9 @@ contract MainRegistry is MainRegistryGuardian {
             assetAddress = assetAddresses[i];
 
             require(inMainRegistry[assetAddress], "MR_BPD: Asset not in mainreg");
-            IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, assetIds[i], amounts[i]);
+            IPricingModule(assetToPricingModule[assetAddress]).processDeposit(
+                msg.sender, assetAddress, assetIds[i], amounts[i]
+            );
 
             unchecked {
                 ++i;
@@ -218,7 +220,9 @@ contract MainRegistry is MainRegistryGuardian {
         for (uint256 i; i < addressesLength;) {
             assetAddress = assetAddresses[i];
 
-            IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(assetAddress, assetIds[i], amounts[i]);
+            IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(
+                msg.sender, assetAddress, assetIds[i], amounts[i]
+            );
 
             unchecked {
                 ++i;
