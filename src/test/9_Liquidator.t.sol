@@ -211,48 +211,48 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(liquidator.auctionCutoffTime(), cutoffTime);
     }
 
-    function testRevert_setDiscountRate_NonOwner(address unprivilegedAddress_, uint256 halfLife) public {
+    function testRevert_setBase_NonOwner(address unprivilegedAddress_, uint256 halfLife) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("UNAUTHORIZED");
-        liquidator.setDiscountRate(halfLife);
+        liquidator.setBase(halfLife);
         vm.stopPrank();
     }
 
-    function testRevert_setDiscountRate_tooHigh(uint256 halfLife) public {
+    function testRevert_setBase_tooHigh(uint256 halfLife) public {
         // Preprocess: limit the fuzzing to acceptable levels
         vm.assume(halfLife > 8 * 60 * 60);
 
         // Given When Then: a owner attempts to set the discount rate, but it is not in the limits
         vm.startPrank(creatorAddress);
         vm.expectRevert("LQ_DR: halfLife too high");
-        liquidator.setDiscountRate(halfLife);
+        liquidator.setBase(halfLife);
         vm.stopPrank();
     }
 
-    function testRevert_setDiscountRate_tooLow(uint256 halfLife) public {
+    function testRevert_setBase_tooLow(uint32 halfLife) public {
         // Preprocess: limit the fuzzing to acceptable levels
-        vm.assume(halfLife < 30 * 60);
+        vm.assume(halfLife < 2 * 60);
 
         // Given When Then: a owner attempts to set the discount rate, but it is not in the limits
         vm.startPrank(creatorAddress);
         vm.expectRevert("LQ_DR: halfLife too low");
-        liquidator.setDiscountRate(halfLife);
+        liquidator.setBase(halfLife);
         vm.stopPrank();
     }
 
-    function testSuccess_setDiscountRate(uint256 halfLife) public {
+    function testSuccess_setBase(uint256 halfLife) public {
         // Preprocess: limit the fuzzing to acceptable levels
-        vm.assume(halfLife > 1 * 60 * 60);
+        vm.assume(halfLife > 2 * 60);
         vm.assume(halfLife < 8 * 60 * 60);
         // Given: the owner is the creatorAddress
         vm.prank(creatorAddress);
         // When: the owner sets the discount rate
-        liquidator.setDiscountRate(halfLife);
+        liquidator.setBase(halfLife);
         // Then: the discount rate is correctly set
         uint256 expectedDiscountRate = 1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife));
-        assertEq(liquidator.discountRate(), expectedDiscountRate);
+        assertEq(liquidator.base(), expectedDiscountRate);
     }
 
     function testRevert_setStartPriceMultiplier_NonOwner(address unprivilegedAddress_, uint16 priceMultiplier) public {
@@ -361,26 +361,26 @@ contract LiquidatorTest is DeployArcadiaVaults {
     }
 
     function testSuccess_getPriceOfVault(
-        uint64 startTime,
-        uint64 halfLife,
-        uint64 currentTime,
+        uint32 startTime,
+        uint32 halfLife,
+        uint32 currentTime,
         uint16 cutoffTime,
         uint128 openDebt
     ) public {
         // Preprocess: Set up the fuzzed variables
         vm.assume(currentTime > startTime);
-        vm.assume(halfLife > 1 * 60 * 60); // 1 hour
-        vm.assume(halfLife < 4 * 60 * 60); // 4 hours
+        vm.assume(halfLife > 2 * 60 * 60); // 2 minutes
+        vm.assume(halfLife < 8 * 60 * 60); // 8 hours
         vm.assume(cutoffTime < 8 * 60 * 60); // 8 hours
         vm.assume(cutoffTime > 1 * 60 * 60); // 1 hours
-        vm.assume(currentTime - startTime < cutoffTime); // 5 day
+        vm.assume(currentTime - startTime < cutoffTime);
         vm.assume(openDebt > 0);
 
         // Given: A vault is in auction
-        uint64 discountRate = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife)));
+        uint64 base = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife)));
 
         vm.startPrank(creatorAddress);
-        liquidator.setDiscountRate(halfLife);
+        liquidator.setBase(halfLife);
         liquidator.setAuctionCutoffTime(cutoffTime);
         vm.stopPrank();
 
@@ -396,7 +396,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         // And: The price is calculated outside correctly
         uint256 auctionTime = (uint256(currentTime) - uint256(startTime)) * 1e18;
         uint256 expectedPrice =
-            uint256(openDebt) * liquidator.startPriceMultiplier() * LogExpMath.pow(discountRate, auctionTime) / 1e20;
+            uint256(openDebt) * liquidator.startPriceMultiplier() * LogExpMath.pow(base, auctionTime) / 1e20;
 
         // Then: The price is calculated correctly
         assertEq(price, expectedPrice);

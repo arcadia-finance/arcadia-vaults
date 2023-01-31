@@ -6,6 +6,7 @@
  */
 pragma solidity ^0.8.13;
 
+import {FixedPointMathLib} from "../lib/solmate/src/utils/FixedPointMathLib.sol";
 import {LogExpMath} from "./utils/LogExpMath.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
@@ -20,12 +21,12 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Owned {
-    uint16 public startPriceMultiplier; // 2 decimals
-    // @dev 18 decimals
-    // It is the discount for an auction, per second passed after the auction.
-    // example: 999807477651317500, it is calculated based on the half-life of 1 hour
-    uint64 public discountRate;
-    uint16 public auctionCutoffTime; // maximum auction time in seconds that auction can run from the start of auction, max 18 hours
+    using FixedPointMathLib for uint256;
+
+    uint16 public startPriceMultiplier; // Sets the begin price of the auction, defined as a percentage of opendebt, 2 decimals precision -> 150 = 150%
+    uint16 public minPriceMultiplier; // Sets the minimum price the auction converges to, defined as a percentage of opendebt, 2 decimals precision -> 60 = 60%
+    uint64 public base; // Determines how fast (exponential decay) the aution price drops per second, 18 decimals precision
+    uint16 public auctionCutoffTime; // Maximum time that the auction can run, in seconds, with 0 decimals precision
 
     address public factory;
     address public registry;
@@ -59,6 +60,7 @@ contract Liquidator is Owned {
         registry = registry_;
         claimRatios = ClaimRatios({penalty: 5, initiatorReward: 2});
         startPriceMultiplier = 110;
+        minPriceMultiplier = 0;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -88,19 +90,19 @@ contract Liquidator is Owned {
     }
 
     /**
-     * @notice Sets the discount rate (DR) for the liquidator.
-     * @param halfLife The new half life time (T_hl), in seconds.
-     * @dev The discount rate is a multiplier that is used to decrease the price of the auction over time.
-     * @dev Exponential decay is defined as: P(t) = P(0) * (1/2)^(t/T_hl)
-     * Or simplified: P(t) = P(O) * DR^t with DR = 1/[2^(1/T_hl)]
+     * @notice Sets the base (18 decimals precision) for the auction curve of the liquidator.
+     * @param halfLife The time ΔT_hl (seconds with 0 decimals) it takes for the power function to halve in value.
+     * @dev The base defines how fast the price of the auction decreases over time.
+     * It is defined as the base that halves exactly after the a time (ΔT_hl in seconds with 0 decimals precision)
+     * @dev An exponential decreasing function with halfTime ΔT_hl is defined as: N(t) = N(0) * (1/2)^(t/ΔT_hl)
+     * Or simplified: N(t) = N(O) * base^t with base = 1/[2^(1/ΔT_hl)]
+     * @dev All calculations are with 18 decimals precision
      */
-    function setDiscountRate(uint256 halfLife) external onlyOwner {
-        require(halfLife > 30 * 60, "LQ_DR: halfLife too low"); // 30 minutes
+    function setBase(uint256 halfLife) external onlyOwner {
+        require(halfLife > 2 * 60, "LQ_DR: halfLife too low"); // 2 minutes
         require(halfLife < 8 * 60 * 60, "LQ_DR: halfLife too high"); // 8 hours
-        //Both the base and exponent of LogExpMath.pow have 18 decimals, and its result has 18 decimals as well.
-        //Since discountRate itself has 18 decimals and it is divided by a number with 18 decimals,
-        //we need to multiply with another 10e18.
-        discountRate = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife)));
+
+        base = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, 1e18 / halfLife));
     }
 
     /**
@@ -128,6 +130,19 @@ contract Liquidator is Owned {
         require(startPriceMultiplier_ > 100, "LQ_SPM: multiplier too low");
         require(startPriceMultiplier_ < 301, "LQ_SPM: multiplier too high");
         startPriceMultiplier = startPriceMultiplier_;
+    }
+
+    /**
+     * @notice Sets the start price multiplier for the liquidator.
+     * @param minPriceMultiplier_ The new start price multiplier, with 2 decimals precision.
+     * @dev The start price multiplier is a multiplier that is used to increase the initial price of the auction.
+     * Since the value of all assets is dicounted with the liquidation factor, and because pricing modules will take a conservative
+     * approach to price assets (eg. floorprices for NFTs), the actual value of the assets being auctioned might be substantially higher
+     * as the open debt. Hence the auction starts at a multiplier of the opendebt, but decreases rapidly (exponential decay).
+     */
+    function setMinimumPriceMultiplier(uint16 minPriceMultiplier_) external onlyOwner {
+        require(minPriceMultiplier_ < 90, "LQ_MPM: multiplier too high");
+        minPriceMultiplier = minPriceMultiplier_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -194,16 +209,21 @@ contract Liquidator is Owned {
      * @return price The total price for which the vault can be purchased.
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
      * And immediately ends the auction.
-     * @dev Price decreases exponentially: P(t) = P(O) * DR^t with P(O) = openDebt * startPriceMultiplier.
+     * @dev Price decreases exponentially: P(t) = openDebt * [(SPM - MPM) * base^t + MPM]
+     * SPM: The startPriceMultiplier defines the initial price: P(0) = openDebt * SPM (2 decimals precision)
+     * MPM: The minPriceMultiplier defines the assymptotic end price for P(∞) = openDebt * MPM (2 decimals precision)
+     * base: defines how fast the exponential curve decreases (18 decimals precision)
+     * t: time passed since start auction (in seconds, 18 decimals precision)
      */
     function _calcPriceOfVault(uint256 timePassed, uint256 openDebt) internal view returns (uint256 price) {
-        uint256 auctionTime;
+        uint256 exponent;
         unchecked {
-            auctionTime = timePassed * 1e18;
+            exponent = timePassed * 1e18;
         }
         //startPriceMultiplier has 2 decimals precision and LogExpMath.pow() has 18 decimals precision,
         //hence we need to divide the result by 1e20.
-        price = openDebt * startPriceMultiplier * LogExpMath.pow(discountRate, auctionTime) / 1e20;
+        price = openDebt
+            * ((startPriceMultiplier - minPriceMultiplier) * LogExpMath.pow(base, exponent) + minPriceMultiplier) / 1e20;
     }
 
     /**
