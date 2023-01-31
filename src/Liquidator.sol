@@ -20,6 +20,8 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Owned {
+    address public immutable factory;
+
     // Sets the begin price of the auction
     // Defined as a percentage of opendebt, 2 decimals precision -> 150 = 150%
     uint16 public startPriceMultiplier;
@@ -41,8 +43,6 @@ contract Liquidator is Owned {
     // Defined as a fraction of the openDebt with 2 decimals precision
     uint8 public penaltyWeight;
 
-    address public immutable factory;
-
     mapping(address => AuctionInformation) public auctionInformation;
 
     struct AuctionInformation {
@@ -62,6 +62,7 @@ contract Liquidator is Owned {
         startPriceMultiplier = 110;
         minPriceMultiplier = 50;
         cutoffTime = 14_400; //4 hours
+        base = 1e18;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -106,7 +107,7 @@ contract Liquidator is Owned {
 
         //Check that LogExpMath.pow(base, timePassed) does not error at cutoffTime (due to numbers smaller than minimum precision)
         //Since LogExpMath.pow is a strictly decreasing function checking the power function at cutoffTime
-        //guarantees that the function does not revert on all timestapms between start of the auction and the cutoffTime
+        //guarantees that the function does not revert on all timestamps between start of the auction and the cutoffTime
         LogExpMath.pow(base_, uint256(cutoffTime_) * 1e18);
 
         //Store the new parameters
@@ -204,6 +205,7 @@ contract Liquidator is Owned {
      * MPM: The minPriceMultiplier defines the assymptotic end price for P(∞) = openDebt * MPM (2 decimals precision)
      * base: defines how fast the exponential curve decreases (18 decimals precision)
      * t: time passed since start auction (in seconds, 18 decimals precision)
+     * @dev LogExpMath was made in solidity 0.7, where operatoins were unchecked.
      */
     function _calcPriceOfVault(uint256 startTime, uint256 openDebt) internal view returns (uint256 price) {
         //Time passed is a difference of two Uint32 -> can't overflow
