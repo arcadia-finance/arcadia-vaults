@@ -459,10 +459,7 @@ contract Vault {
 
         _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
 
-        require(
-            erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT,
-            "V_D: Too many assets"
-        );
+        require(erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT, "V_D: Too many assets");
     }
 
     /**
