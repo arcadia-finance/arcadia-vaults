@@ -270,7 +270,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
         // Given When Then: a owner attempts to set the start price multiplier, but it is not in the limits
         vm.startPrank(creatorAddress);
-        vm.expectRevert("LQ_SPM: multiplier too high");
+        vm.expectRevert("LQ_SSPM: multiplier too high");
         liquidator.setStartPriceMultiplier(priceMultiplier);
         vm.stopPrank();
     }
@@ -281,7 +281,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
         // Given When Then: a owner attempts to set the start price multiplier, but it is not in the limits
         vm.startPrank(creatorAddress);
-        vm.expectRevert("LQ_SPM: multiplier too low");
+        vm.expectRevert("LQ_SSPM: multiplier too low");
         liquidator.setStartPriceMultiplier(priceMultiplier);
         vm.stopPrank();
     }
@@ -296,6 +296,28 @@ contract LiquidatorTest is DeployArcadiaVaults {
         liquidator.setStartPriceMultiplier(priceMultiplier);
         // Then: multiplier sets correctly
         assertEq(liquidator.startPriceMultiplier(), priceMultiplier);
+    }
+
+    function testRevert_setMinimumPriceMultiplier_tooHigh(uint8 priceMultiplier) public {
+        // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(priceMultiplier >= 91);
+
+        // Given When Then: a owner attempts to set the minimum price multiplier, but it is not in the limits
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("LQ_SMPM: multiplier too high");
+        liquidator.setMinimumPriceMultiplier(priceMultiplier);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setMinimumPriceMultiplier(uint8 priceMultiplier) public {
+        // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(priceMultiplier < 91);
+        // Given: the owner is the creatorAddress
+        vm.prank(creatorAddress);
+        // When: the owner sets the minimum price multiplier
+        liquidator.setMinimumPriceMultiplier(priceMultiplier);
+        // Then: multiplier sets correctly
+        assertEq(liquidator.minPriceMultiplier(), priceMultiplier);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -362,19 +384,24 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
     function testSuccess_getPriceOfVault(
         uint32 startTime,
-        uint32 halfLife,
+        uint16 halfLife,
         uint32 currentTime,
         uint16 cutoffTime,
-        uint128 openDebt
+        uint128 openDebt,
+        uint8 startPriceMultiplier,
+        uint8 minPriceMultiplier
     ) public {
         // Preprocess: Set up the fuzzed variables
         vm.assume(currentTime > startTime);
-        vm.assume(halfLife > 2 * 60 * 60); // 2 minutes
+        vm.assume(halfLife > 2 * 60); // 2 minutes
         vm.assume(halfLife < 8 * 60 * 60); // 8 hours
         vm.assume(cutoffTime < 8 * 60 * 60); // 8 hours
         vm.assume(cutoffTime > 1 * 60 * 60); // 1 hours
         vm.assume(currentTime - startTime < cutoffTime);
         vm.assume(openDebt > 0);
+        vm.assume(startPriceMultiplier > 100);
+        vm.assume(startPriceMultiplier < 301);
+        vm.assume(minPriceMultiplier < 91);
 
         // Given: A vault is in auction
         uint64 base = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife)));
@@ -382,6 +409,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         liquidator.setBase(halfLife);
         liquidator.setAuctionCutoffTime(cutoffTime);
+        liquidator.setStartPriceMultiplier(startPriceMultiplier);
+        liquidator.setMinimumPriceMultiplier(minPriceMultiplier);
         vm.stopPrank();
 
         vm.warp(startTime);
@@ -395,8 +424,9 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
         // And: The price is calculated outside correctly
         uint256 auctionTime = (uint256(currentTime) - uint256(startTime)) * 1e18;
-        uint256 expectedPrice =
-            uint256(openDebt) * liquidator.startPriceMultiplier() * LogExpMath.pow(base, auctionTime) / 1e20;
+        uint256 multiplier =
+            (startPriceMultiplier - minPriceMultiplier) * LogExpMath.pow(base, auctionTime) + minPriceMultiplier;
+        uint256 expectedPrice = uint256(openDebt) * multiplier / 1e20;
 
         // Then: The price is calculated correctly
         assertEq(price, expectedPrice);

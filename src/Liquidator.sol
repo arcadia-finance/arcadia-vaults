@@ -24,7 +24,7 @@ contract Liquidator is Owned {
     using FixedPointMathLib for uint256;
 
     uint16 public startPriceMultiplier; // Sets the begin price of the auction, defined as a percentage of opendebt, 2 decimals precision -> 150 = 150%
-    uint16 public minPriceMultiplier; // Sets the minimum price the auction converges to, defined as a percentage of opendebt, 2 decimals precision -> 60 = 60%
+    uint8 public minPriceMultiplier; // Sets the minimum price the auction converges to, defined as a percentage of opendebt, 2 decimals precision -> 60 = 60%
     uint64 public base; // Determines how fast (exponential decay) the aution price drops per second, 18 decimals precision
     uint16 public auctionCutoffTime; // Maximum time that the auction can run, in seconds, with 0 decimals precision
 
@@ -127,8 +127,8 @@ contract Liquidator is Owned {
      * as the open debt. Hence the auction starts at a multiplier of the opendebt, but decreases rapidly (exponential decay).
      */
     function setStartPriceMultiplier(uint16 startPriceMultiplier_) external onlyOwner {
-        require(startPriceMultiplier_ > 100, "LQ_SPM: multiplier too low");
-        require(startPriceMultiplier_ < 301, "LQ_SPM: multiplier too high");
+        require(startPriceMultiplier_ > 100, "LQ_SSPM: multiplier too low");
+        require(startPriceMultiplier_ < 301, "LQ_SSPM: multiplier too high");
         startPriceMultiplier = startPriceMultiplier_;
     }
 
@@ -140,8 +140,8 @@ contract Liquidator is Owned {
      * approach to price assets (eg. floorprices for NFTs), the actual value of the assets being auctioned might be substantially higher
      * as the open debt. Hence the auction starts at a multiplier of the opendebt, but decreases rapidly (exponential decay).
      */
-    function setMinimumPriceMultiplier(uint16 minPriceMultiplier_) external onlyOwner {
-        require(minPriceMultiplier_ < 90, "LQ_MPM: multiplier too high");
+    function setMinimumPriceMultiplier(uint8 minPriceMultiplier_) external onlyOwner {
+        require(minPriceMultiplier_ < 91, "LQ_SMPM: multiplier too high");
         minPriceMultiplier = minPriceMultiplier_;
     }
 
@@ -215,14 +215,14 @@ contract Liquidator is Owned {
      * t: time passed since start auction (in seconds, 18 decimals precision)
      */
     function _calcPriceOfVault(uint256 timePassed, uint256 openDebt) internal view returns (uint256 price) {
-        uint256 exponent;
+        uint256 auctionTime;
         unchecked {
-            exponent = timePassed * 1e18;
+            auctionTime = timePassed * 1e18;
         }
         //Multipliers have 2 decimals precision and LogExpMath.pow() has 18 decimals precision,
         //hence we need to divide the result by 1e20.
         price = openDebt
-            * ((startPriceMultiplier - minPriceMultiplier) * LogExpMath.pow(base, exponent) + minPriceMultiplier) / 1e20;
+            * ((startPriceMultiplier - minPriceMultiplier) * LogExpMath.pow(base, auctionTime) + minPriceMultiplier) / 1e20;
     }
 
     /**
