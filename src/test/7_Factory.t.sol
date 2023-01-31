@@ -24,6 +24,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         factory = new FactoryExtension();
         mainRegistry = new mainRegistryExtension(address(factory));
+        liquidator = new Liquidator(address(factory));
 
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
@@ -493,6 +494,7 @@ contract FactoryTest is DeployArcadiaVaults {
     ) public {
         vm.assume(logic != address(0));
         vm.assume(randomAssetAddress != address(0));
+        vm.assume(randomAssetAddress != address(eth));
         assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);

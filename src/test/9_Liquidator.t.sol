@@ -32,8 +32,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
         pool.setMaxInitiatorFee(type(uint80).max);
         liquidator.setAuctionCurveParameters(3_600, 14_400);
@@ -216,6 +215,19 @@ contract LiquidatorTest is DeployArcadiaVaults {
         // Given When Then: a owner attempts to set the max auction time, but it is not in the limits
         vm.startPrank(creatorAddress);
         vm.expectRevert("LQ_SACP: cutoff too low");
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
+        vm.stopPrank();
+    }
+
+    function testRevert_setAuctionCurveParameters_PowerFunctionReverts(uint8 halfLifeTime, uint16 cutoffTime) public {
+        // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(halfLifeTime > 2 * 60);
+        vm.assume(halfLifeTime < 15 * 60);
+        vm.assume(cutoffTime > 10 * 60 * 60);
+        vm.assume(cutoffTime < 18 * 60 * 60);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert();
         liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
         vm.stopPrank();
     }

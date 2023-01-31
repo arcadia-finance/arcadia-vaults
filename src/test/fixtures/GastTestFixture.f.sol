@@ -193,8 +193,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
         liquidator.setAuctionCurveParameters(3_600, 14_400);
 
