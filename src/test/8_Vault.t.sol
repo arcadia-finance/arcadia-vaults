@@ -1216,6 +1216,8 @@ contract AssetManagementTest is vaultTests {
 
         uint256[] memory assetTypes = new uint256[](arrLength);
 
+        (assetAddresses, assetIds, assetAmounts, assetTypes) = generateERC721DepositList(arrLength);
+
         vm.prank(vaultOwner);
         vm.expectRevert("V_D: Too many assets");
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
@@ -1253,9 +1255,40 @@ contract AssetManagementTest is vaultTests {
 
         assetTypes = new uint256[](arrLength);
 
+        (assetAddresses, assetIds, assetAmounts, assetTypes) = generateERC721DepositList(arrLength);
+
         vm.prank(vaultOwner);
         vm.expectRevert("V_D: Too many assets");
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+    }
+
+    function generateERC721DepositList(uint8 length)
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](length);
+
+        assetIds = new uint256[](length);
+
+        assetAmounts = new uint256[](length);
+
+        assetTypes = new uint256[](length);
+
+        uint256 id = 10;
+        for (uint256 i; i < length; ++i) {
+            vm.prank(tokenCreatorAddress);
+            bayc.mint(vaultOwner, id);
+            assetAddresses[i] = address(bayc);
+            assetIds[i] = id;
+            assetAmounts[i] = 1;
+            assetTypes[i] = 1;
+            ++id;
+        }
     }
 
     //input as uint8 to prevent too long lists as fuzz input
