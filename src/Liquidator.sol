@@ -143,6 +143,13 @@ contract Liquidator is Owned {
     function startAuction(address vault, uint256 openDebt, uint88 maxInitiatorFee) public {
         require(!auctionInformation[vault].inAuction, "LQ_SA: Auction already ongoing");
 
+        //A malicious msg.sender can pass a self created contract as vault (not an actual Arcadia-Vault) that returns true on liquidateVault().
+        //This would successfully start an auction, but as long as as no collision with an actual Arcadia-vault contract address is found, this is not an issue.
+        //The malicious non-vault would be in auction indefinately, but does not block any 'real' auctions of Arcadia-Vaults.
+        //One exception is if an attacker finds a pre-image of his custom contract with the same contract address of an Arcadia-Vault.
+        //The attacker could in theory: start auction of malicious contract, self-destruct and create Arcadia-vault with identical contract address.
+        //This Vault could never be auctioned since auctionInformation[vault].inAuction would return true.
+        //Finding such a collision requires finding a collision of the keccak256 hash function.
         (address originalOwner, address baseCurrency, address trustedCreditor) = IVault(vault).liquidateVault(openDebt);
 
         //Check that msg.sender is indeed the Creditor of the Vault

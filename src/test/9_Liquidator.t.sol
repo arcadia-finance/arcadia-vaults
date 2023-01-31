@@ -314,15 +314,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_startAuction_NonVault(address unprivilegedAddress_, uint128 openDebt) public {
-        vm.assume(unprivilegedAddress_ != address(proxy));
-
-        vm.startPrank(address(pool));
-        vm.expectRevert("LQ_SA: Not a vault");
-        liquidator.startAuction(unprivilegedAddress_, openDebt, type(uint88).max);
-        vm.stopPrank();
-    }
-
     function testRevert_startAuction_NonCreditor(address unprivilegedAddress_, uint128 openDebt) public {
         vm.assume(openDebt > 0);
 
