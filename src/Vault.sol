@@ -89,7 +89,11 @@ contract Vault {
         _;
     }
 
-    constructor() {}
+    constructor() {
+        // This will only be the owner of the vault logic implementation
+        // and will not affect any subsequent proxy implementation using this vault logic
+        owner = msg.sender;
+    }
 
     /* ///////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT
