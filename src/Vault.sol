@@ -121,11 +121,16 @@ contract Vault {
     }
 
     /**
-     * @notice Stores a new address in the EIP1967 implementation slot & updates the vault version.
+     * @notice Updates the vault version and stores a new address in the EIP1967 implementation slot.
      * @param newImplementation The contract with the new vault logic.
+     * @param newRegistry The MainRegistry for this specific implementation (might be identical as the old registry)
+     * @param data Arbitrary data, can contain instructions to execute on the new logic
      * @param newVersion The new version of the vault logic.
      */
-    function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
+    function upgradeVault(address newImplementation, address newRegistry, uint16 newVersion, bytes calldata data)
+        external
+        onlyFactory
+    {
         if (isTrustedCreditorSet) {
             //If a trustedCreditor is set, new version should be compatible.
             //openMarginAccount() is a view function, cannot modify state.
@@ -133,8 +138,18 @@ contract Vault {
             require(success, "V_UV: Invalid vault version");
         }
 
-        vaultVersion = newVersion;
+        //Cache old parameters
+        address oldImplementation = _getAddressSlot(_IMPLEMENTATION_SLOT).value;
+        address oldRegistry = registry;
+        uint16 oldVersion = vaultVersion;
         _getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
+        registry = newRegistry;
+        vaultVersion = newVersion;
+
+        //Hook on the new logic to finalize upgrade.
+        //Used to eg. Remove exposure from old Registry and Add exposure to the new Registry.
+        //Data can be added by the factory for complex instructions.
+        this.upgradeHook(oldImplementation, oldRegistry, oldVersion, data);
 
         emit Upgraded(newImplementation);
     }
@@ -147,6 +162,18 @@ contract Vault {
             r.slot := slot
         }
     }
+
+    /**
+     * @notice Finalizes the Upgrade to a new vault version on the new Logic Contract.
+     * @param oldImplementation The contract with the new old logic.
+     * @param oldRegistry The MainRegistry of the old version (might be identical as the new registry)
+     * @param oldVersion The old version of the vault logic.
+     * @param data Arbitrary data, can contain instructions to execute in thos function.
+     * @dev If upgradeHook() is implemented, it MUST be verified that msg.sender == address(this)
+     */
+    function upgradeHook(address oldImplementation, address oldRegistry, uint16 oldVersion, bytes calldata data)
+        external
+    {}
 
     /* ///////////////////////////////////////////////////////////////
                         OWNERSHIP MANAGEMENT

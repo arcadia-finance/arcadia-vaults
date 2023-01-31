@@ -223,7 +223,7 @@ contract ArcadiaVaultDeployer is Test {
         );
 
         vault = new Vault(address(mainRegistry), 1);
-        factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1);
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1, "");
 
         vm.stopBroadcast();
     }

@@ -89,7 +89,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
 
     function deployFactory() internal {
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vault_), Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(mainRegistry), address(vault_), Constants.upgradeProof1To2, "");
         vm.stopPrank();
 
         stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault_)).checked_write(true);
@@ -293,7 +293,12 @@ contract VaultManagementTest is vaultTests {
         assertEq(vault_.baseCurrency(), address(0));
     }
 
-    function testSuccess_upgradeVault(address newImplementation, uint16 newVersion) public {
+    function testSuccess_upgradeVault(
+        address newImplementation,
+        address newRegistry,
+        uint16 newVersion,
+        bytes calldata data
+    ) public {
         //TrustedCreditor is set
         vm.prank(vaultOwner);
         vault_.openTrustedMarginAccount(address(pool));
@@ -302,25 +307,34 @@ contract VaultManagementTest is vaultTests {
         pool.setVaultVersion(newVersion, true);
 
         vm.prank(address(factory));
-        vault_.upgradeVault(newImplementation, newVersion);
+        vault_.upgradeVault(newImplementation, newRegistry, newVersion, data);
 
         uint16 expectedVersion = vault_.vaultVersion();
 
         assertEq(expectedVersion, newVersion);
     }
 
-    function testRevert_upgradeVault_byNonOwner(address newImplementation, uint16 newVersion, address nonOwner)
-        public
-    {
+    function testRevert_upgradeVault_byNonOwner(
+        address newImplementation,
+        address newRegistry,
+        uint16 newVersion,
+        address nonOwner,
+        bytes calldata data
+    ) public {
         vm.assume(nonOwner != address(factory));
 
         vm.startPrank(nonOwner);
         vm.expectRevert("V: Only Factory");
-        vault_.upgradeVault(newImplementation, newVersion);
+        vault_.upgradeVault(newImplementation, newRegistry, newVersion, data);
         vm.stopPrank();
     }
 
-    function testRevert_upgradeVault_InvalidVaultVersion(address newImplementation, uint16 newVersion) public {
+    function testRevert_upgradeVault_InvalidVaultVersion(
+        address newImplementation,
+        address newRegistry,
+        uint16 newVersion,
+        bytes calldata data
+    ) public {
         vm.assume(newVersion != 1);
 
         //TrustedCreditor is set
@@ -329,7 +343,7 @@ contract VaultManagementTest is vaultTests {
 
         vm.startPrank(address(factory));
         vm.expectRevert("V_UV: Invalid vault version");
-        vault_.upgradeVault(newImplementation, newVersion);
+        vault_.upgradeVault(newImplementation, newRegistry, newVersion, data);
         vm.stopPrank();
     }
 }
@@ -889,7 +903,7 @@ contract VaultActionTest is vaultTests {
 
         vm.startPrank(creatorAddress);
         vault = new VaultTestExtension(address(mainRegistry), 1);
-        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2, "");
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);

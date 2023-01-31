@@ -27,7 +27,8 @@ interface IVault {
      * @param newImplementation The contract with the new vault logic.
      * @param newVersion The new version of the vault logic.
      */
-    function upgradeVault(address newImplementation, uint16 newVersion) external;
+    function upgradeVault(address newImplementation, address newRegistry, uint16 newVersion, bytes calldata data)
+        external;
 
     /**
      * @notice Transfers ownership of the contract to a new account.

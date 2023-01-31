@@ -21,6 +21,7 @@ contract Factory is ERC721, FactoryGuardian {
         address registry;
         address logic;
         bytes32 versionRoot;
+        bytes data;
     }
 
     mapping(uint256 => bool) public vaultVersionBlocked;
@@ -104,9 +105,9 @@ contract Factory is ERC721, FactoryGuardian {
 
         require(canUpgrade, "FTR_UVV: Version not allowed");
 
-        address newImplementation = vaultDetails[version].logic;
-        //TODO: add registry update to the vault
-        IVault(vault).upgradeVault(newImplementation, version);
+        IVault(vault).upgradeVault(
+            vaultDetails[version].logic, vaultDetails[version].registry, version, vaultDetails[version].data
+        );
     }
 
     /**
@@ -184,13 +185,12 @@ contract Factory is ERC721, FactoryGuardian {
      * @param logic The contract address of the Vault logic
      * @param versionRoot The root of the merkle tree of all the compatible vault versions
      */
-    function setNewVaultInfo(address registry, address logic, bytes32 versionRoot) external onlyOwner {
+    function setNewVaultInfo(address registry, address logic, bytes32 versionRoot, bytes calldata data)
+        external
+        onlyOwner
+    {
         require(versionRoot != bytes32(0), "FTRY_SNVI: version root is zero");
         require(logic != address(0), "FTRY_SNVI: logic address is zero");
-
-        vaultDetails[latestVaultVersion + 1].registry = registry;
-        vaultDetails[latestVaultVersion + 1].logic = logic;
-        vaultDetails[latestVaultVersion + 1].versionRoot = versionRoot;
 
         //If there is a new Main Registry Contract, Check that baseCurrencies in factory and main registry match
         if (vaultDetails[latestVaultVersion].registry != registry && latestVaultVersion != 0) {
@@ -212,6 +212,11 @@ contract Factory is ERC721, FactoryGuardian {
         unchecked {
             ++latestVaultVersion;
         }
+
+        vaultDetails[latestVaultVersion].registry = registry;
+        vaultDetails[latestVaultVersion].logic = logic;
+        vaultDetails[latestVaultVersion].versionRoot = versionRoot;
+        vaultDetails[latestVaultVersion].data = data;
     }
 
     /**
@@ -259,14 +264,6 @@ contract Factory is ERC721, FactoryGuardian {
      */
     function allVaultsLength() external view returns (uint256 numberOfVaults) {
         numberOfVaults = allVaults.length;
-    }
-
-    /**
-     * @notice Returns address of the most recent Main Registry
-     * @return registry The contract addres of the Main Registry of the latest Vault Version
-     */
-    function getCurrentRegistry() external view returns (address registry) {
-        registry = vaultDetails[latestVaultVersion].registry;
     }
 
     /*///////////////////////////////////////////////////////////////

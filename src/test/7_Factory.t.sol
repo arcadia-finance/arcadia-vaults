@@ -26,7 +26,7 @@ contract FactoryTest is DeployArcadiaVaults {
         mainRegistry = new mainRegistryExtension(address(factory));
         liquidator = new Liquidator(address(factory));
 
-        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
     }
 
@@ -111,7 +111,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(vaultVersion <= versionsToMake + 1);
         for (uint256 i; i < versionsToMake; ++i) {
             vm.prank(creatorAddress);
-            factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
+            factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeRoot1To2, "");
         }
 
         for (uint256 y; y < versionsToBlock.length; ++y) {
@@ -440,14 +440,14 @@ contract FactoryTest is DeployArcadiaVaults {
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("UNAUTHORIZED");
-        factory.setNewVaultInfo(address(mainRegistry), address(proxyAddr), Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(mainRegistry), address(proxyAddr), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
     }
 
     function testRevert_setNewVaultInfo_VersionRootIsZero(address mainRegistry_, address logic) public {
         vm.startPrank(creatorAddress);
         vm.expectRevert("FTRY_SNVI: version root is zero");
-        factory.setNewVaultInfo(mainRegistry_, logic, bytes32(0));
+        factory.setNewVaultInfo(mainRegistry_, logic, bytes32(0), "");
         vm.stopPrank();
     }
 
@@ -456,7 +456,7 @@ contract FactoryTest is DeployArcadiaVaults {
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("FTRY_SNVI: logic address is zero");
-        factory.setNewVaultInfo(mainRegistry_, address(0), versionRoot);
+        factory.setNewVaultInfo(mainRegistry_, address(0), versionRoot, "");
         vm.stopPrank();
     }
 
@@ -480,7 +480,7 @@ contract FactoryTest is DeployArcadiaVaults {
 
         mainRegistry2 = new mainRegistryExtension(address(factory));
         vm.expectRevert("FTRY_SNVI: counter mismatch");
-        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2, "");
         vm.stopPrank();
     }
 
@@ -516,56 +516,35 @@ contract FactoryTest is DeployArcadiaVaults {
             })
         );
         vm.expectRevert("FTRY_SNVI: no baseCurrency match");
-        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2, "");
         vm.stopPrank();
     }
 
-    function testSuccess_setNewVaultInfo_OwnerSetsVaultInfoForFirstTime(address mainRegistry_, address logic) public {
+    function testSuccess_setNewVaultInfo(address mainRegistry_, address logic, bytes calldata data) public {
         vm.assume(logic != address(0));
-
-        uint256 latestVaultVersionPre = factory.latestVaultVersion();
 
         vm.prank(creatorAddress);
         factory = new FactoryExtension();
         assertTrue(factory.getVaultVersionRoot() == bytes32(0));
 
-        vm.prank(creatorAddress);
-        factory.setNewVaultInfo(mainRegistry_, logic, Constants.upgradeProof1To2);
-        assertTrue(factory.getVaultVersionRoot() == bytes32(0));
-        assertEq(factory.latestVaultVersion(), ++latestVaultVersionPre);
-    }
-
-    function testSuccess_setNewVaultInfo_OwnerSetsNewVaultInfoWithIdenticalMainRegistry(address logic) public {
-        vm.assume(logic != address(0));
-
-        uint256 latestVaultVersionPre = factory.latestVaultVersion();
-
-        assertTrue(!factory.newVaultInfoSet());
-        vm.prank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), logic, Constants.upgradeProof1To2);
-
-        assertEq(factory.latestVaultVersion(), ++latestVaultVersionPre);
-    }
-
-    function testSuccess_setNewVaultInfo_OwnerSetsNewVaultInfoSecondTimeWithIdenticalMainRegistry(address logic)
-        public
-    {
-        vm.assume(logic != address(0));
-
         uint256 latestVaultVersionPre = factory.latestVaultVersion();
 
         vm.prank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(mainRegistry_, logic, Constants.upgradeRoot1To2, data);
 
-        vm.prank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), logic, Constants.upgradeProof1To2);
-
-        assertEq(factory.latestVaultVersion(), ++latestVaultVersionPre);
+        (address registry_, address addresslogic_, bytes32 root, bytes memory data_) =
+            factory.vaultDetails(latestVaultVersionPre + 1);
+        assertEq(registry_, mainRegistry_);
+        assertEq(addresslogic_, logic);
+        assertEq(root, Constants.upgradeRoot1To2);
+        assertEq(data_, data);
+        assertEq(factory.latestVaultVersion(), latestVaultVersionPre + 1);
     }
 
     function testSuccess_setNewVaultInfo_OwnerSetsNewVaultWithIdenticalBaseCurrenciesInMainRegistry(
         address newAssetAddress,
-        address logic
+        address logic,
+        bytes calldata data
     ) public {
         vm.assume(logic != address(0));
         vm.assume(newAssetAddress != address(0));
@@ -593,7 +572,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             })
         );
-        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2, data);
         vm.stopPrank();
 
         assertEq(factory.latestVaultVersion(), ++latestVaultVersionPre);
@@ -601,7 +580,8 @@ contract FactoryTest is DeployArcadiaVaults {
 
     function testSuccess_setNewVaultInfo_OwnerSetsNewVaultWithMoreBaseCurrenciesInMainRegistry(
         address newAssetAddress,
-        address logic
+        address logic,
+        bytes calldata data
     ) public {
         vm.assume(logic != address(0));
         vm.assume(newAssetAddress != address(0));
@@ -619,7 +599,7 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             })
         );
-        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2, data);
         vm.stopPrank();
 
         assertEq(factory.latestVaultVersion(), ++latestVaultVersionPre);
@@ -714,13 +694,6 @@ contract FactoryTest is DeployArcadiaVaults {
 
     function testSuccess_allVaultsLength_VaultIdStartFromZero() public {
         assertEq(factory.allVaultsLength(), 0);
-    }
-
-    function testSuccess_getCurrentRegistry() public {
-        address expectedRegistry = factory.getCurrentRegistry();
-        address actualRegistry = address(mainRegistry);
-
-        assertEq(expectedRegistry, actualRegistry);
     }
 
     /* ///////////////////////////////////////////////////////////////
