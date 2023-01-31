@@ -91,12 +91,11 @@ contract VaultV2Test is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_confirmNewVaultInfo(uint256 salt) public {
+    function testSuccess_getVaultVersionRoot(uint256 salt) public {
         vm.assume(salt > 0);
 
         vm.startPrank(creatorAddress);
         factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
         vm.stopPrank();
 
         assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
@@ -122,7 +121,6 @@ contract VaultV2Test is DeployArcadiaVaults {
 
         vm.startPrank(creatorAddress);
         factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
@@ -157,7 +155,6 @@ contract VaultV2Test is DeployArcadiaVaults {
 
         vm.startPrank(creatorAddress);
         factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
@@ -185,7 +182,6 @@ contract VaultV2Test is DeployArcadiaVaults {
 
         vm.startPrank(creatorAddress);
         factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);

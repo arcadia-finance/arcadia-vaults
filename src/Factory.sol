@@ -27,7 +27,6 @@ contract Factory is ERC721, FactoryGuardian {
     mapping(address => uint256) public vaultIndex;
     mapping(uint256 => vaultVersionInfo) public vaultDetails;
 
-    bool public newVaultInfoSet;
     uint16 public latestVaultVersion;
     string public baseURI;
 
@@ -177,8 +176,7 @@ contract Factory is ERC721, FactoryGuardian {
 
     /**
      * @notice Function to set new contracts to be used for new deployed vaults
-     * @dev Two step function to confirm new logic to be used for newly deployed vaults.
-     * Changing any of the contracts does NOT change the contracts for existing deployed vaults,
+     * @dev Changing any of the contracts does NOT change the contracts for existing deployed vaults,
      * unless the vault owner explicitly chooses to upgrade their vault to a newer version
      * If a new Main Registry contract is set, all the BaseCurrencies currently stored in the Factory
      * are checked against the new Main Registry contract. If they do not match, the function reverts.
@@ -193,7 +191,6 @@ contract Factory is ERC721, FactoryGuardian {
         vaultDetails[latestVaultVersion + 1].registry = registry;
         vaultDetails[latestVaultVersion + 1].logic = logic;
         vaultDetails[latestVaultVersion + 1].versionRoot = versionRoot;
-        newVaultInfoSet = true;
 
         //If there is a new Main Registry Contract, Check that baseCurrencies in factory and main registry match
         if (vaultDetails[latestVaultVersion].registry != registry && latestVaultVersion != 0) {
@@ -211,23 +208,9 @@ contract Factory is ERC721, FactoryGuardian {
                 }
             }
         }
-    }
 
-    /**
-     * @notice Function confirms the new contracts to be used for new deployed vaults
-     * @dev Two step function to confirm new logic to be used for new deployed vaults.
-     * Changing any of the contracts does NOT change the contracts for already deployed vaults,
-     * unless the vault owner explicitly chooses to upgrade their vault version to a newer version
-     * ToDo Add a time lock between setting a new vault version, and confirming a new vault version
-     * If no new vault info is being set (newVaultInfoSet is false), this function will not do anything
-     * The variable factoryInitialised is set to true as soon as one vault version is confirmed
-     */
-    function confirmNewVaultInfo() public onlyOwner {
-        if (newVaultInfoSet) {
-            unchecked {
-                ++latestVaultVersion;
-            }
-            newVaultInfoSet = false;
+        unchecked {
+            ++latestVaultVersion;
         }
     }
 

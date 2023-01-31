@@ -90,7 +90,6 @@ abstract contract vaultTests is DeployArcadiaVaults {
     function deployFactory() internal {
         vm.startPrank(creatorAddress);
         factory.setNewVaultInfo(address(mainRegistry), address(vault_), Constants.upgradeProof1To2);
-        factory.confirmNewVaultInfo();
         vm.stopPrank();
 
         stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault_)).checked_write(true);
@@ -891,7 +890,6 @@ contract VaultActionTest is vaultTests {
         vm.startPrank(creatorAddress);
         vault = new VaultTestExtension(address(mainRegistry), 1);
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
-        factory.confirmNewVaultInfo();
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
