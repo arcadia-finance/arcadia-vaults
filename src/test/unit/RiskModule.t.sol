@@ -9,11 +9,9 @@ pragma solidity >=0.4.22 <0.9.0;
 import "../../../lib/forge-std/src/Test.sol";
 import {RiskModule} from "../../RiskModule.sol";
 import {RiskConstants} from "../../utils/RiskConstants.sol";
-import {FixedPointMathLib} from "../../utils/FixedPointMathLib.sol";
 
 contract RiskModuleTest is Test {
     using stdStorage for StdStorage;
-    using FixedPointMathLib for uint256;
 
     constructor() {}
 

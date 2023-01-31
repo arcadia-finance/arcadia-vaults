@@ -133,6 +133,10 @@ contract VaultV2Test is DeployArcadiaVaults {
         bytes32[] memory proofs = new bytes32[](1);
         proofs[0] = Constants.upgradeProof1To2;
 
+        vm.startPrank(creatorAddress);
+        pool.setVaultVersion(factory.latestVaultVersion(), true);
+        vm.stopPrank();
+
         vm.startPrank(vaultOwner);
         factory.upgradeVaultVersion(address(proxy), factory.latestVaultVersion(), proofs);
         vm.stopPrank();
@@ -165,12 +169,12 @@ contract VaultV2Test is DeployArcadiaVaults {
         proofs[0] = Constants.upgradeProof1To2;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("FTR_UVV: Cannot upgrade to this version");
+        vm.expectRevert("FTR_UVV: Version not allowed");
         factory.upgradeVaultVersion(address(proxy), 0, proofs);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("FTR_UVV: Cannot upgrade to this version");
+        vm.expectRevert("FTR_UVV: Version not allowed");
         factory.upgradeVaultVersion(address(proxy), 3, proofs);
         vm.stopPrank();
 
@@ -193,7 +197,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         proofs[0] = Constants.upgradeProof1To2;
 
         vm.startPrank(sender);
-        vm.expectRevert("FTRY_UVV: You are not the owner");
+        vm.expectRevert("FTRY_UVV: Only Owner");
         factory.upgradeVaultVersion(address(proxy), 2, proofs);
         vm.stopPrank();
     }
@@ -273,7 +277,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         uint256 tokenIdToWorkWith;
         for (uint256 i; i < tokenIds.length; ++i) {
             tokenIdToWorkWith = tokenIds[i];
-            while (token.ownerOf(tokenIdToWorkWith) != address(0)) {
+            while (token.getOwnerOf(tokenIdToWorkWith) != address(0)) {
                 tokenIdToWorkWith++;
             }
 

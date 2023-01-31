@@ -9,28 +9,26 @@ pragma solidity >=0.4.22 <0.9.0;
 import {IChainLinkData} from "./interfaces/IChainLinkData.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 import {IPricingModule} from "./interfaces/IPricingModule.sol";
-import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 import {RiskModule} from "./RiskModule.sol";
 import {MainRegistryGuardian} from "./security/MainRegistryGuardian.sol";
 
 /**
  * @title Main Asset registry
  * @author Arcadia Finance
- * @notice The Main-registry stores basic information for each token that can, or could at some point, be deposited in the vaults
- * @dev No end-user should directly interact with the Main-registry, only vaults, Sub-Registries or the contract owner
+ * @notice The Main Registry stores basic information for each token that can, or could at some point, be deposited in the vaults
+ * @dev No end-user should directly interact with the Main Registry, only vaults, Pricing Modules or the contract owner
  */
 contract MainRegistry is MainRegistryGuardian {
     using FixedPointMathLib for uint256;
 
     address immutable _this;
 
-    bool public assetsUpdatable = true;
-
     uint256 public baseCurrencyCounter;
 
-    address public factoryAddress;
+    address public immutable factory;
 
-    address[] private pricingModules;
+    address[] public pricingModules;
     address[] public assetsInMainRegistry;
     address[] public baseCurrencies;
 
@@ -44,58 +42,54 @@ contract MainRegistry is MainRegistryGuardian {
     mapping(address => bool) public isActionAllowed;
 
     struct BaseCurrencyInformation {
-        uint64 baseCurrencyToUsdOracleUnit;
         uint64 baseCurrencyUnitCorrection;
         address assetAddress;
+        uint64 baseCurrencyToUsdOracleUnit;
         address baseCurrencyToUsdOracle;
-        string baseCurrencyLabel;
+        bytes8 baseCurrencyLabel;
     }
-
-    event ActionAllowed(address action, bool allowed);
-    event BaseCurrencyAdded(uint256 baseCurrencyId, address assetAddress);
-    event PricingModuleAdded(address subAssetRegistryAddress);
-    event AssetUpdatabilityDisabled();
 
     /**
-     * @dev Only Sub-registries can call functions marked by this modifier.
-     *
+     * @dev Only Pricing Modules can call functions mwith this modifier.
      */
     modifier onlyPricingModule() {
-        require(isPricingModule[msg.sender], "Caller is not a Price Module.");
+        require(isPricingModule[msg.sender], "MR: Only PriceMod.");
         _;
     }
 
+    /**
+     * @dev Only Vaults can call functions with this modifier.
+     * @dev Cannot be called via delegatecalls.
+     */
     modifier onlyVault() {
-        require(IFactory(factoryAddress).isVault(msg.sender), "Caller is not a Vault.");
-        _;
-    }
-
-    modifier noDelegate() {
-        require(address(this) == _this, "Delegate calls not allowed.");
+        require(IFactory(factory).isVault(msg.sender), "MR: Only Vaults.");
+        require(address(this) == _this, "MR: No delegate.");
         _;
     }
 
     /**
      * @notice The Main Registry must always be initialised with the BaseCurrency USD
-     * @dev Since the BaseCurrency USD has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
-     * @param baseCurrencyInformation A Struct with information about the BaseCurrency USD
+     * @param factory_ The factory address
+     * @dev The mainRegistry must be initialised with baseCurrency USD, at baseCurrencyCounter of 0
+     * Usd is initialised with the following BaseCurrencyInformation.
      * - baseCurrencyToUsdOracleUnit: Since there is no price oracle for usd to USD, this is 0 by default for USD
-     * - baseCurrencyUnit: Since there is no native token for USD, this is 0 by default for USD
+     * - baseCurrencyUnitCorrection: We use 18 decimals precision for USD, so Unitcorrection is 1 for USD
      * - assetAddress: Since there is no native token for usd, this is 0 address by default for USD
      * - baseCurrencyToUsdOracle: Since there is no price oracle for usd to USD, this is 0 address by default for USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
      */
-    constructor(BaseCurrencyInformation memory baseCurrencyInformation) {
+    constructor(address factory_) {
         _this = address(this);
-        //Main registry must be initialised with usd
-        baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
-        assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
-        isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
-        baseCurrencies.push(baseCurrencyInformation.assetAddress);
+        factory = factory_;
 
-        unchecked {
-            ++baseCurrencyCounter;
-        }
+        //Main Registry must be initialised with usd, other values of baseCurrencyToInformation[0] are 0 or the zero-address.
+        baseCurrencyToInformation[0].baseCurrencyLabel = "USD";
+        baseCurrencyToInformation[0].baseCurrencyUnitCorrection = 1;
+
+        //Usd is the first baseCurrency at index 0 of array baseCurrencies
+        isBaseCurrency[address(0)] = true;
+        baseCurrencies.push(address(0));
+        baseCurrencyCounter = 1;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -103,22 +97,13 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Sets the Factory address
-     * @param _factoryAddress The address of the Factory
-     */
-    function setFactory(address _factoryAddress) external onlyOwner {
-        factoryAddress = _factoryAddress;
-    }
-
-    /**
      * @notice Sets an allowed action handler
      * @param action The address of the action handler
      * @param allowed Bool to indicate its status
      * @dev Can only be called by owner.
      */
-    function setAllowedAction(address action, bool allowed) public onlyOwner {
+    function setAllowedAction(address action, bool allowed) external onlyOwner {
         isActionAllowed[action] = allowed;
-        emit ActionAllowed(action, allowed);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -126,21 +111,24 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Add a new baseCurrency (a unit in which price is measured, like USD or ETH) to the Main Registry, or overwrite an existing one
+     * @notice Add a new baseCurrency (a unit in which price is measured, like USD or ETH) to the Main Registry
      * @param baseCurrencyInformation A Struct with information about the BaseCurrency
      * - baseCurrencyToUsdOracleUnit: The unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
-     * - baseCurrencyUnit: The unit of the baseCurrency, equal to 10 to the power of the number of decimals of the baseCurrency
+     * - baseCurrencyUnitCorrection: The unit correction needed to get the baseCurrency to 1e18 units
      * - assetAddress: The contract address of the baseCurrency,
      * - baseCurrencyToUsdOracle: The contract address of the price oracle of the baseCurrency in USD
      * - baseCurrencyLabel: The symbol of the baseCurrency (only used for readability purpose)
-     * @dev If the BaseCurrency has no native token, baseCurrencyDecimals should be set to 0 and assetAddress to the null address.
+     * @dev If the BaseCurrency has no native token, baseCurrencyDecimals is 0 and assetAddress the null address.
      * Tokens pegged to the native token do not count as native tokens
      * - USDC is not a native token for USD as BaseCurrency
      * - WETH is a native token for ETH as BaseCurrency
      * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be set through the pricing modules!
      * @dev Risk variable have 2 decimals precision
+     * @dev A baseCurrency cannot be added twice, as that would result in the ability to overwrite the baseCurrencyToUsdOracle
      */
     function addBaseCurrency(BaseCurrencyInformation calldata baseCurrencyInformation) external onlyOwner {
+        require(!isBaseCurrency[baseCurrencyInformation.assetAddress], "MR_ABC: BaseCurrency exists");
+
         baseCurrencyToInformation[baseCurrencyCounter] = baseCurrencyInformation;
         assetToBaseCurrency[baseCurrencyInformation.assetAddress] = baseCurrencyCounter;
         isBaseCurrency[baseCurrencyInformation.assetAddress] = true;
@@ -149,7 +137,6 @@ contract MainRegistry is MainRegistryGuardian {
         unchecked {
             ++baseCurrencyCounter;
         }
-        emit BaseCurrencyAdded(baseCurrencyCounter, baseCurrencyInformation.assetAddress);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -157,14 +144,13 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Add a Sub-registry Address to the list of Sub-Registries
-     * @param subAssetRegistryAddress Address of the Sub-Registry
+     * @notice Add a Pricing Module Address to the list of Pricing Modules
+     * @param pricingModule Address of the Pricing Module
      */
-    function addPricingModule(address subAssetRegistryAddress) external onlyOwner {
-        require(!isPricingModule[subAssetRegistryAddress], "MR_APM: PriceMod. not unique");
-        isPricingModule[subAssetRegistryAddress] = true;
-        pricingModules.push(subAssetRegistryAddress);
-        emit PricingModuleAdded(subAssetRegistryAddress);
+    function addPricingModule(address pricingModule) external onlyOwner {
+        require(!isPricingModule[pricingModule], "MR_APM: PriceMod. not unique");
+        isPricingModule[pricingModule] = true;
+        pricingModules.push(pricingModule);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -172,39 +158,17 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Disables the updatability of assets. In the disabled states, asset properties become immutable
-     *
-     */
-    function setAssetsToNonUpdatable() external onlyOwner {
-        assetsUpdatable = false;
-        emit AssetUpdatabilityDisabled();
-    }
-
-    /**
-     * @notice Add a new asset to the Main Registry, or overwrite an existing one (if assetsUpdatable is True)
+     * @notice Add a new asset to the Main Registry
      * @param assetAddress The address of the asset
-     * @dev The list of Risk Variables (Collateral Factor and Liquidation Threshold) should either be as long as
-     * the number of assets added to the Main Registry,or the list must have length 0.
-     * If the list has length zero, the risk variables of the baseCurrency for all assets
-     * is initiated as default (safest lowest rating).
-     * @dev Risk variable are variables with 2 decimals precision
-     * @dev By overwriting existing assets, the contract owner can temper with the value of assets already used as collateral
-     * (for instance by changing the oracle address to a fake price feed) and poses a security risk towards protocol users.
-     * This risk can be mitigated by setting the boolean "assetsUpdatable" in the MainRegistry to false, after which
-     * assets are no longer updatable.
+     * @dev Assets that are already present in the mainreg cannot be updated,
+     * as that would make it possible for devs to change the asset pricing.
      */
-    event AssetAdded(address assetAddress);
+    function addAsset(address assetAddress) external onlyPricingModule {
+        require(!inMainRegistry[assetAddress], "MR_AA: Asset already in mainreg");
 
-    function addAsset(address assetAddress) external onlyPricingModule returns (bool) {
-        if (inMainRegistry[assetAddress]) {
-            require(assetsUpdatable, "MR_AA: Asset not updatable");
-        } else {
-            inMainRegistry[assetAddress] = true;
-            assetsInMainRegistry.push(assetAddress);
-        }
+        inMainRegistry[assetAddress] = true;
+        assetsInMainRegistry.push(assetAddress);
         assetToPricingModule[assetAddress] = msg.sender;
-        emit AssetAdded(assetAddress);
-        return true;
     }
 
     /**
@@ -213,13 +177,13 @@ contract MainRegistry is MainRegistryGuardian {
      * @param assetIds An array of asset ids
      * @param amounts An array of amounts to be deposited
      * @dev processDeposit in the pricing module checks whether
-     *    it's allowlisted and updates the maxExposure
+     *    it's allowlisted and updates the exposure
      */
     function batchProcessDeposit(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) public whenDepositNotPaused onlyVault noDelegate {
+    ) external whenDepositNotPaused onlyVault {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
@@ -240,13 +204,12 @@ contract MainRegistry is MainRegistryGuardian {
      * @notice Batch withdrawal multiple assets
      * @param assetAddresses An array of addresses of the assets
      * @param amounts An array of amounts to be withdrawn
-     * @dev batchProcessWithdrawal in the pricing module updates the maxExposure
+     * @dev batchProcessWithdrawal in the pricing module updates the exposure
      */
     function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
-        public
+        external
         whenWithdrawNotPaused
         onlyVault
-        noDelegate
     {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
@@ -268,96 +231,6 @@ contract MainRegistry is MainRegistryGuardian {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
-     * @param assetAddresses The List of token addresses of the assets
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency The contract address of the BaseCurrency
-     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
-     */
-    function getTotalValue(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        address baseCurrency
-    ) public view returns (uint256 valueInBaseCurrency) {
-        valueInBaseCurrency = getTotalValue(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
-    }
-
-    /**
-     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
-     * @param assetAddresses The List of token addresses of the assets
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @dev For each token address, a corresponding id at the same index should be present,
-     * for tokens without Id (ERC20 for instance), the Id should be set to 0
-     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An identifier (uint256) of the BaseCurrency
-     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
-     * @dev ToDo: value sum unchecked. Cannot overflow on 1e18 decimals
-     */
-    function getTotalValue(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        uint256 baseCurrency
-    ) public view returns (uint256 valueInBaseCurrency) {
-        uint256 valueInUsd;
-
-        require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
-
-        uint256 assetAddressesLength = assetAddresses.length;
-        require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
-            "MR_GTV: LENGTH_MISMATCH"
-        );
-        IPricingModule.GetValueInput memory getValueInput;
-        getValueInput.baseCurrency = baseCurrency;
-
-        address assetAddress;
-        uint256 tempValueInUsd;
-        uint256 tempValueInBaseCurrency;
-        for (uint256 i; i < assetAddressesLength;) {
-            assetAddress = assetAddresses[i];
-            require(inMainRegistry[assetAddress], "MR_GTV: Unknown asset");
-
-            getValueInput.assetAddress = assetAddress;
-            getValueInput.assetId = assetIds[i];
-            getValueInput.assetAmount = assetAmounts[i];
-
-            if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
-                //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
-                valueInBaseCurrency = valueInBaseCurrency
-                    + assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //assetAmounts can have a variable decimal precision -> bring to 18 decimals
-            } else {
-                //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
-                (tempValueInUsd, tempValueInBaseCurrency,,) =
-                    IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
-                valueInUsd = valueInUsd + tempValueInUsd;
-                valueInBaseCurrency = valueInBaseCurrency + tempValueInBaseCurrency;
-            }
-            unchecked {
-                ++i;
-            }
-        }
-        //Check if baseCurrency is USD
-        if (baseCurrency == 0) {
-            //Bring from internal 18 decimals to the number of decimals of baseCurrency
-            return valueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-        } else if (valueInUsd > 0) {
-            //Get the BaseCurrency-USD rate
-            (, int256 rate,,,) =
-                IChainLinkData(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle).latestRoundData();
-            //Add valueInUsd to valueInBaseCurrency
-            valueInBaseCurrency = valueInBaseCurrency
-                + valueInUsd.mulDivDown(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit, uint256(rate));
-        }
-        //Bring from internal 18 decimals to the number of decimals of baseCurrency
-        return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-    }
-
-    /**
      * @notice Calculate the value per asset of a list of assets denominated in a given BaseCurrency
      * @param assetAddresses The List of token addresses of the assets
      * @param assetIds The list of corresponding token Ids that needs to be checked
@@ -372,7 +245,7 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset) {
+    ) external view returns (RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset) {
         valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
@@ -386,6 +259,10 @@ contract MainRegistry is MainRegistryGuardian {
      * @param assetAmounts The list of corresponding amounts of each Token-Id combination
      * @param baseCurrency An identifier (uint256) of the BaseCurrency
      * @return valuesAndRiskVarPerAsset The list of values per assets denominated in BaseCurrency
+     * @dev No checks of input parameters necessary, all generated by the Vault.
+     * Additionally, unknown assetAddresses cause IPricingModule(assetAddresses) to revert,
+     * Unknown baseCurrency will cause IChainLinkData(baseCurrency) to revert.
+     * Non-equal lists will or or revert, or not take all assets into account -> lower value as actual.
      */
     function getListOfValuesPerAsset(
         address[] calldata assetAddresses,
@@ -393,61 +270,74 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetAmounts,
         uint256 baseCurrency
     ) public view returns (RiskModule.AssetValueAndRiskVariables[] memory) {
-        require(baseCurrency <= baseCurrencyCounter - 1, "MR_GLV: Unknown BaseCurrency");
-
+        //Cache Output array
         uint256 assetAddressesLength = assetAddresses.length;
-        require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
-            "MR_GLV: LENGTH_MISMATCH"
-        );
-        IPricingModule.GetValueInput memory getValueInput;
-        getValueInput.baseCurrency = baseCurrency;
-
-        int256 rateBaseCurrencyToUsd;
-        address assetAddress;
-        uint256 tempValueInUsd;
-        uint256 tempValueInBaseCurrency;
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             new RiskModule.AssetValueAndRiskVariables[](assetAddressesLength);
+
+        //Cache variables
+        IPricingModule.GetValueInput memory getValueInput;
+        getValueInput.baseCurrency = baseCurrency;
+        int256 rateBaseCurrencyToUsd;
+        address assetAddress;
+        uint256 valueInUsd;
+        uint256 valueInBaseCurrency;
+
+        //Loop over all assets
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
-            require(inMainRegistry[assetAddress], "MR_GLV: Unknown asset");
 
-            getValueInput.assetAddress = assetAddress;
-            getValueInput.assetId = assetIds[i];
-            getValueInput.assetAmount = assetAmounts[i];
-
+            //If the asset is identical to the basecurrency, we do not need to get a rate
+            //We only need to fetch the risk variables from the PricingModule
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
-                //Should only be allowed if the baseCurrency is ETH, not for stablecoins or wrapped tokens
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency = assetAmounts[i];
+                (valuesAndRiskVarPerAsset[i].collateralFactor, valuesAndRiskVarPerAsset[i].liquidationFactor) =
+                    IPricingModule(assetToPricingModule[assetAddress]).getRiskVariables(assetAddress, baseCurrency);
+
+                //Else we need to fetch the value in the assets' PricingModule
             } else {
+                //Prepare input
+                getValueInput.assetAddress = assetAddress;
+                getValueInput.assetId = assetIds[i];
+                getValueInput.assetAmount = assetAmounts[i];
+
+                //Fetch the Value and the risk variables in the PricingModule
                 (
-                    tempValueInUsd,
-                    tempValueInBaseCurrency,
+                    valueInUsd,
+                    valueInBaseCurrency,
                     valuesAndRiskVarPerAsset[i].collateralFactor,
                     valuesAndRiskVarPerAsset[i].liquidationFactor
                 ) = IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
-                //Check if baseCurrency is USD
+
+                //If the baseCurrency is USD (identifier 0), IPricingModule().getValue will always return the value in USD (valueInBaseCurrency = 0).
                 if (baseCurrency == 0) {
-                    //Bring from internal 18 decimals to the number of decimals of baseCurrency
-                    valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
-                        tempValueInUsd / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-                } else if (tempValueInBaseCurrency > 0) {
-                    //Bring from internal 18 decimals to the number of decimals of baseCurrency
-                    valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
-                        tempValueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                    //USD has hardcoded precision of 18 decimals (baseCurrencyUnitCorrection set to 1)
+                    //Since internal precision of value calculations is also 18 decimals, no need for a unit correction.
+                    valuesAndRiskVarPerAsset[i].valueInBaseCurrency = valueInUsd;
+
+                    //If the baseCurrency is different from USD, both valueInUsd and valueInBaseCurrency can be non-zero.
                 } else {
-                    //Check if the BaseCurrency-USD rate is already fetched
-                    if (rateBaseCurrencyToUsd == 0) {
-                        //Get the BaseCurrency-USD rate ToDo: Ask via the OracleHub?
-                        (, rateBaseCurrencyToUsd,,,) = IChainLinkData(
-                            baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
-                        ).latestRoundData();
+                    if (valueInBaseCurrency > 0) {
+                        //Bring value from internal 18 decimals to the actual number of decimals of the baseCurrency
+                        valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
+                            valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                     }
-                    valuesAndRiskVarPerAsset[i].valueInBaseCurrency = tempValueInUsd.mulDivDown(
-                        baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
-                        uint256(rateBaseCurrencyToUsd)
-                    ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection; //Bring from internal 18 decimals to the number of decimals of baseCurrency
+                    if (valueInUsd > 0) {
+                        //Check if the BaseCurrency-USD rate is already fetched, this should be done only once per loop!
+                        if (rateBaseCurrencyToUsd == 0) {
+                            //Get the BaseCurrency-USD rate
+                            (, rateBaseCurrencyToUsd,,,) = IChainLinkData(
+                                baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
+                            ).latestRoundData();
+                        }
+
+                        //Calculate the valueInBaseCurrency from the valueInUsd and the rateBaseCurrencyToUsd
+                        //And bring the final valueInBaseCurrency from internal 18 decimals to the actual number of decimals of baseCurrency
+                        valuesAndRiskVarPerAsset[i].valueInBaseCurrency = valueInUsd.mulDivDown(
+                            baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
+                            uint256(rateBaseCurrencyToUsd)
+                        ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                    }
                 }
             }
             unchecked {
@@ -472,10 +362,9 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 collateralValue) {
-        //No need to heck that all arrays are of equal length, already done in getListOfValuesPerAsset()
+    ) external view returns (uint256 collateralValue) {
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
 
         collateralValue = RiskModule.calculateCollateralValue(valuesAndRiskVarPerAsset);
     }
@@ -495,10 +384,9 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetIds,
         uint256[] calldata assetAmounts,
         address baseCurrency
-    ) public view returns (uint256 liquidationValue) {
-        //No need to Check that all arrays are of equal length, already done in getListOfValuesPerAsset()
+    ) external view returns (uint256 liquidationValue) {
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
-            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
 
         liquidationValue = RiskModule.calculateLiquidationValue(valuesAndRiskVarPerAsset);
     }

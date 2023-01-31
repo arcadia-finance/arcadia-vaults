@@ -73,17 +73,6 @@ contract FloorERC1155PricingModule is PricingModule {
     }
 
     /**
-     * @notice Sets the oracle addresses for the given asset.
-     * @param asset The contract address of the asset.
-     * @param oracles An array of oracle addresses for the asset.
-     */
-    function setOracles(address asset, address[] calldata oracles) external onlyOwner {
-        require(inPricingModule[asset], "PM1155_SO: asset unknown");
-        IOraclesHub(oracleHub).checkOracleSequence(oracles);
-        assetToInformation[asset].oracles = oracles;
-    }
-
-    /**
      * @notice Returns the information that is stored in the Pricing Module for a given asset
      * @param asset The Token address of the asset
      * @return id The id of the token
@@ -103,7 +92,7 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param assetId The Id of the asset
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address asset, uint256 assetId) public view override returns (bool) {
+    function isAllowListed(address asset, uint256 assetId) public view override returns (bool) {
         if (exposure[asset].maxExposure != 0) {
             if (assetId == assetToInformation[asset].id) {
                 return true;

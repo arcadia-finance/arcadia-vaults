@@ -210,9 +210,9 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         //When: unprivilegedAddress_ adds a new asset
-        //Then: addAsset reverts with "Ownable: caller is not the owner"
+        //Then: addAsset reverts with "UNAUTHORIZED"
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
     }
@@ -220,7 +220,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
     function testRevert_addAsset_NonWhiteListedUnderlyingAsset() public {
         //Given: One of the underlying assets is not whitelisted (SafeMoon)
         //When: creator adds a new asset
-        //Then: addAsset reverts with "Ownable: caller is not the owner"
+        //Then: addAsset reverts with "UNAUTHORIZED"
         vm.startPrank(creatorAddress);
         vm.expectRevert("PMUV2_AA: TOKENO_NOT_WHITELISTED");
         uniswapV2PricingModule.addAsset(address(pairSafemoonEth), emptyRiskVarInput, type(uint128).max);
@@ -239,16 +239,6 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint128).max);
     }
 
-    function testRevert_addAsset_ExposureNotInLimits() public {
-        // Given: All necessary contracts deployed on setup
-        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
-        // Then: addAsset should revert with "PMUV2_AA: Max Exposure not in limits"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PMUV2_AA: Max Exposure not in limits");
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, uint256(type(uint128).max) + 1);
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListCreditRatings() public {
         //Given: credit rating list is empty
 
@@ -262,7 +252,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         (address token0, address token1) = uniswapV2PricingModule.assetToInformation(address(pairSnxEth));
         assertEq(token0, address(snx));
         assertEq(token1, address(eth));
-        assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth), 0));
+        assertTrue(uniswapV2PricingModule.isAllowListed(address(pairSnxEth), 0));
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
@@ -716,11 +706,12 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** oracleTokenToUsdDecimals),
                 baseAssetBaseCurrency: 0,
-                quoteAsset: label,
+                quoteAsset: bytes8(abi.encodePacked(label)),
                 baseAsset: "USD",
                 oracle: address(oracleTokenToUsd),
                 quoteAssetAddress: address(token),
-                baseAssetIsBaseCurrency: true
+                baseAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         standardERC20PricingModule.addAsset(address(token), oracleTokenToUsdArr, emptyRiskVarInput, type(uint128).max);

@@ -82,7 +82,8 @@ contract ArcadiaVaultDeployer is Test {
             baseAsset: "USD",
             oracle: DeployAddresses.oracleDaiToUsd,
             quoteAssetAddress: DeployAddresses.dai,
-            baseAssetIsBaseCurrency: true
+            baseAssetIsBaseCurrency: true,
+            isActive: true
         });
 
         ethToUsdOracleInfo = OracleHub.OracleInformation({
@@ -92,7 +93,8 @@ contract ArcadiaVaultDeployer is Test {
             baseAsset: "USD",
             oracle: DeployAddresses.oracleEthToUsd,
             quoteAssetAddress: DeployAddresses.eth,
-            baseAssetIsBaseCurrency: true
+            baseAssetIsBaseCurrency: true,
+            isActive: true
         });
 
         linkToEthEthToUsdOracleInfo = OracleHub.OracleInformation({
@@ -102,7 +104,8 @@ contract ArcadiaVaultDeployer is Test {
             baseAsset: "ETH",
             oracle: DeployAddresses.oracleLinkToEth,
             quoteAssetAddress: DeployAddresses.link,
-            baseAssetIsBaseCurrency: true
+            baseAssetIsBaseCurrency: true,
+            isActive: true
         });
 
         snxToUsdOracleInfo = OracleHub.OracleInformation({
@@ -112,7 +115,8 @@ contract ArcadiaVaultDeployer is Test {
             baseAsset: "USD",
             oracle: DeployAddresses.oracleSnxToUsd,
             quoteAssetAddress: DeployAddresses.snx,
-            baseAssetIsBaseCurrency: true
+            baseAssetIsBaseCurrency: true,
+            isActive: true
         });
 
         usdcToUsdOracleInfo = OracleHub.OracleInformation({
@@ -122,7 +126,8 @@ contract ArcadiaVaultDeployer is Test {
             baseAsset: "USD",
             oracle: DeployAddresses.oracleUsdcToUsd,
             quoteAssetAddress: DeployAddresses.usdc,
-            baseAssetIsBaseCurrency: true
+            baseAssetIsBaseCurrency: true,
+            isActive: true
         });
 
         btcToEthEthToUsdOracleInfo = OracleHub.OracleInformation({
@@ -132,15 +137,8 @@ contract ArcadiaVaultDeployer is Test {
             baseAsset: "ETH",
             oracle: DeployAddresses.oracleBtcToEth,
             quoteAssetAddress: DeployAddresses.btc,
-            baseAssetIsBaseCurrency: true
-        });
-
-        usdBaseCurrencyInfo = MainRegistry.BaseCurrencyInformation({
-            baseCurrencyToUsdOracleUnit: 0,
-            assetAddress: 0x0000000000000000000000000000000000000000,
-            baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-            baseCurrencyLabel: "USD",
-            baseCurrencyUnitCorrection: uint64(10 ** (18 - DeployNumbers.usdDecimals))
+            baseAssetIsBaseCurrency: true,
+            isActive: true
         });
 
         ethBaseCurrencyInfo = MainRegistry.BaseCurrencyInformation({
@@ -200,7 +198,7 @@ contract ArcadiaVaultDeployer is Test {
         oracleHub.addOracle(usdcToUsdOracleInfo);
         oracleHub.addOracle(btcToEthEthToUsdOracleInfo);
 
-        mainRegistry = new MainRegistry(usdBaseCurrencyInfo);
+        mainRegistry = new MainRegistry(address(factory));
         mainRegistry.addBaseCurrency(ethBaseCurrencyInfo);
         mainRegistry.addBaseCurrency(usdcBaseCurrencyInfo);
 
@@ -227,7 +225,6 @@ contract ArcadiaVaultDeployer is Test {
         vault = new Vault();
         factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1);
         factory.confirmNewVaultInfo();
-        mainRegistry.setFactory(address(factory));
 
         vm.stopBroadcast();
     }

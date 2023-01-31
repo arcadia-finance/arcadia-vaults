@@ -17,15 +17,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
     //this is a before each
     function setUp() public {
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -63,8 +55,8 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addAsset
 
-        // Then: addAsset should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addAsset should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         floorERC1155PricingModule.addAsset(
             address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
@@ -86,18 +78,6 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_ExposureNotInLimits() public {
-        // Given: All necessary contracts deployed on setup
-        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
-        // Then: addAsset should revert with "PM1155_AA: Max Exposure not in limits"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PM1155_AA: Max Exposure not in limits");
-        floorERC1155PricingModule.addAsset(
-            address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput, uint256(type(uint128).max) + 1
-        );
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListRiskVariables() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
@@ -115,7 +95,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleInterleaveToEthEthToUsd.length; ++i) {
             assertEq(oracles[i], oracleInterleaveToEthEthToUsd[i]);
         }
-        assertTrue(floorERC1155PricingModule.isWhiteListed(address(interleave), 1));
+        assertTrue(floorERC1155PricingModule.isAllowListed(address(interleave), 1));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {
@@ -150,40 +130,11 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         assertTrue(floorERC1155PricingModule.inPricingModule(address(interleave)));
     }
 
-    function testRevert_setOracles_NonOwner(address unprivilegedAddress_, address asset) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
-        floorERC1155PricingModule.setOracles(asset, new address[](0));
-        vm.stopPrank();
-    }
-
-    function testRevert_setOracles_AssetUnknown(address asset) public {
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PM1155_SO: asset unknown");
-        floorERC1155PricingModule.setOracles(asset, new address[](0));
-        vm.stopPrank();
-    }
-
-    function testSuccess_setOracles() public {
-        stdstore.target(address(floorERC1155PricingModule)).sig(floorERC1155PricingModule.inPricingModule.selector)
-            .with_key(address(interleave)).checked_write(true);
-
-        vm.prank(creatorAddress);
-        floorERC1155PricingModule.setOracles(address(interleave), oracleInterleaveToEthEthToUsd);
-
-        (, address[] memory oracles) = floorERC1155PricingModule.getAssetInformation(address(interleave));
-        for (uint256 i; i < oracleInterleaveToEthEthToUsd.length; ++i) {
-            assertEq(oracles[i], oracleInterleaveToEthEthToUsd[i]);
-        }
-    }
-
     /*///////////////////////////////////////////////////////////////
                         WHITE LIST MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
-    function testSuccess_isWhiteListed_Positive() public {
+    function testSuccess_isAllowListed_Positive() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset
@@ -192,19 +143,19 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         );
         vm.stopPrank();
 
-        // Then: isWhiteListed for address(interleave) should return true
-        assertTrue(floorERC1155PricingModule.isWhiteListed(address(interleave), 1));
+        // Then: isAllowListed for address(interleave) should return true
+        assertTrue(floorERC1155PricingModule.isAllowListed(address(interleave), 1));
     }
 
-    function testSuccess_isWhiteListed_NegativeWrongAddress(address randomAsset) public {
+    function testSuccess_isAllowListed_NegativeWrongAddress(address randomAsset) public {
         // Given: All necessary contracts deployed on setup
         // When: input is randomAsset
 
-        // Then: isWhiteListed for randomAsset should return false
-        assertTrue(!floorERC1155PricingModule.isWhiteListed(randomAsset, 1));
+        // Then: isAllowListed for randomAsset should return false
+        assertTrue(!floorERC1155PricingModule.isAllowListed(randomAsset, 1));
     }
 
-    function testSuccess_isWhiteListed_NegativeIdOutsideRange(uint256 id) public {
+    function testSuccess_isAllowListed_NegativeIdOutsideRange(uint256 id) public {
         // Given: id is not 1
         vm.assume(id != 1);
         vm.startPrank(creatorAddress);
@@ -214,15 +165,15 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         );
         vm.stopPrank();
 
-        // Then: isWhiteListed for address(interlave) should return false
-        assertTrue(!floorERC1155PricingModule.isWhiteListed(address(interleave), id));
+        // Then: isAllowListed for address(interlave) should return false
+        assertTrue(!floorERC1155PricingModule.isAllowListed(address(interleave), id));
     }
 
     /*///////////////////////////////////////////////////////////////
                     RISK VARIABLES MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
-    function testRevert_processDeposit_NonMainRegistry(address unprivilegedAddress_, uint256 amount) public {
+    function testRevert_processDeposit_NonMainRegistry(address unprivilegedAddress_, uint128 amount) public {
         vm.prank(creatorAddress);
         floorERC1155PricingModule.addAsset(
             address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput, type(uint128).max

@@ -28,15 +28,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     //this is a before each
     function setUp() public {
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -91,7 +83,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     function testRevert_addAsset_NonOwner(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
     }
@@ -117,16 +109,6 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_ExposureNotInLimits() public {
-        // Given: All necessary contracts deployed on setup
-        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
-        // Then: addAsset should revert with "PMAT_AA: Max Exposure not in limits"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PMAT_AA: Max Exposure not in limits");
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, uint256(type(uint128).max) + 1);
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint128).max);
@@ -141,7 +123,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
-        assertTrue(aTokenPricingModule.isWhiteListed(address(aEth), 0));
+        assertTrue(aTokenPricingModule.isAllowListed(address(aEth), 0));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {
@@ -166,30 +148,6 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         assertTrue(aTokenPricingModule.inPricingModule(address(aEth)));
-    }
-
-    function testRevert_syncOracles_AssetUnknown(address sender, address asset) public {
-        vm.startPrank(sender);
-        vm.expectRevert("PMAT_SO: asset unknown");
-        aTokenPricingModule.syncOracles(asset);
-        vm.stopPrank();
-    }
-
-    function testSuccess_syncOracles(address sender) public {
-        vm.startPrank(creatorAddress);
-        aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint128).max);
-
-        //Given: oracle sequence of underlying asset is modified
-        standardERC20PricingModule.setOracles(address(eth), oracleLinkToUsdArr);
-        vm.stopPrank();
-
-        vm.prank(sender);
-        aTokenPricingModule.syncOracles(address(aEth));
-
-        (,, address[] memory oracles) = aTokenPricingModule.getAssetInformation(address(aEth));
-        for (uint256 i; i < oracleLinkToUsdArr.length; ++i) {
-            assertEq(oracles[i], oracleLinkToUsdArr[i]);
-        }
     }
 
     /*///////////////////////////////////////////////////////////////

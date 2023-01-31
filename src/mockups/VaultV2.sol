@@ -72,7 +72,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than the factory adress.
      */
     modifier onlyFactory() {
-        require(msg.sender == IMainRegistry(registry).factoryAddress(), "V: You are not the factory");
+        require(msg.sender == IMainRegistry(registry).factory(), "V: Only Factory");
         _;
     }
 
@@ -80,7 +80,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner, "V: You are not the owner");
+        require(msg.sender == owner, "V: Only Owner");
         _;
     }
 
@@ -88,7 +88,7 @@ contract VaultV2 {
      * @dev Throws if called by any account other than an asset manager or the owner.
      */
     modifier onlyAssetManager() {
-        require(msg.sender == owner || isAssetManager[msg.sender], "V: You are not an asset manager");
+        require(msg.sender == owner || isAssetManager[msg.sender], "V: Only Asset Manager");
         _;
     }
 
@@ -107,6 +107,7 @@ contract VaultV2 {
      * @param owner_ The tx.origin: the sender of the 'createVault' on the factory
      * @param registry_ The 'beacon' contract to which should be looked at for external logic.
      * @param vaultVersion_ The version of the vault logic.
+     * @param baseCurrency_ The Base-currency in which the vault is denominated.
      */
     function initialize(address owner_, address registry_, uint16 vaultVersion_, address baseCurrency_) external {
         require(vaultVersion == 0, "V_I: Already initialized!");
@@ -118,17 +119,26 @@ contract VaultV2 {
     }
 
     /**
-     * @dev Stores a new address in the EIP1967 implementation slot & updates the vault version.
+     * @notice Stores a new address in the EIP1967 implementation slot & updates the vault version.
+     * @param newImplementation The contract with the new vault logic.
+     * @param newVersion The new version of the vault logic.
      */
     function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
         vaultVersion = newVersion;
         _getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
 
+        if (isTrustedCreditorSet) {
+            //If a trustedCreditor is set, new version should be compatible.
+            //openMarginAccount() is a view function, cannot modify state.
+            (bool success,,) = ITrustedCreditor(trustedCreditor).openMarginAccount(newVersion);
+            require(success, "V_UV: Invalid vault version");
+        }
+
         emit Upgraded(newImplementation);
     }
 
     /**
-     * @dev Returns an `AddressSlot` with member `value` located at `slot`.
+     * @notice Returns an `AddressSlot` with member `value` located at `slot`.
      */
     function _getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
         assembly {
@@ -141,8 +151,9 @@ contract VaultV2 {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner via the factory.
+     * @notice Transfers ownership of the contract to a new account.
+     * @param newOwner The new owner of the Vault
+     * @dev Can only be called by the current owner via the factory.
      * A transfer of ownership of this vault by a transfer
      * of ownership of the accompanying ERC721 Vault NFT
      * issued by the factory. Owner of Vault NFT = owner of vault
@@ -155,7 +166,7 @@ contract VaultV2 {
     }
 
     /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * @notice Transfers ownership of the contract to a new account (`newOwner`).
      * Internal function without access restriction.
      */
     function _transferOwnership(address newOwner) internal virtual {
@@ -182,7 +193,7 @@ contract VaultV2 {
      * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
      */
     function _setBaseCurrency(address baseCurrency_) private {
-        require(getUsedMargin() == 0, "V_SBC: Can't change baseCurrency when Used Margin > 0");
+        require(getUsedMargin() == 0, "V_SBC: Non-zero open position");
         require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
         baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
     }
@@ -200,12 +211,12 @@ contract VaultV2 {
      * The protocol has significant authorisation: use margin (-> trigger liquidation)
      */
     function openTrustedMarginAccount(address protocol) public onlyOwner {
-        require(!isTrustedCreditorSet, "V_OMA: ALREADY SET");
+        require(!isTrustedCreditorSet, "V_OTMA: ALREADY SET");
 
         //openMarginAccount() is a view function, cannot modify state.
         (bool success, address baseCurrency_, address liquidator_) =
             ITrustedCreditor(protocol).openMarginAccount(vaultVersion);
-        require(success, "V_OMA: OPENING ACCOUNT REVERTED");
+        require(success, "V_OTMA: Invalid Version");
 
         liquidator = liquidator_;
         trustedCreditor = protocol;
@@ -221,9 +232,9 @@ contract VaultV2 {
      * @dev Currently only one trusted protocol can be set.
      */
     function closeTrustedMarginAccount() public onlyOwner {
-        require(isTrustedCreditorSet, "V_CMA: NOT SET");
+        require(isTrustedCreditorSet, "V_CTMA: NOT SET");
         //getOpenPosition() is a view function, cannot modify state.
-        require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
+        require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CTMA: NON-ZERO OPEN POSITION");
 
         isTrustedCreditorSet = false;
     }
@@ -233,10 +244,10 @@ contract VaultV2 {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Can be called by authorised applications to increase a margin position.
-     * @param baseCurrency_ The Base-currency in which the margin position is denominated
+     * @notice Called by trusted applications, checks if the Vault has sufficient free margin.
+     * @param baseCurrency_ The Base-currency in which the Vault is denominated.
      * @param amount The amount the position is increased.
-     * @return success Boolean indicating if there is sufficient free margin to increase the margin position
+     * @return success Boolean indicating if there is sufficient free margin to increase the margin position.
      */
     function increaseMarginPosition(address baseCurrency_, uint256 amount) public view returns (bool success) {
         if (baseCurrency_ != baseCurrency) {
@@ -344,15 +355,15 @@ contract VaultV2 {
         external
         returns (address originalOwner, address baseCurrency_, address trustedCreditor_)
     {
-        require(msg.sender == liquidator, "V_LV: You are not the liquidator");
+        require(msg.sender == liquidator, "V_LV: Only Liquidator");
 
-        //In current Vault version, the vault can only have debt owed to a single creditor, the trustedCreditor
-        require(getLiquidationValue() < openDebt, "V_LV: This vault is healthy");
+        //In current Vault version, the Vault can only have debt owed to a single creditor, the trustedCreditor
+        require(getLiquidationValue() < openDebt, "V_LV: Vault is healthy");
 
         //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
-        IFactory(IMainRegistry(registry).factoryAddress()).liquidate(msg.sender);
+        IFactory(IMainRegistry(registry).factory()).liquidate(msg.sender);
 
-        //Transfer ownership of the Vault itself
+        //Transfer ownership of the Vault itself to the Liquidator
         originalOwner = owner;
         _transferOwnership(msg.sender);
 
@@ -369,21 +380,25 @@ contract VaultV2 {
      * @param value A boolean giving permissions to or taking permissions from an Asset manager
      * @dev Only set trusted addresses as Asset manager, Asset managers can potentially steal assets (as long as the vault position remains healthy).
      * @dev No need to set the Owner as Asset manager, owner will automattically have all permissions of an asset manager.
+     * @dev Potential use-cases of the asset manager might be to:
+     * - Automate actions by keeper networks,
+     * - Chain interactions with the Trusted Creditor together with vault actions (eg. borrow deposit and trade in one transaction).
      */
     function setAssetManager(address assetManager, bool value) external onlyOwner {
         isAssetManager[assetManager] = value;
     }
 
     /**
-     * @notice Calls external action handlers to execute and interact with external logic.
-     * @param actionHandler the address of the action handler to call
-     * @param actionData a bytes object containing two actionAssetData structs, an address array and a bytes array
+     * @notice Calls external action handler to execute and interact with external logic.
+     * @param actionHandler The address of the action handler.
+     * @param actionData A bytes object containing two actionAssetData structs, an address array and a bytes array.
      * @dev Similar to flash loans, this function optimistically calls external logic and checks for the vault state at the very end.
-     * Potential use-cases of the asset manager might be automate actions by keeper networks,
-     * or to chain interactions with trusted creditor together with vault actions (eg. borrow deposit and trade in one transaction).
+     * @dev vaultManagementAction can interact with and chain together any DeFi protocol to swap, stake, claim...
+     * The only requirements are that the recipient tokens of the interactions are allowlisted, deposited back into the vault and
+     * that the Vault is in a healthy state at the end of the transaction.
      */
     function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyAssetManager {
-        require(IMainRegistry(registry).isActionAllowed(actionHandler), "VL_VMA: Action is not allowlisted");
+        require(IMainRegistry(registry).isActionAllowed(actionHandler), "V_VMA: Action not allowed");
 
         (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
 
@@ -398,7 +413,7 @@ contract VaultV2 {
 
         uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
-        require(collValue >= usedMargin, "VMA: coll. value too low");
+        require(collValue >= usedMargin, "V_VMA: coll. value too low");
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -865,10 +880,6 @@ contract VaultV2 {
 
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) public pure returns (bytes4) {
         return this.onERC1155Received.selector;
-    }
-
-    fallback() external {
-        revert();
     }
 
     function returnFive() external pure returns (uint256) {
