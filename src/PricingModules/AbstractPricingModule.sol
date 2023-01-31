@@ -8,6 +8,7 @@ pragma solidity ^0.8.13;
 
 import {IOraclesHub} from "./interfaces/IOraclesHub.sol";
 import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
+import {IPricingModule} from "../interfaces/IPricingModule.sol";
 import {RiskConstants} from "../utils/RiskConstants.sol";
 import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
