@@ -114,14 +114,9 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
 
         standardERC20PricingModule.addAsset(address(safemoon), oracleSafemoonToUsdArr, riskVars_, type(uint128).max);
 
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), treasuryAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), treasuryAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
         DataTypes.InterestRateConfiguration memory config = DataTypes.InterestRateConfiguration({
             baseRatePerYear: Constants.interestRate,
