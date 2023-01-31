@@ -9,7 +9,7 @@ pragma solidity >=0.4.22 <0.9.0;
 import {IChainLinkData} from "./interfaces/IChainLinkData.sol";
 import {IOraclesHub} from "./PricingModules/interfaces/IOraclesHub.sol";
 import {StringHelpers} from "./utils/StringHelpers.sol";
-import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "../lib/solmate/src/utils/FixedPointMathLib.sol";
 import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 /**
