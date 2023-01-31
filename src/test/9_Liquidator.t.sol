@@ -30,11 +30,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
     //this is a before
     constructor() DeployArcadiaVaults() {
         vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
@@ -93,7 +89,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
     /////////////////////////////////////////////////////////////// */
     function testSuccess_deployment() public {
         assertEq(liquidator.factory(), address(factory));
-        assertEq(liquidator.registry(), address(mainRegistry));
         (uint64 penalty, uint64 initiatorReward) = liquidator.claimRatios();
         assertEq(penalty, 5);
         assertEq(initiatorReward, 2);
@@ -121,26 +116,6 @@ contract LiquidatorTest is DeployArcadiaVaults {
         liquidator.transferOwnership(to);
 
         assertEq(creatorAddress, liquidator.owner());
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                          EXTERNAL CONTRACTS
-    ///////////////////////////////////////////////////////////////*/
-
-    function testRevert_setFactory_NonOwner(address unprivilegedAddress_, address factory_) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("UNAUTHORIZED");
-        liquidator.setFactory(factory_);
-        vm.stopPrank();
-    }
-
-    function testSuccess_setFactory(address factory_) public {
-        vm.prank(creatorAddress);
-        liquidator.setFactory(factory_);
-
-        assertEq(liquidator.factory(), factory_);
     }
 
     /*///////////////////////////////////////////////////////////////

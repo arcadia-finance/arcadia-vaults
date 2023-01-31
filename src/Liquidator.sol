@@ -6,7 +6,6 @@
  */
 pragma solidity ^0.8.13;
 
-import {FixedPointMathLib} from "../lib/solmate/src/utils/FixedPointMathLib.sol";
 import {LogExpMath} from "./utils/LogExpMath.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
@@ -21,18 +20,14 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Owned {
-    using FixedPointMathLib for uint256;
-
     uint16 public startPriceMultiplier; // Sets the begin price of the auction, defined as a percentage of opendebt, 2 decimals precision -> 150 = 150%
     uint8 public minPriceMultiplier; // Sets the minimum price the auction converges to, defined as a percentage of opendebt, 2 decimals precision -> 60 = 60%
     uint64 public base; // Determines how fast (exponential decay) the aution price drops per second, 18 decimals precision
     uint16 public auctionCutoffTime; // Maximum time that the auction can run, in seconds, with 0 decimals precision
 
-    address public factory;
-    address public registry;
+    address public immutable factory;
 
     mapping(address => AuctionInformation) public auctionInformation;
-    mapping(address => mapping(address => uint256)) public openClaims;
 
     ClaimRatios public claimRatios;
 
@@ -55,24 +50,11 @@ contract Liquidator is Owned {
         address trustedCreditor;
     }
 
-    constructor(address factory_, address registry_) Owned(msg.sender) {
+    constructor(address factory_) Owned(msg.sender) {
         factory = factory_;
-        registry = registry_;
         claimRatios = ClaimRatios({penalty: 5, initiatorReward: 2});
         startPriceMultiplier = 110;
         minPriceMultiplier = 0;
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                          EXTERNAL CONTRACTS
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Sets the factory address on the liquidator.
-     * @param factory_ the factory address.
-     */
-    function setFactory(address factory_) external onlyOwner {
-        factory = factory_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -135,7 +117,7 @@ contract Liquidator is Owned {
     /**
      * @notice Sets the minimum price multiplier for the liquidator.
      * @param minPriceMultiplier_ The new minimum price multiplier, with 2 decimals precision.
-     * @dev The minimum price multiplier sets a lower bound to which the auction price converges. 
+     * @dev The minimum price multiplier sets a lower bound to which the auction price converges.
      */
     function setMinimumPriceMultiplier(uint8 minPriceMultiplier_) external onlyOwner {
         require(minPriceMultiplier_ < 91, "LQ_SMPM: multiplier too high");
@@ -155,6 +137,9 @@ contract Liquidator is Owned {
     function startAuction(address vault, uint256 openDebt, uint88 maxInitiatorFee) public {
         require(!auctionInformation[vault].inAuction, "LQ_SA: Auction already ongoing");
 
+        //Avoid re-entr
+        auctionInformation[vault].inAuction = true;
+
         //A malicious msg.sender can pass a self created contract as vault (not an actual Arcadia-Vault) that returns true on liquidateVault().
         //This would successfully start an auction, but as long as as no collision with an actual Arcadia-vault contract address is found, this is not an issue.
         //The malicious non-vault would be in auction indefinately, but does not block any 'real' auctions of Arcadia-Vaults.
@@ -169,7 +154,6 @@ contract Liquidator is Owned {
 
         auctionInformation[vault].openDebt = uint128(openDebt);
         auctionInformation[vault].startTime = uint32(block.timestamp);
-        auctionInformation[vault].inAuction = true;
         auctionInformation[vault].maxInitiatorFee = maxInitiatorFee;
         auctionInformation[vault].baseCurrency = baseCurrency;
         auctionInformation[vault].originalOwner = originalOwner;
