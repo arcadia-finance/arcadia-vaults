@@ -32,8 +32,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
         pool.setMaxInitiatorFee(type(uint80).max);
         liquidator.setAuctionCurveParameters(3_600, 14_400);
