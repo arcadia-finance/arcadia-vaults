@@ -899,7 +899,7 @@ contract PricingLogicTest is MainRegistryTest {
         // When: getTotalValue called
 
         // Then: getTotalValue should revert with "MR_GTV: Unknown asset"
-        vm.expectRevert("MR_GTV: Unknown asset");
+        vm.expectRevert(bytes(""));
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 

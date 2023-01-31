@@ -417,64 +417,12 @@ contract MainRegistry is MainRegistryGuardian {
         uint256 baseCurrency
     ) public view returns (uint256 valueInBaseCurrency) {
         require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
+        RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
+            getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 
-        uint256 assetAddressesLength = assetAddresses.length;
-
-        IPricingModule.GetValueInput memory getValueInput;
-        getValueInput.baseCurrency = baseCurrency;
-
-        uint256 valueInUsd;
-        address assetAddress;
-        uint256 tempValueInUsd;
-        uint256 tempValueInBaseCurrency;
-        for (uint256 i; i < assetAddressesLength;) {
-            assetAddress = assetAddresses[i];
-            require(inMainRegistry[assetAddress], "MR_GTV: Unknown asset");
-
-            getValueInput.assetAddress = assetAddress;
-            getValueInput.assetId = assetIds[i];
-            getValueInput.assetAmount = assetAmounts[i];
-
-            if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
-                //The asset to price is the basecurrency
-                //assetAmounts can have a variable decimal precision -> bring to 18 decimals
-                //
-                unchecked {
-                    valueInBaseCurrency +=
-                        assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-                }
-            } else {
-                //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
-                unchecked {
-                    (tempValueInUsd, tempValueInBaseCurrency,,) =
-                        IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
-                    valueInUsd += tempValueInUsd;
-                    valueInBaseCurrency += tempValueInBaseCurrency;
-                }
-            }
-            unchecked {
-                ++i;
-            }
+        for (uint256 i = 0; i < valuesAndRiskVarPerAsset.length; ++i) {
+            valueInBaseCurrency += valuesAndRiskVarPerAsset[i].valueInBaseCurrency;
         }
-        //Check if baseCurrency is USD
-        if (baseCurrency == 0) {
-            //Bring from internal 18 decimals to the number of decimals of baseCurrency
-            unchecked {
-                return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-            }
-        } else if (valueInUsd > 0) {
-            //Get the BaseCurrency-USD rate
-            (, int256 rate,,,) =
-                IChainLinkData(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle).latestRoundData();
-            //Add valueInUsd to valueInBaseCurrency
-            unchecked {
-                valueInBaseCurrency += valueInUsd.mulDivDown(
-                    baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit, uint256(rate)
-                );
-            }
-        }
-        //Bring from internal 18 decimals to the number of decimals of baseCurrency
-        return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
     }
 
     /**
