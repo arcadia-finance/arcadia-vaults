@@ -220,6 +220,19 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
+    function testRevert_setAuctionCurveParameters_PowerFunctionReverts(uint8 halfLifeTime, uint16 cutoffTime) public {
+        // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(halfLifeTime > 2 * 60);
+        vm.assume(halfLifeTime < 15 * 60);
+        vm.assume(cutoffTime > 10 * 60 * 60);
+        vm.assume(cutoffTime < 18 * 60 * 60);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert();
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
+        vm.stopPrank();
+    }
+
     function testSuccess_setAuctionCurveParameters_Base(uint16 halfLifeTime, uint16 cutoffTime) public {
         // Preprocess: limit the fuzzing to acceptable levels
         vm.assume(halfLifeTime > 2 * 60);

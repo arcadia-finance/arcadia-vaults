@@ -107,7 +107,7 @@ contract Liquidator is Owned {
         //Check that LogExpMath.pow(base, timePassed) does not error at cutoffTime (due to numbers smaller than minimum precision)
         //Since LogExpMath.pow is a strictly decreasing function checking the power function at cutoffTime
         //guarantees that the function does not revert on all timestapms between start of the auction and the cutoffTime
-        LogExpMath.pow(base_, cutoffTime_);
+        LogExpMath.pow(base_, uint256(cutoffTime_) * 1e18);
 
         //Store the new parameters
         base = base_;
