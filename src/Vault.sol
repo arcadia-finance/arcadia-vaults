@@ -60,7 +60,7 @@ contract Vault {
         address value;
     }
 
-    event Upgraded(address indexed implementation);
+    event Upgraded(address oldImplementation, address newImplementation, uint16 oldVersion, uint16 indexed newVersion);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
@@ -151,7 +151,7 @@ contract Vault {
         //Data can be added by the factory for complex instructions.
         this.upgradeHook(oldImplementation, oldRegistry, oldVersion, data);
 
-        emit Upgraded(newImplementation);
+        emit Upgraded(oldImplementation, newImplementation, oldVersion, newVersion);
     }
 
     /**

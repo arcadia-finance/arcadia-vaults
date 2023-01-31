@@ -65,7 +65,7 @@ contract VaultV2 {
         address value;
     }
 
-    event Upgraded(address indexed implementation);
+    event Upgraded(address oldImplementation, address newImplementation, uint16 oldVersion, uint16 newversion);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
@@ -156,7 +156,7 @@ contract VaultV2 {
         //Data can be added by the factory for complex instructions.
         this.upgradeHook(oldImplementation, oldRegistry, oldVersion, data);
 
-        emit Upgraded(newImplementation);
+        emit Upgraded(oldImplementation, newImplementation, oldVersion, newVersion);
     }
 
     /**
@@ -167,18 +167,6 @@ contract VaultV2 {
             r.slot := slot
         }
     }
-
-    /**
-     * @notice Finalizes the Upgrade to a new vault version on the new Logic Contract.
-     * @param oldImplementation The contract with the new old logic.
-     * @param oldRegistry The MainRegistry of the old version (might be identical as the new registry)
-     * @param oldVersion The old version of the vault logic.
-     * @param data Arbitrary data, can contain instructions to execute in thos function.
-     * @dev If upgradeHook() is implemented, it MUST be verified that msg.sender == address(this)
-     */
-    function upgradeHook(address oldImplementation, address oldRegistry, uint16 oldVersion, bytes calldata data)
-        external
-    {}
 
     /* ///////////////////////////////////////////////////////////////
                         OWNERSHIP MANAGEMENT
@@ -926,7 +914,27 @@ contract VaultV2 {
         revert();
     }
 
-    function returnFive() external pure returns (uint256) {
+    function returnFive() public pure returns (uint256) {
         return 5;
     }
+
+    /**
+     * @notice Finalizes the Upgrade to a new vault version on the new Logic Contract.
+     * param oldImplementation The contract with the new old logic.
+     * @param oldRegistry The MainRegistry of the old version (might be identical as the new registry)
+     * param oldVersion The old version of the vault logic.
+     * param data Arbitrary data, can contain instructions to execute in thos function.
+     * @dev If upgradeHook() is implemented, it MUST be verified that msg.sender == address(this)
+     */
+    function upgradeHook(address, address oldRegistry, uint16, bytes calldata)
+        external
+    {
+        require(msg.sender == address(this), "Not the right address");
+        IMainRegistry(oldRegistry).batchProcessWithdrawal(new address[](0), new uint256[](0), new uint256[](0));
+        IMainRegistry(registry).batchProcessDeposit(new address[](0), new uint256[](0), new uint256[](0));
+
+        check = returnFive();
+    }
+
+    uint256 public check;
 }

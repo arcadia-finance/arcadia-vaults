@@ -134,6 +134,8 @@ contract VaultV2Test is DeployArcadiaVaults {
         factory.upgradeVaultVersion(address(proxy), factory.latestVaultVersion(), proofs);
         vm.stopPrank();
 
+        assertEq(VaultV2(proxyAddr).check(), 6);
+
         Checks memory checkAfter = createCompareStruct();
 
         assertEq(keccak256(abi.encode(checkAfter)), keccak256(abi.encode(checkBefore)));
