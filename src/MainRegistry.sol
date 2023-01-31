@@ -20,6 +20,10 @@ import {MainRegistryGuardian} from "./security/MainRegistryGuardian.sol";
  * @dev No end-user should directly interact with the Main Registry, only vaults, Pricing Modules or the contract owner
  */
 contract MainRegistry is MainRegistryGuardian {
+    event ActionAllowed(address action, bool allowed);
+    event BaseCurrencyAdded(uint256 baseCurrencyId, address assetAddress);
+    event PricingModuleAdded(address subAssetRegistryAddress);
+
     using FixedPointMathLib for uint256;
 
     address immutable _this;
@@ -104,6 +108,7 @@ contract MainRegistry is MainRegistryGuardian {
      */
     function setAllowedAction(address action, bool allowed) external onlyOwner {
         isActionAllowed[action] = allowed;
+        emit ActionAllowed(action, allowed);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -137,6 +142,7 @@ contract MainRegistry is MainRegistryGuardian {
         unchecked {
             ++baseCurrencyCounter;
         }
+        emit BaseCurrencyAdded(baseCurrencyInformation.assetAddress, baseCurrencyCounter);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -151,6 +157,7 @@ contract MainRegistry is MainRegistryGuardian {
         require(!isPricingModule[pricingModule], "MR_APM: PriceMod. not unique");
         isPricingModule[pricingModule] = true;
         pricingModules.push(pricingModule);
+        emit PricingModuleAdded(pricingModule);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -169,6 +176,7 @@ contract MainRegistry is MainRegistryGuardian {
         inMainRegistry[assetAddress] = true;
         assetsInMainRegistry.push(assetAddress);
         assetToPricingModule[assetAddress] = msg.sender;
+        emit AssetAdded(assetAddress);
     }
 
     /**
