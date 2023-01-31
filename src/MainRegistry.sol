@@ -206,11 +206,11 @@ contract MainRegistry is MainRegistryGuardian {
      * @param amounts An array of amounts to be withdrawn
      * @dev batchProcessWithdrawal in the pricing module updates the exposure
      */
-    function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
-        external
-        whenWithdrawNotPaused
-        onlyVault
-    {
+    function batchProcessWithdrawal(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata amounts
+    ) external whenWithdrawNotPaused onlyVault {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
 
@@ -218,7 +218,7 @@ contract MainRegistry is MainRegistryGuardian {
         for (uint256 i; i < addressesLength;) {
             assetAddress = assetAddresses[i];
 
-            IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(assetAddress, amounts[i]);
+            IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(assetAddress, assetIds[i], amounts[i]);
 
             unchecked {
                 ++i;
@@ -270,12 +270,12 @@ contract MainRegistry is MainRegistryGuardian {
         uint256[] calldata assetAmounts,
         uint256 baseCurrency
     ) public view returns (RiskModule.AssetValueAndRiskVariables[] memory) {
-        //Cache Output array
+        // Cache Output array
         uint256 assetAddressesLength = assetAddresses.length;
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             new RiskModule.AssetValueAndRiskVariables[](assetAddressesLength);
 
-        //Cache variables
+        // Cache variables
         IPricingModule.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
         int256 rateBaseCurrencyToUsd;
@@ -287,7 +287,7 @@ contract MainRegistry is MainRegistryGuardian {
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
 
-            //If the asset is identical to the basecurrency, we do not need to get a rate
+            //If the asset is identical to the base Currency, we do not need to get a rate
             //We only need to fetch the risk variables from the PricingModule
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency = assetAmounts[i];

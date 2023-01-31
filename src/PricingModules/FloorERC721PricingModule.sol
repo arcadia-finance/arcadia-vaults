@@ -148,7 +148,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param asset The address of the asset
      * @dev amount of a deposit in ERC721 pricing module is always 1
      */
-    function processWithdrawal(address asset, uint256) external override onlyMainReg {
+    function processWithdrawal(address asset, uint256, uint256) external override onlyMainReg {
         exposure[asset].exposure -= 1;
     }
 

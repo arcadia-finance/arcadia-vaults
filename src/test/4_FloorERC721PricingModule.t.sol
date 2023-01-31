@@ -237,7 +237,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("APM: ONLY_MAIN_REGISTRY");
-        floorERC721PricingModule.processWithdrawal(address(bayc), 1);
+        floorERC721PricingModule.processWithdrawal(address(bayc), 1, 1);
         vm.stopPrank();
     }
 
@@ -251,7 +251,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         assertEq(actualExposure, 1);
 
         vm.prank(address(mainRegistry));
-        floorERC721PricingModule.processWithdrawal(address(bayc), 1);
+        floorERC721PricingModule.processWithdrawal(address(bayc), 1, 1);
         (, actualExposure) = floorERC721PricingModule.exposure(address(bayc));
         assertEq(actualExposure, 0);
     }

@@ -531,12 +531,15 @@ contract AssetManagementTest is MainRegistryTest {
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
 
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("MR: Only Vaults.");
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -545,12 +548,15 @@ contract AssetManagementTest is MainRegistryTest {
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(dai);
 
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1000;
 
         vm.startPrank(proxyAddr);
         vm.expectRevert("MR_BPW: LENGTH_MISMATCH");
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -578,7 +584,7 @@ contract AssetManagementTest is MainRegistryTest {
         // Then: Withdrawal is reverted due to paused main registry
         vm.startPrank(proxyAddr);
         vm.expectRevert("Guardian: withdraw paused");
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -604,7 +610,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amountWithdrawn;
 
         vm.prank(proxyAddr);
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
 
         (, exposure) = standardERC20PricingModule.exposure(address(eth));
 
@@ -626,7 +632,7 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
 
         vm.startPrank(proxyAddr);
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
 
         (, uint128 endExposure) = standardERC20PricingModule.exposure(address(link));
@@ -648,7 +654,10 @@ contract AssetManagementTest is MainRegistryTest {
         vm.expectRevert("MR: No delegate.");
         (bool success,) = address(mainRegistry).delegatecall(
             abi.encodeWithSignature(
-                "batchProcessWithdrawal(address[] calldata,uint256[] calldata)", assetAddresses, assetAmounts
+                "batchProcessWithdrawal(address[] calldata,uint256[] calldata,uint256[] calldata)",
+                assetAddresses,
+                assetIds,
+                assetAmounts
             )
         );
         vm.stopPrank();

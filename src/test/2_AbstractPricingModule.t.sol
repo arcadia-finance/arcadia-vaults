@@ -347,26 +347,33 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         assertEq(actualExposure, expectedExposure);
     }
 
-    function testRevert_processWithdrawal_NonMainRegistry(address unprivilegedAddress_, address asset, uint128 amount)
-        public
-    {
+    function testRevert_processWithdrawal_NonMainRegistry(
+        address unprivilegedAddress_,
+        address asset,
+        uint128 id,
+        uint128 amount
+    ) public {
         vm.assume(unprivilegedAddress_ != address(mainRegistry));
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("APM: ONLY_MAIN_REGISTRY");
-        abstractPricingModule.processWithdrawal(asset, amount);
+        abstractPricingModule.processWithdrawal(asset, id, amount);
         vm.stopPrank();
     }
 
-    function testSuccess_processWithdrawal(address asset, uint128 exposure, uint128 amount, uint128 maxExposure)
-        public
-    {
+    function testSuccess_processWithdrawal(
+        address asset,
+        uint128 exposure,
+        uint128 amount,
+        uint128 maxExposure,
+        uint128 id
+    ) public {
         vm.assume(maxExposure >= exposure);
         vm.assume(exposure >= amount);
         abstractPricingModule.setExposure(asset, exposure, maxExposure);
 
         vm.prank(address(mainRegistry));
-        abstractPricingModule.processWithdrawal(asset, amount);
+        abstractPricingModule.processWithdrawal(asset, id, amount);
 
         (, uint128 actualExposure) = abstractPricingModule.exposure(address(asset));
         uint128 expectedExposure = exposure - amount;

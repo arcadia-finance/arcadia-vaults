@@ -46,5 +46,5 @@ interface IPricingModule {
      * @param asset The address of the asset
      * @param amount The amount of tokens
      */
-    function processWithdrawal(address asset, uint256 amount) external;
+    function processWithdrawal(address asset, uint256 id, uint256 amount) external;
 }
