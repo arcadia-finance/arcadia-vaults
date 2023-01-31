@@ -458,17 +458,14 @@ contract Vault {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
-            erc20Stored.length + erc721Stored.length + erc1155Stored.length + assetAddressesLength <= ASSET_LIMIT,
-            "V_D: Too many assets"
-        );
-
-        require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
                 && assetAddressesLength == assetTypes.length,
             "V_D: Length mismatch"
         );
 
         _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+
+        require(erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT, "V_D: Too many assets");
     }
 
     /**
