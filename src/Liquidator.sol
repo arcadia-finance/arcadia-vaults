@@ -142,7 +142,6 @@ contract Liquidator is Owned {
      */
     function startAuction(address vault, uint256 openDebt, uint88 maxInitiatorFee) public {
         require(!auctionInformation[vault].inAuction, "LQ_SA: Auction already ongoing");
-        require(IFactory(factory).isVault(vault), "LQ_SA: Not a vault");
 
         (address originalOwner, address baseCurrency, address trustedCreditor) = IVault(vault).liquidateVault(openDebt);
 
@@ -155,7 +154,7 @@ contract Liquidator is Owned {
         auctionInformation[vault].maxInitiatorFee = maxInitiatorFee;
         auctionInformation[vault].baseCurrency = baseCurrency;
         auctionInformation[vault].originalOwner = originalOwner;
-        auctionInformation[vault].trustedCreditor = trustedCreditor;
+        auctionInformation[vault].trustedCreditor = msg.sender;
     }
 
     /**
