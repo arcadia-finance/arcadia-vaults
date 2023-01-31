@@ -92,7 +92,13 @@ contract Vault is IVault {
         _;
     }
 
-    constructor() {}
+    constructor(address registry_, uint16 vaultVersion_) {
+        // This will only be the owner of the vault logic implementation
+        // and will not affect any subsequent proxy implementation using this vault logic
+        owner = msg.sender;
+        registry = registry_;
+        vaultVersion = vaultVersion_;
+    }
 
     /* ///////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT
@@ -109,7 +115,7 @@ contract Vault is IVault {
      * @param baseCurrency_ The Base-currency in which the vault is denominated.
      */
     function initialize(address owner_, address registry_, uint16 vaultVersion_, address baseCurrency_) external {
-        require(vaultVersion == 0, "V_I: Already initialized!");
+        require(vaultVersion == 0 && owner == address(0), "V_I: Already initialized!");
         require(vaultVersion_ != 0, "V_I: Invalid vault version");
         owner = owner_;
         registry = registry_;
@@ -455,17 +461,14 @@ contract Vault is IVault {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
-            erc20Stored.length + erc721Stored.length + erc1155Stored.length + assetAddressesLength <= ASSET_LIMIT,
-            "V_D: Too many assets"
-        );
-
-        require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
                 && assetAddressesLength == assetTypes.length,
             "V_D: Length mismatch"
         );
 
         _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+
+        require(erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT, "V_D: Too many assets");
     }
 
     /**
@@ -600,7 +603,7 @@ contract Vault is IVault {
         uint256[] memory assetTypes,
         address to
     ) internal {
-        IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //reverts in mainregistry if invalid input
+        IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts); //reverts in mainregistry if invalid input
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {

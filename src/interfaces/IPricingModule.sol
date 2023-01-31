@@ -39,12 +39,12 @@ interface IPricingModule {
      * @param id The Id of the asset where applicable
      * @param amount The amount of tokens
      */
-    function processDeposit(address asset, uint256 id, uint256 amount) external;
+    function processDeposit(address vault, address asset, uint256 id, uint256 amount) external;
 
     /**
      * @notice Processes the withdrawal of tokens to increase the maxExposure
      * @param asset The address of the asset
      * @param amount The amount of tokens
      */
-    function processWithdrawal(address asset, uint256 amount) external;
+    function processWithdrawal(address vault, address asset, uint256 id, uint256 amount) external;
 }

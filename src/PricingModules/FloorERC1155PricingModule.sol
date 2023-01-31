@@ -113,7 +113,11 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param amount the amount of ERC1155 tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
      */
-    function processDeposit(address asset, uint256 assetId, uint256 amount) external override onlyMainReg {
+    function processDeposit(address vault, address asset, uint256 assetId, uint256 amount)
+        external
+        override
+        onlyMainReg
+    {
         require(assetId == assetToInformation[asset].id, "PM1155_PD: ID not allowed");
 
         exposure[asset].exposure += uint128(amount);

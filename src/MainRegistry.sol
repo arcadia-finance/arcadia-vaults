@@ -193,7 +193,9 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
             assetAddress = assetAddresses[i];
 
             require(inMainRegistry[assetAddress], "MR_BPD: Asset not in mainreg");
-            IPricingModule(assetToPricingModule[assetAddress]).processDeposit(assetAddress, assetIds[i], amounts[i]);
+            IPricingModule(assetToPricingModule[assetAddress]).processDeposit(
+                msg.sender, assetAddress, assetIds[i], amounts[i]
+            );
 
             unchecked {
                 ++i;
@@ -207,11 +209,11 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
      * @param amounts An array of amounts to be withdrawn
      * @dev batchProcessWithdrawal in the pricing module updates the exposure
      */
-    function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts)
-        external
-        whenWithdrawNotPaused
-        onlyVault
-    {
+    function batchProcessWithdrawal(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata amounts
+    ) external whenWithdrawNotPaused onlyVault {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
 
@@ -219,7 +221,9 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         for (uint256 i; i < addressesLength;) {
             assetAddress = assetAddresses[i];
 
-            IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(assetAddress, amounts[i]);
+            IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(
+                msg.sender, assetAddress, assetIds[i], amounts[i]
+            );
 
             unchecked {
                 ++i;
@@ -271,12 +275,12 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         uint256[] calldata assetAmounts,
         uint256 baseCurrency
     ) public view returns (RiskModule.AssetValueAndRiskVariables[] memory) {
-        //Cache Output array
+        // Cache Output array
         uint256 assetAddressesLength = assetAddresses.length;
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             new RiskModule.AssetValueAndRiskVariables[](assetAddressesLength);
 
-        //Cache variables
+        // Cache variables
         IPricingModule.GetValueInput memory getValueInput;
         getValueInput.baseCurrency = baseCurrency;
         int256 rateBaseCurrencyToUsd;
@@ -288,7 +292,7 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
 
-            //If the asset is identical to the basecurrency, we do not need to get a rate
+            //If the asset is identical to the base Currency, we do not need to get a rate
             //We only need to fetch the risk variables from the PricingModule
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency = assetAmounts[i];
@@ -320,8 +324,10 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
                 } else {
                     if (valueInBaseCurrency > 0) {
                         //Bring value from internal 18 decimals to the actual number of decimals of the baseCurrency
-                        valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
-                            valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                        unchecked {
+                            valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
+                                valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                        }
                     }
                     if (valueInUsd > 0) {
                         //Check if the BaseCurrency-USD rate is already fetched, this should be done only once per loop!
@@ -334,10 +340,12 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
 
                         //Calculate the valueInBaseCurrency from the valueInUsd and the rateBaseCurrencyToUsd
                         //And bring the final valueInBaseCurrency from internal 18 decimals to the actual number of decimals of baseCurrency
-                        valuesAndRiskVarPerAsset[i].valueInBaseCurrency = valueInUsd.mulDivDown(
-                            baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
-                            uint256(rateBaseCurrencyToUsd)
-                        ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                        unchecked {
+                            valuesAndRiskVarPerAsset[i].valueInBaseCurrency = valueInUsd.mulDivDown(
+                                baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
+                                uint256(rateBaseCurrencyToUsd)
+                            ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                        }
                     }
                 }
             }
@@ -390,5 +398,102 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
 
         liquidationValue = RiskModule.calculateLiquidationValue(valuesAndRiskVarPerAsset);
+    }
+
+    /**
+     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
+     * @param assetAddresses The List of token addresses of the assets
+     * @param assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     * for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency An identifier (uint256) of the BaseCurrency
+     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
+     * @dev No need to check equality of length of arrays, since they are generated by the Vault.
+     */
+    function getTotalValue(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
+        uint256 baseCurrency
+    ) public view returns (uint256 valueInBaseCurrency) {
+        require(baseCurrency <= baseCurrencyCounter - 1, "MR_GTV: Unknown BaseCurrency");
+
+        uint256 assetAddressesLength = assetAddresses.length;
+
+        IPricingModule.GetValueInput memory getValueInput;
+        getValueInput.baseCurrency = baseCurrency;
+
+        uint256 valueInUsd;
+        address assetAddress;
+        uint256 tempValueInUsd;
+        uint256 tempValueInBaseCurrency;
+        for (uint256 i; i < assetAddressesLength;) {
+            assetAddress = assetAddresses[i];
+            require(inMainRegistry[assetAddress], "MR_GTV: Unknown asset");
+
+            getValueInput.assetAddress = assetAddress;
+            getValueInput.assetId = assetIds[i];
+            getValueInput.assetAmount = assetAmounts[i];
+
+            if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
+                //The asset to price is the basecurrency
+                //assetAmounts can have a variable decimal precision -> bring to 18 decimals
+                //
+                unchecked {
+                    valueInBaseCurrency +=
+                        assetAmounts[i] * baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                }
+            } else {
+                //Calculate value of the next asset and add it to the total value of the vault, both tempValueInUsd and tempValueInBaseCurrency can be non-zero
+                unchecked {
+                    (tempValueInUsd, tempValueInBaseCurrency,,) =
+                        IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
+                    valueInUsd += tempValueInUsd;
+                    valueInBaseCurrency += tempValueInBaseCurrency;
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        //Check if baseCurrency is USD
+        if (baseCurrency == 0) {
+            //Bring from internal 18 decimals to the number of decimals of baseCurrency
+            unchecked {
+                return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+            }
+        } else if (valueInUsd > 0) {
+            //Get the BaseCurrency-USD rate
+            (, int256 rate,,,) =
+                IChainLinkData(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle).latestRoundData();
+            //Add valueInUsd to valueInBaseCurrency
+            unchecked {
+                valueInBaseCurrency += valueInUsd.mulDivDown(
+                    baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit, uint256(rate)
+                );
+            }
+        }
+        //Bring from internal 18 decimals to the number of decimals of baseCurrency
+        return valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+    }
+
+    /**
+     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
+     * @param assetAddresses The List of token addresses of the assets
+     * @param assetIds The list of corresponding token Ids that needs to be checked
+     * @dev For each token address, a corresponding id at the same index should be present,
+     * for tokens without Id (ERC20 for instance), the Id should be set to 0
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
+     * @param baseCurrency The contract address of the BaseCurrency
+     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
+     */
+    function getTotalValue(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata assetAmounts,
+        address baseCurrency
+    ) external view returns (uint256 valueInBaseCurrency) {
+        valueInBaseCurrency = getTotalValue(assetAddresses, assetIds, assetAmounts, assetToBaseCurrency[baseCurrency]);
     }
 }
