@@ -30,6 +30,14 @@ contract VaultTestExtension is Vault {
     function setIsTrustedCreditorSet(bool set) public {
         isTrustedCreditorSet = set;
     }
+
+    function setVaultVersion(uint16 version) public {
+        vaultVersion = version;
+    }
+
+    function setOwner(address newOwner) public {
+        owner = newOwner;
+    }
 }
 
 abstract contract vaultTests is DeployArcadiaVaults {
@@ -259,6 +267,7 @@ contract VaultManagementTest is vaultTests {
     using stdStorage for StdStorage;
 
     function setUp() public override {
+        vm.prank(vaultOwner);
         vault_ = new VaultTestExtension(address(mainRegistry), 1);
     }
 
@@ -268,8 +277,8 @@ contract VaultManagementTest is vaultTests {
     }
 
     function testRevert_initialize_InvalidVersion() public {
-        stdstore.target(address(vault_)).sig(vault_.owner.selector).checked_write(address(0));
-        stdstore.target(address(vault_)).sig(vault_.vaultVersion.selector).checked_write(0);
+        vault_.setVaultVersion(0);
+        vault_.setOwner(address(0));
 
         vm.expectRevert("V_I: Invalid vault version");
         vault_.initialize(vaultOwner, address(mainRegistry), 0, address(0));
@@ -278,8 +287,8 @@ contract VaultManagementTest is vaultTests {
     function testSuccess_initialize(address owner_, uint16 vaultVersion_) public {
         vm.assume(vaultVersion_ > 0);
 
-        stdstore.target(address(vault_)).sig(vault_.owner.selector).checked_write(address(0));
-        stdstore.target(address(vault_)).sig(vault_.vaultVersion.selector).checked_write(0);
+        vault_.setVaultVersion(0);
+        vault_.setOwner(address(0));
 
         vault_.initialize(owner_, address(mainRegistry), vaultVersion_, address(0));
 
