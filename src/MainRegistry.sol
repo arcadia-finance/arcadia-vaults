@@ -319,8 +319,10 @@ contract MainRegistry is MainRegistryGuardian {
                 } else {
                     if (valueInBaseCurrency > 0) {
                         //Bring value from internal 18 decimals to the actual number of decimals of the baseCurrency
-                        valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
-                            valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                        unchecked {
+                            valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
+                                valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                        }
                     }
                     if (valueInUsd > 0) {
                         //Check if the BaseCurrency-USD rate is already fetched, this should be done only once per loop!
@@ -333,10 +335,12 @@ contract MainRegistry is MainRegistryGuardian {
 
                         //Calculate the valueInBaseCurrency from the valueInUsd and the rateBaseCurrencyToUsd
                         //And bring the final valueInBaseCurrency from internal 18 decimals to the actual number of decimals of baseCurrency
-                        valuesAndRiskVarPerAsset[i].valueInBaseCurrency = valueInUsd.mulDivDown(
-                            baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
-                            uint256(rateBaseCurrencyToUsd)
-                        ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                        unchecked {
+                            valuesAndRiskVarPerAsset[i].valueInBaseCurrency = valueInUsd.mulDivDown(
+                                baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
+                                uint256(rateBaseCurrencyToUsd)
+                            ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
+                        }
                     }
                 }
             }
