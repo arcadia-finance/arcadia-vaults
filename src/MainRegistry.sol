@@ -420,8 +420,11 @@ contract MainRegistry is MainRegistryGuardian {
         RiskModule.AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset =
             getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, baseCurrency);
 
-        for (uint256 i = 0; i < valuesAndRiskVarPerAsset.length; ++i) {
+        for (uint256 i = 0; i < valuesAndRiskVarPerAsset.length;) {
             valueInBaseCurrency += valuesAndRiskVarPerAsset[i].valueInBaseCurrency;
+            unchecked {
+                ++i;
+            }
         }
     }
 
