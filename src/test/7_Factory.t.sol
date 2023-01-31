@@ -29,8 +29,6 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
         vm.stopPrank();
-
-
     }
 
     /* ///////////////////////////////////////////////////////////////
