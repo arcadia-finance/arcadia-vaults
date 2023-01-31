@@ -17,7 +17,6 @@ import "../actions/utils/ActionData.sol";
 import {MultiActionMock} from "../mockups/MultiActionMock.sol";
 
 contract VaultTestExtension is Vault {
-
     constructor(address mainReg_, uint16 vaultVersion_) Vault(mainReg_, vaultVersion_) {}
 
     function getLengths() external view returns (uint256, uint256, uint256, uint256) {
@@ -258,13 +257,12 @@ contract DeploymentTest is vaultTests {
 /////////////////////////////////////////////////////////////// */
 contract VaultManagementTest is vaultTests {
     using stdStorage for StdStorage;
-    
+
     function setUp() public override {
         vault_ = new VaultTestExtension(address(mainRegistry), 1);
     }
 
     function testRevert_initialize_AlreadyInitialized() public {
-
         vm.expectRevert("V_I: Already initialized!");
         vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
     }
@@ -292,7 +290,6 @@ contract VaultManagementTest is vaultTests {
     }
 
     function testSuccess_upgradeVault(address newImplementation, uint16 newVersion) public {
-
         //TrustedCreditor is set
         vm.prank(vaultOwner);
         vault_.openTrustedMarginAccount(address(pool));
@@ -320,7 +317,6 @@ contract VaultManagementTest is vaultTests {
     }
 
     function testRevert_upgradeVault_InvalidVaultVersion(address newImplementation, uint16 newVersion) public {
-
         vm.assume(newVersion != 1);
 
         //TrustedCreditor is set
