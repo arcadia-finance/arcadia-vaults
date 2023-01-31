@@ -35,8 +35,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
         pool.setVaultVersion(1, true);
-        pool.setMaxInitiatorFee(type(uint88).max);
-        liquidator.setAuctionCutoffTime(14_400);
+        pool.setMaxInitiatorFee(type(uint80).max);
+        liquidator.setAuctionCurveParameters(3_600, 14_400);
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
@@ -89,9 +89,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     /////////////////////////////////////////////////////////////// */
     function testSuccess_deployment() public {
         assertEq(liquidator.factory(), address(factory));
-        (uint64 penalty, uint64 initiatorReward) = liquidator.claimRatios();
-        assertEq(penalty, 5);
-        assertEq(initiatorReward, 2);
+        assertEq(liquidator.penaltyWeight(), 5);
+        assertEq(liquidator.initiatorRewardWeight(), 1);
         assertEq(liquidator.startPriceMultiplier(), 110);
     }
 
@@ -122,112 +121,132 @@ contract LiquidatorTest is DeployArcadiaVaults {
                         MANAGE AUCTION SETTINGS
     ///////////////////////////////////////////////////////////////*/
 
-    function testRevert_setClaimRatios_NonOwner(
+    function testRevert_setWeights_NonOwner(
         address unprivilegedAddress_,
-        Liquidator.ClaimRatios memory claimRatios_
+        uint8 initiatorRewardWeight,
+        uint8 penaltyWeight
     ) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("UNAUTHORIZED");
-        liquidator.setClaimRatios(claimRatios_);
+        liquidator.setWeights(initiatorRewardWeight, penaltyWeight);
         vm.stopPrank();
     }
 
-    function testSuccess_setClaimRatios(Liquidator.ClaimRatios memory claimRatios_) public {
-        vm.prank(creatorAddress);
-        liquidator.setClaimRatios(claimRatios_);
+    function testRevert_setWeights_WeightsTooHigh(uint8 initiatorRewardWeight, uint8 penaltyWeight) public {
+        vm.assume(uint16(initiatorRewardWeight) + penaltyWeight > 11);
 
-        (uint64 penalty, uint64 initiatorReward) = liquidator.claimRatios();
-        assertEq(penalty, claimRatios_.penalty);
-        assertEq(initiatorReward, claimRatios_.initiatorReward);
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("LQ_SW: Weights Too High");
+        liquidator.setWeights(initiatorRewardWeight, penaltyWeight);
+        vm.stopPrank();
     }
 
-    function testRevert_setMaxAuctionTime_NonOwner(address unprivilegedAddress_, uint16 cutoffTime) public {
+    function testSuccess_setWeights(uint8 initiatorRewardWeight, uint8 penaltyWeight) public {
+        vm.assume(uint16(initiatorRewardWeight) + penaltyWeight <= 11);
+
+        vm.prank(creatorAddress);
+        liquidator.setWeights(initiatorRewardWeight, penaltyWeight);
+
+        assertEq(liquidator.penaltyWeight(), penaltyWeight);
+        assertEq(liquidator.initiatorRewardWeight(), initiatorRewardWeight);
+    }
+
+    function testRevert_setAuctionCurveParameters_NonOwner(
+        address unprivilegedAddress_,
+        uint16 halfLifeTime,
+        uint16 cutoffTime
+    ) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("UNAUTHORIZED");
-        liquidator.setAuctionCutoffTime(cutoffTime);
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
         vm.stopPrank();
     }
 
-    function testRevert_setMaxAuctionTime_tooHigh(uint16 cutoffTime) public {
+    function testRevert_setAuctionCurveParameters_BaseTooHigh(uint16 halfLifeTime, uint16 cutoffTime) public {
         // Preprocess: limit the fuzzing to acceptable levels
-        vm.assume(cutoffTime > 8 * 60 * 60);
+        vm.assume(halfLifeTime > 8 * 60 * 60);
+
+        // Given When Then: a owner attempts to set the discount rate, but it is not in the limits
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("LQ_SACP: halfLifeTime too high");
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
+        vm.stopPrank();
+    }
+
+    function testRevert_setAuctionCurveParameters_BaseTooLow(uint16 halfLifeTime, uint16 cutoffTime) public {
+        // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(halfLifeTime < 2 * 60);
+
+        // Given When Then: a owner attempts to set the discount rate, but it is not in the limits
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("LQ_SACP: halfLifeTime too low");
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
+        vm.stopPrank();
+    }
+
+    function testRevert_setAuctionCurveParameters_AuctionCutoffTimeTooHigh(uint16 halfLifeTime, uint16 cutoffTime)
+        public
+    {
+        // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(halfLifeTime > 2 * 60);
+        vm.assume(halfLifeTime < 8 * 60 * 60);
+
+        vm.assume(cutoffTime > 18 * 60 * 60);
 
         // Given When Then: a owner attempts to set the max auction time, but it is not in the limits
         vm.startPrank(creatorAddress);
-        vm.expectRevert("LQ_ACT: cutoff too high");
-        liquidator.setAuctionCutoffTime(cutoffTime);
+        vm.expectRevert("LQ_SACP: cutoff too high");
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
         vm.stopPrank();
     }
 
-    function testRevert_setMaxAuctionTime_tooLow(uint16 cutoffTime) public {
+    function testRevert_setAuctionCurveParameters_AuctionCutoffTimeTooLow(uint16 halfLifeTime, uint16 cutoffTime)
+        public
+    {
         // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(halfLifeTime > 2 * 60);
+        vm.assume(halfLifeTime < 8 * 60 * 60);
+
         vm.assume(cutoffTime < 1 * 60 * 60);
 
         // Given When Then: a owner attempts to set the max auction time, but it is not in the limits
         vm.startPrank(creatorAddress);
-        vm.expectRevert("LQ_ACT: cutoff too low");
-        liquidator.setAuctionCutoffTime(cutoffTime);
+        vm.expectRevert("LQ_SACP: cutoff too low");
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
         vm.stopPrank();
     }
 
-    function testSuccess_setMaxAuctionTime(uint16 cutoffTime) public {
+    function testSuccess_setAuctionCurveParameters_Base(uint16 halfLifeTime, uint16 cutoffTime) public {
         // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(halfLifeTime > 2 * 60);
+        vm.assume(halfLifeTime < 8 * 60 * 60);
+        vm.assume(cutoffTime > 1 * 60 * 60);
+        vm.assume(cutoffTime < 2 * 60 * 60);
+        // Given: the owner is the creatorAddress
+        vm.prank(creatorAddress);
+        // When: the owner sets the discount rate
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
+        // Then: the discount rate is correctly set
+        uint256 expectedDiscountRate = 1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLifeTime));
+        assertEq(liquidator.base(), expectedDiscountRate);
+    }
+
+    function testSuccess_setAuctionCurveParameters_cutoffTime(uint16 halfLifeTime, uint16 cutoffTime) public {
+        // Preprocess: limit the fuzzing to acceptable levels
+        vm.assume(halfLifeTime > 1 * 60 * 60);
+        vm.assume(halfLifeTime < 8 * 60 * 60);
         vm.assume(cutoffTime > 1 * 60 * 60);
         vm.assume(cutoffTime < 8 * 60 * 60);
         // Given: the owner is the creatorAddress
         vm.prank(creatorAddress);
         // When: the owner sets the max auction time
-        liquidator.setAuctionCutoffTime(cutoffTime);
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
         // Then: the max auction time is set
-        assertEq(liquidator.auctionCutoffTime(), cutoffTime);
-    }
-
-    function testRevert_setBase_NonOwner(address unprivilegedAddress_, uint256 halfLife) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("UNAUTHORIZED");
-        liquidator.setBase(halfLife);
-        vm.stopPrank();
-    }
-
-    function testRevert_setBase_tooHigh(uint256 halfLife) public {
-        // Preprocess: limit the fuzzing to acceptable levels
-        vm.assume(halfLife > 8 * 60 * 60);
-
-        // Given When Then: a owner attempts to set the discount rate, but it is not in the limits
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("LQ_DR: halfLife too high");
-        liquidator.setBase(halfLife);
-        vm.stopPrank();
-    }
-
-    function testRevert_setBase_tooLow(uint32 halfLife) public {
-        // Preprocess: limit the fuzzing to acceptable levels
-        vm.assume(halfLife < 2 * 60);
-
-        // Given When Then: a owner attempts to set the discount rate, but it is not in the limits
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("LQ_DR: halfLife too low");
-        liquidator.setBase(halfLife);
-        vm.stopPrank();
-    }
-
-    function testSuccess_setBase(uint256 halfLife) public {
-        // Preprocess: limit the fuzzing to acceptable levels
-        vm.assume(halfLife > 2 * 60);
-        vm.assume(halfLife < 8 * 60 * 60);
-        // Given: the owner is the creatorAddress
-        vm.prank(creatorAddress);
-        // When: the owner sets the discount rate
-        liquidator.setBase(halfLife);
-        // Then: the discount rate is correctly set
-        uint256 expectedDiscountRate = 1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife));
-        assertEq(liquidator.base(), expectedDiscountRate);
+        assertEq(liquidator.cutoffTime(), cutoffTime);
     }
 
     function testRevert_setStartPriceMultiplier_NonOwner(address unprivilegedAddress_, uint16 priceMultiplier) public {
@@ -303,11 +322,11 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(openDebt > 0);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
+        liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
 
         vm.startPrank(address(pool));
         vm.expectRevert("LQ_SA: Auction already ongoing");
-        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
+        liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
         vm.stopPrank();
     }
 
@@ -318,7 +337,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("LQ_SA: Unauthorised");
-        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
+        liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
         vm.stopPrank();
     }
 
@@ -326,7 +345,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(openDebt > 0);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
+        liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
 
         assertEq(proxy.owner(), address(liquidator));
         uint256 index = factory.vaultIndex(address(proxy));
@@ -357,9 +376,9 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(inAuction, false);
     }
 
-    function testSuccess_getPriceOfVault(
+    function testSuccess_getPriceOfVault_BeforeCutOffTime(
         uint32 startTime,
-        uint16 halfLife,
+        uint16 halfLifeTime,
         uint32 currentTime,
         uint16 cutoffTime,
         uint128 openDebt,
@@ -368,8 +387,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     ) public {
         // Preprocess: Set up the fuzzed variables
         vm.assume(currentTime > startTime);
-        vm.assume(halfLife > 2 * 60); // 2 minutes
-        vm.assume(halfLife < 8 * 60 * 60); // 8 hours
+        vm.assume(halfLifeTime > 10 * 60); // 10 minutes
+        vm.assume(halfLifeTime < 8 * 60 * 60); // 8 hours
         vm.assume(cutoffTime < 8 * 60 * 60); // 8 hours
         vm.assume(cutoffTime > 1 * 60 * 60); // 1 hours
         vm.assume(currentTime - startTime < cutoffTime);
@@ -379,11 +398,10 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(minPriceMultiplier < 91);
 
         // Given: A vault is in auction
-        uint64 base = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLife)));
+        uint64 base = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, uint256(1e18 / halfLifeTime)));
 
         vm.startPrank(creatorAddress);
-        liquidator.setBase(halfLife);
-        liquidator.setAuctionCutoffTime(cutoffTime);
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
         liquidator.setStartPriceMultiplier(startPriceMultiplier);
         liquidator.setMinimumPriceMultiplier(minPriceMultiplier);
         vm.stopPrank();
@@ -391,7 +409,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.warp(startTime);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
+        liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
         vm.warp(currentTime);
 
         // When: Get the price of the vault
@@ -402,6 +420,52 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint256 multiplier =
             (startPriceMultiplier - minPriceMultiplier) * LogExpMath.pow(base, auctionTime) + minPriceMultiplier;
         uint256 expectedPrice = uint256(openDebt) * multiplier / 1e20;
+
+        // Then: The price is calculated correctly
+        assertEq(price, expectedPrice);
+        assertEq(inAuction, true);
+    }
+
+    function testSuccess_getPriceOfVault_AfterCutOffTime(
+        uint32 startTime,
+        uint16 halfLifeTime,
+        uint32 currentTime,
+        uint16 cutoffTime,
+        uint128 openDebt,
+        uint8 startPriceMultiplier,
+        uint8 minPriceMultiplier
+    ) public {
+        // Preprocess: Set up the fuzzed variables
+        vm.assume(currentTime > startTime);
+        vm.assume(halfLifeTime > 10 * 60); // 10 minutes
+        vm.assume(halfLifeTime < 8 * 60 * 60); // 8 hours
+        vm.assume(cutoffTime < 8 * 60 * 60); // 8 hours
+        vm.assume(cutoffTime > 1 * 60 * 60); // 1 hours
+        vm.assume(currentTime - startTime >= cutoffTime);
+        vm.assume(openDebt > 0);
+        vm.assume(startPriceMultiplier > 100);
+        vm.assume(startPriceMultiplier < 301);
+        vm.assume(minPriceMultiplier < 91);
+
+        // Given: A vault is in auction
+        vm.startPrank(creatorAddress);
+        liquidator.setAuctionCurveParameters(halfLifeTime, cutoffTime);
+        liquidator.setStartPriceMultiplier(startPriceMultiplier);
+        liquidator.setMinimumPriceMultiplier(minPriceMultiplier);
+        vm.stopPrank();
+
+        vm.warp(startTime);
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
+        vm.warp(currentTime);
+
+        // When: Get the price of the vault
+        (uint256 price, bool inAuction) = liquidator.getPriceOfVault(address(proxy));
+
+        // And: The price is calculated outside correctly
+        uint256 multiplier = minPriceMultiplier;
+        uint256 expectedPrice = uint256(openDebt) * multiplier / 1e2;
 
         // Then: The price is calculated correctly
         assertEq(price, expectedPrice);
@@ -421,7 +485,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.assume(bidder != liquidityProvider);
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
+        liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
 
         (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy));
         vm.assume(priceOfVault > bidderfunds);
@@ -436,27 +500,30 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_buyVault_afterAuctionCutoff(uint128 openDebt, uint32 timePassed) public {
-        vm.assume(timePassed > liquidator.auctionCutoffTime());
+    function testSuccess_buyVault(
+        uint128 openDebt,
+        uint136 bidderfunds,
+        uint16 halfLifeTime,
+        uint24 timePassed,
+        uint16 cutoffTime,
+        uint8 startPriceMultiplier,
+        uint8 minPriceMultiplier
+    ) public {
+        // Preprocess: Set up the fuzzed variables
+        vm.assume(halfLifeTime > 10 * 60); // 10 minutes
+        vm.assume(halfLifeTime < 8 * 60 * 60); // 8 hours
+        vm.assume(cutoffTime < 8 * 60 * 60); // 8 hours
+        vm.assume(cutoffTime > 1 * 60 * 60); // 1 hours
+        vm.assume(startPriceMultiplier > 100);
+        vm.assume(startPriceMultiplier < 301);
+        vm.assume(minPriceMultiplier < 91);
         vm.assume(openDebt > 0 && openDebt <= pool.totalRealisedLiquidity());
         address bidder = address(69); //Cannot fuzz the bidder address, since any existing contract without onERC721Received will revert
 
         vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
+        liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
 
-        vm.warp(timePassed);
-
-        vm.startPrank(bidder);
-        liquidator.buyVault(address(proxy));
-        vm.stopPrank();
-    }
-
-    function testSuccess_buyVault(uint128 openDebt, uint136 bidderfunds) public {
-        vm.assume(openDebt > 0 && openDebt <= pool.totalRealisedLiquidity());
-        address bidder = address(69); //Cannot fuzz the bidder address, since any existing contract without onERC721Received will revert
-
-        vm.prank(address(pool));
-        liquidator.startAuction(address(proxy), openDebt, type(uint88).max);
+        vm.warp(block.timestamp + timePassed);
 
         (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy));
         vm.assume(priceOfVault <= bidderfunds);
@@ -475,7 +542,11 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint256 totalRealisedLiquidityAfter = pool.totalRealisedLiquidity();
         uint256 availableLiquidityAfter = dai.balanceOf(address(pool));
 
-        assertEq(totalRealisedLiquidityAfter - totalRealisedLiquidityBefore, priceOfVault - openDebt);
+        if (priceOfVault >= openDebt) {
+            assertEq(totalRealisedLiquidityAfter - totalRealisedLiquidityBefore, priceOfVault - openDebt);
+        } else {
+            assertEq(totalRealisedLiquidityBefore - totalRealisedLiquidityAfter, openDebt - priceOfVault);
+        }
         assertEq(availableLiquidityAfter - availableLiquidityBefore, priceOfVault);
         assertEq(dai.balanceOf(bidder), bidderfunds - priceOfVault);
         uint256 index = factory.vaultIndex(address(proxy));
@@ -486,7 +557,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
     function testSuccess_calcLiquidationSettlementValues(uint128 openDebt, uint256 priceOfVault, uint88 maxInitiatorFee)
         public
     {
-        (uint64 penaltyWeight, uint64 initiatorRewardWeight) = liquidator.claimRatios();
+        uint8 penaltyWeight = liquidator.penaltyWeight();
+        uint8 initiatorRewardWeight = liquidator.initiatorRewardWeight();
         uint256 expectedLiquidationInitiatorReward = uint256(openDebt) * initiatorRewardWeight / 100;
         expectedLiquidationInitiatorReward =
             expectedLiquidationInitiatorReward > maxInitiatorFee ? maxInitiatorFee : expectedLiquidationInitiatorReward;
