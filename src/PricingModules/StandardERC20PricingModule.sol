@@ -64,7 +64,7 @@ contract StandardERC20PricingModule is PricingModule {
         assetsInPricingModule.push(asset);
 
         uint256 assetUnit = 10 ** IERC20(asset).decimals();
-        require(assetUnit <= 1000000000000000000, "PM20_AA: Maximal 18 decimals");
+        require(assetUnit <= 1e18, "PM20_AA: Maximal 18 decimals");
 
         assetToInformation[asset].assetUnit = uint64(assetUnit); //Can safely cast to uint64, we previously checked it is smaller than 10e18
         assetToInformation[asset].oracles = oracles;

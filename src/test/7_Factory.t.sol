@@ -749,6 +749,7 @@ contract FactoryTest is DeployArcadiaVaults {
 
     function testSuccess_liquidate(address liquidator_) public {
         vm.assume(liquidator_ != vaultOwner);
+        vm.assume(liquidator_ != address(0));
 
         vm.prank(vaultOwner);
         proxyAddr = factory.createVault(0, 0, address(0));
