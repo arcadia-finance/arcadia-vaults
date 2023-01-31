@@ -34,6 +34,7 @@ contract OracleHub is Owned {
     }
 
     event OracleAdded(address oracle, string quoteAsset, string baseAsset);
+    event OracleDecommissioned(address oracle, bool isActive);
 
     /**
      * @notice Constructor
@@ -117,11 +118,14 @@ contract OracleHub is Owned {
             int192 min = IChainLinkData(IChainLinkData(oracle).aggregator()).minAnswer();
             if (answer <= min) {
                 oracleIsInUse = false;
+                emit OracleDecommissioned(oracle, false);
             } else if (updatedAt <= block.timestamp - 1 weeks) {
                 oracleIsInUse = false;
+                emit OracleDecommissioned(oracle, false);
             }
         } catch {
             oracleIsInUse = false;
+            emit OracleDecommissioned(oracle, false);
         }
 
         oracleToOracleInformation[oracle].isActive = oracleIsInUse;
