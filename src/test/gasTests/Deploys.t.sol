@@ -24,7 +24,7 @@ contract gasDeploys is GasTestFixture {
     }
 
     function testDeployVaultLogic() public {
-        new Vault();
+        new Vault(address(mainRegistry), 1);
     }
 
     function testDeployMainRegistry() public {

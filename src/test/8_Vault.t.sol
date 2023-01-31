@@ -17,6 +17,8 @@ import "../actions/utils/ActionData.sol";
 import {MultiActionMock} from "../mockups/MultiActionMock.sol";
 
 contract VaultTestExtension is Vault {
+    constructor(address mainReg_, uint16 vaultVersion_) Vault(mainReg_, vaultVersion_) {}
+
     function getLengths() external view returns (uint256, uint256, uint256, uint256) {
         return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
     }
@@ -27,6 +29,14 @@ contract VaultTestExtension is Vault {
 
     function setIsTrustedCreditorSet(bool set) public {
         isTrustedCreditorSet = set;
+    }
+
+    function setVaultVersion(uint16 version) public {
+        vaultVersion = version;
+    }
+
+    function setOwner(address newOwner) public {
+        owner = newOwner;
     }
 }
 
@@ -78,10 +88,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
     //this is a before each
     function setUp() public virtual {
         vm.prank(vaultOwner);
-        vault_ = new VaultTestExtension();
-
-        vm.prank(vaultOwner);
-        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
+        vault_ = new VaultTestExtension(address(mainRegistry), 1);
     }
 
     function deployFactory() internal {
@@ -257,24 +264,31 @@ contract DeploymentTest is vaultTests {
                     VAULT MANAGEMENT
 /////////////////////////////////////////////////////////////// */
 contract VaultManagementTest is vaultTests {
+    using stdStorage for StdStorage;
+
     function setUp() public override {
-        vault_ = new VaultTestExtension();
+        vm.prank(vaultOwner);
+        vault_ = new VaultTestExtension(address(mainRegistry), 1);
     }
 
     function testRevert_initialize_AlreadyInitialized() public {
-        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
-
         vm.expectRevert("V_I: Already initialized!");
         vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
     }
 
     function testRevert_initialize_InvalidVersion() public {
+        vault_.setVaultVersion(0);
+        vault_.setOwner(address(0));
+
         vm.expectRevert("V_I: Invalid vault version");
         vault_.initialize(vaultOwner, address(mainRegistry), 0, address(0));
     }
 
     function testSuccess_initialize(address owner_, uint16 vaultVersion_) public {
         vm.assume(vaultVersion_ > 0);
+
+        vault_.setVaultVersion(0);
+        vault_.setOwner(address(0));
 
         vault_.initialize(owner_, address(mainRegistry), vaultVersion_, address(0));
 
@@ -285,8 +299,6 @@ contract VaultManagementTest is vaultTests {
     }
 
     function testSuccess_upgradeVault(address newImplementation, uint16 newVersion) public {
-        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
-
         //TrustedCreditor is set
         vm.prank(vaultOwner);
         vault_.openTrustedMarginAccount(address(pool));
@@ -307,8 +319,6 @@ contract VaultManagementTest is vaultTests {
     {
         vm.assume(nonOwner != address(factory));
 
-        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
-
         vm.startPrank(nonOwner);
         vm.expectRevert("V: Only Factory");
         vault_.upgradeVault(newImplementation, newVersion);
@@ -317,7 +327,6 @@ contract VaultManagementTest is vaultTests {
 
     function testRevert_upgradeVault_InvalidVaultVersion(address newImplementation, uint16 newVersion) public {
         vm.assume(newVersion != 1);
-        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
 
         //TrustedCreditor is set
         vm.prank(vaultOwner);
@@ -884,7 +893,7 @@ contract VaultActionTest is vaultTests {
         deal(address(eth), address(action), 1000 * 10 ** 20, false);
 
         vm.startPrank(creatorAddress);
-        vault = new VaultTestExtension();
+        vault = new VaultTestExtension(address(mainRegistry), 1);
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
         factory.confirmNewVaultInfo();
         vm.stopPrank();

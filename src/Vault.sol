@@ -89,7 +89,13 @@ contract Vault {
         _;
     }
 
-    constructor() {}
+    constructor(address registry_, uint16 vaultVersion_) {
+        // This will only be the owner of the vault logic implementation
+        // and will not affect any subsequent proxy implementation using this vault logic
+        owner = msg.sender;
+        registry = registry_;
+        vaultVersion = vaultVersion_;
+    }
 
     /* ///////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT
@@ -106,7 +112,7 @@ contract Vault {
      * @param baseCurrency_ The Base-currency in which the vault is denominated.
      */
     function initialize(address owner_, address registry_, uint16 vaultVersion_, address baseCurrency_) external {
-        require(vaultVersion == 0, "V_I: Already initialized!");
+        require(vaultVersion == 0 && owner == address(0), "V_I: Already initialized!");
         require(vaultVersion_ != 0, "V_I: Invalid vault version");
         owner = owner_;
         registry = registry_;

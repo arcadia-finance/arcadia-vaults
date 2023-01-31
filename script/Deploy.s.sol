@@ -222,7 +222,7 @@ contract ArcadiaVaultDeployer is Test {
             DeployAddresses.btc, oracleBtcToEthEthToUsdArr, riskVars_, type(uint128).max
         );
 
-        vault = new Vault();
+        vault = new Vault(address(mainRegistry), 1);
         factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1);
         factory.confirmNewVaultInfo();
 
