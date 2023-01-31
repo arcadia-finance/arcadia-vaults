@@ -42,11 +42,7 @@ contract VaultV2Test is DeployArcadiaVaults {
     //this is a before
     constructor() DeployArcadiaVaults() {
         vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
@@ -197,7 +193,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         proofs[0] = Constants.upgradeProof1To2;
 
         vm.startPrank(sender);
-        vm.expectRevert("FTRY_UVV: You are not the owner");
+        vm.expectRevert("FTRY_UVV: Only Owner");
         factory.upgradeVaultVersion(address(proxy), 2, proofs);
         vm.stopPrank();
     }
@@ -277,7 +273,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         uint256 tokenIdToWorkWith;
         for (uint256 i; i < tokenIds.length; ++i) {
             tokenIdToWorkWith = tokenIds[i];
-            while (token.ownerOf(tokenIdToWorkWith) != address(0)) {
+            while (token.getOwnerOf(tokenIdToWorkWith) != address(0)) {
                 tokenIdToWorkWith++;
             }
 

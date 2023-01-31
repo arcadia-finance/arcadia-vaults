@@ -128,7 +128,7 @@ contract BaseGuardianUnitTest is Test {
         vm.assume(nonOwner_ != owner);
         vm.startPrank(nonOwner_);
         // When: a non-owner tries to change the guardian, it is reverted
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         baseGuardian.changeGuardian(guardian);
         vm.stopPrank();
         // Then: the guardian is not changed

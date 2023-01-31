@@ -102,14 +102,14 @@ contract OracleHubTest is Test {
             bool baseAssetIsBaseCurrency,
             ,
             address quoteAssetAddress,
-            string memory quoteAsset,
-            string memory baseAsset
+            bytes16 quoteAsset,
+            bytes16 baseAsset
         ) = oracleHub.oracleToOracleInformation(address(oracleEthToUsd));
         assertEq(oracleUnit, oracleEthToUsdUnit);
         assertEq(baseAssetBaseCurrency, uint8(Constants.UsdBaseCurrency));
         assertEq(baseAssetIsBaseCurrency, true);
-        assertEq(quoteAsset, "ETH");
-        assertEq(baseAsset, "USD");
+        assertEq(quoteAsset, bytes16(abi.encodePacked("ETH")));
+        assertEq(baseAsset, bytes16(abi.encodePacked("USD")));
         assertEq(quoteAssetAddress, address(eth));
         assertEq(isActive, true);
     }
@@ -153,8 +153,8 @@ contract OracleHubTest is Test {
         vm.assume(unprivilegedAddress != creatorAddress);
         // When: unprivilegedAddress addOracle
         vm.startPrank(unprivilegedAddress);
-        // Then: addOracle should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addOracle should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),

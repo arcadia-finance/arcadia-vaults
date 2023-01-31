@@ -173,7 +173,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** 10),
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "GenericStoreFront",
+                quoteAsset: "GenStoreFront",
                 baseAsset: "ETH",
                 oracle: address(oracleGenericStoreFrontToEth),
                 quoteAssetAddress: address(genericStoreFront),
@@ -191,16 +191,12 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
         pool.setVaultVersion(1, true);
-        liquidator.setAuctionCutoffTime(14_400);
+        liquidator.setAuctionCurveParameters(3_600, 14_400);
 
         debt = DebtToken(address(pool));
 

@@ -29,8 +29,12 @@ contract ERC721Mock is ERC721 {
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(ownerOf[tokenId] != address(0), "ERC721Metadata: URI query for nonexistent token");
+        require(_ownerOf[tokenId] != address(0), "ERC721Metadata: URI query for nonexistent token");
         string memory currentBaseURI = baseURI;
         return bytes(currentBaseURI).length > 0 ? string(abi.encodePacked(currentBaseURI, tokenId.toString())) : "";
+    }
+
+    function getOwnerOf(uint256 tokenId) public view returns (address) {
+        return _ownerOf[tokenId];
     }
 }

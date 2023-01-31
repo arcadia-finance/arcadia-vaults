@@ -28,11 +28,7 @@ abstract contract EndToEndTest is DeployArcadiaVaults {
     //this is a before
     constructor() DeployArcadiaVaults() {
         vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
         pool.setLiquidator(address(liquidator));
@@ -687,7 +683,7 @@ contract DoActionWithLeverage is EndToEndTest {
 
         //Do swap on leverage
         vm.startPrank(vaultOwner);
-        vm.expectRevert("VMA: coll. value too low");
+        vm.expectRevert("V_VMA: coll. value too low");
         pool.doActionWithLeverage(daiMargin, address(proxy), address(action), callData, emptyBytes3);
         vm.stopPrank();
     }
