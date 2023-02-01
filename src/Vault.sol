@@ -930,6 +930,45 @@ contract Vault is IVault {
         }
     }
 
+    function skim(address token, uint256 id, uint256 type_) public {
+        require(msg.sender == owner, "V_S: Only owner can skim");
+
+        if (token == address(0)) {
+            payable(owner).transfer(address(this).balance);
+            return;
+        }
+
+        if (type_ == 0) {
+            uint256 balance = IERC20(token).balanceOf(address(this));
+            uint256 balanceStored = erc20Balances[token];
+            if (balance > balanceStored) {
+                require(IERC20(token).transfer(owner, balance - balanceStored), "V_S: ERC20 transfer failed");
+            }
+        } else if (type_ == 1) {
+            bool isStored;
+            for (uint256 i; i < erc721Stored.length;) {
+                if (erc721Stored[i] == token && erc721TokenIds[i] == id) {
+                    isStored = true;
+                    break;
+                }
+                unchecked {
+                    ++i;
+                }
+            }
+
+            if (!isStored) {
+                IERC721(token).safeTransferFrom(address(this), owner, id);
+            }
+        } else if (type_ == 2) {
+            uint256 balance = IERC1155(token).balanceOf(address(this), id);
+            uint256 balanceStored = erc1155Balances[token][id];
+
+            if (balance > balanceStored) {
+                IERC1155(token).safeTransferFrom(address(this), owner, id, balance - balanceStored, "");
+            }
+        }
+    }
+
     function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
         return this.onERC721Received.selector;
     }
