@@ -532,7 +532,7 @@ contract DoActionWithLeverage is EndToEndTest {
         proxy.setAssetManager(address(pool), true);
     }
 
-    function testSuccess_doActionWithLeverage(uint32 daiDebt, uint64 daiCollateral, uint32 ethOut) public {
+    function testSuccess_doActionWithLeverage(uint32 daiDebt, uint72 daiCollateral, uint32 ethOut) public {
         (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0); //18 decimals
         (uint256 daiRate,) = oracleHub.getRate(oracleDaiToUsdArr, 0); //18 decimals
 

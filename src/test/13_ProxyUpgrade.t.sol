@@ -87,16 +87,15 @@ contract VaultV2Test is DeployArcadiaVaults {
         safemoon.approve(address(proxy), type(uint256).max);
         dai.approve(address(liquidator), type(uint256).max);
 
-        vaultV2 = new VaultV2();
+        vaultV2 = new VaultV2(address(mainRegistry), 2);
         vm.stopPrank();
     }
 
-    function testSuccess_confirmNewVaultInfo(uint256 salt) public {
+    function testSuccess_getVaultVersionRoot(uint256 salt) public {
         vm.assume(salt > 0);
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
@@ -121,8 +120,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         Checks memory checkBefore = createCompareStruct();
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
@@ -135,6 +133,8 @@ contract VaultV2Test is DeployArcadiaVaults {
         vm.startPrank(vaultOwner);
         factory.upgradeVaultVersion(address(proxy), factory.latestVaultVersion(), proofs);
         vm.stopPrank();
+
+        assertEq(VaultV2(proxyAddr).check(), 5);
 
         Checks memory checkAfter = createCompareStruct();
 
@@ -156,8 +156,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         Checks memory checkBefore = createCompareStruct();
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
@@ -184,8 +183,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         vm.assume(sender != address(6));
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
