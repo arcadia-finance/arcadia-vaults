@@ -6,7 +6,7 @@
  */
 pragma solidity >=0.8.0 <0.9.0;
 
-import {ActionData} from "../actions/utils/ActionData.sol";
+import { ActionData } from "../actions/utils/ActionData.sol";
 
 abstract contract ActionBase {
     address public immutable MAIN_REGISTRY;
@@ -20,5 +20,5 @@ abstract contract ActionBase {
      * @param actionData A bytes object containing two actionAssetData structs, an address array and a bytes array.
      * @return resultData An actionAssetData struct with the balances of this ActionMultiCall address.
      */
-    function executeAction(bytes calldata actionData) external virtual returns (ActionData memory resultData) {}
+    function executeAction(bytes calldata actionData) external virtual returns (ActionData memory resultData) { }
 }

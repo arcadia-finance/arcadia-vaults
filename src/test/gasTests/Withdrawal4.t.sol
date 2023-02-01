@@ -14,7 +14,7 @@ contract gasWithdrawal4_2ERC202ERC721 is GasTestFixture {
     bytes3 public emptyBytes3;
 
     //this is a before
-    constructor() GasTestFixture() {}
+    constructor() GasTestFixture() { }
 
     //this is a before each
     function setUp() public override {

@@ -14,20 +14,12 @@ abstract contract MainRegistryTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     //this is a before
-    constructor() DeployArcadiaVaults() {}
+    constructor() DeployArcadiaVaults() { }
 
     //this is a before each
     function setUp() public virtual {
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
@@ -57,9 +49,9 @@ contract DeploymentTest is MainRegistryTest {
         // Given: All necessary contracts deployed on setup
         // When:
         // Then: baseCurrencyLabel should return "USD"
-        (,, address assetaddress,, string memory baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
+        (, address assetaddress,,, bytes8 baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
         assertEq(assetaddress, address(0));
-        assertTrue(StringHelpers.compareStrings("USD", baseCurrencyLabel));
+        assertTrue(bytes8("USD") == baseCurrencyLabel);
         assertEq(mainRegistry.assetToBaseCurrency(address(0)), 0);
         assertEq(mainRegistry.baseCurrencies(0), address(0));
     }
@@ -80,60 +72,6 @@ contract ExternalContractsTest is MainRegistryTest {
         super.setUp();
     }
 
-    function testRevert_setFactory_NonOwner(address unprivilegedAddress_) public {
-        // Given: unprivilegedAddress_ is not creatorAddress, creatorAddress deploys Factory contract, calls setNewVaultInfo and confirmNewVaultInfo
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-        vm.startPrank(creatorAddress);
-        factory = new Factory();
-        factory.setNewVaultInfo(
-            address(mainRegistry), 0x0000000000000000000000000000001234567890, Constants.upgradeProof1To2
-        );
-        factory.confirmNewVaultInfo();
-        vm.stopPrank();
-
-        vm.startPrank(unprivilegedAddress_);
-        // When: unprivilegedAddress_ calls setFactory
-
-        // Then: setFactory should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
-        mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-    }
-
-    function testSuccess_setFactory_MultipleBaseCurrencies() public {
-        // Given: creatorAddress calls addBaseCurrency, deploys Factory contract, calls setNewVaultInfo and confirmNewVaultInfo
-        vm.startPrank(creatorAddress);
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
-                assetAddress: address(dai),
-                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
-                baseCurrencyLabel: "DAI",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
-            })
-        );
-        mainRegistry.addBaseCurrency(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleEthToUsdDecimals),
-                assetAddress: address(eth),
-                baseCurrencyToUsdOracle: address(oracleEthToUsd),
-                baseCurrencyLabel: "ETH",
-                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
-            })
-        );
-        factory = new Factory();
-        factory.setNewVaultInfo(
-            address(mainRegistry), 0x0000000000000000000000000000001234567890, Constants.upgradeProof1To2
-        );
-        factory.confirmNewVaultInfo();
-        // When: creatorAddress calls setFactory with address(factory)
-        mainRegistry.setFactory(address(factory));
-        vm.stopPrank();
-
-        // Then: address(factory) should be equal to factoryAddress
-        assertEq(address(factory), mainRegistry.factoryAddress());
-    }
-
     function testSuccess_setAllowedAction_Owner(address action, bool allowed) public {
         vm.prank(creatorAddress);
         mainRegistry.setAllowedAction(action, allowed);
@@ -145,7 +83,7 @@ contract ExternalContractsTest is MainRegistryTest {
         vm.assume(nonAuthorized != creatorAddress);
 
         vm.startPrank(nonAuthorized);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         mainRegistry.setAllowedAction(action, allowed);
         vm.stopPrank();
     }
@@ -165,8 +103,8 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addBaseCurrency
 
-        // Then: addBaseCurrency should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addBaseCurrency should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -248,8 +186,8 @@ contract PriceModuleManagementTest is MainRegistryTest {
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addPricingModule
 
-        // Then: addPricingModule should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addPricingModule should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         vm.stopPrank();
     }
@@ -337,7 +275,6 @@ contract AssetManagementTest is MainRegistryTest {
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_, type(uint128).max);
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, riskVars_, type(uint128).max);
 
-        mainRegistry.setFactory(address(factory));
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
@@ -363,8 +300,8 @@ contract AssetManagementTest is MainRegistryTest {
         vm.assume(unprivilegedAddress_ != address(floorERC1155PricingModule));
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addAsset
-        // Then: addAsset should revert with "Caller is not a Price Module."
-        vm.expectRevert("Caller is not a Price Module.");
+        // Then: addAsset should revert with "MR: Only PriceMod."
+        vm.expectRevert("MR: Only PriceMod.");
         mainRegistry.addAsset(address(eth));
         vm.stopPrank();
     }
@@ -414,7 +351,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = 1;
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Caller is not a Vault.");
+        vm.expectRevert("MR: Only Vaults.");
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
@@ -574,7 +511,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amountLink;
 
         vm.startPrank(proxyAddr);
-        vm.expectRevert("Delegate calls not allowed.");
+        vm.expectRevert("MR: No delegate.");
         (bool success,) = address(mainRegistry).delegatecall(
             abi.encodeWithSignature(
                 "batchProcessDeposit(address[] calldata,uint256[] calldata,uint256[] calldata)",
@@ -594,12 +531,15 @@ contract AssetManagementTest is MainRegistryTest {
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
 
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Caller is not a Vault.");
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        vm.expectRevert("MR: Only Vaults.");
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -608,12 +548,15 @@ contract AssetManagementTest is MainRegistryTest {
         assetAddresses[0] = address(eth);
         assetAddresses[1] = address(dai);
 
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1000;
 
         vm.startPrank(proxyAddr);
         vm.expectRevert("MR_BPW: LENGTH_MISMATCH");
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -641,7 +584,7 @@ contract AssetManagementTest is MainRegistryTest {
         // Then: Withdrawal is reverted due to paused main registry
         vm.startPrank(proxyAddr);
         vm.expectRevert("Guardian: withdraw paused");
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -667,7 +610,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amountWithdrawn;
 
         vm.prank(proxyAddr);
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
 
         (, exposure) = standardERC20PricingModule.exposure(address(eth));
 
@@ -689,7 +632,7 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
 
         vm.startPrank(proxyAddr);
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetAmounts);
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
 
         (, uint128 endExposure) = standardERC20PricingModule.exposure(address(link));
@@ -708,10 +651,13 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amountLink;
 
         vm.startPrank(proxyAddr);
-        vm.expectRevert("Delegate calls not allowed.");
+        vm.expectRevert("MR: No delegate.");
         (bool success,) = address(mainRegistry).delegatecall(
             abi.encodeWithSignature(
-                "batchProcessWithdrawal(address[] calldata,uint256[] calldata)", assetAddresses, assetAmounts
+                "batchProcessWithdrawal(address[] calldata,uint256[] calldata,uint256[] calldata)",
+                assetAddresses,
+                assetIds,
+                assetAmounts
             )
         );
         vm.stopPrank();
@@ -894,63 +840,6 @@ contract PricingLogicTest is MainRegistryTest {
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
     }
 
-    function testRevert_getTotalValue_NegativeNonEqualInputLists() public {
-        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(bayc);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](2);
-        assetAmounts[0] = 10;
-        assetAmounts[1] = 10;
-
-        // Then: getTotalValue should revert with "MR_GTV: LENGTH_MISMATCH"
-        vm.expectRevert("MR_GTV: LENGTH_MISMATCH");
-        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
-
-        assetIds = new uint256[](2);
-        assetIds[0] = 0;
-        assetIds[1] = 0;
-
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = 10;
-
-        vm.expectRevert("MR_GTV: LENGTH_MISMATCH");
-        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
-    }
-
-    function testRevert_getListOfValuesPerAsset_NonEqualInputLists() public {
-        // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(bayc);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](2);
-        assetAmounts[0] = 10;
-        assetAmounts[1] = 10;
-        // When: getListOfValuesPerAsset called
-
-        // Then: getListOfValuesPerAsset should revert with "MR_GLV: LENGTH_MISMATCH"
-        vm.expectRevert("MR_GLV: LENGTH_MISMATCH");
-        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
-
-        assetIds = new uint256[](2);
-        assetIds[0] = 0;
-        assetIds[1] = 0;
-
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = 10;
-
-        vm.expectRevert("MR_GLV: LENGTH_MISMATCH");
-        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
-    }
-
     function testRevert_getTotalValue_UnknownBaseCurrency() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
         // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
@@ -988,8 +877,8 @@ contract PricingLogicTest is MainRegistryTest {
         assetAmounts[1] = 10;
         // When: getTotalValue called
 
-        // Then: getTotalValue should revert with "MR_GLV: Unknown BaseCurrency"
-        vm.expectRevert("MR_GLV: Unknown BaseCurrency");
+        // Then: getTotalValue should revert with "" ("EvmError: Revert")
+        vm.expectRevert();
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.SafemoonBaseCurrency);
     }
 
@@ -1010,7 +899,7 @@ contract PricingLogicTest is MainRegistryTest {
         // When: getTotalValue called
 
         // Then: getTotalValue should revert with "MR_GTV: Unknown asset"
-        vm.expectRevert("MR_GTV: Unknown asset");
+        vm.expectRevert(bytes(""));
         mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 
@@ -1030,8 +919,8 @@ contract PricingLogicTest is MainRegistryTest {
         assetAmounts[1] = 10;
         // When: getTotalValue called
 
-        // Then: getTotalValue should revert with "MR_GLV: Unknown asset"
-        vm.expectRevert("MR_GLV: Unknown asset");
+        // Then: getTotalValue should revert with "" ("EvmError: Revert")
+        vm.expectRevert();
         mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 

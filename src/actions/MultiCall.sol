@@ -6,9 +6,9 @@
  */
 pragma solidity >0.8.13;
 
-import {ActionBase, ActionData} from "./ActionBase.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
-import {IERC1155} from "../interfaces/IERC1155.sol";
+import { ActionBase, ActionData } from "./ActionBase.sol";
+import { IERC20 } from "../interfaces/IERC20.sol";
+import { IERC1155 } from "../interfaces/IERC1155.sol";
 
 /**
  * @title Generic multicall action
@@ -19,7 +19,7 @@ import {IERC1155} from "../interfaces/IERC1155.sol";
  */
 
 contract ActionMultiCall is ActionBase {
-    constructor(address mainRegistry_) ActionBase(mainRegistry_) {}
+    constructor(address mainRegistry_) ActionBase(mainRegistry_) { }
 
     /**
      * @notice Calls a series of addresses with arbitrrary calldata

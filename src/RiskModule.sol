@@ -6,18 +6,14 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
-import {RiskConstants} from "./utils/RiskConstants.sol";
+import { RiskConstants } from "./utils/RiskConstants.sol";
 
 /**
  * @title Risk Module
  * @author Arcadia Finance
- * @notice The Risk Module manages the supported asset related risks, collateral factor, liquidity threshold
- * @dev No end-user should directly interact with the Risk Module
+ * @notice The Risk Module is responsible for calculating the collateral value and liquidation value of a given combination of assets.
  */
 library RiskModule {
-    using FixedPointMathLib for uint256;
-
     struct AssetValueAndRiskVariables {
         uint256 valueInBaseCurrency;
         uint256 collateralFactor;
@@ -34,7 +30,8 @@ library RiskModule {
         pure
         returns (uint256 collateralValue)
     {
-        for (uint256 i; i < valuesAndRiskVarPerAsset.length;) {
+        uint256 valuesAndRiskVarPerAssetLength = valuesAndRiskVarPerAsset.length;
+        for (uint256 i; i < valuesAndRiskVarPerAssetLength;) {
             collateralValue +=
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].collateralFactor;
             unchecked {
@@ -45,8 +42,8 @@ library RiskModule {
     }
 
     /**
-     * @notice Calculate the weighted liquidation value given a combination of asset values and corresponding collateral factors.
-     * @param valuesAndRiskVarPerAsset List of asset values and corresponding collateral factors.
+     * @notice Calculate the weighted liquidation value given a combination of asset values and corresponding liquidation factors.
+     * @param valuesAndRiskVarPerAsset List of asset values and corresponding liquidation factors.
      * @return liquidationValue The value of a combination of assets, each discounted with a liquidation factor
      */
     function calculateLiquidationValue(AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset)
@@ -54,7 +51,8 @@ library RiskModule {
         pure
         returns (uint256 liquidationValue)
     {
-        for (uint256 i; i < valuesAndRiskVarPerAsset.length;) {
+        uint256 valuesAndRiskVarPerAssetLength = valuesAndRiskVarPerAsset.length;
+        for (uint256 i; i < valuesAndRiskVarPerAssetLength;) {
             liquidationValue +=
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].liquidationFactor;
             unchecked {

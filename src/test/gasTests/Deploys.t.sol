@@ -12,7 +12,7 @@ contract gasDeploys is GasTestFixture {
     using stdStorage for StdStorage;
 
     //this is a before
-    constructor() GasTestFixture() {}
+    constructor() GasTestFixture() { }
 
     //this is a before each
     function setUp() public override {
@@ -20,23 +20,15 @@ contract gasDeploys is GasTestFixture {
     }
 
     function testDeployFactory() public {
-        new Factory();
+        new FactoryExtension();
     }
 
     function testDeployVaultLogic() public {
-        new Vault();
+        new Vault(address(mainRegistry), 1);
     }
 
     function testDeployMainRegistry() public {
-        new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        new mainRegistryExtension(address(factory));
     }
 
     function testDeployPricingModuleERC20() public {

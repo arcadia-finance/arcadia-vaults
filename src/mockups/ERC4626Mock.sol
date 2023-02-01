@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity >=0.8.0;
 
-import {ERC20} from "../../lib/solmate/src/tokens/ERC20.sol";
-import {SafeTransferLib} from "../../lib/solmate/src/utils/SafeTransferLib.sol";
-import {FixedPointMathLib} from "../../lib/solmate/src/utils/FixedPointMathLib.sol";
+import { ERC20 } from "../../lib/solmate/src/tokens/ERC20.sol";
+import { SafeTransferLib } from "lib/solmate/src/utils/SafeTransferLib.sol";
+import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 /// @notice Minimal ERC4626 tokenized Vault implementation.
 /// @author Solmate (https://github.com/Rari-Capital/solmate/blob/main/src/mixins/ERC4626.sol)
@@ -167,15 +167,15 @@ abstract contract ERC4626 is ERC20 {
                          INTERNAL HOOKS LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function beforeWithdraw(uint256 assets, uint256 shares) internal virtual {}
+    function beforeWithdraw(uint256 assets, uint256 shares) internal virtual { }
 
-    function afterDeposit(uint256 assets, uint256 shares) internal virtual {}
+    function afterDeposit(uint256 assets, uint256 shares) internal virtual { }
 }
 
 contract ERC4626Mock is ERC4626 {
     constructor(ERC20 _underlying, string memory _name, string memory _symbol, uint8 _decimals)
         ERC4626(_underlying, _name, _symbol, _decimals)
-    {}
+    { }
 
     function totalAssets() public view override returns (uint256) {
         return ERC20(asset).balanceOf(address(this));

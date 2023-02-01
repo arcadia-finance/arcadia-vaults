@@ -6,10 +6,10 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
-import {IERC4626} from "../interfaces/IERC4626.sol";
-import {IStandardERC20PricingModule} from "./interfaces/IStandardERC20PricingModule.sol";
-import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
+import { PricingModule, IMainRegistry, IOraclesHub } from "./AbstractPricingModule.sol";
+import { IERC4626 } from "../interfaces/IERC4626.sol";
+import { IStandardERC20PricingModule } from "./interfaces/IStandardERC20PricingModule.sol";
+import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 /**
  * @title Sub-registry for Standard ERC4626 tokens

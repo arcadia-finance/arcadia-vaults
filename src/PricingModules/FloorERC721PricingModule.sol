@@ -6,7 +6,7 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
+import { PricingModule, IMainRegistry, IOraclesHub } from "./AbstractPricingModule.sol";
 
 /**
  * @title Pricing Module for ERC721 tokens for which a oracle exists for the floor price of the collection
@@ -29,7 +29,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param mainRegistry_ The address of the Main-registry
      * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) { }
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -102,7 +102,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param assetId The Id of the asset
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address asset, uint256 assetId) public view override returns (bool) {
+    function isAllowListed(address asset, uint256 assetId) public view override returns (bool) {
         if (exposure[asset].maxExposure != 0) {
             if (isIdInRange(asset, assetId)) {
                 return true;
@@ -136,7 +136,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param assetId The Id of the asset
      * @dev amount of a deposit in ERC721 pricing module is always 1
      */
-    function processDeposit(address asset, uint256 assetId, uint256) external override onlyMainReg {
+    function processDeposit(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
         require(isIdInRange(asset, assetId), "PM721_PD: ID not allowed");
 
         exposure[asset].exposure += 1;
@@ -148,7 +148,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param asset The address of the asset
      * @dev amount of a deposit in ERC721 pricing module is always 1
      */
-    function processWithdrawal(address asset, uint256) external override onlyMainReg {
+    function processWithdrawal(address, address asset, uint256, uint256) external override onlyMainReg {
         exposure[asset].exposure -= 1;
     }
 

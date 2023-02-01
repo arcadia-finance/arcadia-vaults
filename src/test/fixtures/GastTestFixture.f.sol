@@ -8,8 +8,8 @@ pragma solidity >0.8.10;
 
 import "../fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {LendingPool, DebtToken, ERC20, DataTypes} from "../../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../../lib/arcadia-lending/src/Tranche.sol";
+import { LendingPool, DebtToken, ERC20, DataTypes } from "../../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../../lib/arcadia-lending/src/Tranche.sol";
 
 abstract contract GasTestFixture is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -62,17 +62,17 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
         dickButs.mint(tokenCreatorAddress, 1);
         dickButs.mint(tokenCreatorAddress, 2);
 
-        interleave.mint(tokenCreatorAddress, 2, 100000);
-        interleave.mint(tokenCreatorAddress, 3, 100000);
-        interleave.mint(tokenCreatorAddress, 4, 100000);
-        interleave.mint(tokenCreatorAddress, 5, 100000);
+        interleave.mint(tokenCreatorAddress, 2, 100_000);
+        interleave.mint(tokenCreatorAddress, 3, 100_000);
+        interleave.mint(tokenCreatorAddress, 4, 100_000);
+        interleave.mint(tokenCreatorAddress, 5, 100_000);
 
         genericStoreFront = new ERC1155Mock("Generic Storefront Mock", "mGSM");
-        genericStoreFront.mint(tokenCreatorAddress, 1, 100000);
-        genericStoreFront.mint(tokenCreatorAddress, 2, 100000);
-        genericStoreFront.mint(tokenCreatorAddress, 3, 100000);
-        genericStoreFront.mint(tokenCreatorAddress, 4, 100000);
-        genericStoreFront.mint(tokenCreatorAddress, 5, 100000);
+        genericStoreFront.mint(tokenCreatorAddress, 1, 100_000);
+        genericStoreFront.mint(tokenCreatorAddress, 2, 100_000);
+        genericStoreFront.mint(tokenCreatorAddress, 3, 100_000);
+        genericStoreFront.mint(tokenCreatorAddress, 4, 100_000);
+        genericStoreFront.mint(tokenCreatorAddress, 5, 100_000);
 
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 4);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 5);
@@ -96,63 +96,63 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
             tokenCreatorAddress,
             vaultOwner,
             2,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         interleave.safeTransferFrom(
             tokenCreatorAddress,
             vaultOwner,
             3,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         interleave.safeTransferFrom(
             tokenCreatorAddress,
             vaultOwner,
             4,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         interleave.safeTransferFrom(
             tokenCreatorAddress,
             vaultOwner,
             5,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         genericStoreFront.safeTransferFrom(
             tokenCreatorAddress,
             vaultOwner,
             1,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         genericStoreFront.safeTransferFrom(
             tokenCreatorAddress,
             vaultOwner,
             2,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         genericStoreFront.safeTransferFrom(
             tokenCreatorAddress,
             vaultOwner,
             3,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         genericStoreFront.safeTransferFrom(
             tokenCreatorAddress,
             vaultOwner,
             4,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         genericStoreFront.safeTransferFrom(
             tokenCreatorAddress,
             vaultOwner,
             5,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         vm.stopPrank();
@@ -173,7 +173,7 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** 10),
                 baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "GenericStoreFront",
+                quoteAsset: "GenStoreFront",
                 baseAsset: "ETH",
                 oracle: address(oracleGenericStoreFrontToEth),
                 quoteAssetAddress: address(genericStoreFront),
@@ -191,16 +191,11 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
-        liquidator.setAuctionCutoffTime(14_400);
+        liquidator.setAuctionCurveParameters(3600, 14_400);
 
         debt = DebtToken(address(pool));
 

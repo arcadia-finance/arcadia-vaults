@@ -12,20 +12,12 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     //this is a before
-    constructor() DeployArcadiaVaults() {}
+    constructor() DeployArcadiaVaults() { }
 
     //this is a before each
     function setUp() public {
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -63,8 +55,8 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(unprivilegedAddress_);
         // When: unprivilegedAddress_ calls addAsset
 
-        // Then: addAsset should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addAsset should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
     }
@@ -91,16 +83,6 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_ExposureNotInLimits() public {
-        // Given: All necessary contracts deployed on setup
-        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
-        // Then: addAsset should revert with "PM20_AA: Max Exposure not in limits"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PM20_AA: Max Exposure not in limits");
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, uint256(type(uint128).max) + 1);
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListRiskVariables() public {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
@@ -116,7 +98,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
-        assertTrue(standardERC20PricingModule.isWhiteListed(address(eth), 0));
+        assertTrue(standardERC20PricingModule.isAllowListed(address(eth), 0));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {

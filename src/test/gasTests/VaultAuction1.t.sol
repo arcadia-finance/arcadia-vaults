@@ -14,7 +14,7 @@ contract gasVaultAuction_1ERC20 is GasTestFixture {
     bytes3 public emptyBytes3;
 
     //this is a before
-    constructor() GasTestFixture() {}
+    constructor() GasTestFixture() { }
 
     //this is a before each
     function setUp() public override {

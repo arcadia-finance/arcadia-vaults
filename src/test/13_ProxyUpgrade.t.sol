@@ -10,8 +10,8 @@ import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
 import "../mockups/VaultV2.sol";
 
-import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import { LendingPool, DebtToken, ERC20 } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 
 contract VaultV2Test is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -42,14 +42,9 @@ contract VaultV2Test is DeployArcadiaVaults {
     //this is a before
     constructor() DeployArcadiaVaults() {
         vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
         debt = DebtToken(address(pool));
 
@@ -92,21 +87,20 @@ contract VaultV2Test is DeployArcadiaVaults {
         safemoon.approve(address(proxy), type(uint256).max);
         dai.approve(address(liquidator), type(uint256).max);
 
-        vaultV2 = new VaultV2();
+        vaultV2 = new VaultV2(address(mainRegistry), 2);
         vm.stopPrank();
     }
 
-    function testSuccess_confirmNewVaultInfo(uint256 salt) public {
+    function testSuccess_getVaultVersionRoot(uint256 salt) public {
         vm.assume(salt > 0);
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
 
-        vm.startPrank(address(123456789));
+        vm.startPrank(address(123_456_789));
         proxyAddr2 = factory.createVault(salt, 0, address(0));
         vaultV2 = VaultV2(proxyAddr2);
         assertEq(vaultV2.returnFive(), 5);
@@ -126,8 +120,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         Checks memory checkBefore = createCompareStruct();
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
@@ -140,6 +133,8 @@ contract VaultV2Test is DeployArcadiaVaults {
         vm.startPrank(vaultOwner);
         factory.upgradeVaultVersion(address(proxy), factory.latestVaultVersion(), proofs);
         vm.stopPrank();
+
+        assertEq(VaultV2(proxyAddr).check(), 5);
 
         Checks memory checkAfter = createCompareStruct();
 
@@ -161,20 +156,19 @@ contract VaultV2Test is DeployArcadiaVaults {
         Checks memory checkBefore = createCompareStruct();
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
         proofs[0] = Constants.upgradeProof1To2;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("FTR_UVV: Cannot upgrade to this version");
+        vm.expectRevert("FTR_UVV: Version not allowed");
         factory.upgradeVaultVersion(address(proxy), 0, proofs);
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("FTR_UVV: Cannot upgrade to this version");
+        vm.expectRevert("FTR_UVV: Version not allowed");
         factory.upgradeVaultVersion(address(proxy), 3, proofs);
         vm.stopPrank();
 
@@ -189,15 +183,14 @@ contract VaultV2Test is DeployArcadiaVaults {
         vm.assume(sender != address(6));
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
         proofs[0] = Constants.upgradeProof1To2;
 
         vm.startPrank(sender);
-        vm.expectRevert("FTRY_UVV: You are not the owner");
+        vm.expectRevert("FTRY_UVV: Only Owner");
         factory.upgradeVaultVersion(address(proxy), 2, proofs);
         vm.stopPrank();
     }
@@ -277,7 +270,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         uint256 tokenIdToWorkWith;
         for (uint256 i; i < tokenIds.length; ++i) {
             tokenIdToWorkWith = tokenIds[i];
-            while (token.ownerOf(tokenIdToWorkWith) != address(0)) {
+            while (token.getOwnerOf(tokenIdToWorkWith) != address(0)) {
                 tokenIdToWorkWith++;
             }
 

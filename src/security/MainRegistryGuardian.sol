@@ -7,7 +7,7 @@
 
 pragma solidity ^0.8.0;
 
-import {BaseGuardian} from "./BaseGuardian.sol";
+import { BaseGuardian } from "./BaseGuardian.sol";
 
 /**
  * @title Main Registry Guardian
@@ -31,7 +31,7 @@ abstract contract MainRegistryGuardian is BaseGuardian {
     bool public withdrawPaused;
     bool public depositPaused;
 
-    constructor() {}
+    constructor() { }
 
     /*
     //////////////////////////////////////////////////////////////

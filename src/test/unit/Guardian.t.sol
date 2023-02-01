@@ -7,9 +7,9 @@
 pragma solidity ^0.8.13;
 
 import "../../../lib/forge-std/src/Test.sol";
-import {FactoryGuardian} from "../../security/FactoryGuardian.sol";
-import {MainRegistryGuardian} from "../../security/MainRegistryGuardian.sol";
-import {BaseGuardian} from "../../security/BaseGuardian.sol";
+import { FactoryGuardian } from "../../security/FactoryGuardian.sol";
+import { MainRegistryGuardian } from "../../security/MainRegistryGuardian.sol";
+import { BaseGuardian } from "../../security/BaseGuardian.sol";
 
 contract BaseGuardianPossibleExtension is BaseGuardian {
     bool public pausedVar1;
@@ -128,7 +128,7 @@ contract BaseGuardianUnitTest is Test {
         vm.assume(nonOwner_ != owner);
         vm.startPrank(nonOwner_);
         // When: a non-owner tries to change the guardian, it is reverted
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         baseGuardian.changeGuardian(guardian);
         vm.stopPrank();
         // Then: the guardian is not changed

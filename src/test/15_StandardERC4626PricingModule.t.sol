@@ -8,8 +8,8 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {ERC4626Mock} from "../mockups/ERC4626Mock.sol";
-import {StandardERC4626PricingModule} from "../PricingModules/StandardERC4626PricingModule.sol";
+import { ERC4626Mock } from "../mockups/ERC4626Mock.sol";
+import { StandardERC4626PricingModule } from "../PricingModules/StandardERC4626PricingModule.sol";
 
 contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -28,15 +28,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
     //this is a before each
     function setUp() public {
         vm.startPrank(creatorAddress);
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -91,7 +83,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
     function testRevert_addAsset_NonOwner(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
     }
@@ -118,16 +110,6 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC4626PricingModule.inPricingModule(address(ybEth)));
     }
 
-    function testRevert_addAsset_ExposureNotInLimits() public {
-        // Given: All necessary contracts deployed on setup
-        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
-        // Then: addAsset should revert with "PM4626_AA: Max Exposure not in limits"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PM4626_AA: Max Exposure not in limits");
-        standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, uint256(type(uint128).max) + 1);
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListRiskVariables() public {
         vm.startPrank(creatorAddress);
         standardERC4626PricingModule.addAsset(address(ybEth), emptyRiskVarInput, type(uint128).max);
@@ -142,7 +124,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         for (uint256 i; i < oracleEthToUsdArr.length; ++i) {
             assertEq(oracles[i], oracleEthToUsdArr[i]);
         }
-        assertTrue(standardERC4626PricingModule.isWhiteListed(address(ybEth), 0));
+        assertTrue(standardERC4626PricingModule.isAllowListed(address(ybEth), 0));
     }
 
     function testSuccess_addAsset_NonFullListRiskVariables() public {

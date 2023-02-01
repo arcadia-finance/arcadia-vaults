@@ -14,7 +14,7 @@ library Constants {
     uint256 internal constant EthBaseCurrency = 2;
     uint256 internal constant SafemoonBaseCurrency = 3;
 
-    uint256 internal constant usdDecimals = 11;
+    uint256 internal constant usdDecimals = 18;
     uint256 internal constant daiDecimals = 12;
     uint256 internal constant ethDecimals = 13;
 
@@ -77,6 +77,6 @@ library Constants {
     bytes32 internal constant upgradeRoot1To2 = 0x472ba66bf173e177005d95fe17be2002ac4c417ff5bef6fb20a1e357f75bf394;
     bytes32 internal constant upgradeRoot1To1 = 0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f;
 
-    uint256 internal constant interestRate = 5e16; //5% with 18 decimals precision
-    uint256 internal constant utilisationThreshold = 8e4; //80% with 5 decimals precision
+    uint72 internal constant interestRate = 5e16; //5% with 18 decimals precision
+    uint40 internal constant utilisationThreshold = 8e4; //80% with 5 decimals precision
 }

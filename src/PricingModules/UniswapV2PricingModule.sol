@@ -6,11 +6,11 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {PricingModule, IMainRegistry} from "./AbstractPricingModule.sol";
-import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
-import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
-import {FixedPointMathLib} from "../utils/FixedPointMathLib.sol";
-import {PRBMath} from "../utils/PRBMath.sol";
+import { PricingModule, IMainRegistry } from "./AbstractPricingModule.sol";
+import { IUniswapV2Pair } from "./interfaces/IUniswapV2Pair.sol";
+import { IUniswapV2Factory } from "./interfaces/IUniswapV2Factory.sol";
+import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import { PRBMath } from "../utils/PRBMath.sol";
 
 /**
  * @title Pricing-Module for Uniswap V2 LP tokens
@@ -24,7 +24,7 @@ contract UniswapV2PricingModule is PricingModule {
     using FixedPointMathLib for uint256;
     using PRBMath for uint256;
 
-    uint256 public constant poolUnit = 1000000000000000000;
+    uint256 public constant poolUnit = 1_000_000_000_000_000_000;
     address public immutable uniswapV2Factory;
     address public immutable erc20PricingModule;
 
@@ -81,8 +81,8 @@ contract UniswapV2PricingModule is PricingModule {
         address token0 = IUniswapV2Pair(asset).token0();
         address token1 = IUniswapV2Pair(asset).token1();
 
-        require(PricingModule(erc20PricingModule).isWhiteListed(token0, 0), "PMUV2_AA: TOKENO_NOT_WHITELISTED");
-        require(PricingModule(erc20PricingModule).isWhiteListed(token1, 0), "PMUV2_AA: TOKEN1_NOT_WHITELISTED");
+        require(PricingModule(erc20PricingModule).isAllowListed(token0, 0), "PMUV2_AA: TOKENO_NOT_WHITELISTED");
+        require(PricingModule(erc20PricingModule).isAllowListed(token1, 0), "PMUV2_AA: TOKEN1_NOT_WHITELISTED");
 
         require(!inPricingModule[asset], "PMUV2_AA: already added");
         inPricingModule[asset] = true;

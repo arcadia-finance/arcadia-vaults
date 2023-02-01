@@ -17,7 +17,7 @@ interface IMainRegistry {
      * @notice Returns the Factory address.
      * @return factory The Factory address.
      */
-    function factoryAddress() external view returns (address);
+    function factory() external view returns (address);
 
     /**
      * @notice Returns the contract of a basecurrency.
@@ -57,7 +57,11 @@ interface IMainRegistry {
      * @param assetAddresses An array of addresses of the assets
      * @param amounts An array of amounts to be withdrawn
      */
-    function batchProcessWithdrawal(address[] calldata assetAddresses, uint256[] calldata amounts) external;
+    function batchProcessWithdrawal(
+        address[] calldata assetAddresses,
+        uint256[] calldata assetIds,
+        uint256[] calldata amounts
+    ) external;
 
     /**
      * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency

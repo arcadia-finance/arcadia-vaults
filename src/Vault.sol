@@ -6,31 +6,30 @@
  */
 pragma solidity >=0.8.0 <0.9.0;
 
-import {LogExpMath} from "./utils/LogExpMath.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
-import {IERC721} from "./interfaces/IERC721.sol";
-import {IERC1155} from "./interfaces/IERC1155.sol";
-import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
-import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
-import {IActionBase} from "./interfaces/IActionBase.sol";
-import {IFactory} from "./interfaces/IFactory.sol";
-import {ActionData} from "./actions/utils/ActionData.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
+import { IERC721 } from "./interfaces/IERC721.sol";
+import { IERC1155 } from "./interfaces/IERC1155.sol";
+import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
+import { ITrustedCreditor } from "./interfaces/ITrustedCreditor.sol";
+import { IActionBase, ActionData } from "./interfaces/IActionBase.sol";
+import { IFactory } from "./interfaces/IFactory.sol";
+import { IVault } from "./interfaces/IVault.sol";
+import { IOraclesHub } from "./PricingModules/interfaces/IOraclesHub.sol";
+import { ActionData } from "./actions/utils/ActionData.sol";
 
 /**
- * @title An Arcadia Vault used to deposit a combination of all kinds of assets
+ * @title An Arcadia Vault used to manage all your assets and take margin.
  * @author Arcadia Finance
  * @notice Users can use this vault to deposit assets (ERC20, ERC721, ERC1155, ...).
  * The vault will denominate all the pooled assets into one baseCurrency (one unit of account, like usd or eth).
  * An increase of value of one asset will offset a decrease in value of another asset.
- * Users can take out a credit line against the single denominated value.
+ * Users can use the single denominated value of all their assets to take margin (take credit line, financing for leverage...).
  * Ensure your total value denomination remains above the liquidation threshold, or risk being liquidated!
- * @dev A vault is a smart contract that will contain multiple assets.
- * Using getValue(<baseCurrency>), the vault returns the combined total value of all (whitelisted) assets the vault contains.
- * Integrating this vault as means of collateral management for your own protocol that requires collateral is encouraged.
+ * @dev Integrating this vault as means of margin/collateral management for your own protocol that requires collateral is encouraged.
  * Arcadia's vault functions will guarantee you a certain value of the vault.
- * For whitelists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
+ * For allowlists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
-contract Vault {
+contract Vault is IVault {
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
@@ -64,14 +63,14 @@ contract Vault {
         address value;
     }
 
-    event Upgraded(address indexed implementation);
+    event Upgraded(address oldImplementation, address newImplementation, uint16 oldVersion, uint16 indexed newVersion);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
-     * @dev Throws if called by any account other than the factory adress.
+     * @dev Throws if called by any account other than the factory address.
      */
     modifier onlyFactory() {
-        require(msg.sender == IMainRegistry(registry).factoryAddress(), "V: You are not the factory");
+        require(msg.sender == IMainRegistry(registry).factory(), "V: Only Factory");
         _;
     }
 
@@ -79,7 +78,7 @@ contract Vault {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner, "V: You are not the owner");
+        require(msg.sender == owner, "V: Only Owner");
         _;
     }
 
@@ -87,11 +86,19 @@ contract Vault {
      * @dev Throws if called by any account other than an asset manager or the owner.
      */
     modifier onlyAssetManager() {
-        require(msg.sender == owner || isAssetManager[msg.sender], "V: You are not an asset manager");
+        require(
+            msg.sender == owner || msg.sender == trustedCreditor || isAssetManager[msg.sender], "V: Only Asset Manager"
+        );
         _;
     }
 
-    constructor() {}
+    constructor(address registry_, uint16 vaultVersion_) {
+        // This will only be the owner of the vault logic implementation
+        // and will not affect any subsequent proxy implementation using this vault logic
+        owner = msg.sender;
+        registry = registry_;
+        vaultVersion = vaultVersion_;
+    }
 
     /* ///////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT
@@ -102,30 +109,31 @@ contract Vault {
      * @dev A proxy will be used to interact with the vault logic.
      * Therefore everything is initialised through an init function.
      * This function will only be called (once) in the same transaction as the proxy vault creation through the factory.
-     * Costly function (156k gas)
-     * @param owner_ The tx.origin: the sender of the 'createVault' on the factory
+     * @param owner_ The sender of the 'createVault' on the factory
      * @param registry_ The 'beacon' contract to which should be looked at for external logic.
      * @param vaultVersion_ The version of the vault logic.
      * @param baseCurrency_ The Base-currency in which the vault is denominated.
      */
     function initialize(address owner_, address registry_, uint16 vaultVersion_, address baseCurrency_) external {
-        require(vaultVersion == 0, "V_I: Already initialized!");
+        require(vaultVersion == 0 && owner == address(0), "V_I: Already initialized!");
         require(vaultVersion_ != 0, "V_I: Invalid vault version");
         owner = owner_;
         registry = registry_;
         vaultVersion = vaultVersion_;
-        _setBaseCurrency(baseCurrency_);
+        baseCurrency = baseCurrency_;
     }
 
     /**
-     * @notice Stores a new address in the EIP1967 implementation slot & updates the vault version.
+     * @notice Updates the vault version and stores a new address in the EIP1967 implementation slot.
      * @param newImplementation The contract with the new vault logic.
+     * @param newRegistry The MainRegistry for this specific implementation (might be identical as the old registry)
+     * @param data Arbitrary data, can contain instructions to execute on the new logic
      * @param newVersion The new version of the vault logic.
      */
-    function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
-        vaultVersion = newVersion;
-        _getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
-
+    function upgradeVault(address newImplementation, address newRegistry, uint16 newVersion, bytes calldata data)
+        external
+        onlyFactory
+    {
         if (isTrustedCreditorSet) {
             //If a trustedCreditor is set, new version should be compatible.
             //openMarginAccount() is a view function, cannot modify state.
@@ -133,7 +141,20 @@ contract Vault {
             require(success, "V_UV: Invalid vault version");
         }
 
-        emit Upgraded(newImplementation);
+        //Cache old parameters
+        address oldImplementation = _getAddressSlot(_IMPLEMENTATION_SLOT).value;
+        address oldRegistry = registry;
+        uint16 oldVersion = vaultVersion;
+        _getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
+        registry = newRegistry;
+        vaultVersion = newVersion;
+
+        //Hook on the new logic to finalize upgrade.
+        //Used to eg. Remove exposure from old Registry and Add exposure to the new Registry.
+        //Data can be added by the factory for complex instructions.
+        this.upgradeHook(oldImplementation, oldRegistry, oldVersion, data);
+
+        emit Upgraded(oldImplementation, newImplementation, oldVersion, newVersion);
     }
 
     /**
@@ -145,6 +166,18 @@ contract Vault {
         }
     }
 
+    /**
+     * @notice Finalizes the Upgrade to a new vault version on the new Logic Contract.
+     * @param oldImplementation The contract with the new old logic.
+     * @param oldRegistry The MainRegistry of the old version (might be identical as the new registry)
+     * @param oldVersion The old version of the vault logic.
+     * @param data Arbitrary data, can contain instructions to execute in this function.
+     * @dev If upgradeHook() is implemented, it MUST be verified that msg.sender == address(this)
+     */
+    function upgradeHook(address oldImplementation, address oldRegistry, uint16 oldVersion, bytes calldata data)
+        external
+    { }
+
     /* ///////////////////////////////////////////////////////////////
                         OWNERSHIP MANAGEMENT
     /////////////////////////////////////////////////////////////// */
@@ -153,11 +186,11 @@ contract Vault {
      * @notice Transfers ownership of the contract to a new account.
      * @param newOwner The new owner of the Vault
      * @dev Can only be called by the current owner via the factory.
-     * A transfer of ownership of this vault by a transfer
-     * of ownership of the accompanying ERC721 Vault NFT
-     * issued by the factory. Owner of Vault NFT = owner of vault
+     * A transfer of ownership of the vault is triggered by a transfer
+     * of ownership of the accompanying ERC721 Vault NFT issued by the factory.
+     * Owner of Vault NFT = owner of vault
      */
-    function transferOwnership(address newOwner) public onlyFactory {
+    function transferOwnership(address newOwner) external onlyFactory {
         if (newOwner == address(0)) {
             revert("V_TO: INVALID_RECIPIENT");
         }
@@ -168,7 +201,7 @@ contract Vault {
      * @notice Transfers ownership of the contract to a new account (`newOwner`).
      * Internal function without access restriction.
      */
-    function _transferOwnership(address newOwner) internal virtual {
+    function _transferOwnership(address newOwner) internal {
         address oldOwner = owner;
         owner = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);
@@ -181,20 +214,20 @@ contract Vault {
     /**
      * @notice Sets the baseCurrency of a vault.
      * @param baseCurrency_ the new baseCurrency for the vault.
+     * @dev First checks if there is no locked value. If there is no value locked then a new baseCurrency is set.
      */
-    function setBaseCurrency(address baseCurrency_) public onlyOwner {
+    function setBaseCurrency(address baseCurrency_) external onlyOwner {
+        require(getUsedMargin() == 0, "V_SBC: Non-zero open position");
         _setBaseCurrency(baseCurrency_);
     }
 
     /**
      * @notice Internal function: sets baseCurrency.
      * @param baseCurrency_ the new baseCurrency for the vault.
-     * @dev First checks if there is no locked value. If there is no value locked then the baseCurrency gets changed to the param
      */
-    function _setBaseCurrency(address baseCurrency_) private {
-        require(getUsedMargin() == 0, "V_SBC: Can't change baseCurrency when Used Margin > 0");
+    function _setBaseCurrency(address baseCurrency_) internal {
         require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
-        baseCurrency = baseCurrency_; //Change this to where ever it is going to be actually set
+        baseCurrency = baseCurrency_;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -202,23 +235,24 @@ contract Vault {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Initiates a margin account on the vault for one trusted application..
-     * @param protocol The contract address of the trusted application.
-     * @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
-     * @dev Currently only one trusted protocol can be set.
+     * @notice Initiates a margin account on the vault for a trusted Creditor.
+     * @param creditor The contract address of the trusted Creditor.
+     * @dev Currently only one trusted Creditor can be set.
      * @dev Only open margin accounts for protocols you trust!
-     * The protocol has significant authorisation: use margin (-> trigger liquidation)
+     * The Creditor should be trusted by the Vault Owner, but not by any of the Arcadia-vault smart contracts.
+     * TrustedProtocol and Liquidator will never be called from an Arcadia Contract with a function that can modify state.
+     * @dev The creditor has significant authorisation: use margin, trigger liquidation, and manage assets.
      */
-    function openTrustedMarginAccount(address protocol) public onlyOwner {
-        require(!isTrustedCreditorSet, "V_OMA: ALREADY SET");
+    function openTrustedMarginAccount(address creditor) external onlyOwner {
+        require(!isTrustedCreditorSet, "V_OTMA: ALREADY SET");
 
         //openMarginAccount() is a view function, cannot modify state.
         (bool success, address baseCurrency_, address liquidator_) =
-            ITrustedCreditor(protocol).openMarginAccount(vaultVersion);
-        require(success, "V_OMA: OPENING ACCOUNT REVERTED");
+            ITrustedCreditor(creditor).openMarginAccount(vaultVersion);
+        require(success, "V_OTMA: Invalid Version");
 
         liquidator = liquidator_;
-        trustedCreditor = protocol;
+        trustedCreditor = creditor;
         if (baseCurrency != baseCurrency_) {
             _setBaseCurrency(baseCurrency_);
         }
@@ -227,15 +261,15 @@ contract Vault {
 
     /**
      * @notice Closes the margin account on the vault of the trusted application..
-     * @dev The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
-     * @dev Currently only one trusted protocol can be set.
+     * @dev Currently only one trusted creditor can be set.
      */
-    function closeTrustedMarginAccount() public onlyOwner {
-        require(isTrustedCreditorSet, "V_CMA: NOT SET");
+    function closeTrustedMarginAccount() external onlyOwner {
+        require(isTrustedCreditorSet, "V_CTMA: NOT SET");
         //getOpenPosition() is a view function, cannot modify state.
-        require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CMA: NON-ZERO OPEN POSITION");
+        require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CTMA: NON-ZERO OPEN POSITION");
 
         isTrustedCreditorSet = false;
+        trustedCreditor = address(0);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -243,29 +277,31 @@ contract Vault {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Called by trusted applications, checks if the Vault has sufficient free margin.
-     * @param baseCurrency_ The Base-currency in which the Vault is denominated.
-     * @param amount The amount the position is increased.
-     * @return success Boolean indicating if there is sufficient free margin to increase the margin position.
+     * @notice Checks if the Vault is healthy and still has free margin.
+     * @param debtIncrease The amount with which the debt is increased.
+     * @param totalOpenDebt The total open Debt against the Vault.
+     * @return success Boolean indicating if there is sufficient margin to back a certain amount of Debt.
+     * @dev Only one of the values can be non-zero, or we check on a certain increase of debt, or we check on a total amount of debt.
+     * @dev If both values are zero, we check if the vault is currently healthy.
      */
-    function increaseMarginPosition(address baseCurrency_, uint256 amount) public view returns (bool success) {
-        if (baseCurrency_ != baseCurrency) {
-            return false;
+    function isVaultHealthy(uint256 debtIncrease, uint256 totalOpenDebt) external view returns (bool success) {
+        if (totalOpenDebt != 0) {
+            //Check if vault is healthy for a given amount of openDebt.
+            success = getCollateralValue() >= totalOpenDebt;
+        } else {
+            //Check if vault is still healthy after an increase of debt.
+            success = getCollateralValue() >= getUsedMargin() + debtIncrease;
         }
-
-        // Check that the collateral value is bigger than the sum  of the already used margin and the increase
-        // ToDo: For trusted protocols, already pass usedMargin with the call -> avoid additional hop back to trusted protocol to fetch already open debt
-        success = getCollateralValue() >= getUsedMargin() + amount;
     }
 
     /**
      * @notice Returns the total value of the vault in a specific baseCurrency
      * @dev Fetches all stored assets with their amounts on the proxy vault.
      * Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
-     * @param baseCurrency_ The asset to return the value in.
+     * @param baseCurrency_ The basecurrency to return the value in.
      * @return vaultValue Total value stored on the vault, expressed in baseCurrency.
      */
-    function getVaultValue(address baseCurrency_) public view returns (uint256 vaultValue) {
+    function getVaultValue(address baseCurrency_) external view returns (uint256 vaultValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             generateAssetData();
         vaultValue = IMainRegistry(registry).getTotalValue(assetAddresses, assetIds, assetAmounts, baseCurrency_);
@@ -274,7 +310,7 @@ contract Vault {
     /**
      * @notice Calculates the total collateral value of the vault.
      * @return collateralValue The collateral value, returned in the decimals of the base currency.
-     * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+     * @dev Returns the value denominated in the baseCurrency of the Vault.
      * @dev The collateral value of the vault is equal to the spot value of the underlying assets,
      * discounted by a haircut (the collateral factor). Since the value of
      * collateralised assets can fluctuate, the haircut guarantees that the vault
@@ -292,7 +328,7 @@ contract Vault {
     /**
      * @notice Calculates the total liquidation value of the vault.
      * @return liquidationValue The liquidation value, returned in the decimals of the base currency.
-     * @dev Returns the value denominated in the baseCurrency in which the proxy vault is initialised.
+     * @dev Returns the value denominated in the baseCurrency of the Vault.
      * @dev The liquidation value of the vault is equal to the spot value of the underlying assets,
      * discounted by a haircut (the liquidation factor).
      * The liquidation value takes into account that not the full value of the assets can go towards
@@ -312,7 +348,7 @@ contract Vault {
      * @return usedMargin The used amount of margin a user has taken
      * @dev The used margin is denominated in the baseCurrency of the proxy vault.
      * @dev Currently only one trusted application (Arcadia Lending) can open a margin account.
-     * The open position is fetched at a contract of the application -> only allow trusted audited protocols!!!
+     * The open position is fetched at a contract of the application -> only allow trusted audited creditors!!!
      */
     function getUsedMargin() public view returns (uint256 usedMargin) {
         if (!isTrustedCreditorSet) return 0;
@@ -354,13 +390,16 @@ contract Vault {
         external
         returns (address originalOwner, address baseCurrency_, address trustedCreditor_)
     {
-        require(msg.sender == liquidator, "V_LV: You are not the liquidator");
+        require(msg.sender == liquidator, "V_LV: Only Liquidator");
 
-        //In current Vault version, the Vault can only have debt owed to a single creditor, the trustedCreditor
-        require(getLiquidationValue() < openDebt, "V_LV: This vault is healthy");
+        //If getLiquidationValue (total value discounted with liquidation factor) is smaller than openDebt,
+        //the Vault is unhealthy and is succesfully liquidated.
+        //Liquidations are triggered by the trustedCreditor (via Liquidator), the openDebt is
+        //passed to avoid the need of another contract call back to trustedCreditor.
+        require(getLiquidationValue() < openDebt, "V_LV: Vault is healthy");
 
         //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
-        IFactory(IMainRegistry(registry).factoryAddress()).liquidate(msg.sender);
+        IFactory(IMainRegistry(registry).factory()).liquidate(msg.sender);
 
         //Transfer ownership of the Vault itself to the Liquidator
         originalOwner = owner;
@@ -396,8 +435,8 @@ contract Vault {
      * The only requirements are that the recipient tokens of the interactions are allowlisted, deposited back into the vault and
      * that the Vault is in a healthy state at the end of the transaction.
      */
-    function vaultManagementAction(address actionHandler, bytes calldata actionData) public onlyAssetManager {
-        require(IMainRegistry(registry).isActionAllowed(actionHandler), "VL_VMA: Action is not allowlisted");
+    function vaultManagementAction(address actionHandler, bytes calldata actionData) external onlyAssetManager {
+        require(IMainRegistry(registry).isActionAllowed(actionHandler), "V_VMA: Action not allowed");
 
         (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
 
@@ -410,9 +449,11 @@ contract Vault {
         // deposit from actionHandler into vault
         _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);
 
-        uint256 collValue = getCollateralValue();
         uint256 usedMargin = getUsedMargin();
-        require(collValue >= usedMargin, "VMA: coll. value too low");
+        if (usedMargin > 0) {
+            uint256 collValue = getCollateralValue();
+            require(collValue >= usedMargin, "V_VMA: coll. value too low");
+        }
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -450,17 +491,14 @@ contract Vault {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
-            erc20Stored.length + erc721Stored.length + erc1155Stored.length + assetAddressesLength <= ASSET_LIMIT,
-            "V_D: Too many assets"
-        );
-
-        require(
             assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
                 && assetAddressesLength == assetTypes.length,
             "V_D: Length mismatch"
         );
 
         _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+
+        require(erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT, "V_D: Too many assets");
     }
 
     /**
@@ -511,7 +549,7 @@ contract Vault {
             } else if (assetTypes[i] == 2) {
                 _depositERC1155(from, assetAddresses[i], assetIds[i], assetAmounts[i]);
             } else {
-                require(false, "V_D: Unknown asset type");
+                revert("V_D: Unknown asset type");
             }
             unchecked {
                 ++i;
@@ -595,7 +633,7 @@ contract Vault {
         uint256[] memory assetTypes,
         address to
     ) internal {
-        IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetAmounts); //reverts in mainregistry if invalid input
+        IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts); //reverts in mainregistry if invalid input
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
@@ -630,8 +668,8 @@ contract Vault {
      * @param ERC20Address The asset address that should be transferred.
      * @param amount The amount of ERC20 tokens to be transferred.
      */
-    function _depositERC20(address from, address ERC20Address, uint256 amount) private {
-        require(IERC20(ERC20Address).transferFrom(from, address(this), amount), "Transfer from failed");
+    function _depositERC20(address from, address ERC20Address, uint256 amount) internal {
+        require(IERC20(ERC20Address).transferFrom(from, address(this), amount), "V_D20: Transfer from failed");
 
         uint256 currentBalance = erc20Balances[ERC20Address];
 
@@ -639,7 +677,9 @@ contract Vault {
             erc20Stored.push(ERC20Address);
         }
 
-        erc20Balances[ERC20Address] += amount;
+        unchecked {
+            erc20Balances[ERC20Address] += amount;
+        }
     }
 
     /**
@@ -651,7 +691,7 @@ contract Vault {
      * @param ERC721Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
      */
-    function _depositERC721(address from, address ERC721Address, uint256 id) private {
+    function _depositERC721(address from, address ERC721Address, uint256 id) internal {
         IERC721(ERC721Address).transferFrom(from, address(this), id);
 
         erc721Stored.push(ERC721Address);
@@ -669,7 +709,7 @@ contract Vault {
      * @param id The ID of the token to be transferred.
      * @param amount The amount of ERC1155 tokens to be transferred.
      */
-    function _depositERC1155(address from, address ERC1155Address, uint256 id, uint256 amount) private {
+    function _depositERC1155(address from, address ERC1155Address, uint256 id, uint256 amount) internal {
         IERC1155(ERC1155Address).safeTransferFrom(from, address(this), id, amount, "");
 
         uint256 currentBalance = erc1155Balances[ERC1155Address][id];
@@ -679,7 +719,9 @@ contract Vault {
             erc1155TokenIds.push(id);
         }
 
-        erc1155Balances[ERC1155Address][id] += amount;
+        unchecked {
+            erc1155Balances[ERC1155Address][id] += amount;
+        }
     }
 
     /**
@@ -694,7 +736,7 @@ contract Vault {
      * @param ERC20Address The asset address that should be transferred.
      * @param amount The amount of ERC20 tokens to be transferred.
      */
-    function _withdrawERC20(address to, address ERC20Address, uint256 amount) private {
+    function _withdrawERC20(address to, address ERC20Address, uint256 amount) internal {
         erc20Balances[ERC20Address] -= amount;
 
         if (erc20Balances[ERC20Address] == 0) {
@@ -732,7 +774,7 @@ contract Vault {
      * @param ERC721Address The asset address that should be transferred.
      * @param id The ID of the token to be transferred.
      */
-    function _withdrawERC721(address to, address ERC721Address, uint256 id) private {
+    function _withdrawERC721(address to, address ERC721Address, uint256 id) internal {
         uint256 tokenIdLength = erc721TokenIds.length;
 
         if (tokenIdLength == 1) {
@@ -771,7 +813,7 @@ contract Vault {
      * @param id The ID of the token to be transferred.
      * @param amount The amount of ERC1155 tokens to be transferred.
      */
-    function _withdrawERC1155(address to, address ERC1155Address, uint256 id, uint256 amount) private {
+    function _withdrawERC1155(address to, address ERC1155Address, uint256 id, uint256 amount) internal {
         uint256 tokenIdLength = erc1155TokenIds.length;
 
         erc1155Balances[ERC1155Address][id] -= amount;
@@ -869,6 +911,45 @@ contract Vault {
             }
             unchecked {
                 ++k;
+            }
+        }
+    }
+
+    function skim(address token, uint256 id, uint256 type_) public {
+        require(msg.sender == owner, "V_S: Only owner can skim");
+
+        if (token == address(0)) {
+            payable(owner).transfer(address(this).balance);
+            return;
+        }
+
+        if (type_ == 0) {
+            uint256 balance = IERC20(token).balanceOf(address(this));
+            uint256 balanceStored = erc20Balances[token];
+            if (balance > balanceStored) {
+                require(IERC20(token).transfer(owner, balance - balanceStored), "V_S: ERC20 transfer failed");
+            }
+        } else if (type_ == 1) {
+            bool isStored;
+            for (uint256 i; i < erc721Stored.length;) {
+                if (erc721Stored[i] == token && erc721TokenIds[i] == id) {
+                    isStored = true;
+                    break;
+                }
+                unchecked {
+                    ++i;
+                }
+            }
+
+            if (!isStored) {
+                IERC721(token).safeTransferFrom(address(this), owner, id);
+            }
+        } else if (type_ == 2) {
+            uint256 balance = IERC1155(token).balanceOf(address(this), id);
+            uint256 balanceStored = erc1155Balances[token][id];
+
+            if (balance > balanceStored) {
+                IERC1155(token).safeTransferFrom(address(this), owner, id, balance - balanceStored, "");
             }
         }
     }

@@ -8,10 +8,10 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {LendingPool, DebtToken, ERC20, DataTypes} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
-import {ActionMultiCall} from "../actions/MultiCall.sol";
-import {MultiActionMock} from "../mockups/MultiActionMock.sol";
+import { LendingPool, DebtToken, ERC20, DataTypes } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
+import { ActionMultiCall } from "../actions/MultiCall.sol";
+import { MultiActionMock } from "../mockups/MultiActionMock.sol";
 
 abstract contract EndToEndTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -28,14 +28,9 @@ abstract contract EndToEndTest is DeployArcadiaVaults {
     //this is a before
     constructor() DeployArcadiaVaults() {
         vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
         DataTypes.InterestRateConfiguration memory config = DataTypes.InterestRateConfiguration({
             baseRatePerYear: Constants.interestRate,
@@ -537,7 +532,7 @@ contract DoActionWithLeverage is EndToEndTest {
         proxy.setAssetManager(address(pool), true);
     }
 
-    function testSuccess_doActionWithLeverage(uint32 daiDebt, uint64 daiCollateral, uint32 ethOut) public {
+    function testSuccess_doActionWithLeverage(uint32 daiDebt, uint72 daiCollateral, uint32 ethOut) public {
         (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0); //18 decimals
         (uint256 daiRate,) = oracleHub.getRate(oracleDaiToUsdArr, 0); //18 decimals
 
@@ -687,7 +682,7 @@ contract DoActionWithLeverage is EndToEndTest {
 
         //Do swap on leverage
         vm.startPrank(vaultOwner);
-        vm.expectRevert("VMA: coll. value too low");
+        vm.expectRevert("V_VMA: coll. value too low");
         pool.doActionWithLeverage(daiMargin, address(proxy), address(action), callData, emptyBytes3);
         vm.stopPrank();
     }

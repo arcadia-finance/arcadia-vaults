@@ -7,17 +7,17 @@
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import {DeployAddresses, DeployNumbers, DeployBytes} from "./Constants/DeployConstants.sol";
+import { DeployAddresses, DeployNumbers, DeployBytes } from "./Constants/DeployConstants.sol";
 
 import "../src/Factory.sol";
 import "../src/Proxy.sol";
 import "../src/Vault.sol";
-import {ERC20} from "../lib/solmate/src/tokens/ERC20.sol";
+import { ERC20 } from "../lib/solmate/src/tokens/ERC20.sol";
 import "../src/MainRegistry.sol";
-import {PricingModule, StandardERC20PricingModule} from "../src/PricingModules/StandardERC20PricingModule.sol";
+import { PricingModule, StandardERC20PricingModule } from "../src/PricingModules/StandardERC20PricingModule.sol";
 import "../src/Liquidator.sol";
 import "../src/OracleHub.sol";
-import {RiskConstants} from "../src/utils/RiskConstants.sol";
+import { RiskConstants } from "../src/utils/RiskConstants.sol";
 
 contract ArcadiaVaultDeployer is Test {
     Factory public factory;
@@ -141,14 +141,6 @@ contract ArcadiaVaultDeployer is Test {
             isActive: true
         });
 
-        usdBaseCurrencyInfo = MainRegistry.BaseCurrencyInformation({
-            baseCurrencyToUsdOracleUnit: 0,
-            assetAddress: 0x0000000000000000000000000000000000000000,
-            baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-            baseCurrencyLabel: "USD",
-            baseCurrencyUnitCorrection: uint64(10 ** (18 - DeployNumbers.usdDecimals))
-        });
-
         ethBaseCurrencyInfo = MainRegistry.BaseCurrencyInformation({
             baseCurrencyToUsdOracleUnit: uint64(DeployNumbers.oracleEthToUsdUnit),
             assetAddress: DeployAddresses.eth,
@@ -206,7 +198,7 @@ contract ArcadiaVaultDeployer is Test {
         oracleHub.addOracle(usdcToUsdOracleInfo);
         oracleHub.addOracle(btcToEthEthToUsdOracleInfo);
 
-        mainRegistry = new MainRegistry(usdBaseCurrencyInfo);
+        mainRegistry = new MainRegistry(address(factory));
         mainRegistry.addBaseCurrency(ethBaseCurrencyInfo);
         mainRegistry.addBaseCurrency(usdcBaseCurrencyInfo);
 
@@ -230,10 +222,8 @@ contract ArcadiaVaultDeployer is Test {
             DeployAddresses.btc, oracleBtcToEthEthToUsdArr, riskVars_, type(uint128).max
         );
 
-        vault = new Vault();
-        factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1);
-        factory.confirmNewVaultInfo();
-        mainRegistry.setFactory(address(factory));
+        vault = new Vault(address(mainRegistry), 1);
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1, "");
 
         vm.stopBroadcast();
     }

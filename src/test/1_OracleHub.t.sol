@@ -102,14 +102,14 @@ contract OracleHubTest is Test {
             bool baseAssetIsBaseCurrency,
             ,
             address quoteAssetAddress,
-            string memory quoteAsset,
-            string memory baseAsset
+            bytes16 quoteAsset,
+            bytes16 baseAsset
         ) = oracleHub.oracleToOracleInformation(address(oracleEthToUsd));
         assertEq(oracleUnit, oracleEthToUsdUnit);
         assertEq(baseAssetBaseCurrency, uint8(Constants.UsdBaseCurrency));
         assertEq(baseAssetIsBaseCurrency, true);
-        assertEq(quoteAsset, "ETH");
-        assertEq(baseAsset, "USD");
+        assertEq(quoteAsset, bytes16(abi.encodePacked("ETH")));
+        assertEq(baseAsset, bytes16(abi.encodePacked("USD")));
         assertEq(quoteAssetAddress, address(eth));
         assertEq(isActive, true);
     }
@@ -153,8 +153,8 @@ contract OracleHubTest is Test {
         vm.assume(unprivilegedAddress != creatorAddress);
         // When: unprivilegedAddress addOracle
         vm.startPrank(unprivilegedAddress);
-        // Then: addOracle should revert with "Ownable: caller is not the owner"
-        vm.expectRevert("Ownable: caller is not the owner");
+        // Then: addOracle should revert with "UNAUTHORIZED"
+        vm.expectRevert("UNAUTHORIZED");
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
@@ -1204,7 +1204,7 @@ contract OracleHubTest is Test {
         vm.startPrank(oracleOwner);
         //minAnswer is set to 100 in the oracle mocks
         oracleSnxToEth.transmit(int256(1));
-        oracleEthToUsd.transmit(int256(500000000000));
+        oracleEthToUsd.transmit(int256(500_000_000_000));
         vm.stopPrank();
 
         (bool isActive,,,,,,,) = oracleHub.oracleToOracleInformation(address(oracleSnxToEth));
@@ -1260,8 +1260,8 @@ contract OracleHubTest is Test {
 
         vm.startPrank(oracleOwner);
         //minAnswer is set to 100 in the oracle mocks
-        oracleSnxToEth.transmit(int256(500000000000));
-        oracleEthToUsd.transmit(int256(500000000000));
+        oracleSnxToEth.transmit(int256(500_000_000_000));
+        oracleEthToUsd.transmit(int256(500_000_000_000));
         vm.stopPrank();
 
         vm.warp(block.timestamp + timePassed);
@@ -1319,8 +1319,8 @@ contract OracleHubTest is Test {
 
         vm.startPrank(oracleOwner);
         //minAnswer is set to 100 in the oracle mocks
-        oracleSnxToEth.transmit(int256(500000000000));
-        oracleEthToUsd.transmit(int256(500000000000)); //only one of the two is needed to fail
+        oracleSnxToEth.transmit(int256(500_000_000_000));
+        oracleEthToUsd.transmit(int256(500_000_000_000)); //only one of the two is needed to fail
         vm.stopPrank();
 
         vm.warp(block.timestamp + timePassed);
@@ -1345,8 +1345,8 @@ contract OracleHubTest is Test {
 
         vm.startPrank(oracleOwner);
         //minAnswer is set to 100 in the oracle mocks
-        oracleSnxToEth.transmit(int256(500000000000));
-        oracleEthToUsd.transmit(int256(500000000000)); //only one of the two is needed to fail
+        oracleSnxToEth.transmit(int256(500_000_000_000));
+        oracleEthToUsd.transmit(int256(500_000_000_000)); //only one of the two is needed to fail
         vm.stopPrank();
 
         vm.prank(sender);
@@ -1361,6 +1361,6 @@ contract OracleHubTest is Test {
 
         (rateInUsd, rateInBaseCurrency) = oracleHub.getRate(oracles, Constants.UsdBaseCurrency);
 
-        assertEq(rateInUsd, 250000);
+        assertEq(rateInUsd, 250_000);
     }
 }

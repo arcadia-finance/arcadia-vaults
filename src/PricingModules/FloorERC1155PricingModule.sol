@@ -6,7 +6,7 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
+import { PricingModule, IMainRegistry, IOraclesHub } from "./AbstractPricingModule.sol";
 
 /**
  * @title Pricing Module for ERC1155 tokens
@@ -28,7 +28,7 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param mainRegistry_ The address of the Main-registry
      * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) { }
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -92,7 +92,7 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param assetId The Id of the asset
      * @return A boolean, indicating if the asset passed as input is whitelisted
      */
-    function isWhiteListed(address asset, uint256 assetId) public view override returns (bool) {
+    function isAllowListed(address asset, uint256 assetId) public view override returns (bool) {
         if (exposure[asset].maxExposure != 0) {
             if (assetId == assetToInformation[asset].id) {
                 return true;
@@ -113,7 +113,7 @@ contract FloorERC1155PricingModule is PricingModule {
      * @param amount the amount of ERC1155 tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
      */
-    function processDeposit(address asset, uint256 assetId, uint256 amount) external override onlyMainReg {
+    function processDeposit(address, address asset, uint256 assetId, uint256 amount) external override onlyMainReg {
         require(assetId == assetToInformation[asset].id, "PM1155_PD: ID not allowed");
 
         exposure[asset].exposure += uint128(amount);
