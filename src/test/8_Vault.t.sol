@@ -1875,6 +1875,170 @@ contract AssetManagementTest is vaultTests {
 
         assertEq(expectedValue, actualValue);
     }
+
+    function testRevert_skim_NonOwner(address sender) public {
+        vm.assume(sender != vaultOwner);
+
+        vm.startPrank(sender);
+        vm.expectRevert("V_S: Only owner can skim");
+        vault_.skim(address(eth), 0, 0);
+        vm.stopPrank();
+    }
+
+    function testSuccess_skim_type0_skim() public {
+        depositERC20InVault(eth, 2000, vaultOwner);
+
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(vault_), 1000);
+
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(vault_), vaultOwner, 1000);
+        vault_.skim(address(eth), 0, 0);
+        vm.stopPrank();
+    }
+
+    function testSuccess_skim_type0_nothingToSkim() public {
+        depositERC20InVault(eth, 2000, vaultOwner);
+
+        uint256 balanceBeforeStored = vault_.erc20Balances(address(eth));
+        uint256 balanceBefore = eth.balanceOf(address(vault_));
+        assertEq(balanceBeforeStored, balanceBefore);
+
+        vm.startPrank(vaultOwner);
+        vault_.skim(address(eth), 0, 0);
+        vm.stopPrank();
+
+        uint256 balancePostStored = vault_.erc20Balances(address(eth));
+        uint256 balancePost = eth.balanceOf(address(vault_));
+        assertEq(balancePostStored, balancePost);
+        assertEq(balancePostStored, balanceBeforeStored);
+    }
+
+    function testSuccess_skim_type1_skim(uint128[] calldata tokenIdsDeposit) public {
+        vm.assume(tokenIdsDeposit.length < 15 && tokenIdsDeposit.length > 0);
+        (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        ) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
+
+        address[] memory assetAddrOne = new address[](1);
+        uint256[] memory assetIdOne = new uint256[](1);
+        uint256[] memory assetAmountOne = new uint256[](1);
+        uint256[] memory assetTypeOne = new uint256[](1);
+
+        assetAddrOne[0] = assetAddresses[0];
+        assetIdOne[0] = assetIds[0];
+        assetAmountOne[0] = assetAmounts[0];
+        assetTypeOne[0] = assetTypes[0];
+
+        vm.startPrank(vaultOwner);
+        vault_.withdraw(assetAddrOne, assetIdOne, assetAmountOne, assetTypeOne);
+        bayc.transferFrom(vaultOwner, address(vault_), assetIdOne[0]);
+
+        vault_.skim(assetAddrOne[0], assetIdOne[0], assetTypeOne[0]);
+        vm.stopPrank();
+
+        assertEq(bayc.ownerOf(assetIdOne[0]), vaultOwner);
+    }
+
+    function testSuccess_skim_type1_nothingToSkim() public {
+        uint128[] memory tokenIdsDeposit = new uint128[](5);
+        tokenIdsDeposit[0] = 100;
+        tokenIdsDeposit[1] = 200;
+        tokenIdsDeposit[2] = 300;
+        tokenIdsDeposit[3] = 400;
+        tokenIdsDeposit[4] = 500;
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts,) =
+            depositBaycInVault(tokenIdsDeposit, vaultOwner);
+
+        uint256 balanceBefore = bayc.balanceOf(address(vault_));
+
+        vm.startPrank(vaultOwner);
+        vault_.skim(assetAddresses[0], assetIds[0], assetAmounts[0]);
+        vm.stopPrank();
+
+        uint256 balancePost = bayc.balanceOf(address(vault_));
+
+        assertEq(balanceBefore, balancePost);
+        assertEq(bayc.ownerOf(assetIds[0]), address(vault_));
+    }
+
+    function testSuccess_skim_type2_skim() public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(interleave);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 1;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 10_000;
+
+        uint256[] memory assetTypes = new uint256[](1);
+        assetTypes[0] = 2;
+
+        vm.prank(vaultOwner);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+
+        assetAmounts[0] = 100;
+        vm.startPrank(vaultOwner);
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        interleave.safeTransferFrom(vaultOwner, address(vault_), 1, 100, "");
+
+        uint256 balanceOwnerBefore = interleave.balanceOf(vaultOwner, 1);
+
+        vault_.skim(address(interleave), 1, 2);
+        vm.stopPrank();
+
+        uint256 balanceOwnerAfter = interleave.balanceOf(vaultOwner, 1);
+
+        assertEq(interleave.balanceOf(address(vault_), 1), vault_.erc1155Balances(address(interleave), 1));
+        assertEq(balanceOwnerBefore + 100, balanceOwnerAfter);
+    }
+
+    function testSuccess_skim_type2_nothingToSkim() public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(interleave);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 1;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 10_000;
+
+        uint256[] memory assetTypes = new uint256[](1);
+        assetTypes[0] = 2;
+
+        vm.startPrank(vaultOwner);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+
+        uint256 balanceBefore = interleave.balanceOf(address(vault_), 1);
+
+        vault_.skim(address(interleave), 1, 2);
+        vm.stopPrank();
+
+        uint256 balancePost = interleave.balanceOf(address(vault_), 1);
+
+        assertEq(balanceBefore, balancePost);
+        assertEq(interleave.balanceOf(address(vault_), 1), vault_.erc1155Balances(address(interleave), 1));
+    }
+
+    function testSuccess_skim_ether() public {
+        vm.deal(address(vault_), 1e21);
+        emit log_uint(address(vault_).balance);
+        assertEq(address(vault_).balance, 1e21);
+
+        uint256 balanceOwnerBefore = vaultOwner.balance;
+
+        vm.prank(vaultOwner);
+        vault_.skim(address(0), 0, 0);
+
+        uint256 balanceOwnerAfter = vaultOwner.balance;
+
+        assertEq(balanceOwnerBefore + 1e21, balanceOwnerAfter);
+    }
 }
 
 /* ///////////////////////////////////////////////////////////////
