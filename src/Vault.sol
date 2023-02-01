@@ -289,6 +289,24 @@ contract Vault {
     }
 
     /**
+     * @notice Checks if the Vault is healthy and still has free margin.
+     * @param debtIncrease The amount with which the debt is increased.
+     * @param totalOpenDebt The total open Debt against the Vault.
+     * @return success Boolean indicating if there is sufficient margin to back a certain amount of Debt.
+     * @dev Only one of the values can be non-zero, or we check on a certain increase of debt, or we check on a total amount of debt.
+     * @dev If both values are zero, we check if the vault is currently healthy.
+     */
+    function isVaultHealthy(uint256 debtIncrease, uint256 totalOpenDebt) external view returns (bool success) {
+        if (totalOpenDebt != 0) {
+            //Check if vault is healthy for a given amount of openDebt.
+            success = getCollateralValue() >= totalOpenDebt;
+        } else {
+            //Check if vault is still healthy after an increase of debt.
+            success = getCollateralValue() >= getUsedMargin() + debtIncrease;
+        }
+    }
+
+    /**
      * @notice Returns the total value of the vault in a specific baseCurrency
      * @dev Fetches all stored assets with their amounts on the proxy vault.
      * Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.

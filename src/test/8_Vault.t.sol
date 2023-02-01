@@ -571,15 +571,7 @@ contract MarginRequirementsTest is vaultTests {
         openMarginAccount();
     }
 
-    function testSuccess_increaseMarginPosition_DifferentBaseCurrency(address baseCurrency, uint256 marginIncrease)
-        public
-    {
-        vm.prank(address(pool));
-        bool success = vault_.increaseMarginPosition(baseCurrency, marginIncrease);
-        assertTrue(!success);
-    }
-
-    function testSuccess_increaseMarginPosition_InsufficientMargin(
+    function testSuccess_isVaultHealthy_debtIncrease_InsufficientMargin(
         uint8 depositAmount,
         uint128 marginIncrease,
         uint128 usedMargin,
@@ -613,13 +605,13 @@ contract MarginRequirementsTest is vaultTests {
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        bool success = vault_.increaseMarginPosition(address(dai), marginIncrease);
+        bool success = vault_.isVaultHealthy(marginIncrease, 0);
 
         // Then: The action is not succesfull
         assertTrue(!success);
     }
 
-    function testSuccess_increaseMarginPosition_SufficientMargin(
+    function testSuccess_isVaultHealthy_debtIncrease_SufficientMargin(
         uint8 depositAmount,
         uint128 marginIncrease,
         uint128 usedMargin,
@@ -653,7 +645,79 @@ contract MarginRequirementsTest is vaultTests {
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        bool success = vault_.increaseMarginPosition(address(dai), marginIncrease);
+        bool success = vault_.isVaultHealthy(marginIncrease, 0);
+
+        // Then: The action is succesfull
+        assertTrue(success);
+    }
+
+    function testSuccess_isVaultHealthy_totalOpenDebt_InsufficientMargin(
+        uint8 depositAmount,
+        uint128 totalOpenDebt,
+        uint8 collFac,
+        uint8 liqFac
+    ) public {
+        // Given: Risk Factors for basecurrency are set
+        vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
+        vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
+        PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
+        riskVars_[0] = PricingModule.RiskVarInput({
+            baseCurrency: uint8(Constants.DaiBaseCurrency),
+            asset: address(eth),
+            collateralFactor: collFac,
+            liquidationFactor: liqFac
+        });
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setBatchRiskVariables(riskVars_);
+
+        // And: Eth is deposited in the Vault
+        depositEthInVault(depositAmount, vaultOwner);
+
+        // And: There is insufficient Collateral to take more margin
+        uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
+            * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
+        vm.assume(collateralValue < totalOpenDebt);
+        vm.assume(depositAmount > 0); // Devision by 0
+
+        // When: An Authorised protocol tries to take more margin against the vault
+        vm.prank(address(pool));
+        bool success = vault_.isVaultHealthy(0, totalOpenDebt);
+
+        // Then: The action is not succesfull
+        assertTrue(!success);
+    }
+
+    function testSuccess_isVaultHealthy_totalOpenDebt_SufficientMargin(
+        uint8 depositAmount,
+        uint128 totalOpenDebt,
+        uint8 collFac,
+        uint8 liqFac
+    ) public {
+        // Given: Risk Factors for basecurrency are set
+        vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
+        vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
+        PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
+        riskVars_[0] = PricingModule.RiskVarInput({
+            baseCurrency: uint8(Constants.DaiBaseCurrency),
+            asset: address(eth),
+            collateralFactor: collFac,
+            liquidationFactor: liqFac
+        });
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setBatchRiskVariables(riskVars_);
+
+        // And: Eth is deposited in the Vault
+        depositEthInVault(depositAmount, vaultOwner);
+
+        // And: There is sufficient Collateral to take more margin
+        uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
+            * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
+        vm.assume(collateralValue >= totalOpenDebt);
+        vm.assume(depositAmount > 0); // Devision by 0
+
+        // When: An Authorised protocol tries to take more margin against the vault
+        vm.prank(address(pool));
+        bool success = vault_.isVaultHealthy(0, totalOpenDebt);
 
         // Then: The action is succesfull
         assertTrue(success);
