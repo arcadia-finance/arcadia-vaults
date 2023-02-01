@@ -11,7 +11,7 @@ interface IVault {
      * @notice Returns the Vault version.
      * @return verion The Vault version.
      */
-    function vaultVersion() external view returns (uint8);
+    function vaultVersion() external view returns (uint16);
 
     /**
      * @notice Initiates the variables of the vault
