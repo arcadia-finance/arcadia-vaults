@@ -1007,6 +1007,7 @@ contract VaultActionTest is vaultTests {
     function testRevert_vaultManagementAction_NonAssetManager(address sender, address assetManager) public {
         vm.assume(sender != vaultOwner);
         vm.assume(sender != assetManager);
+        vm.assume(sender != address(0));
 
         vm.prank(vaultOwner);
         proxy_.setAssetManager(assetManager, true);
