@@ -18,6 +18,7 @@ import { IStandardERC20PricingModule } from "./interfaces/IStandardERC20PricingM
  * @notice The StandardERC20PricingModule stores pricing logic and basic information for ERC20 tokens for which a direct price feed exists
  * @dev No end-user should directly interact with the StandardERC20PricingModule, only the Main-registry, Oracle-Hub or the contract owner
  */
+
 contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModule {
     using FixedPointMathLib for uint256;
 

@@ -692,7 +692,7 @@ contract Vault is IVault {
      * @param id The ID of the token to be transferred.
      */
     function _depositERC721(address from, address ERC721Address, uint256 id) internal {
-        IERC721(ERC721Address).transferFrom(from, address(this), id);
+        IERC721(ERC721Address).safeTransferFrom(from, address(this), id);
 
         erc721Stored.push(ERC721Address);
         erc721TokenIds.push(id);
