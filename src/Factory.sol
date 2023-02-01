@@ -19,7 +19,7 @@ import { FactoryGuardian } from "./security/FactoryGuardian.sol";
 contract Factory is IFactory, ERC721, FactoryGuardian {
     using Strings for uint256;
 
-    struct vaultVersionInfo {
+    struct VaultVersionInfo {
         address registry;
         address logic;
         bytes32 versionRoot;
@@ -28,7 +28,7 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
 
     mapping(uint256 => bool) public vaultVersionBlocked;
     mapping(address => uint256) public vaultIndex;
-    mapping(uint256 => vaultVersionInfo) public vaultDetails;
+    mapping(uint256 => VaultVersionInfo) public vaultDetails;
 
     uint16 public latestVaultVersion;
     string public baseURI;

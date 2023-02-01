@@ -147,7 +147,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(eth),
             assetId: 0,
             assetAmount: amountEth,
@@ -173,7 +173,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency = (amountSnx * rateSnxToEth * Constants.WAD)
             / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(snx),
             assetId: 0,
             assetAmount: amountSnx,
@@ -199,7 +199,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(link),
             assetId: 0,
             assetAmount: amountLink,
@@ -243,7 +243,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         ) / 10 ** Constants.ethDecimals;
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(eth),
             assetId: 0,
             assetAmount: amountEth,
@@ -277,7 +277,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(eth),
             assetId: 0,
             assetAmount: amountEth,

@@ -2104,7 +2104,6 @@ contract AssetManagementTest is vaultTests {
 
     function testSuccess_skim_ether() public {
         vm.deal(address(vault_), 1e21);
-        emit log_uint(address(vault_).balance);
         assertEq(address(vault_).balance, 1e21);
 
         uint256 balanceOwnerBefore = vaultOwner.balance;

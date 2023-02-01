@@ -594,7 +594,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             uint256(_rateEthToUsd) > type(uint256).max / Constants.WAD / Constants.WAD * 10 ** _oracleEthToUsdDecimals; // trustedPriceEthToUsd overflows
         vm.assume(cond0 || cond1);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(pairSnxEth),
             assetId: 0,
             assetAmount: pairSnxEth.totalSupply(),
@@ -662,7 +662,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             Constants.WAD * _rateEthToUsd / 10 ** _oracleEthToUsdDecimals * amountEth / 10 ** _ethDecimals;
         uint256 expectedValueInUsd = valueSnx + valueEth;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(pairSnxEth),
             assetId: 0,
             assetAmount: pairSnxEth.totalSupply(),

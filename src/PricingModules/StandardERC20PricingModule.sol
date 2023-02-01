@@ -6,7 +6,7 @@
  */
 pragma solidity ^0.8.13;
 
-import { PricingModule } from "./AbstractPricingModule.sol";
+import { PricingModule, IPricingModule } from "./AbstractPricingModule.sol";
 import { IOraclesHub } from "./interfaces/IOraclesHub.sol";
 import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
 import { IERC20 } from "../interfaces/IERC20.sol";
@@ -110,7 +110,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
      * However no check in StandardERC20PricingModule is necessary, since the check if the asset is allow listed (and hence added to PricingModule)
      * is already done in the Main-Registry.
      */
-    function getValue(PricingModule.GetValueInput memory getValueInput)
+    function getValue(IPricingModule.GetValueInput memory getValueInput)
         public
         view
         override
