@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
@@ -249,7 +249,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleInterleaveToEthDecimals + Constants.oracleEthToUsdDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(interleave),
             assetId: 1,
             assetAmount: amountInterleave,
@@ -277,7 +277,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency =
             (amountInterleave * rateInterleaveToEth * Constants.WAD) / 10 ** (Constants.oracleInterleaveToEthDecimals);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(interleave),
             assetId: 1,
             assetAmount: amountInterleave,
@@ -305,7 +305,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleInterleaveToEthDecimals + Constants.oracleEthToUsdDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(interleave),
             assetId: 1,
             assetAmount: amountInterleave,
@@ -350,7 +350,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
             (rateInterleaveToEthNew * Constants.WAD) / 10 ** Constants.oracleInterleaveToEthDecimals
         ) * amountInterleave;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(interleave),
             assetId: 1,
             assetAmount: amountInterleave,
@@ -387,7 +387,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         );
         vm.stopPrank();
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(interleave),
             assetId: 1,
             assetAmount: amountInterleave,

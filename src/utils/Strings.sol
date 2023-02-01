@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity >=0.8.6;
+pragma solidity ^0.8.13;
 
 library Strings {
     bytes16 private constant _HEX_SYMBOLS = "0123456789abcdef";

@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
@@ -164,7 +164,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(aEth),
             assetId: 0,
             assetAmount: amountEth,
@@ -191,7 +191,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency = (amountSnx * rateSnxToEth * Constants.WAD)
             / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(aSnx),
             assetId: 0,
             assetAmount: amountSnx,
@@ -217,7 +217,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(aLink),
             assetId: 0,
             assetAmount: amountLink,
@@ -260,7 +260,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(aEth),
             assetId: 0,
             assetAmount: amountEth,
@@ -290,7 +290,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(aEth),
             assetId: 0,
             assetAmount: amountEth,

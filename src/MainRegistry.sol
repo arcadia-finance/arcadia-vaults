@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
 import { IChainLinkData } from "./interfaces/IChainLinkData.sol";
 import { IFactory } from "./interfaces/IFactory.sol";
@@ -302,7 +302,7 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
                 //Else we need to fetch the value in the assets' PricingModule
             } else {
                 //Prepare input
-                getValueInput.assetAddress = assetAddress;
+                getValueInput.asset = assetAddress;
                 getValueInput.assetId = assetIds[i];
                 getValueInput.assetAmount = assetAmounts[i];
 

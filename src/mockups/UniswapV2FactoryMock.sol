@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: MIT
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
 import "./UniswapV2PairMock.sol";
 import "../PricingModules/interfaces/IUniswapV2Pair.sol";

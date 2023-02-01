@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
@@ -274,7 +274,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleWbaycToEthDecimals + Constants.oracleEthToUsdDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(bayc),
             assetId: 0,
             assetAmount: 1,
@@ -301,7 +301,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency =
             (rateWbaycToEth * Constants.WAD) / 10 ** Constants.oracleWbaycToEthDecimals;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(bayc),
             assetId: 0,
             assetAmount: 1,
@@ -327,7 +327,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInUsd = (rateWmaycToUsd * Constants.WAD) / 10 ** Constants.oracleWmaycToUsdDecimals;
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(mayc),
             assetId: 0,
             assetAmount: 1,

@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.13;
 
 import "../utils/LogExpMath.sol";
 import "../interfaces/IERC20.sol";
@@ -264,22 +264,6 @@ contract VaultV2 {
     /* ///////////////////////////////////////////////////////////////
                           MARGIN REQUIREMENTS
     /////////////////////////////////////////////////////////////// */
-
-    /**
-     * @notice Called by trusted applications, checks if the Vault has sufficient free margin.
-     * @param baseCurrency_ The Base-currency in which the Vault is denominated.
-     * @param amount The amount the position is increased.
-     * @return success Boolean indicating if there is sufficient free margin to increase the margin position.
-     */
-    function increaseMarginPosition(address baseCurrency_, uint256 amount) external view returns (bool success) {
-        if (baseCurrency_ != baseCurrency) {
-            return false;
-        }
-
-        // Check that the collateral value is bigger than the sum  of the already used margin and the increase
-        // ToDo: For trusted creditors, already pass usedMargin with the call -> avoid additional hop back to trusted creditor to fetch already open debt
-        success = getCollateralValue() >= getUsedMargin() + amount;
-    }
 
     /**
      * @notice Returns the total value of the vault in a specific baseCurrency
