@@ -1416,6 +1416,7 @@ contract AssetManagementTest is vaultTests {
         vm.assume(inputAddr != address(snx));
         vm.assume(inputAddr != address(bayc));
         vm.assume(inputAddr != address(interleave));
+        vm.assume(inputAddr != address(dai));
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = inputAddr;
