@@ -63,7 +63,7 @@ contract Vault is IVault {
         address value;
     }
 
-    event Upgraded(address indexed implementation);
+    event Upgraded(address oldImplementation, address newImplementation, uint16 oldVersion, uint16 indexed newVersion);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
@@ -124,11 +124,16 @@ contract Vault is IVault {
     }
 
     /**
-     * @notice Stores a new address in the EIP1967 implementation slot & updates the vault version.
+     * @notice Updates the vault version and stores a new address in the EIP1967 implementation slot.
      * @param newImplementation The contract with the new vault logic.
+     * @param newRegistry The MainRegistry for this specific implementation (might be identical as the old registry)
+     * @param data Arbitrary data, can contain instructions to execute on the new logic
      * @param newVersion The new version of the vault logic.
      */
-    function upgradeVault(address newImplementation, uint16 newVersion) external onlyFactory {
+    function upgradeVault(address newImplementation, address newRegistry, uint16 newVersion, bytes calldata data)
+        external
+        onlyFactory
+    {
         if (isTrustedCreditorSet) {
             //If a trustedCreditor is set, new version should be compatible.
             //openMarginAccount() is a view function, cannot modify state.
@@ -136,10 +141,20 @@ contract Vault is IVault {
             require(success, "V_UV: Invalid vault version");
         }
 
-        vaultVersion = newVersion;
+        //Cache old parameters
+        address oldImplementation = _getAddressSlot(_IMPLEMENTATION_SLOT).value;
+        address oldRegistry = registry;
+        uint16 oldVersion = vaultVersion;
         _getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
+        registry = newRegistry;
+        vaultVersion = newVersion;
 
-        emit Upgraded(newImplementation);
+        //Hook on the new logic to finalize upgrade.
+        //Used to eg. Remove exposure from old Registry and Add exposure to the new Registry.
+        //Data can be added by the factory for complex instructions.
+        this.upgradeHook(oldImplementation, oldRegistry, oldVersion, data);
+
+        emit Upgraded(oldImplementation, newImplementation, oldVersion, newVersion);
     }
 
     /**
@@ -150,6 +165,18 @@ contract Vault is IVault {
             r.slot := slot
         }
     }
+
+    /**
+     * @notice Finalizes the Upgrade to a new vault version on the new Logic Contract.
+     * @param oldImplementation The contract with the new old logic.
+     * @param oldRegistry The MainRegistry of the old version (might be identical as the new registry)
+     * @param oldVersion The old version of the vault logic.
+     * @param data Arbitrary data, can contain instructions to execute in thos function.
+     * @dev If upgradeHook() is implemented, it MUST be verified that msg.sender == address(this)
+     */
+    function upgradeHook(address oldImplementation, address oldRegistry, uint16 oldVersion, bytes calldata data)
+        external
+    {}
 
     /* ///////////////////////////////////////////////////////////////
                         OWNERSHIP MANAGEMENT
@@ -263,6 +290,24 @@ contract Vault is IVault {
         // Check that the collateral value is bigger than the sum  of the already used margin and the increase
         // ToDo: For trusted creditors, already pass usedMargin with the call -> avoid additional hop back to trusted creditor to fetch already open debt
         success = getCollateralValue() >= getUsedMargin() + amount;
+    }
+
+    /**
+     * @notice Checks if the Vault is healthy and still has free margin.
+     * @param debtIncrease The amount with which the debt is increased.
+     * @param totalOpenDebt The total open Debt against the Vault.
+     * @return success Boolean indicating if there is sufficient margin to back a certain amount of Debt.
+     * @dev Only one of the values can be non-zero, or we check on a certain increase of debt, or we check on a total amount of debt.
+     * @dev If both values are zero, we check if the vault is currently healthy.
+     */
+    function isVaultHealthy(uint256 debtIncrease, uint256 totalOpenDebt) external view returns (bool success) {
+        if (totalOpenDebt != 0) {
+            //Check if vault is healthy for a given amount of openDebt.
+            success = getCollateralValue() >= totalOpenDebt;
+        } else {
+            //Check if vault is still healthy after an increase of debt.
+            success = getCollateralValue() >= getUsedMargin() + debtIncrease;
+        }
     }
 
     /**

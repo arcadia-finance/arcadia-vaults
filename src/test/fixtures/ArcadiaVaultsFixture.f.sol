@@ -360,8 +360,7 @@ contract DeployArcadiaVaults is Test {
         );
 
         vault = new Vault(address(mainRegistry), 1);
-        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2, "");
         vm.stopPrank();
     }
 }
