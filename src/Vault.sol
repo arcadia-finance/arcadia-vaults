@@ -168,7 +168,7 @@ contract Vault {
      * @param oldImplementation The contract with the new old logic.
      * @param oldRegistry The MainRegistry of the old version (might be identical as the new registry)
      * @param oldVersion The old version of the vault logic.
-     * @param data Arbitrary data, can contain instructions to execute in thos function.
+     * @param data Arbitrary data, can contain instructions to execute in this function.
      * @dev If upgradeHook() is implemented, it MUST be verified that msg.sender == address(this)
      */
     function upgradeHook(address oldImplementation, address oldRegistry, uint16 oldVersion, bytes calldata data)
