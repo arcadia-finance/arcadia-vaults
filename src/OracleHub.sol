@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
 import { IChainLinkData } from "./interfaces/IChainLinkData.sol";
 import { IOraclesHub } from "./PricingModules/interfaces/IOraclesHub.sol";

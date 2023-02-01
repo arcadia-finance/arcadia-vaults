@@ -11,6 +11,7 @@ import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
 import { IPricingModule } from "../interfaces/IPricingModule.sol";
 import { RiskConstants } from "../utils/RiskConstants.sol";
 import { Owned } from "lib/solmate/src/auth/Owned.sol";
+import { IPricingModule } from "../interfaces/IPricingModule.sol";
 
 /**
  * @title Abstract Pricing Module
@@ -19,7 +20,7 @@ import { Owned } from "lib/solmate/src/auth/Owned.sol";
  * @dev No end-user should directly interact with Sub-Registries, only the Main Registry, Oracle-Hub or the contract owner
  * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main Registry
  */
-abstract contract PricingModule is Owned {
+abstract contract PricingModule is Owned, IPricingModule {
     address public immutable mainRegistry;
     address public immutable oracleHub;
     address public riskManager;
@@ -29,14 +30,6 @@ abstract contract PricingModule is Owned {
     mapping(address => bool) public inPricingModule;
     mapping(address => Exposure) public exposure;
     mapping(address => mapping(uint256 => RiskVars)) public assetRiskVars;
-
-    //struct with input variables necessary to avoid stack too deep error
-    struct GetValueInput {
-        address asset;
-        uint256 assetId;
-        uint256 assetAmount;
-        uint256 baseCurrency;
-    }
 
     struct Exposure {
         uint128 maxExposure;

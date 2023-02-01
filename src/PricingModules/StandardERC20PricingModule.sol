@@ -11,14 +11,14 @@ import { IOraclesHub } from "./interfaces/IOraclesHub.sol";
 import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
 import { IERC20 } from "../interfaces/IERC20.sol";
 import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
-
+import { IStandardERC20PricingModule } from "./interfaces/IStandardERC20PricingModule.sol";
 /**
  * @title Sub-registry for Standard ERC20 tokens
  * @author Arcadia Finance
  * @notice The StandardERC20PricingModule stores pricing logic and basic information for ERC20 tokens for which a direct price feed exists
  * @dev No end-user should directly interact with the StandardERC20PricingModule, only the Main-registry, Oracle-Hub or the contract owner
  */
-contract StandardERC20PricingModule is PricingModule {
+contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModule {
     using FixedPointMathLib for uint256;
 
     mapping(address => AssetInformation) public assetToInformation;
@@ -110,7 +110,7 @@ contract StandardERC20PricingModule is PricingModule {
      * However no check in StandardERC20PricingModule is necessary, since the check if the asset is allow listed (and hence added to PricingModule)
      * is already done in the Main-Registry.
      */
-    function getValue(GetValueInput memory getValueInput)
+    function getValue(PricingModule.GetValueInput memory getValueInput)
         public
         view
         override

@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.13;
+pragma solidity ^0.8.13;
 
 import { ActionBase, ActionData } from "./ActionBase.sol";
 import { IERC20 } from "../interfaces/IERC20.sol";
