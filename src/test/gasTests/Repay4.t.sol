@@ -16,7 +16,7 @@ contract gasRepay_2ERC202ERC721 is GasTestFixture {
     uint128 maxCredit;
 
     //this is a before
-    constructor() GasTestFixture() {}
+    constructor() GasTestFixture() { }
 
     //this is a before each
     function setUp() public override {

@@ -8,8 +8,8 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import { LendingPool, DebtToken, ERC20 } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 
 contract LiquidatorTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -35,7 +35,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
         pool.setMaxInitiatorFee(type(uint80).max);
-        liquidator.setAuctionCurveParameters(3_600, 14_400);
+        liquidator.setAuctionCurveParameters(3600, 14_400);
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");

@@ -11,24 +11,24 @@ import "../../../lib/forge-std/src/Test.sol";
 import "../../Factory.sol";
 import "../../Proxy.sol";
 import "../../Vault.sol";
-import {ERC20Mock} from "../../mockups/ERC20SolmateMock.sol";
+import { ERC20Mock } from "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
 import "../../MainRegistry.sol";
-import {PricingModule, StandardERC20PricingModule} from "../../PricingModules/StandardERC20PricingModule.sol";
-import {FloorERC721PricingModule} from "../../PricingModules/FloorERC721PricingModule.sol";
-import {FloorERC1155PricingModule} from "../../PricingModules/FloorERC1155PricingModule.sol";
+import { PricingModule, StandardERC20PricingModule } from "../../PricingModules/StandardERC20PricingModule.sol";
+import { FloorERC721PricingModule } from "../../PricingModules/FloorERC721PricingModule.sol";
+import { FloorERC1155PricingModule } from "../../PricingModules/FloorERC1155PricingModule.sol";
 import "../../Liquidator.sol";
 import "../../OracleHub.sol";
 import "../../utils/Constants.sol";
 import "../../mockups/ArcadiaOracle.sol";
-import {RiskConstants} from "../../utils/RiskConstants.sol";
+import { RiskConstants } from "../../utils/RiskConstants.sol";
 import ".././fixtures/ArcadiaOracleFixture.f.sol";
 
 contract mainRegistryExtension is MainRegistry {
     using FixedPointMathLib for uint256;
 
-    constructor(address factory_) MainRegistry(factory_) {}
+    constructor(address factory_) MainRegistry(factory_) { }
 }
 
 contract FactoryExtension is Factory {
@@ -77,9 +77,9 @@ contract DeployArcadiaVaults is Test {
     uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
     uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10 ** Constants.oracleLinkToUsdDecimals;
-    uint256 rateSnxToEth = 1600000000000000;
+    uint256 rateSnxToEth = 1_600_000_000_000_000;
     uint256 rateWbaycToEth = 85 * 10 ** Constants.oracleWbaycToEthDecimals;
-    uint256 rateWmaycToUsd = 50000 * 10 ** Constants.oracleWmaycToUsdDecimals;
+    uint256 rateWmaycToUsd = 50_000 * 10 ** Constants.oracleWmaycToUsdDecimals;
     uint256 rateInterleaveToEth = 1 * 10 ** (Constants.oracleInterleaveToEthDecimals - 2);
 
     address[] public oracleDaiToUsdArr = new address[](1);
@@ -106,21 +106,21 @@ contract DeployArcadiaVaults is Test {
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         dai.mint(liquidityProvider, type(uint256).max);
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        eth.mint(tokenCreatorAddress, 200000 * 10 ** Constants.ethDecimals);
+        eth.mint(tokenCreatorAddress, 200_000 * 10 ** Constants.ethDecimals);
         snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
-        snx.mint(tokenCreatorAddress, 200000 * 10 ** Constants.snxDecimals);
+        snx.mint(tokenCreatorAddress, 200_000 * 10 ** Constants.snxDecimals);
         link = new ERC20Mock(
             "LINK Mock",
             "mLINK",
             uint8(Constants.linkDecimals)
         );
-        link.mint(tokenCreatorAddress, 200000 * 10 ** Constants.linkDecimals);
+        link.mint(tokenCreatorAddress, 200_000 * 10 ** Constants.linkDecimals);
         safemoon = new ERC20Mock(
             "Safemoon Mock",
             "mSFMN",
             uint8(Constants.safemoonDecimals)
         );
-        safemoon.mint(tokenCreatorAddress, 200000 * 10 ** Constants.safemoonDecimals);
+        safemoon.mint(tokenCreatorAddress, 200_000 * 10 ** Constants.safemoonDecimals);
         bayc = new ERC721Mock("BAYC Mock", "mBAYC");
         bayc.mint(tokenCreatorAddress, 0);
         bayc.mint(tokenCreatorAddress, 1);
@@ -135,14 +135,14 @@ contract DeployArcadiaVaults is Test {
             "mwBAYC",
             uint8(Constants.wbaycDecimals)
         );
-        wbayc.mint(tokenCreatorAddress, 100000 * 10 ** Constants.wbaycDecimals);
+        wbayc.mint(tokenCreatorAddress, 100_000 * 10 ** Constants.wbaycDecimals);
         interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
-        interleave.mint(tokenCreatorAddress, 1, 100000);
+        interleave.mint(tokenCreatorAddress, 1, 100_000);
 
-        eth.transfer(vaultOwner, 100000 * 10 ** Constants.ethDecimals);
-        link.transfer(vaultOwner, 100000 * 10 ** Constants.linkDecimals);
-        snx.transfer(vaultOwner, 100000 * 10 ** Constants.snxDecimals);
-        safemoon.transfer(vaultOwner, 100000 * 10 ** Constants.safemoonDecimals);
+        eth.transfer(vaultOwner, 100_000 * 10 ** Constants.ethDecimals);
+        link.transfer(vaultOwner, 100_000 * 10 ** Constants.linkDecimals);
+        snx.transfer(vaultOwner, 100_000 * 10 ** Constants.snxDecimals);
+        safemoon.transfer(vaultOwner, 100_000 * 10 ** Constants.safemoonDecimals);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 1);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 2);
@@ -153,7 +153,7 @@ contract DeployArcadiaVaults is Test {
             tokenCreatorAddress,
             vaultOwner,
             1,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         eth.transfer(unprivilegedAddress, 1000 * 10 ** Constants.ethDecimals);

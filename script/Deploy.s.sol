@@ -7,17 +7,17 @@
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import {DeployAddresses, DeployNumbers, DeployBytes} from "./Constants/DeployConstants.sol";
+import { DeployAddresses, DeployNumbers, DeployBytes } from "./Constants/DeployConstants.sol";
 
 import "../src/Factory.sol";
 import "../src/Proxy.sol";
 import "../src/Vault.sol";
-import {ERC20} from "../lib/solmate/src/tokens/ERC20.sol";
+import { ERC20 } from "../lib/solmate/src/tokens/ERC20.sol";
 import "../src/MainRegistry.sol";
-import {PricingModule, StandardERC20PricingModule} from "../src/PricingModules/StandardERC20PricingModule.sol";
+import { PricingModule, StandardERC20PricingModule } from "../src/PricingModules/StandardERC20PricingModule.sol";
 import "../src/Liquidator.sol";
 import "../src/OracleHub.sol";
-import {RiskConstants} from "../src/utils/RiskConstants.sol";
+import { RiskConstants } from "../src/utils/RiskConstants.sol";
 
 contract ArcadiaVaultDeployer is Test {
     Factory public factory;

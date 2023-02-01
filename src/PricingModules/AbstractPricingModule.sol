@@ -6,11 +6,11 @@
  */
 pragma solidity ^0.8.13;
 
-import {IOraclesHub} from "./interfaces/IOraclesHub.sol";
-import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
-import {IPricingModule} from "../interfaces/IPricingModule.sol";
-import {RiskConstants} from "../utils/RiskConstants.sol";
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
+import { IOraclesHub } from "./interfaces/IOraclesHub.sol";
+import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
+import { IPricingModule } from "../interfaces/IPricingModule.sol";
+import { RiskConstants } from "../utils/RiskConstants.sol";
+import { Owned } from "lib/solmate/src/auth/Owned.sol";
 
 /**
  * @title Abstract Pricing Module
@@ -116,7 +116,7 @@ abstract contract PricingModule is Owned {
      * one denominated in USD and the other one in the different BaseCurrency).
      * @dev All price feeds should be fetched in the Oracle-Hub
      */
-    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) {}
+    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) { }
 
     /*///////////////////////////////////////////////////////////////
                     RISK VARIABLES MANAGEMENT

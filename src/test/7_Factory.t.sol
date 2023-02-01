@@ -17,7 +17,7 @@ contract FactoryTest is DeployArcadiaVaults {
     event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 length);
 
     //this is a before
-    constructor() DeployArcadiaVaults() {}
+    constructor() DeployArcadiaVaults() { }
 
     //this is a before each
     function setUp() public {

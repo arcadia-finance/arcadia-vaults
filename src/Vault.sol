@@ -6,16 +6,16 @@
  */
 pragma solidity >=0.8.0 <0.9.0;
 
-import {IERC20} from "./interfaces/IERC20.sol";
-import {IERC721} from "./interfaces/IERC721.sol";
-import {IERC1155} from "./interfaces/IERC1155.sol";
-import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
-import {ITrustedCreditor} from "./interfaces/ITrustedCreditor.sol";
-import {IActionBase, ActionData} from "./interfaces/IActionBase.sol";
-import {IFactory} from "./interfaces/IFactory.sol";
-import {IVault} from "./interfaces/IVault.sol";
-import {IOraclesHub} from "./PricingModules/interfaces/IOraclesHub.sol";
-import {ActionData} from "./actions/utils/ActionData.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
+import { IERC721 } from "./interfaces/IERC721.sol";
+import { IERC1155 } from "./interfaces/IERC1155.sol";
+import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
+import { ITrustedCreditor } from "./interfaces/ITrustedCreditor.sol";
+import { IActionBase, ActionData } from "./interfaces/IActionBase.sol";
+import { IFactory } from "./interfaces/IFactory.sol";
+import { IVault } from "./interfaces/IVault.sol";
+import { IOraclesHub } from "./PricingModules/interfaces/IOraclesHub.sol";
+import { ActionData } from "./actions/utils/ActionData.sol";
 
 /**
  * @title An Arcadia Vault used to manage all your assets and take margin.
@@ -176,7 +176,7 @@ contract Vault is IVault {
      */
     function upgradeHook(address oldImplementation, address oldRegistry, uint16 oldVersion, bytes calldata data)
         external
-    {}
+    { }
 
     /* ///////////////////////////////////////////////////////////////
                         OWNERSHIP MANAGEMENT

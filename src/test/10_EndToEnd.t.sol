@@ -8,10 +8,10 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {LendingPool, DebtToken, ERC20, DataTypes} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
-import {ActionMultiCall} from "../actions/MultiCall.sol";
-import {MultiActionMock} from "../mockups/MultiActionMock.sol";
+import { LendingPool, DebtToken, ERC20, DataTypes } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
+import { ActionMultiCall } from "../actions/MultiCall.sol";
+import { MultiActionMock } from "../mockups/MultiActionMock.sol";
 
 abstract contract EndToEndTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;

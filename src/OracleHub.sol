@@ -6,11 +6,11 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {IChainLinkData} from "./interfaces/IChainLinkData.sol";
-import {IOraclesHub} from "./PricingModules/interfaces/IOraclesHub.sol";
-import {StringHelpers} from "./utils/StringHelpers.sol";
-import {FixedPointMathLib} from "../lib/solmate/src/utils/FixedPointMathLib.sol";
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
+import { IChainLinkData } from "./interfaces/IChainLinkData.sol";
+import { IOraclesHub } from "./PricingModules/interfaces/IOraclesHub.sol";
+import { StringHelpers } from "./utils/StringHelpers.sol";
+import { FixedPointMathLib } from "../lib/solmate/src/utils/FixedPointMathLib.sol";
+import { Owned } from "lib/solmate/src/auth/Owned.sol";
 
 /**
  * @title Oracle Hub
@@ -38,7 +38,7 @@ contract OracleHub is Owned, IOraclesHub {
     /**
      * @notice Constructor
      */
-    constructor() Owned(msg.sender) {}
+    constructor() Owned(msg.sender) { }
 
     /*///////////////////////////////////////////////////////////////
                           ORACLE MANAGEMENT
@@ -62,7 +62,7 @@ contract OracleHub is Owned, IOraclesHub {
     function addOracle(OracleInformation calldata oracleInformation) external onlyOwner {
         address oracle = oracleInformation.oracle;
         require(!inOracleHub[oracle], "OH_AO: Oracle not unique");
-        require(oracleInformation.oracleUnit <= 1000000000000000000, "OH_AO: Maximal 18 decimals");
+        require(oracleInformation.oracleUnit <= 1_000_000_000_000_000_000, "OH_AO: Maximal 18 decimals");
         inOracleHub[oracle] = true;
         oracleToOracleInformation[oracle] = oracleInformation;
     }

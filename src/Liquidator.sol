@@ -6,12 +6,12 @@
  */
 pragma solidity ^0.8.13;
 
-import {LogExpMath} from "./utils/LogExpMath.sol";
-import {IFactory} from "./interfaces/IFactory.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
-import {IVault} from "./interfaces/IVault.sol";
-import {ILendingPool} from "./interfaces/ILendingPool.sol";
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
+import { LogExpMath } from "./utils/LogExpMath.sol";
+import { IFactory } from "./interfaces/IFactory.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
+import { IVault } from "./interfaces/IVault.sol";
+import { ILendingPool } from "./interfaces/ILendingPool.sol";
+import { Owned } from "lib/solmate/src/auth/Owned.sol";
 
 /**
  * @title The liquidator holds the execution logic and storage of all things related to liquidating Arcadia Vaults
@@ -99,7 +99,7 @@ contract Liquidator is Owned {
         //Checks that new parameters are within reasonable boundries
         require(halfLifeTime > 120, "LQ_SACP: halfLifeTime too low"); // 2 minutes
         require(halfLifeTime < 28_800, "LQ_SACP: halfLifeTime too high"); // 8 hours
-        require(cutoffTime_ > 3_600, "LQ_SACP: cutoff too low"); // 1 hour
+        require(cutoffTime_ > 3600, "LQ_SACP: cutoff too low"); // 1 hour
         require(cutoffTime_ < 64_800, "LQ_SACP: cutoff too high"); // 18 hours
 
         //Derive base from the halfLifeTime

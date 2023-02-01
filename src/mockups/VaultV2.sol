@@ -14,8 +14,8 @@ import "../interfaces/IERC4626.sol";
 import "../interfaces/IMainRegistry.sol";
 import "../interfaces/ITrustedCreditor.sol";
 import "../interfaces/IActionBase.sol";
-import {IFactory} from "../interfaces/IFactory.sol";
-import {ActionData} from "../actions/utils/ActionData.sol";
+import { IFactory } from "../interfaces/IFactory.sol";
+import { ActionData } from "../actions/utils/ActionData.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets

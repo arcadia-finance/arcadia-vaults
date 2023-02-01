@@ -6,7 +6,7 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
+import { PricingModule, IMainRegistry, IOraclesHub } from "./AbstractPricingModule.sol";
 
 /**
  * @title Pricing Module for ERC721 tokens for which a oracle exists for the floor price of the collection
@@ -29,7 +29,7 @@ contract FloorERC721PricingModule is PricingModule {
      * @param mainRegistry_ The address of the Main-registry
      * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) { }
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT

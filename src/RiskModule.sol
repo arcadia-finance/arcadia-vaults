@@ -6,7 +6,7 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {RiskConstants} from "./utils/RiskConstants.sol";
+import { RiskConstants } from "./utils/RiskConstants.sol";
 
 /**
  * @title Risk Module

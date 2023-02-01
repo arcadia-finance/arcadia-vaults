@@ -12,7 +12,7 @@ contract gasDeploys is GasTestFixture {
     using stdStorage for StdStorage;
 
     //this is a before
-    constructor() GasTestFixture() {}
+    constructor() GasTestFixture() { }
 
     //this is a before each
     function setUp() public override {

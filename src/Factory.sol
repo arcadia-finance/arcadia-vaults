@@ -6,15 +6,15 @@
  */
 pragma solidity >=0.4.22 <0.9.0;
 
-import {Proxy} from "./Proxy.sol";
-import {IVault} from "./interfaces/IVault.sol";
-import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
+import { Proxy } from "./Proxy.sol";
+import { IVault } from "./interfaces/IVault.sol";
+import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
 
-import {IFactory} from "./interfaces/IFactory.sol";
-import {ERC721} from "../lib/solmate/src/tokens/ERC721.sol";
-import {Strings} from "./utils/Strings.sol";
-import {MerkleProofLib} from "./utils/MerkleProofLib.sol";
-import {FactoryGuardian} from "./security/FactoryGuardian.sol";
+import { IFactory } from "./interfaces/IFactory.sol";
+import { ERC721 } from "../lib/solmate/src/tokens/ERC721.sol";
+import { Strings } from "./utils/Strings.sol";
+import { MerkleProofLib } from "./utils/MerkleProofLib.sol";
+import { FactoryGuardian } from "./security/FactoryGuardian.sol";
 
 contract Factory is IFactory, ERC721, FactoryGuardian {
     using Strings for uint256;
@@ -35,7 +35,7 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
 
     address[] public allVaults;
 
-    constructor() ERC721("Arcadia Vault", "ARCADIA") {}
+    constructor() ERC721("Arcadia Vault", "ARCADIA") { }
 
     /*///////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT

@@ -8,8 +8,8 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {LendingPool, DebtToken, ERC20, DataTypes} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import { LendingPool, DebtToken, ERC20, DataTypes } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 
 contract LiquidatorEndToEnd is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -59,7 +59,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         link.mint(vaultOwner1, 1_000_000 * 10 ** Constants.linkDecimals);
         link.mint(vaultOwner2, 1_000_000 * 10 ** Constants.linkDecimals);
         eth.mint(vaultOwner1, 100_000 * 10 ** Constants.ethDecimals);
-        eth.mint(vaultOwner2, 100_00 * 10 ** Constants.ethDecimals);
+        eth.mint(vaultOwner2, 10_000 * 10 ** Constants.ethDecimals);
         safemoon.mint(vaultOwner1, 100_000 * 10 ** Constants.safemoonDecimals);
         vm.stopPrank();
 
@@ -172,7 +172,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         ids1[2] = 0;
 
         uint256[] memory amounts1 = new uint256[](3); // total value = 100_000 + 300_000 + 500_000, coll value = 450_000, liq value = 500_000
-        amounts1[0] = 5_000 * 10 ** Constants.linkDecimals;
+        amounts1[0] = 5000 * 10 ** Constants.linkDecimals;
         amounts1[1] = 100 * 10 ** Constants.ethDecimals;
         amounts1[2] = 100_000 * 10 ** Constants.safemoonDecimals;
 
@@ -211,7 +211,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         ids2[1] = 0;
 
         uint256[] memory amounts2 = new uint256[](2); // total value = 100_000 + 300_000, coll value = 200_000, liq value = 222_222.2222222
-        amounts2[0] = 5_000 * 10 ** Constants.linkDecimals;
+        amounts2[0] = 5000 * 10 ** Constants.linkDecimals;
         amounts2[1] = 100 * 10 ** Constants.ethDecimals;
 
         uint256[] memory types2 = new uint256[](2);
@@ -244,7 +244,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         vm.startPrank(vaultOwner1);
         proxy1.openTrustedMarginAccount(address(pool));
         pool.borrow(
-            449_550_449550449551 * 10 ** Constants.daiDecimals / 10 ** 12, address(proxy1), vaultOwner1, 0xae12fa
+            449_550_449_550_449_551 * 10 ** Constants.daiDecimals / 10 ** 12, address(proxy1), vaultOwner1, 0xae12fa
         );
         vm.stopPrank();
 

@@ -6,11 +6,11 @@
  */
 pragma solidity ^0.8.13;
 
-import {PricingModule} from "./AbstractPricingModule.sol";
-import {IOraclesHub} from "./interfaces/IOraclesHub.sol";
-import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
-import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import { PricingModule } from "./AbstractPricingModule.sol";
+import { IOraclesHub } from "./interfaces/IOraclesHub.sol";
+import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
+import { IERC20 } from "../interfaces/IERC20.sol";
+import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 /**
  * @title Sub-registry for Standard ERC20 tokens
@@ -33,7 +33,7 @@ contract StandardERC20PricingModule is PricingModule {
      * @param mainRegistry_ The address of the Main-registry
      * @param oracleHub_ The address of the Oracle-Hub
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
+    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) { }
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT

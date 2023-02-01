@@ -14,7 +14,7 @@ abstract contract MainRegistryTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     //this is a before
-    constructor() DeployArcadiaVaults() {}
+    constructor() DeployArcadiaVaults() { }
 
     //this is a before each
     function setUp() public virtual {

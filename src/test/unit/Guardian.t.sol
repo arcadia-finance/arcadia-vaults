@@ -7,9 +7,9 @@
 pragma solidity ^0.8.13;
 
 import "../../../lib/forge-std/src/Test.sol";
-import {FactoryGuardian} from "../../security/FactoryGuardian.sol";
-import {MainRegistryGuardian} from "../../security/MainRegistryGuardian.sol";
-import {BaseGuardian} from "../../security/BaseGuardian.sol";
+import { FactoryGuardian } from "../../security/FactoryGuardian.sol";
+import { MainRegistryGuardian } from "../../security/MainRegistryGuardian.sol";
+import { BaseGuardian } from "../../security/BaseGuardian.sol";
 
 contract BaseGuardianPossibleExtension is BaseGuardian {
     bool public pausedVar1;

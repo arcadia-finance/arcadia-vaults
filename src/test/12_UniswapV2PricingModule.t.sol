@@ -9,12 +9,12 @@ pragma solidity >0.8.10;
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 import "../mockups/UniswapV2FactoryMock.sol";
 import "../mockups/UniswapV2PairMock.sol";
-import {UniswapV2PricingModule} from "../PricingModules/UniswapV2PricingModule.sol";
+import { UniswapV2PricingModule } from "../PricingModules/UniswapV2PricingModule.sol";
 
 contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
     constructor(address mainRegistry_, address oracleHub_, address uniswapV2Factory_, address erc20PricingModule_)
         UniswapV2PricingModule(mainRegistry_, oracleHub_, uniswapV2Factory_, erc20PricingModule_)
-    {}
+    { }
 
     function getTrustedTokenAmounts(
         address pair,
@@ -103,7 +103,7 @@ abstract contract UniswapV2PricingModuleTest is DeployArcadiaVaults {
     }
 
     //this is a before each
-    function setUp() public virtual {}
+    function setUp() public virtual { }
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -333,13 +333,13 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         uint256 maxProfit = profitArbitrage(priceTokenIn, priceTokenOut, amountIn, reserveIn, reserveOut);
 
         //Due to numerical rounding actual maximum might be deviating bit from calculated max, but must be in a range of 1%
-        vm.assume(maxProfit <= type(uint256).max / 10001); //Prevent overflow on underlying overflows, maxProfit can still be a ridiculous big number
+        vm.assume(maxProfit <= type(uint256).max / 10_001); //Prevent overflow on underlying overflows, maxProfit can still be a ridiculous big number
         assertGe(
-            maxProfit * 10001 / 10000,
+            maxProfit * 10_001 / 10_000,
             profitArbitrage(priceTokenIn, priceTokenOut, amountIn * 999 / 1000, reserveIn, reserveOut)
         );
         assertGe(
-            maxProfit * 10001 / 10000,
+            maxProfit * 10_001 / 10_000,
             profitArbitrage(priceTokenIn, priceTokenOut, amountIn * 1001 / 1000, reserveIn, reserveOut)
         );
     }

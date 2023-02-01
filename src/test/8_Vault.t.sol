@@ -8,16 +8,16 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {TrustedCreditorMock} from "../mockups/TrustedCreditorMock.sol";
-import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import { TrustedCreditorMock } from "../mockups/TrustedCreditorMock.sol";
+import { LendingPool, DebtToken, ERC20 } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 
-import {ActionMultiCall} from "../actions/MultiCall.sol";
+import { ActionMultiCall } from "../actions/MultiCall.sol";
 import "../actions/utils/ActionData.sol";
-import {MultiActionMock} from "../mockups/MultiActionMock.sol";
+import { MultiActionMock } from "../mockups/MultiActionMock.sol";
 
 contract VaultTestExtension is Vault {
-    constructor(address mainReg_, uint16 vaultVersion_) Vault(mainReg_, vaultVersion_) {}
+    constructor(address mainReg_, uint16 vaultVersion_) Vault(mainReg_, vaultVersion_) { }
 
     function getLengths() external view returns (uint256, uint256, uint256, uint256) {
         return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
@@ -745,7 +745,7 @@ contract MarginRequirementsTest is vaultTests {
         vault_.getVaultValue(address(dai));
         uint256 gasAfter = gasleft();
         emit log_int(int256(gasStart - gasAfter));
-        assertLt(gasStart - gasAfter, 200000);
+        assertLt(gasStart - gasAfter, 200_000);
     }
 
     function testSuccess_getLiquidationValue(uint8 depositAmount) public {
@@ -972,7 +972,7 @@ contract VaultActionTest is vaultTests {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        proxyAddr = factory.createVault(12345678, 0, address(0));
+        proxyAddr = factory.createVault(12_345_678, 0, address(0));
         proxy_ = VaultTestExtension(proxyAddr);
         vm.stopPrank();
 
@@ -1526,7 +1526,7 @@ contract AssetManagementTest is vaultTests {
     }
 
     function testSuccess_deposit_MultipleSameERC20(uint16 amount) public {
-        vm.assume(amount <= 50000);
+        vm.assume(amount <= 50_000);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
@@ -2183,7 +2183,7 @@ contract DepreciatedTest is vaultTests {
 
     //overflows from deltaTimestamp = 894262060268226281981748468
     function testSuccess_CheckExponentUnchecked() public {
-        uint256 yearlySeconds = 31536000;
+        uint256 yearlySeconds = 31_536_000;
         uint256 maxDeltaTimestamp = (uint256(type(uint128).max) * uint256(yearlySeconds)) / 10 ** 18;
 
         uint256 exponent256 = (maxDeltaTimestamp * 1e18) / yearlySeconds;
@@ -2204,7 +2204,7 @@ contract DepreciatedTest is vaultTests {
         vm.assume(deltaTimestamp <= 5 * 365 * 24 * 60 * 60); //5 year
         vm.assume(openDebt <= type(uint128).max / (10 ** 5)); //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
 
-        uint256 yearlySeconds = 31536000;
+        uint256 yearlySeconds = 31_536_000;
         uint128 exponent = uint128(((uint256(deltaTimestamp)) * 1e18) / yearlySeconds);
         vm.assume(LogExpMath.pow(base, exponent) > 0);
 
@@ -2244,7 +2244,7 @@ contract DepreciatedTest is vaultTests {
         ); // This is always zero
         amountEthToDeposit += uint128(additionalDeposit);
 
-        uint256 yearlySeconds = 31536000;
+        uint256 yearlySeconds = 31_536_000;
         uint128 exponent = uint128(((uint256(deltaTimestamp)) * 1e18) / yearlySeconds);
 
         uint256 remainingCredit = depositEthAndTakeMaxCredit(amountEthToDeposit);
@@ -2266,7 +2266,7 @@ contract DepreciatedTest is vaultTests {
     function testSuccess_syncInterests_GetOpenDebtUnchecked(uint32 blocksToRoll, uint128 baseAmountEthToDeposit)
         public
     {
-        vm.assume(blocksToRoll <= 255555555); //up to the year 2122
+        vm.assume(blocksToRoll <= 255_555_555); //up to the year 2122
         vm.assume(baseAmountEthToDeposit > 0);
         vm.assume(baseAmountEthToDeposit < 10);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;

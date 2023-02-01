@@ -8,8 +8,8 @@ pragma solidity >0.8.10;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {ATokenMock} from "../mockups/ATokenMock.sol";
-import {ATokenPricingModule} from "../PricingModules/ATokenPricingModule.sol";
+import { ATokenMock } from "../mockups/ATokenMock.sol";
+import { ATokenPricingModule } from "../PricingModules/ATokenPricingModule.sol";
 
 contract aTokenPricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;

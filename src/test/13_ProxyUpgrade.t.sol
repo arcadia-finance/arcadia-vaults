@@ -10,8 +10,8 @@ import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
 import "../mockups/VaultV2.sol";
 
-import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import { LendingPool, DebtToken, ERC20 } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 
 contract VaultV2Test is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -100,7 +100,7 @@ contract VaultV2Test is DeployArcadiaVaults {
 
         assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
 
-        vm.startPrank(address(123456789));
+        vm.startPrank(address(123_456_789));
         proxyAddr2 = factory.createVault(salt, 0, address(0));
         vaultV2 = VaultV2(proxyAddr2);
         assertEq(vaultV2.returnFive(), 5);
