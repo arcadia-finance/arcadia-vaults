@@ -242,6 +242,7 @@ contract Vault is IVault {
         require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CTMA: NON-ZERO OPEN POSITION");
 
         isTrustedCreditorSet = false;
+        trustedCreditor = address(0);
     }
 
     /* ///////////////////////////////////////////////////////////////

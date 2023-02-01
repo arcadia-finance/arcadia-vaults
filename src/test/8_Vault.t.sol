@@ -543,6 +543,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vault_.closeTrustedMarginAccount();
 
         assertTrue(!vault_.isTrustedCreditorSet());
+        assertTrue(vault_.trustedCreditor() == address(0));
     }
 }
 
