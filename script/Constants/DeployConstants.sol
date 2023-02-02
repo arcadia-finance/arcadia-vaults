@@ -46,3 +46,54 @@ library DeployNumbers {
 library DeployBytes {
     bytes32 public constant upgradeRoot1To1 = 0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f;
 }
+
+library DeployRiskConstants {
+    uint16 public constant dai_collFact_0 = 95; //usd
+    uint16 public constant dai_collFact_1 = 70; //eth
+    uint16 public constant dai_collFact_3 = 95; //usdc
+
+    uint16 public constant eth_collFact_0 = 70; //usd
+    uint16 public constant eth_collFact_1 = 95; //eth
+    uint16 public constant eth_collFact_3 = 70; //usdc
+
+    uint16 public constant link_collFact_0 = 65; //usd
+    uint16 public constant link_collFact_1 = 70; //eth
+    uint16 public constant link_collFact_3 = 65; //usdc
+
+    uint16 public constant snx_collFact_0 = 65; //usd
+    uint16 public constant snx_collFact_1 = 70; //eth
+    uint16 public constant snx_collFact_3 = 65; //usdc
+
+    uint16 public constant usdc_collFact_0 = 95; //usd
+    uint16 public constant usdc_collFact_1 = 70; //eth
+    uint16 public constant usdc_collFact_3 = 95; //usdc
+
+    uint16 public constant btc_collFact_0 = 70; //usd
+    uint16 public constant btc_collFact_1 = 75; //eth
+    uint16 public constant btc_collFact_3 = 70; //usdc
+
+    uint16 public constant dai_liqFact_0 = 98; //usd
+    uint16 public constant dai_liqFact_1 = 80; //eth
+    uint16 public constant dai_liqFact_3 = 98; //usdc
+
+    uint16 public constant eth_liqFact_0 = 80; //usd
+    uint16 public constant eth_liqFact_1 = 98; //eth
+    uint16 public constant eth_liqFact_3 = 80; //usdc
+
+    uint16 public constant link_liqFact_0 = 80; //usd
+    uint16 public constant link_liqFact_1 = 82; //eth
+    uint16 public constant link_liqFact_3 = 80; //usdc
+
+    uint16 public constant snx_liqFact_0 = 80; //usd
+    uint16 public constant snx_liqFact_1 = 82; //eth
+    uint16 public constant snx_liqFact_3 = 80; //usdc
+
+    uint16 public constant usdc_liqFact_0 = 98; //usd
+    uint16 public constant usdc_liqFact_1 = 80; //eth
+    uint16 public constant usdc_liqFact_3 = 98; //usdc
+
+    uint16 public constant btc_liqFact_0 = 80; //usd
+    uint16 public constant btc_liqFact_1 = 82; //eth
+    uint16 public constant btc_liqFact_3 = 80; //usdc
+
+}

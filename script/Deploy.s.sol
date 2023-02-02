@@ -15,15 +15,12 @@ import "../src/Vault.sol";
 import { ERC20 } from "../lib/solmate/src/tokens/ERC20.sol";
 import "../src/MainRegistry.sol";
 import { PricingModule, StandardERC20PricingModule } from "../src/PricingModules/StandardERC20PricingModule.sol";
-import "../src/Liquidator.sol";
 import "../src/OracleHub.sol";
 import { RiskConstants } from "../src/utils/RiskConstants.sol";
 
 contract ArcadiaVaultDeployer is Test {
     Factory public factory;
     Vault public vault;
-    Vault public proxy;
-    address public proxyAddr;
     ERC20 public dai;
     ERC20 public eth;
     ERC20 public link;
@@ -33,7 +30,6 @@ contract ArcadiaVaultDeployer is Test {
     OracleHub public oracleHub;
     MainRegistry public mainRegistry;
     StandardERC20PricingModule public standardERC20PricingModule;
-    Liquidator public liquidator;
 
     address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
@@ -45,7 +41,12 @@ contract ArcadiaVaultDeployer is Test {
     uint16 public collateralFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
     uint16 public liquidationFactor = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
 
-    PricingModule.RiskVarInput[] public riskVars;
+    PricingModule.RiskVarInput[] public riskVarsDai;
+    PricingModule.RiskVarInput[] public riskVarsEth;
+    PricingModule.RiskVarInput[] public riskVarsLink;
+    PricingModule.RiskVarInput[] public riskVarsSnx;
+    PricingModule.RiskVarInput[] public riskVarsUsdc;
+    PricingModule.RiskVarInput[] public riskVarsBtc;
 
     OracleHub.OracleInformation public daiToUsdOracleInfo;
     OracleHub.OracleInformation public ethToUsdOracleInfo;
@@ -57,6 +58,8 @@ contract ArcadiaVaultDeployer is Test {
     MainRegistry.BaseCurrencyInformation public usdBaseCurrencyInfo;
     MainRegistry.BaseCurrencyInformation public ethBaseCurrencyInfo;
     MainRegistry.BaseCurrencyInformation public usdcBaseCurrencyInfo;
+
+    address public deployerAddress;
 
     constructor() {
         dai = ERC20(DeployAddresses.dai);
@@ -157,34 +160,162 @@ contract ArcadiaVaultDeployer is Test {
             baseCurrencyUnitCorrection: uint64(10 ** (18 - DeployNumbers.usdcDecimals))
         });
 
-        riskVars.push(
+        riskVarsDai.push(
             PricingModule.RiskVarInput({
                 baseCurrency: 0,
                 asset: address(0),
-                collateralFactor: collateralFactor,
-                liquidationFactor: liquidationFactor
+                collateralFactor: DeployRiskConstants.dai_collFact_0,
+                liquidationFactor: DeployRiskConstants.dai_liqFact_0
             })
         );
-        riskVars.push(
+        riskVarsDai.push(
             PricingModule.RiskVarInput({
                 baseCurrency: 1,
                 asset: address(0),
-                collateralFactor: collateralFactor,
-                liquidationFactor: liquidationFactor
+                collateralFactor: DeployRiskConstants.dai_collFact_1,
+                liquidationFactor: DeployRiskConstants.dai_liqFact_1
             })
         );
-        riskVars.push(
+        riskVarsDai.push(
             PricingModule.RiskVarInput({
                 baseCurrency: 2,
                 asset: address(0),
-                collateralFactor: collateralFactor,
-                liquidationFactor: liquidationFactor
+                collateralFactor: DeployRiskConstants.dai_collFact_2,
+                liquidationFactor: DeployRiskConstants.dai_liqFact_2
             })
         );
+
+        riskVarsEth.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 0,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.eth_collFact_0,
+                liquidationFactor: DeployRiskConstants.eth_liqFact_0
+            })
+        );
+        riskVarsEth.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 1,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.eth_collFact_1,
+                liquidationFactor: DeployRiskConstants.eth_liqFact_1
+            })
+        );
+        riskVarsEth.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 2,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.eth_collFact_2,
+                liquidationFactor: DeployRiskConstants.eth_liqFact_2
+            })
+        );
+
+        riskVarsLink.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 0,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.link_collFact_0,
+                liquidationFactor: DeployRiskConstants.link_liqFact_0
+            })
+        );
+        riskVarsLink.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 1,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.link_collFact_1,
+                liquidationFactor: DeployRiskConstants.link_liqFact_1
+            })
+        );
+        riskVarsLink.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 2,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.link_collFact_2,
+                liquidationFactor: DeployRiskConstants.link_liqFact_2
+            })
+        );
+
+        riskVarsSnx.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 0,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.snx_collFact_0,
+                liquidationFactor: DeployRiskConstants.snx_liqFact_0
+            })
+        );
+        riskVarsSnx.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 1,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.snx_collFact_1,
+                liquidationFactor: DeployRiskConstants.snx_liqFact_1
+            })
+        );
+        riskVarsSnx.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 2,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.snx_collFact_2,
+                liquidationFactor: DeployRiskConstants.snx_liqFact_2
+            })
+        );
+
+        riskVarsUsdc.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 0,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.usdc_collFact_0,
+                liquidationFactor: DeployRiskConstants.usdc_liqFact_0
+            })
+        );
+        riskVarsUsdc.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 1,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.usdc_collFact_1,
+                liquidationFactor: DeployRiskConstants.usdc_liqFact_1
+            })
+        );
+        riskVarsUsdc.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 2,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.usdc_collFact_2,
+                liquidationFactor: DeployRiskConstants.usdc_liqFact_2
+            })
+        );
+
+        riskVarsBtc.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 0,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.btc_collFact_0,
+                liquidationFactor: DeployRiskConstants.btc_liqFact_0
+            })
+        );
+        riskVarsBtc.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 1,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.btc_collFact_1,
+                liquidationFactor: DeployRiskConstants.btc_liqFact_1
+            })
+        );
+        riskVarsBtc.push(
+            PricingModule.RiskVarInput({
+                baseCurrency: 2,
+                asset: address(0),
+                collateralFactor: DeployRiskConstants.btc_collFact_2,
+                liquidationFactor: DeployRiskConstants.btc_liqFact_2
+            })
+        );
+
     }
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        deployerAddress = vm.addr(deployerPrivateKey);
+        
         vm.startBroadcast(deployerPrivateKey);
 
         oracleHub = new OracleHub();
@@ -209,22 +340,115 @@ contract ArcadiaVaultDeployer is Test {
 
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
 
-        PricingModule.RiskVarInput[] memory riskVars_ = riskVars;
+        PricingModule.RiskVarInput[] memory riskVarsDai_ = riskVarsDai;
+        PricingModule.RiskVarInput[] memory riskVarsEth_ = riskVarsEth;
+        PricingModule.RiskVarInput[] memory riskVarsLink_ = riskVarsLink;
+        PricingModule.RiskVarInput[] memory riskVarsSnx_ = riskVarsSnx;
+        PricingModule.RiskVarInput[] memory riskVarsUsdc_ = riskVarsUsdc;
+        PricingModule.RiskVarInput[] memory riskVarsBtc_ = riskVarsBtc;
 
-        standardERC20PricingModule.addAsset(DeployAddresses.dai, oracleDaiToUsdArr, riskVars_, type(uint128).max);
-        standardERC20PricingModule.addAsset(DeployAddresses.eth, oracleEthToUsdArr, riskVars_, type(uint128).max);
+        standardERC20PricingModule.addAsset(DeployAddresses.dai, oracleDaiToUsdArr, riskVarsDai_, type(uint128).max);
+        standardERC20PricingModule.addAsset(DeployAddresses.eth, oracleEthToUsdArr, riskVarsEth_, type(uint128).max);
         standardERC20PricingModule.addAsset(
-            DeployAddresses.link, oracleLinkToEthEthToUsdArr, riskVars_, type(uint128).max
+            DeployAddresses.link, oracleLinkToEthEthToUsdArr, riskVarsLink_, type(uint128).max
         );
-        standardERC20PricingModule.addAsset(DeployAddresses.snx, oracleSnxToUsdArr, riskVars_, type(uint128).max);
-        standardERC20PricingModule.addAsset(DeployAddresses.usdc, oracleUsdcToUsdArr, riskVars_, type(uint128).max);
+        standardERC20PricingModule.addAsset(DeployAddresses.snx, oracleSnxToUsdArr, riskVarsSnx_, type(uint128).max);
+        standardERC20PricingModule.addAsset(DeployAddresses.usdc, oracleUsdcToUsdArr, riskVarsUsdc_, type(uint128).max);
         standardERC20PricingModule.addAsset(
-            DeployAddresses.btc, oracleBtcToEthEthToUsdArr, riskVars_, type(uint128).max
+            DeployAddresses.btc, oracleBtcToEthEthToUsdArr, riskVarsBtc_, type(uint128).max
         );
 
         vault = new Vault(address(mainRegistry), 1);
         factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1, "");
 
         vm.stopBroadcast();
+    }
+
+    function test_deployment() public {
+        assertTrue(address(oracleHub) != address(0));
+        assertTrue(address(factory) != address(0));
+        assertTrue(address(mainRegistry) != address(0));
+        assertTrue(address(standardERC20PricingModule) != address(0));
+        assertTrue(address(vault) != address(0));
+    }
+
+    function test_Factory() public {
+        assertTrue(factory.owner() == address(this));
+        assertTrue(factory.vaultDetails(1).vault == address(vault));
+        assertTrue(factory.vaultDetails(1).upgradeRoot == DeployBytes.upgradeRoot1To1);
+        assertTrue(factory.vaultDetails(1).upgradeData == "");
+
+        vm.expectRevert(stdError.indexOOBError);
+        factory.allVaults(0);
+
+        assertTrue(factory.name() == "Arcadia Vault");
+        assertTrue(factory.symbol() == "ARCADIA");
+    }
+
+    function test_Vault() public {
+        assertTrue(vault.owner() == address(this));
+        assertTrue(vault.mainRegistry() == address(mainRegistry));
+        assertTrue(vault.vaultVersion() == 1);
+    }
+
+    function test_MainRegistry() public {
+        assertTrue(mainRegistry.owner() == address(this));
+        assertTrue(mainRegistry.factory() == address(factory));
+        assertTrue(mainRegistry.baseCurrencyCounter() == 3);
+
+        assertTrue(mainRegistry.isBaseCurrency(address(0)));
+        assertTrue(mainRegistry.isBaseCurrency(address(eth)));
+        assertTrue(mainRegistry.isBaseCurrency(address(usdc)));
+
+        assertTrue(mainRegistry.baseCurrencyInfo(0).baseCurrencyToUsdOracleUnit == 1e18);
+        assertTrue(mainRegistry.baseCurrencyInfo(0).assetAddress == address(0));
+        assertTrue(mainRegistry.baseCurrencyInfo(0).baseCurrencyToUsdOracle == address(0));
+        assertTrue(mainRegistry.baseCurrencyInfo(0).baseCurrencyLabel == "USD");
+        assertTrue(mainRegistry.baseCurrencyInfo(0).baseCurrencyUnitCorrection == 1);
+
+        assertTrue(mainRegistry.baseCurrencyInfo(1).baseCurrencyToUsdOracleUnit == 1e8);
+        assertTrue(mainRegistry.baseCurrencyInfo(1).assetAddress == address(eth));
+        assertTrue(mainRegistry.baseCurrencyInfo(1).baseCurrencyToUsdOracle == address(ethToUsdOracle));
+        assertTrue(mainRegistry.baseCurrencyInfo(1).baseCurrencyLabel == "ETH");
+        assertTrue(mainRegistry.baseCurrencyInfo(1).baseCurrencyUnitCorrection == 1);
+
+        assertTrue(mainRegistry.baseCurrencyInfo(2).baseCurrencyToUsdOracleUnit == 1e8);
+        assertTrue(mainRegistry.baseCurrencyInfo(2).assetAddress == address(usdc));
+        assertTrue(mainRegistry.baseCurrencyInfo(2).baseCurrencyToUsdOracle == address(usdcToUsdOracle));
+        assertTrue(mainRegistry.baseCurrencyInfo(2).baseCurrencyLabel == "USDC");
+        assertTrue(mainRegistry.baseCurrencyInfo(2).baseCurrencyUnitCorrection == 1e12);
+
+        assertTrue(mainRegistry.isPricingModule(address(standardERC20PricingModule)));
+
+        assertTrue(mainRegistry.inMainRegistry(address(dai)));
+        assertTrue(mainRegistry.inMainRegistry(address(eth)));
+        assertTrue(mainRegistry.inMainRegistry(address(link)));
+        assertTrue(mainRegistry.inMainRegistry(address(snx)));
+        assertTrue(mainRegistry.inMainRegistry(address(usdc)));
+        assertTrue(mainRegistry.inMainRegistry(address(btc)));
+
+        assertTrue(mainRegistry.assetsInMainRegistry(0) == address(dai));
+        assertTrue(mainRegistry.assetsInMainRegistry(1) == address(eth));
+        assertTrue(mainRegistry.assetsInMainRegistry(2) == address(link));
+        assertTrue(mainRegistry.assetsInMainRegistry(3) == address(snx));
+        assertTrue(mainRegistry.assetsInMainRegistry(4) == address(usdc));
+        assertTrue(mainRegistry.assetsInMainRegistry(5) == address(btc));
+
+        vm.expectRevert(stdError.indexOOBError);
+        mainRegistry.assetsInMainRegistry(6);
+    }
+
+    function test_oracleHub() public {
+        assertTrue(oracleHub.owner() == address(this));
+
+        assertTrue(oracleHub.inOracleHub(DeployAddresses.oracleDaiToUsd));
+        assertTrue(oracleHub.inOracleHub(DeployAddresses.oracleEthToUsd));
+        assertTrue(oracleHub.inOracleHub(DeployAddresses.oracleLinkToEth));
+        assertTrue(oracleHub.inOracleHub(DeployAddresses.oracleSnxToUsd));
+        assertTrue(oracleHub.inOracleHub(DeployAddresses.oracleUsdcToUsd));
+        assertTrue(oracleHub.inOracleHub(DeployAddresses.oracleBtcToEth));
+
+        vm.expectRevert(stdError.indexOOBError);
+        oracleHub.oracles(6);
     }
 }
