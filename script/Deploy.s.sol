@@ -7,7 +7,7 @@
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import { DeployAddresses, DeployNumbers, DeployBytes } from "./Constants/DeployConstants.sol";
+import { DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstants } from "./Constants/DeployConstants.sol";
 
 import "../src/Factory.sol";
 import "../src/Proxy.sol";
@@ -315,7 +315,7 @@ contract ArcadiaVaultDeployer is Test {
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         deployerAddress = vm.addr(deployerPrivateKey);
-        
+
         vm.startBroadcast(deployerPrivateKey);
 
         oracleHub = new OracleHub();
@@ -373,8 +373,8 @@ contract ArcadiaVaultDeployer is Test {
     }
 
     function test_Factory() public {
-        assertTrue(factory.owner() == address(this));
-        assertTrue(factory.vaultDetails(1).vault == address(vault));
+        assertTrue(factory.owner() == deployerAddress);
+        assertTrue(factory.vaultDetails(1).logic == address(vault));
         assertTrue(factory.vaultDetails(1).upgradeRoot == DeployBytes.upgradeRoot1To1);
         assertTrue(factory.vaultDetails(1).upgradeData == "");
 
@@ -386,13 +386,13 @@ contract ArcadiaVaultDeployer is Test {
     }
 
     function test_Vault() public {
-        assertTrue(vault.owner() == address(this));
+        assertTrue(vault.owner() == deployerAddress);
         assertTrue(vault.mainRegistry() == address(mainRegistry));
         assertTrue(vault.vaultVersion() == 1);
     }
 
     function test_MainRegistry() public {
-        assertTrue(mainRegistry.owner() == address(this));
+        assertTrue(mainRegistry.owner() == deployerAddress);
         assertTrue(mainRegistry.factory() == address(factory));
         assertTrue(mainRegistry.baseCurrencyCounter() == 3);
 
@@ -408,13 +408,13 @@ contract ArcadiaVaultDeployer is Test {
 
         assertTrue(mainRegistry.baseCurrencyInfo(1).baseCurrencyToUsdOracleUnit == 1e8);
         assertTrue(mainRegistry.baseCurrencyInfo(1).assetAddress == address(eth));
-        assertTrue(mainRegistry.baseCurrencyInfo(1).baseCurrencyToUsdOracle == address(ethToUsdOracle));
+        assertTrue(mainRegistry.baseCurrencyInfo(1).baseCurrencyToUsdOracle == address(DeployAddresses.oracleEthToUsd));
         assertTrue(mainRegistry.baseCurrencyInfo(1).baseCurrencyLabel == "ETH");
         assertTrue(mainRegistry.baseCurrencyInfo(1).baseCurrencyUnitCorrection == 1);
 
         assertTrue(mainRegistry.baseCurrencyInfo(2).baseCurrencyToUsdOracleUnit == 1e8);
         assertTrue(mainRegistry.baseCurrencyInfo(2).assetAddress == address(usdc));
-        assertTrue(mainRegistry.baseCurrencyInfo(2).baseCurrencyToUsdOracle == address(usdcToUsdOracle));
+        assertTrue(mainRegistry.baseCurrencyInfo(2).baseCurrencyToUsdOracle == address(DeployAddresses.oracleUsdcToUsd));
         assertTrue(mainRegistry.baseCurrencyInfo(2).baseCurrencyLabel == "USDC");
         assertTrue(mainRegistry.baseCurrencyInfo(2).baseCurrencyUnitCorrection == 1e12);
 
@@ -439,7 +439,7 @@ contract ArcadiaVaultDeployer is Test {
     }
 
     function test_oracleHub() public {
-        assertTrue(oracleHub.owner() == address(this));
+        assertTrue(oracleHub.owner() == deployerAddress);
 
         assertTrue(oracleHub.inOracleHub(DeployAddresses.oracleDaiToUsd));
         assertTrue(oracleHub.inOracleHub(DeployAddresses.oracleEthToUsd));
@@ -448,7 +448,14 @@ contract ArcadiaVaultDeployer is Test {
         assertTrue(oracleHub.inOracleHub(DeployAddresses.oracleUsdcToUsd));
         assertTrue(oracleHub.inOracleHub(DeployAddresses.oracleBtcToEth));
 
-        vm.expectRevert(stdError.indexOOBError);
-        oracleHub.oracles(6);
+        assertTrue(oracleHub.oracleToOracleInformation(
+            DeployAddresses.oracleDaiToUsd).isActive);
+        assertTrue(oracleHub.oracleToOracleInformation(
+            DeployAddresses.oracleDaiToUsd).oracleUnit == 1e8);
+        assertTrue(oracleHub.oracleToOracleInformation(
+            DeployAddresses.oracleDaiToUsd).baseAssetBaseCurrency == 0);
+        assertTrue(oracleHub.oracleToOracleInformation(
+            DeployAddresses.oracleDaiToUsd).baseAssetIsBaseCurrency);
+
     }
 }
