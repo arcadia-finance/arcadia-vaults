@@ -284,7 +284,11 @@ contract Vault is IVault {
      * @dev Only one of the values can be non-zero, or we check on a certain increase of debt, or we check on a total amount of debt.
      * @dev If both values are zero, we check if the vault is currently healthy.
      */
-    function isVaultHealthy(uint256 debtIncrease, uint256 totalOpenDebt) external view returns (bool success, address trustedCreditor_) {
+    function isVaultHealthy(uint256 debtIncrease, uint256 totalOpenDebt)
+        external
+        view
+        returns (bool success, address trustedCreditor_)
+    {
         if (totalOpenDebt != 0) {
             //Check if vault is healthy for a given amount of openDebt.
             success = getCollateralValue() >= totalOpenDebt;
@@ -437,7 +441,11 @@ contract Vault is IVault {
      * The only requirements are that the recipient tokens of the interactions are allowlisted, deposited back into the vault and
      * that the Vault is in a healthy state at the end of the transaction.
      */
-    function vaultManagementAction(address actionHandler, bytes calldata actionData) external onlyAssetManager returns (address) {
+    function vaultManagementAction(address actionHandler, bytes calldata actionData)
+        external
+        onlyAssetManager
+        returns (address)
+    {
         require(IMainRegistry(registry).isActionAllowed(actionHandler), "V_VMA: Action not allowed");
 
         (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
