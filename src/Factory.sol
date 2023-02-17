@@ -237,8 +237,9 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Function called by a Vault at the start of a liquidation to transfer ownership.
+     * @notice Function called by a Vault at the start of a liquidation to transfer ownership to the Liquidator contract.
      * @param liquidator The contract address of the liquidator.
+     * @dev This transfer bypasses the standard transferFrom and safeTransferFrom from the ERC-721 standard.
      */
     function liquidate(address liquidator) external whenLiquidateNotPaused {
         require(isVault(msg.sender), "FTRY: Not a vault");
