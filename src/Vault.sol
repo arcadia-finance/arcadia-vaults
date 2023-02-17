@@ -57,7 +57,7 @@ contract Vault is IVault {
     uint256[] public erc721TokenIds;
     uint256[] public erc1155TokenIds;
 
-    mapping(address => bool) public isAssetManager;
+    mapping(address => mapping(address => bool)) public isAssetManager;
 
     struct AddressSlot {
         address value;
@@ -87,7 +87,8 @@ contract Vault is IVault {
      */
     modifier onlyAssetManager() {
         require(
-            msg.sender == owner || msg.sender == trustedCreditor || isAssetManager[msg.sender], "V: Only Asset Manager"
+            msg.sender == owner || msg.sender == trustedCreditor || isAssetManager[owner][msg.sender],
+            "V: Only Asset Manager"
         );
         _;
     }
@@ -411,7 +412,14 @@ contract Vault is IVault {
         originalOwner = owner;
         _transferOwnership(msg.sender);
 
-        return (originalOwner, baseCurrency, trustedCreditor);
+        //Cashe trustedCreditor
+        trustedCreditor_ = trustedCreditor;
+
+        //Close margin account
+        isTrustedCreditorSet = false;
+        trustedCreditor = address(0);
+
+        return (originalOwner, baseCurrency, trustedCreditor_);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -429,7 +437,7 @@ contract Vault is IVault {
      * - Chain interactions with the Trusted Creditor together with vault actions (eg. borrow deposit and trade in one transaction).
      */
     function setAssetManager(address assetManager, bool value) external onlyOwner {
-        isAssetManager[assetManager] = value;
+        isAssetManager[msg.sender][assetManager] = value;
     }
 
     /**
