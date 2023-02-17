@@ -240,6 +240,35 @@ abstract contract vaultTests is DeployArcadiaVaults {
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
         vm.stopPrank();
     }
+
+    function generateERC721DepositList(uint8 length)
+        public
+        returns (
+            address[] memory assetAddresses,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            uint256[] memory assetTypes
+        )
+    {
+        assetAddresses = new address[](length);
+
+        assetIds = new uint256[](length);
+
+        assetAmounts = new uint256[](length);
+
+        assetTypes = new uint256[](length);
+
+        uint256 id = 10;
+        for (uint256 i; i < length; ++i) {
+            vm.prank(tokenCreatorAddress);
+            bayc.mint(vaultOwner, id);
+            assetAddresses[i] = address(bayc);
+            assetIds[i] = id;
+            assetAmounts[i] = 1;
+            assetTypes[i] = 1;
+            ++id;
+        }
+    }
 }
 
 contract DeploymentTest is vaultTests {
@@ -1027,6 +1056,55 @@ contract VaultActionTest is vaultTests {
         vm.stopPrank();
     }
 
+    function testRevert_vaultManagementAction_tooManyAssets(uint8 arrLength) public {
+        vm.assume(arrLength > proxy_.ASSET_LIMIT() && arrLength < 50);
+
+        address[] memory assetAddresses = new address[](arrLength);
+
+        uint256[] memory assetIds = new uint256[](arrLength);
+
+        uint256[] memory assetAmounts = new uint256[](arrLength);
+
+        uint256[] memory assetTypes = new uint256[](arrLength);
+
+        (assetAddresses, assetIds, assetAmounts, assetTypes) = generateERC721DepositList(arrLength);
+
+        bytes[] memory data = new bytes[](0);
+        address[] memory to = new address[](0);
+
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](0),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](0),
+            assetTypes: new uint256[](0),
+            actionBalances: new uint256[](0)
+        });
+
+        ActionData memory assetDataIn = ActionData({
+            assets: assetAddresses,
+            assetIds: assetIds,
+            assetAmounts: assetAmounts,
+            assetTypes: assetTypes,
+            actionBalances: new uint256[](0)
+        });
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        //Already sent asset to action contract
+        uint256 id = 10;
+        for (uint256 i; i < arrLength; ++i) {
+            vm.prank(vaultOwner);
+            bayc.transferFrom(vaultOwner, address(action), id);
+            ++id;
+        }
+        vm.prank(address(action));
+        bayc.setApprovalForAll(address(proxy_), true);
+
+        vm.prank(vaultOwner);
+        vm.expectRevert("V_D: Too many assets");
+        proxy_.vaultManagementAction(address(action), callData);
+    }
+
     function testSuccess_vaultManagementAction_Owner(uint128 debtAmount) public {
         multiActionMock = new MultiActionMock();
 
@@ -1343,35 +1421,6 @@ contract AssetManagementTest is vaultTests {
         vm.prank(vaultOwner);
         vm.expectRevert("V_D: Too many assets");
         vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-    }
-
-    function generateERC721DepositList(uint8 length)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](length);
-
-        assetIds = new uint256[](length);
-
-        assetAmounts = new uint256[](length);
-
-        assetTypes = new uint256[](length);
-
-        uint256 id = 10;
-        for (uint256 i; i < length; ++i) {
-            vm.prank(tokenCreatorAddress);
-            bayc.mint(vaultOwner, id);
-            assetAddresses[i] = address(bayc);
-            assetIds[i] = id;
-            assetAmounts[i] = 1;
-            assetTypes[i] = 1;
-            ++id;
-        }
     }
 
     //input as uint8 to prevent too long lists as fuzz input
