@@ -58,7 +58,8 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
         require(vaultVersion <= latestVaultVersion, "FTRY_CV: Unknown vault version");
         require(!vaultVersionBlocked[vaultVersion], "FTRY_CV: Vault version blocked");
 
-        vault = address(new Proxy{salt: bytes32(salt)}(vaultDetails[vaultVersion].logic));
+        //Hash tx.origin with the user provided salt to avoid front-running vault deployment with an identical salt.
+        vault = address(new Proxy{salt: keccak256(abi.encodePacked(salt, tx.origin))}(vaultDetails[vaultVersion].logic));
 
         IVault(vault).initialize(msg.sender, vaultDetails[vaultVersion].registry, uint16(vaultVersion), baseCurrency);
 
