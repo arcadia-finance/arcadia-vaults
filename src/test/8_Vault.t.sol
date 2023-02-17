@@ -606,7 +606,7 @@ contract MarginRequirementsTest is vaultTests {
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        bool success = vault_.isVaultHealthy(marginIncrease, 0);
+        (bool success,) = vault_.isVaultHealthy(marginIncrease, 0);
 
         // Then: The action is not succesfull
         assertTrue(!success);
@@ -646,7 +646,7 @@ contract MarginRequirementsTest is vaultTests {
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        bool success = vault_.isVaultHealthy(marginIncrease, 0);
+        (bool success,) = vault_.isVaultHealthy(marginIncrease, 0);
 
         // Then: The action is succesfull
         assertTrue(success);
@@ -682,7 +682,7 @@ contract MarginRequirementsTest is vaultTests {
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        bool success = vault_.isVaultHealthy(0, totalOpenDebt);
+        (bool success,) = vault_.isVaultHealthy(0, totalOpenDebt);
 
         // Then: The action is not succesfull
         assertTrue(!success);
@@ -718,7 +718,7 @@ contract MarginRequirementsTest is vaultTests {
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        bool success = vault_.isVaultHealthy(0, totalOpenDebt);
+        (bool success,) = vault_.isVaultHealthy(0, totalOpenDebt);
 
         // Then: The action is succesfull
         assertTrue(success);
