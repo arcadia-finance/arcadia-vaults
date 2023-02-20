@@ -28,8 +28,14 @@ contract FloorERC721PricingModule is PricingModule {
      * @notice A Pricing Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry_ The address of the Main-registry
      * @param oracleHub_ The address of the Oracle-Hub
+     * @param assetType_ Identifier for the type of asset, necessary for the deposit and withdraw logic in the vaults.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) { }
+    constructor(address mainRegistry_, address oracleHub_, uint256 assetType_)
+        PricingModule(mainRegistry_, oracleHub_, assetType_, msg.sender)
+    { }
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -73,7 +79,7 @@ contract FloorERC721PricingModule is PricingModule {
         exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
-        IMainRegistry(mainRegistry).addAsset(asset);
+        IMainRegistry(mainRegistry).addAsset(asset, assetType);
     }
 
     /**
