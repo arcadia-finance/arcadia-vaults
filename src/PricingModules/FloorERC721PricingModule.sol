@@ -134,10 +134,12 @@ contract FloorERC721PricingModule is PricingModule {
      * @notice Processes the deposit of a token address and the corresponding Id if it is white-listed
      * @param asset The address of the asset
      * @param assetId The Id of the asset
-     * @dev amount of a deposit in ERC721 pricing module is always 1
+     * @param amount the amount of ERC721 tokens
+     * @dev amount of a deposit in ERC721 pricing module must be 1
      */
-    function processDeposit(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
+    function processDeposit(address, address asset, uint256 assetId, uint256 amount) external override onlyMainReg {
         require(isIdInRange(asset, assetId), "PM721_PD: ID not allowed");
+        require(amount == 1, "PM721_PD: Amount not 1");
 
         exposure[asset].exposure += 1;
         require(exposure[asset].exposure <= exposure[asset].maxExposure, "PM721_PD: Exposure not in limits");
@@ -146,9 +148,11 @@ contract FloorERC721PricingModule is PricingModule {
     /**
      * @notice Processes the withdrawal of tokens to increase the maxExposure
      * @param asset The address of the asset
-     * @dev amount of a deposit in ERC721 pricing module is always 1
+     * @param amount the amount of ERC721 tokens
+     * @dev amount of a deposit in ERC721 pricing module must be 1
      */
-    function processWithdrawal(address, address asset, uint256, uint256) external override onlyMainReg {
+    function processWithdrawal(address, address asset, uint256, uint256 amount) external override onlyMainReg {
+        require(amount == 1, "PM721_PW: Amount not 1");
         exposure[asset].exposure -= 1;
     }
 
