@@ -401,7 +401,7 @@ contract BaseCurrencyLogicTest is vaultTests {
     function setUp() public override {
         super.setUp();
         deployFactory();
-        openMarginAccount();
+        //openMarginAccount();
     }
 
     function testSuccess_setBaseCurrency() public {
@@ -418,18 +418,13 @@ contract BaseCurrencyLogicTest is vaultTests {
         vm.expectRevert("V: Only Owner");
         vault_.setBaseCurrency(address(eth));
         vm.stopPrank();
-
-        assertEq(vault_.baseCurrency(), address(dai));
     }
 
-    function testRevert_setBaseCurrency_WithUsedMargin() public {
-        bytes32 addDebt = bytes32(abi.encode(1));
-        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(addDebt);
-        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(addDebt);
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(addDebt);
+    function testRevert_setBaseCurrency_TrustedCreditorSet() public {
+        openMarginAccount();
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_SBC: Non-zero open position");
+        vm.expectRevert("V_SBC: Trusted Creditor Set");
         vault_.setBaseCurrency(address(eth));
         vm.stopPrank();
 

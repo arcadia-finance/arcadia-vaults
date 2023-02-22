@@ -217,7 +217,7 @@ contract Vault is IVault {
      * @dev First checks if there is no locked value. If there is no value locked then a new baseCurrency is set.
      */
     function setBaseCurrency(address baseCurrency_) external onlyOwner {
-        require(getUsedMargin() == 0, "V_SBC: Non-zero open position");
+        require(!isTrustedCreditorSet, "V_SBC: Trusted Creditor Set");
         _setBaseCurrency(baseCurrency_);
     }
 
