@@ -92,6 +92,12 @@ contract ExternalContractsTest is MainRegistryTest {
 /* ///////////////////////////////////////////////////////////////
                     BASE CURRENCY MANAGEMENT
 /////////////////////////////////////////////////////////////// */
+contract RevertingOracle {
+    function latestRoundData() public pure returns (uint80, int256, uint256, uint256, uint80) {
+        revert();
+    }
+}
+
 contract BaseCurrencyManagementTest is MainRegistryTest {
     function setUp() public override {
         super.setUp();
@@ -169,6 +175,178 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
 
         // Then: baseCurrencyCounter should return 2
         assertEq(2, mainRegistry.baseCurrencyCounter());
+    }
+
+    function testRevert_setOracle_NonOwner(uint256 baseCurrency, address newOracle, address unprivilegedAddress_)
+        public
+    {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("UNAUTHORIZED");
+        mainRegistry.setOracle(baseCurrency, newOracle);
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracle_NonBaseCurrency(uint256 baseCurrency, address newOracle) public {
+        vm.assume(baseCurrency >= mainRegistry.baseCurrencyCounter());
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("MR_SO: UNKNOWN_BASECURRENCY");
+        mainRegistry.setOracle(baseCurrency, newOracle);
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracle_HealthyOracle(
+        address newOracle,
+        int192 minAnswer,
+        int192 maxAnswer,
+        int256 price,
+        uint24 timePassed
+    ) public {
+        vm.assume(minAnswer >= 0);
+        vm.assume(price > minAnswer);
+        vm.assume(price < maxAnswer);
+        vm.assume(timePassed <= 1 weeks);
+
+        vm.prank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        vm.warp(2 weeks); //to not run into an underflow
+
+        vm.prank(oracleOwner);
+        oracleDaiToUsd.transmit(price);
+        oracleDaiToUsd.setMinAnswer(minAnswer);
+        oracleDaiToUsd.setMaxAnswer(maxAnswer);
+
+        vm.warp(block.timestamp + timePassed);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("MR_SO: ORACLE_HEALTHY");
+        mainRegistry.setOracle(1, newOracle);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setOracle_RevertingOracle(address newOracle) public {
+        RevertingOracle revertingOracle = new RevertingOracle();
+
+        vm.prank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(revertingOracle),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        vm.prank(creatorAddress);
+        mainRegistry.setOracle(1, newOracle);
+
+        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        assertEq(oracle, newOracle);
+    }
+
+    function testSuccess_setOracle_MinAnswer(address newOracle, int192 minAnswer, int192 price) public {
+        vm.assume(minAnswer >= 0);
+        vm.assume(price <= minAnswer);
+
+        vm.prank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        vm.prank(oracleOwner);
+        oracleDaiToUsd.transmit(price);
+        oracleDaiToUsd.setMinAnswer(minAnswer);
+        oracleDaiToUsd.setMaxAnswer(type(int192).max);
+
+        vm.prank(creatorAddress);
+        mainRegistry.setOracle(1, newOracle);
+
+        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        assertEq(oracle, newOracle);
+    }
+
+    function testSuccess_setOracle_MaxAnswer(address newOracle, int192 maxAnswer, int256 price) public {
+        vm.assume(maxAnswer >= 0);
+        vm.assume(price >= maxAnswer);
+
+        vm.prank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        vm.prank(oracleOwner);
+        oracleDaiToUsd.transmit(price);
+        oracleDaiToUsd.setMinAnswer(0);
+        oracleDaiToUsd.setMaxAnswer(maxAnswer);
+
+        vm.prank(creatorAddress);
+        mainRegistry.setOracle(1, newOracle);
+
+        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        assertEq(oracle, newOracle);
+    }
+
+    function testSuccess_setOracle_UpdateTooOld(
+        address newOracle,
+        int192 minAnswer,
+        int192 maxAnswer,
+        int256 price,
+        uint32 timePassed
+    ) public {
+        vm.assume(minAnswer >= 0);
+        vm.assume(price >= minAnswer);
+        vm.assume(price <= maxAnswer);
+        vm.assume(timePassed > 1 weeks);
+
+        vm.prank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        vm.warp(2 weeks); //to not run into an underflow
+
+        vm.prank(oracleOwner);
+        oracleDaiToUsd.transmit(price);
+        oracleDaiToUsd.setMinAnswer(minAnswer);
+        oracleDaiToUsd.setMaxAnswer(maxAnswer);
+
+        vm.warp(block.timestamp + timePassed);
+
+        vm.prank(creatorAddress);
+        mainRegistry.setOracle(1, newOracle);
+
+        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        assertEq(oracle, newOracle);
     }
 }
 
