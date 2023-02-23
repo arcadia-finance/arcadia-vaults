@@ -71,7 +71,7 @@ contract ActionMultiCall is ActionBase {
             amount = IERC20(asset).balanceOf(address(this));
         }
 
-        (bool success, bytes memory data) = creditor.call(abi.encodeWithSignature("repay(address,uint256)", vault, amount));
+        (bool success, bytes memory data) = creditor.call(abi.encodeWithSignature("repay(uint256,address)", amount, vault));
         require(success, string(data));
     }
 }
