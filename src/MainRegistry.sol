@@ -288,6 +288,12 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         uint256 valueInUsd;
         uint256 valueInBaseCurrency;
 
+        //Get the BaseCurrency-USD rate if the BaseCurrency is different from USD
+        if (baseCurrency > 0) {
+            (, rateBaseCurrencyToUsd,,,) =
+                IChainLinkData(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle).latestRoundData();
+        }
+
         //Loop over all assets
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
@@ -330,14 +336,6 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
                         }
                     }
                     if (valueInUsd > 0) {
-                        //Check if the BaseCurrency-USD rate is already fetched, this should be done only once per loop!
-                        if (rateBaseCurrencyToUsd == 0) {
-                            //Get the BaseCurrency-USD rate
-                            (, rateBaseCurrencyToUsd,,,) = IChainLinkData(
-                                baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
-                            ).latestRoundData();
-                        }
-
                         //Calculate the valueInBaseCurrency from the valueInUsd and the rateBaseCurrencyToUsd
                         //And bring the final valueInBaseCurrency from internal 18 decimals to the actual number of decimals of baseCurrency
                         unchecked {
