@@ -81,12 +81,12 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: 0,
-                baseAssetBaseCurrency: 0,
-                quoteAsset: "ASSET",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: 0,
+                baseAsset: "ASSET",
+                quoteAsset: "USD",
                 oracle: address(oracle),
-                quoteAssetAddress: address(asset),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(asset),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );

@@ -738,12 +738,12 @@ contract PricingLogicTest is MainRegistryTest {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "LINK",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "LINK",
+                quoteAsset: "USD",
                 oracle: address(oracle),
-                quoteAssetAddress: address(link),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(link),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );
@@ -809,12 +809,12 @@ contract PricingLogicTest is MainRegistryTest {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: 0,
-                baseAssetBaseCurrency: 0,
-                quoteAsset: "ASSET",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: 0,
+                baseAsset: "ASSET",
+                quoteAsset: "USD",
                 oracle: address(oracle),
-                quoteAssetAddress: address(link),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(link),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );

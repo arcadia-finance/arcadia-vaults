@@ -190,84 +190,84 @@ contract DeployArcadiaVaults is Test {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleDaiToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "DAI",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "DAI",
+                quoteAsset: "USD",
                 oracle: address(oracleDaiToUsd),
-                quoteAssetAddress: address(dai),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(dai),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "ETH",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "ETH",
+                quoteAsset: "USD",
                 oracle: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(eth),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "LINK",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "LINK",
+                quoteAsset: "USD",
                 oracle: address(oracleLinkToUsd),
-                quoteAssetAddress: address(link),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(link),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
+                quoteAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                baseAsset: "SNX",
+                quoteAsset: "ETH",
                 oracle: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(snx),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleBaycToEthUnit),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "BAYC",
-                baseAsset: "ETH",
+                quoteAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                baseAsset: "BAYC",
+                quoteAsset: "ETH",
                 oracle: address(oracleBaycToEth),
-                quoteAssetAddress: address(bayc),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(bayc),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleMaycToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "MAYC",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "MAYC",
+                quoteAsset: "USD",
                 oracle: address(oracleMaycToUsd),
-                quoteAssetAddress: address(mayc),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(mayc),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "INTERLEAVE",
-                baseAsset: "ETH",
+                quoteAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                baseAsset: "INTERLEAVE",
+                quoteAsset: "ETH",
                 oracle: address(oracleInterleaveToEth),
-                quoteAssetAddress: address(interleave),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(interleave),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );

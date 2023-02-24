@@ -705,12 +705,12 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** oracleTokenToUsdDecimals),
-                baseAssetBaseCurrency: 0,
-                quoteAsset: bytes8(abi.encodePacked(label)),
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: 0,
+                baseAsset: bytes8(abi.encodePacked(label)),
+                quoteAsset: "USD",
                 oracle: address(oracleTokenToUsd),
-                quoteAssetAddress: address(token),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(token),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );
