@@ -78,11 +78,12 @@ contract OracleHub is Owned, IOraclesHub {
      */
     function checkOracleSequence(address[] calldata oracles) external view {
         uint256 oracleAdressesLength = oracles.length;
+        require(oracleAdressesLength > 0, "OH_COS: Min 1 Oracle");
         require(oracleAdressesLength <= 3, "OH_COS: Max 3 Oracles");
         address oracle;
         for (uint256 i; i < oracleAdressesLength;) {
             oracle = oracles[i];
-            require(inOracleHub[oracle], "OH_COS: Unknown Oracle");
+            require(oracleToOracleInformation[oracle].isActive, "OH_COS: Oracle not active");
             if (i > 0) {
                 require(
                     oracleToOracleInformation[oracles[i - 1]].baseAsset == oracleToOracleInformation[oracle].quoteAsset,

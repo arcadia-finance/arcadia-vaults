@@ -249,22 +249,15 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesSnxToUsd);
     }
 
+    function testRevert_checkOracleSequence_ZeroOracles() public {
+        // When: address 4 is oraclesSequence
+        address[] memory oraclesSequence = new address[](0);
+        // Then: checkOracleSequence should revert with "OH_COS: Max 3 Oracles"
+        vm.expectRevert("OH_COS: Min 1 Oracle");
+        oracleHub.checkOracleSequence(oraclesSequence);
+    }
+
     function testRevert_checkOracleSequence_MoreThanThreeOracles() public {
-        vm.startPrank(creatorAddress);
-        // Given: creatorAddress addOracle with OracleInformation for SNX-ETH
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleSnxToEthDecimals),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
-                oracle: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true,
-                isActive: true
-            })
-        );
-        vm.stopPrank();
         // When: address 4 is oraclesSequence
         address[] memory oraclesSequence = new address[](4);
         // Then: checkOracleSequence should revert with "OH_COS: Max 3 Oracles"
@@ -273,13 +266,37 @@ contract OracleHubTest is Test {
     }
 
     function testRevert_checkOracleSequence_UnknownOracle() public {
-        // Given: oraclesLinkToUsd index 0 equal to
-        oraclesLinkToUsd[0] = address(oracleLinkToUsd);
         // When: checkOracleSequence
 
         // Then: checkOracleSequence with oraclesSnxToUsd should revert with "OH_COS: Unknown Oracle"
-        vm.expectRevert("OH_COS: Unknown Oracle");
+        vm.expectRevert("OH_COS: Oracle not active");
         oracleHub.checkOracleSequence(oraclesSnxToUsd);
+    }
+
+    function testRevert_checkOracleSequence_InactiveOracle() public {
+        vm.prank(creatorAddress);
+        // Given: creatorAddress addOracle with OracleInformation
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracle: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+
+        vm.prank(oracleOwner);
+        oracleEthToUsd.transmit(0); // Lower than min value
+
+        oracleHub.decommissionOracle(address(oracleEthToUsd));
+
+        // Then: checkOracleSequence with oraclesSnxToUsd should revert with "OH_COS: Unknown Oracle"
+        vm.expectRevert("OH_COS: Oracle not active");
+        oracleHub.checkOracleSequence(oraclesEthToUsd);
     }
 
     function testRevert_checkOracleSequence_NonMatchingBaseAndQuoteAssets() public {
