@@ -211,7 +211,7 @@ contract OracleHubTest is Test {
         // When: oraclesEthToUsd index 0 is oracleEthToUsd
         oraclesEthToUsd[0] = address(oracleEthToUsd);
         // Then: checkOracleSequence should past for oraclesEthToUsd
-        oracleHub.checkOracleSequence(oraclesEthToUsd);
+        oracleHub.checkOracleSequence(oraclesEthToUsd, address(eth));
     }
 
     function testSuccess_checkOracleSequence_MultipleOraclesToUsd() public {
@@ -246,7 +246,7 @@ contract OracleHubTest is Test {
         oraclesSnxToUsd[0] = address(oracleSnxToEth);
         oraclesSnxToUsd[1] = address(oracleEthToUsd);
         // Then: checkOracleSequence should past for oraclesSnxToUsd
-        oracleHub.checkOracleSequence(oraclesSnxToUsd);
+        oracleHub.checkOracleSequence(oraclesSnxToUsd, address(snx));
     }
 
     function testRevert_checkOracleSequence_ZeroOracles() public {
@@ -254,7 +254,7 @@ contract OracleHubTest is Test {
         address[] memory oraclesSequence = new address[](0);
         // Then: checkOracleSequence should revert with "OH_COS: Max 3 Oracles"
         vm.expectRevert("OH_COS: Min 1 Oracle");
-        oracleHub.checkOracleSequence(oraclesSequence);
+        oracleHub.checkOracleSequence(oraclesSequence, address(eth));
     }
 
     function testRevert_checkOracleSequence_MoreThanThreeOracles() public {
@@ -262,7 +262,7 @@ contract OracleHubTest is Test {
         address[] memory oraclesSequence = new address[](4);
         // Then: checkOracleSequence should revert with "OH_COS: Max 3 Oracles"
         vm.expectRevert("OH_COS: Max 3 Oracles");
-        oracleHub.checkOracleSequence(oraclesSequence);
+        oracleHub.checkOracleSequence(oraclesSequence, address(eth));
     }
 
     function testRevert_checkOracleSequence_UnknownOracle() public {
@@ -270,7 +270,7 @@ contract OracleHubTest is Test {
 
         // Then: checkOracleSequence with oraclesSnxToUsd should revert with "OH_COS: Unknown Oracle"
         vm.expectRevert("OH_COS: Oracle not active");
-        oracleHub.checkOracleSequence(oraclesSnxToUsd);
+        oracleHub.checkOracleSequence(oraclesSnxToUsd, address(snx));
     }
 
     function testRevert_checkOracleSequence_InactiveOracle() public {
@@ -296,7 +296,32 @@ contract OracleHubTest is Test {
 
         // Then: checkOracleSequence with oraclesSnxToUsd should revert with "OH_COS: Unknown Oracle"
         vm.expectRevert("OH_COS: Oracle not active");
-        oracleHub.checkOracleSequence(oraclesEthToUsd);
+        oracleHub.checkOracleSequence(oraclesEthToUsd, address(eth));
+    }
+
+    function testRevert_checkOracleSequence_NonMatchingFirstQuoteAssets(address asset) public {
+        vm.assume(asset != address(eth));
+        vm.startPrank(creatorAddress);
+        // Given: creatorAddress addOracle with OracleInformation
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracle: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        vm.stopPrank();
+        // When: oraclesEthToUsd index 0 is oracleEthToUsd
+        oraclesEthToUsd[0] = address(oracleEthToUsd);
+
+        // Then: checkOracleSequence with oraclesSnxToUsd should revert with "OH_COS: Unknown Oracle"
+        vm.expectRevert("OH_COS: No Match First qAsset");
+        oracleHub.checkOracleSequence(oraclesEthToUsd, asset);
     }
 
     function testRevert_checkOracleSequence_NonMatchingBaseAndQuoteAssets() public {
@@ -332,7 +357,7 @@ contract OracleHubTest is Test {
         oraclesSnxToUsd[1] = address(oracleLinkToUsd);
         // Then: checkOracleSequence for oraclesSnxToUsd should revert with "OH_COS: No Match qAsset and bAsset"
         vm.expectRevert("OH_COS: No Match qAsset and bAsset");
-        oracleHub.checkOracleSequence(oraclesSnxToUsd);
+        oracleHub.checkOracleSequence(oraclesSnxToUsd, address(snx));
     }
 
     function testRevert_checkOracleSequence_LastBaseAssetNotUsd() public {
@@ -355,7 +380,7 @@ contract OracleHubTest is Test {
         oraclesSnxToEth[0] = address(oracleSnxToEth);
         // Then: checkOracleSequence for oraclesSnxToEth should revert with "OH_COS: Last bAsset not USD"
         vm.expectRevert("OH_COS: Last bAsset not USD");
-        oracleHub.checkOracleSequence(oraclesSnxToEth);
+        oracleHub.checkOracleSequence(oraclesSnxToEth, address(snx));
     }
 
     /*///////////////////////////////////////////////////////////////

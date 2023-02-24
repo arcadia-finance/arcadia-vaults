@@ -54,10 +54,10 @@ contract gasRepay_2ERC202ERC721 is GasTestFixture {
         uint256 valueLink = (((10 ** 18 * rateLinkToUsd) / 10 ** Constants.oracleLinkToUsdDecimals) * s_assetAmounts[1])
             / 10 ** Constants.linkDecimals;
         uint256 valueBayc = (
-            (10 ** 18 * rateWbaycToEth * rateEthToUsd)
-                / 10 ** (Constants.oracleWbaycToEthDecimals + Constants.oracleEthToUsdDecimals)
+            (10 ** 18 * rateBaycToEth * rateEthToUsd)
+                / 10 ** (Constants.oracleBaycToEthDecimals + Constants.oracleEthToUsdDecimals)
         ) * s_assetAmounts[2];
-        uint256 valueMayc = ((10 ** 18 * rateWmaycToUsd) / 10 ** Constants.oracleWmaycToUsdDecimals) * s_assetAmounts[3];
+        uint256 valueMayc = ((10 ** 18 * rateMaycToUsd) / 10 ** Constants.oracleMaycToUsdDecimals) * s_assetAmounts[3];
         maxCredit = uint128(
             ((valueEth + valueLink + valueBayc + valueMayc) / 10 ** (18 - Constants.daiDecimals) * collateralFactor)
                 / 100

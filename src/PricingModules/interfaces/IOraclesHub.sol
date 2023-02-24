@@ -10,8 +10,9 @@ interface IOraclesHub {
     /**
      * @notice Checks if a series of oracles adheres to a predefined ruleset
      * @param oracles An array of addresses of oracle contracts
+     * @param asset The contract address of the quote-asset.
      */
-    function checkOracleSequence(address[] memory oracles) external view;
+    function checkOracleSequence(address[] memory oracles, address asset) external view;
 
     /**
      * @notice Returns the exchange rate of a certain asset, denominated in USD or in another BaseCurrency

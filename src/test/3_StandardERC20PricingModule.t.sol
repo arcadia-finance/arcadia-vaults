@@ -73,13 +73,29 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
 
     function testRevert_addAsset_MoreThan18Decimals() public {
         vm.prank(tokenCreatorAddress);
-        eth = new ERC20Mock("ETH Mock", "mETH", 19);
+        ERC20Mock asset = new ERC20Mock("ASSET", "ASSET", 19);
+        ArcadiaOracle oracle = arcadiaOracleFixture.initMockedOracle(0, "ASSET / USD");
+        address[] memory oracleAssetToUsdArr = new address[](1);
+        oracleAssetToUsdArr[0] = address(oracle);
+        vm.prank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 0,
+                baseAssetBaseCurrency: 0,
+                quoteAsset: "ASSET",
+                baseAsset: "USD",
+                oracle: address(oracle),
+                quoteAssetAddress: address(asset),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
 
         // When: creatorAddress calls addAsset with 19 decimals
         // Then: addAsset should revert with "PM20_AA: Maximal 18 decimals"
         vm.startPrank(creatorAddress);
         vm.expectRevert("PM20_AA: Maximal 18 decimals");
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+        standardERC20PricingModule.addAsset(address(asset), oracleAssetToUsdArr, riskVars, type(uint128).max);
         vm.stopPrank();
     }
 

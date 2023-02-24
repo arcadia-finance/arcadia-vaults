@@ -42,8 +42,8 @@ contract gasBuyVault_1ERC201ERC721 is GasTestFixture {
         uint256 valueEth = (((10 ** 18 * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * s_assetAmounts[0])
             / 10 ** Constants.ethDecimals;
         uint256 valueBayc = (
-            (10 ** 18 * rateWbaycToEth * rateEthToUsd)
-                / 10 ** (Constants.oracleWbaycToEthDecimals + Constants.oracleEthToUsdDecimals)
+            (10 ** 18 * rateBaycToEth * rateEthToUsd)
+                / 10 ** (Constants.oracleBaycToEthDecimals + Constants.oracleEthToUsdDecimals)
         ) * s_assetAmounts[1];
         pool.borrow(
             uint128(((valueEth + valueBayc) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100),
@@ -56,7 +56,7 @@ contract gasBuyVault_1ERC201ERC721 is GasTestFixture {
         vm.prank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd) / 2);
         vm.prank(oracleOwner);
-        oracleWbaycToEth.transmit(int256(rateWbaycToEth) / 2);
+        oracleBaycToEth.transmit(int256(rateBaycToEth) / 2);
 
         vm.prank(liquidatorBot);
         pool.liquidateVault(address(proxy));

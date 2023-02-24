@@ -59,7 +59,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
     {
         require(!inPricingModule[asset], "PM20_AA: already added");
         //View function, reverts in OracleHub if sequence is not correct
-        IOraclesHub(oracleHub).checkOracleSequence(oracles);
+        IOraclesHub(oracleHub).checkOracleSequence(oracles, asset);
 
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);

@@ -70,13 +70,14 @@ contract OracleHub is Owned, IOraclesHub {
     /**
      * @notice Checks if a series of oracles adheres to a predefined ruleset
      * @param oracles An array of addresses of oracle contracts
+     * @param asset The contract address of the quote-asset.
      * @dev Function will do nothing if all checks pass, but reverts if at least one check fails.
      * The following checks are performed:
      * - The oracle-address must be previously added to the Oracle-Hub.
      * - The last oracle in the series must have USD as base-asset.
      * - The Base-asset of all oracles must be equal to the quote-asset of the next oracle (except for the last oracle in the series).
      */
-    function checkOracleSequence(address[] calldata oracles) external view {
+    function checkOracleSequence(address[] calldata oracles, address asset) external view {
         uint256 oracleAdressesLength = oracles.length;
         require(oracleAdressesLength > 0, "OH_COS: Min 1 Oracle");
         require(oracleAdressesLength <= 3, "OH_COS: Max 3 Oracles");
@@ -84,7 +85,9 @@ contract OracleHub is Owned, IOraclesHub {
         for (uint256 i; i < oracleAdressesLength;) {
             oracle = oracles[i];
             require(oracleToOracleInformation[oracle].isActive, "OH_COS: Oracle not active");
-            if (i > 0) {
+            if (i == 0) {
+                require(asset == oracleToOracleInformation[oracle].quoteAssetAddress, "OH_COS: No Match First qAsset");
+            } else {
                 require(
                     oracleToOracleInformation[oracles[i - 1]].baseAsset == oracleToOracleInformation[oracle].quoteAsset,
                     "OH_COS: No Match qAsset and bAsset"

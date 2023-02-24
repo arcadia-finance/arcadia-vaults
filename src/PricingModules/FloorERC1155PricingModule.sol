@@ -55,7 +55,7 @@ contract FloorERC1155PricingModule is PricingModule {
         uint256 maxExposure
     ) external onlyOwner {
         //View function, reverts in OracleHub if sequence is not correct
-        IOraclesHub(oracleHub).checkOracleSequence(oracles);
+        IOraclesHub(oracleHub).checkOracleSequence(oracles, asset);
 
         require(!inPricingModule[asset], "PM1155_AA: already added");
         inPricingModule[asset] = true;
