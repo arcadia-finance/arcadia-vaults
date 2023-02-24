@@ -30,7 +30,6 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
     address[] public s_assetAddresses;
     uint256[] public s_assetIds;
     uint256[] public s_assetAmounts;
-    uint256[] public s_assetTypes;
 
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);

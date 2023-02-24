@@ -29,6 +29,10 @@ contract mainRegistryExtension is MainRegistry {
     using FixedPointMathLib for uint256;
 
     constructor(address factory_) MainRegistry(factory_) { }
+
+    function setAssetType(address asset, uint96 assetType) public {
+        assetToAssetInformation[asset].assetType = assetType;
+    }
 }
 
 contract FactoryExtension is Factory {
@@ -304,15 +308,18 @@ contract DeployArcadiaVaults is Test {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
         floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            1
         );
         floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            2
         );
 
         mainRegistry.addPricingModule(address(standardERC20PricingModule));

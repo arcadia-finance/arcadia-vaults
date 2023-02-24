@@ -37,10 +37,15 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
     mapping(address => bool) public isPricingModule;
     mapping(address => bool) public isBaseCurrency;
     mapping(address => uint256) public assetToBaseCurrency;
-    mapping(address => address) public assetToPricingModule;
+    mapping(address => AssetInformation) public assetToAssetInformation;
     mapping(uint256 => BaseCurrencyInformation) public baseCurrencyToInformation;
 
     mapping(address => bool) public isActionAllowed;
+
+    struct AssetInformation {
+        uint96 assetType;
+        address pricingModule;
+    }
 
     struct BaseCurrencyInformation {
         uint64 baseCurrencyUnitCorrection;
@@ -161,15 +166,21 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
     /**
      * @notice Add a new asset to the Main Registry
      * @param assetAddress The address of the asset
+     * @param assetType Identifier for the type of the asset.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      * @dev Assets that are already present in the mainreg cannot be updated,
      * as that would make it possible for devs to change the asset pricing.
      */
-    function addAsset(address assetAddress) external onlyPricingModule {
+    function addAsset(address assetAddress, uint256 assetType) external onlyPricingModule {
         require(!inMainRegistry[assetAddress], "MR_AA: Asset already in mainreg");
+        require(assetType <= type(uint96).max, "MR_AA: Invalid AssetType");
 
         inMainRegistry[assetAddress] = true;
         assetsInMainRegistry.push(assetAddress);
-        assetToPricingModule[assetAddress] = msg.sender;
+        assetToAssetInformation[assetAddress] =
+            AssetInformation({ assetType: uint96(assetType), pricingModule: msg.sender });
     }
 
     /**
@@ -177,6 +188,10 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
      * @param assetAddresses An array of addresses of the assets
      * @param assetIds An array of asset ids
      * @param amounts An array of amounts to be deposited
+     * @return assetTypes The identifiers of the types of the assets deposited.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      * @dev processDeposit in the pricing module checks whether
      *    it's allowlisted and updates the exposure
      */
@@ -184,16 +199,18 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) external whenDepositNotPaused onlyVault {
+    ) external whenDepositNotPaused onlyVault returns (uint256[] memory assetTypes) {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPD: LENGTH_MISMATCH");
 
         address assetAddress;
+        assetTypes = new uint256[](addressesLength);
         for (uint256 i; i < addressesLength;) {
             assetAddress = assetAddresses[i];
+            assetTypes[i] = assetToAssetInformation[assetAddress].assetType;
 
             require(inMainRegistry[assetAddress], "MR_BPD: Asset not in mainreg");
-            IPricingModule(assetToPricingModule[assetAddress]).processDeposit(
+            IPricingModule(assetToAssetInformation[assetAddress].pricingModule).processDeposit(
                 msg.sender, assetAddress, assetIds[i], amounts[i]
             );
 
@@ -207,21 +224,27 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
      * @notice Batch withdrawal multiple assets
      * @param assetAddresses An array of addresses of the assets
      * @param amounts An array of amounts to be withdrawn
+     * @return assetTypes The identifiers of the types of the assets withdrawn.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      * @dev batchProcessWithdrawal in the pricing module updates the exposure
      */
     function batchProcessWithdrawal(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) external whenWithdrawNotPaused onlyVault {
+    ) external whenWithdrawNotPaused onlyVault returns (uint256[] memory assetTypes) {
         uint256 addressesLength = assetAddresses.length;
         require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
 
         address assetAddress;
+        assetTypes = new uint256[](addressesLength);
         for (uint256 i; i < addressesLength;) {
             assetAddress = assetAddresses[i];
+            assetTypes[i] = assetToAssetInformation[assetAddress].assetType;
 
-            IPricingModule(assetToPricingModule[assetAddress]).processWithdrawal(
+            IPricingModule(assetToAssetInformation[assetAddress].pricingModule).processWithdrawal(
                 msg.sender, assetAddress, assetIds[i], amounts[i]
             );
 
@@ -297,7 +320,9 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
             if (assetAddress == baseCurrencyToInformation[baseCurrency].assetAddress) {
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency = assetAmounts[i];
                 (valuesAndRiskVarPerAsset[i].collateralFactor, valuesAndRiskVarPerAsset[i].liquidationFactor) =
-                    IPricingModule(assetToPricingModule[assetAddress]).getRiskVariables(assetAddress, baseCurrency);
+                IPricingModule(assetToAssetInformation[assetAddress].pricingModule).getRiskVariables(
+                    assetAddress, baseCurrency
+                );
 
                 //Else we need to fetch the value in the assets' PricingModule
             } else {
@@ -312,7 +337,7 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
                     valueInBaseCurrency,
                     valuesAndRiskVarPerAsset[i].collateralFactor,
                     valuesAndRiskVarPerAsset[i].liquidationFactor
-                ) = IPricingModule(assetToPricingModule[assetAddress]).getValue(getValueInput);
+                ) = IPricingModule(assetToAssetInformation[assetAddress].pricingModule).getValue(getValueInput);
 
                 //If the baseCurrency is USD (identifier 0), IPricingModule().getValue will always return the value in USD (valueInBaseCurrency = 0).
                 if (baseCurrency == 0) {
