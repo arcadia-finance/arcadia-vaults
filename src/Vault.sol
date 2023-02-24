@@ -270,6 +270,7 @@ contract Vault is IVault {
 
         isTrustedCreditorSet = false;
         trustedCreditor = address(0);
+        liquidator = address(0);
     }
 
     /* ///////////////////////////////////////////////////////////////
