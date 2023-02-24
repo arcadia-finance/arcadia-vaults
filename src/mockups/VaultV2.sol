@@ -7,7 +7,6 @@
 pragma solidity ^0.8.13;
 
 import "../utils/LogExpMath.sol";
-import "../interfaces/IERC20.sol";
 import "../interfaces/IERC721.sol";
 import "../interfaces/IERC1155.sol";
 import "../interfaces/IERC4626.sol";
@@ -16,6 +15,7 @@ import "../interfaces/ITrustedCreditor.sol";
 import "../interfaces/IActionBase.sol";
 import { IFactory } from "../interfaces/IFactory.sol";
 import { ActionData } from "../actions/utils/ActionData.sol";
+import { ERC20, SafeTransferLib } from "../../lib/solmate/src/utils/SafeTransferLib.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -32,10 +32,12 @@ import { ActionData } from "../actions/utils/ActionData.sol";
  * For whitelists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
 contract VaultV2 {
+    using SafeTransferLib for ERC20;
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
      */
+
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     uint256 public constant ASSET_LIMIT = 15;
 
@@ -65,7 +67,7 @@ contract VaultV2 {
         address value;
     }
 
-    event Upgraded(address oldImplementation, address newImplementation, uint16 oldVersion, uint16 newversion);
+    event Upgraded(address oldImplementation, address newImplementation, uint16 oldVersion, uint16 indexed newVersion);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
@@ -259,11 +261,36 @@ contract VaultV2 {
         require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CTMA: NON-ZERO OPEN POSITION");
 
         isTrustedCreditorSet = false;
+        trustedCreditor = address(0);
     }
 
     /* ///////////////////////////////////////////////////////////////
                           MARGIN REQUIREMENTS
     /////////////////////////////////////////////////////////////// */
+
+    /**
+     * @notice Checks if the Vault is healthy and still has free margin.
+     * @param debtIncrease The amount with which the debt is increased.
+     * @param totalOpenDebt The total open Debt against the Vault.
+     * @return success Boolean indicating if there is sufficient margin to back a certain amount of Debt.
+     * @dev Only one of the values can be non-zero, or we check on a certain increase of debt, or we check on a total amount of debt.
+     * @dev If both values are zero, we check if the vault is currently healthy.
+     */
+    function isVaultHealthy(uint256 debtIncrease, uint256 totalOpenDebt)
+        external
+        view
+        returns (bool success, address trustedCreditor_)
+    {
+        if (totalOpenDebt != 0) {
+            //Check if vault is healthy for a given amount of openDebt.
+            success = getCollateralValue() >= totalOpenDebt;
+        } else {
+            //Check if vault is still healthy after an increase of debt.
+            success = getCollateralValue() >= getUsedMargin() + debtIncrease;
+        }
+
+        return (success, trustedCreditor);
+    }
 
     /**
      * @notice Returns the total value of the vault in a specific baseCurrency
@@ -406,7 +433,11 @@ contract VaultV2 {
      * The only requirements are that the recipient tokens of the interactions are allowlisted, deposited back into the vault and
      * that the Vault is in a healthy state at the end of the transaction.
      */
-    function vaultManagementAction(address actionHandler, bytes calldata actionData) external onlyAssetManager {
+    function vaultManagementAction(address actionHandler, bytes calldata actionData)
+        external
+        onlyAssetManager
+        returns (address)
+    {
         require(IMainRegistry(registry).isActionAllowed(actionHandler), "V_VMA: Action not allowed");
 
         (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
@@ -425,6 +456,8 @@ contract VaultV2 {
             uint256 collValue = getCollateralValue();
             require(collValue >= usedMargin, "V_VMA: coll. value too low");
         }
+
+        return trustedCreditor;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -640,7 +673,7 @@ contract VaultV2 {
      * @param amount The amount of ERC20 tokens to be transferred.
      */
     function _depositERC20(address from, address ERC20Address, uint256 amount) internal {
-        require(IERC20(ERC20Address).transferFrom(from, address(this), amount), "V_D20: Transfer from failed");
+        ERC20(ERC20Address).safeTransferFrom(from, address(this), amount);
 
         uint256 currentBalance = erc20Balances[ERC20Address];
 
@@ -663,7 +696,7 @@ contract VaultV2 {
      * @param id The ID of the token to be transferred.
      */
     function _depositERC721(address from, address ERC721Address, uint256 id) internal {
-        IERC721(ERC721Address).transferFrom(from, address(this), id);
+        IERC721(ERC721Address).safeTransferFrom(from, address(this), id);
 
         erc721Stored.push(ERC721Address);
         erc721TokenIds.push(id);
@@ -730,7 +763,7 @@ contract VaultV2 {
             }
         }
 
-        require(IERC20(ERC20Address).transfer(to, amount), "V_W20: Transfer failed");
+        ERC20(ERC20Address).safeTransfer(to, amount);
     }
 
     /**
@@ -882,6 +915,45 @@ contract VaultV2 {
             }
             unchecked {
                 ++k;
+            }
+        }
+    }
+
+    function skim(address token, uint256 id, uint256 type_) public {
+        require(msg.sender == owner, "V_S: Only owner can skim");
+
+        if (token == address(0)) {
+            payable(owner).transfer(address(this).balance);
+            return;
+        }
+
+        if (type_ == 0) {
+            uint256 balance = ERC20(token).balanceOf(address(this));
+            uint256 balanceStored = erc20Balances[token];
+            if (balance > balanceStored) {
+                ERC20(token).safeTransfer(owner, balance - balanceStored);
+            }
+        } else if (type_ == 1) {
+            bool isStored;
+            for (uint256 i; i < erc721Stored.length;) {
+                if (erc721Stored[i] == token && erc721TokenIds[i] == id) {
+                    isStored = true;
+                    break;
+                }
+                unchecked {
+                    ++i;
+                }
+            }
+
+            if (!isStored) {
+                IERC721(token).safeTransferFrom(address(this), owner, id);
+            }
+        } else if (type_ == 2) {
+            uint256 balance = IERC1155(token).balanceOf(address(this), id);
+            uint256 balanceStored = erc1155Balances[token][id];
+
+            if (balance > balanceStored) {
+                IERC1155(token).safeTransferFrom(address(this), owner, id, balance - balanceStored, "");
             }
         }
     }

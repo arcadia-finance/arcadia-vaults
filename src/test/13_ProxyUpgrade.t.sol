@@ -8,7 +8,7 @@ pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import "../mockups/VaultV2.sol";
+import { VaultV2 } from "../mockups/VaultV2.sol";
 
 import { LendingPool, DebtToken, ERC20 } from "../../lib/arcadia-lending/src/LendingPool.sol";
 import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";

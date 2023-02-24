@@ -6,7 +6,6 @@
  */
 pragma solidity ^0.8.13;
 
-import { IERC20 } from "./interfaces/IERC20.sol";
 import { IERC721 } from "./interfaces/IERC721.sol";
 import { IERC1155 } from "./interfaces/IERC1155.sol";
 import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
@@ -16,6 +15,7 @@ import { IFactory } from "./interfaces/IFactory.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IOraclesHub } from "./PricingModules/interfaces/IOraclesHub.sol";
 import { ActionData } from "./actions/utils/ActionData.sol";
+import { ERC20, SafeTransferLib } from "../lib/solmate/src/utils/SafeTransferLib.sol";
 
 /**
  * @title An Arcadia Vault used to manage all your assets and take margin.
@@ -30,10 +30,12 @@ import { ActionData } from "./actions/utils/ActionData.sol";
  * For allowlists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
 contract Vault is IVault {
+    using SafeTransferLib for ERC20;
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
      */
+
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     uint256 public constant ASSET_LIMIT = 15;
 
@@ -681,7 +683,7 @@ contract Vault is IVault {
      * @param amount The amount of ERC20 tokens to be transferred.
      */
     function _depositERC20(address from, address ERC20Address, uint256 amount) internal {
-        require(IERC20(ERC20Address).transferFrom(from, address(this), amount), "V_D20: Transfer from failed");
+        ERC20(ERC20Address).safeTransferFrom(from, address(this), amount);
 
         uint256 currentBalance = erc20Balances[ERC20Address];
 
@@ -771,7 +773,7 @@ contract Vault is IVault {
             }
         }
 
-        require(IERC20(ERC20Address).transfer(to, amount), "V_W20: Transfer failed");
+        ERC20(ERC20Address).safeTransfer(to, amount);
     }
 
     /**
@@ -936,10 +938,10 @@ contract Vault is IVault {
         }
 
         if (type_ == 0) {
-            uint256 balance = IERC20(token).balanceOf(address(this));
+            uint256 balance = ERC20(token).balanceOf(address(this));
             uint256 balanceStored = erc20Balances[token];
             if (balance > balanceStored) {
-                require(IERC20(token).transfer(owner, balance - balanceStored), "V_S: ERC20 transfer failed");
+                ERC20(token).safeTransfer(owner, balance - balanceStored);
             }
         } else if (type_ == 1) {
             bool isStored;

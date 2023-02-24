@@ -10,7 +10,7 @@ import "../../../lib/forge-std/src/Test.sol";
 
 import "../../Factory.sol";
 import "../../Proxy.sol";
-import "../../Vault.sol";
+import { Vault, ActionData } from "../../Vault.sol";
 import { ERC20Mock } from "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
@@ -18,7 +18,7 @@ import "../../MainRegistry.sol";
 import { PricingModule, StandardERC20PricingModule } from "../../PricingModules/StandardERC20PricingModule.sol";
 import { FloorERC721PricingModule } from "../../PricingModules/FloorERC721PricingModule.sol";
 import { FloorERC1155PricingModule } from "../../PricingModules/FloorERC1155PricingModule.sol";
-import "../../Liquidator.sol";
+import { Liquidator, LogExpMath } from "../../Liquidator.sol";
 import "../../OracleHub.sol";
 import "../../utils/Constants.sol";
 import "../../mockups/ArcadiaOracle.sol";
