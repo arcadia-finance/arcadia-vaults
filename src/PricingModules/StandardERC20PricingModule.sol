@@ -95,7 +95,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
             if (oldOracles[i] == decommissionedOracle) {
                 require(!IOraclesHub(oracleHub).isActive(oldOracles[i]), "PM20_SO: Oracle still active");
                 //View function, reverts in OracleHub if sequence is not correct
-                IOraclesHub(oracleHub).checkOracleSequence(newOracles);
+                IOraclesHub(oracleHub).checkOracleSequence(newOracles, asset);
                 assetToInformation[asset].oracles = newOracles;
                 return;
             }
