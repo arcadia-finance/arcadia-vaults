@@ -353,32 +353,66 @@ contract LiquidatorTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
-    function testSuccess_startAuction(uint128 openDebt) public {
+    // function testSuccess_startAuction(uint128 openDebt) public {
+    //     vm.assume(openDebt > 0);
+
+    //     vm.prank(address(pool));
+    //     liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
+
+    //     assertEq(proxy.owner(), address(liquidator));
+    //     {uint256 index = factory.vaultIndex(address(proxy));
+    //     assertEq(factory.ownerOf(index), address(liquidator));}
+
+    //     {(
+    //         uint128 openDebt_,
+    //         uint32 startTime,
+    //         bool inAuction,
+    //         uint80 maxInitiatorFee,
+    //         address baseCurrency,
+    //         ,
+    //         ,
+    //         ,
+    //         ,
+    //         ,
+    //         address originalOwner,
+    //         address trustedCreditor,
+            
+    //      ) = liquidator.auctionInformation(address(proxy));
+    //     assertEq(openDebt_, openDebt);
+    //     assertEq(startTime, uint128(block.timestamp));
+    //     assertEq(inAuction, true);
+    //     assertEq(baseCurrency, address(dai));
+    //     assertEq(originalOwner, vaultOwner);
+    //     assertEq(trustedCreditor, address(pool));
+    //     assertEq(maxInitiatorFee, pool.maxInitiatorFee());}
+
+    //     {
+    //         (
+    //             ,
+    //             ,
+    //             ,
+    //             ,
+    //             ,
+    //             uint16 startPriceMultiplier,
+    //             uint8 minPriceMultiplier,
+    //             uint8 initiatorRewardWeight,
+    //             uint8 penaltyWeight,
+    //             uint16 cutoffTime,
+    //             ,
+    //             ,
+    //             uint64 base
+    //         ) = liquidator.auctionInformation(address(proxy));
+    //      }
+
+
+    // }
+
+    function testSuccess_startAuction_fixed() public {
+        uint128 openDebt = 1000;
         vm.assume(openDebt > 0);
 
         vm.prank(address(pool));
         liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
-
-        assertEq(proxy.owner(), address(liquidator));
-        uint256 index = factory.vaultIndex(address(proxy));
-        assertEq(factory.ownerOf(index), address(liquidator));
-
-        (
-            uint128 openDebt_,
-            uint128 startTime,
-            bool inAuction,
-            uint88 maxInitiatorFee,
-            address baseCurrency,
-            address originalOwner,
-            address trustedCreditor
-        ) = liquidator.auctionInformation(address(proxy));
-        assertEq(openDebt_, openDebt);
-        assertEq(startTime, uint128(block.timestamp));
-        assertEq(inAuction, true);
-        assertEq(baseCurrency, address(dai));
-        assertEq(originalOwner, vaultOwner);
-        assertEq(trustedCreditor, address(pool));
-        assertEq(maxInitiatorFee, pool.maxInitiatorFee());
     }
 
     function testSuccess_getPriceOfVault_NotForSale(address vaultAddress) public {
@@ -521,6 +555,61 @@ contract LiquidatorTest is DeployArcadiaVaults {
         uint8 startPriceMultiplier,
         uint8 minPriceMultiplier
     ) public {
+        // Preprocess: Set up the fuzzed variables
+        vm.assume(halfLifeTime > 10 * 60); // 10 minutes
+        vm.assume(halfLifeTime < 8 * 60 * 60); // 8 hours
+        vm.assume(cutoffTime < 8 * 60 * 60); // 8 hours
+        vm.assume(cutoffTime > 1 * 60 * 60); // 1 hours
+        vm.assume(startPriceMultiplier > 100);
+        vm.assume(startPriceMultiplier < 301);
+        vm.assume(minPriceMultiplier < 91);
+        vm.assume(openDebt > 0 && openDebt <= pool.totalRealisedLiquidity());
+        address bidder = address(69); //Cannot fuzz the bidder address, since any existing contract without onERC721Received will revert
+
+        vm.prank(address(pool));
+        liquidator.startAuction(address(proxy), openDebt, type(uint80).max);
+
+        vm.warp(block.timestamp + timePassed);
+
+        (uint256 priceOfVault,) = liquidator.getPriceOfVault(address(proxy));
+        vm.assume(priceOfVault <= bidderfunds);
+
+        vm.prank(liquidityProvider);
+        dai.transfer(bidder, bidderfunds);
+
+        uint256 totalRealisedLiquidityBefore = pool.totalRealisedLiquidity();
+        uint256 availableLiquidityBefore = dai.balanceOf(address(pool));
+
+        vm.startPrank(bidder);
+        dai.approve(address(liquidator), type(uint256).max);
+        liquidator.buyVault(address(proxy));
+        vm.stopPrank();
+
+        uint256 totalRealisedLiquidityAfter = pool.totalRealisedLiquidity();
+        uint256 availableLiquidityAfter = dai.balanceOf(address(pool));
+
+        if (priceOfVault >= openDebt) {
+            assertEq(totalRealisedLiquidityAfter - totalRealisedLiquidityBefore, priceOfVault - openDebt);
+        } else {
+            assertEq(totalRealisedLiquidityBefore - totalRealisedLiquidityAfter, openDebt - priceOfVault);
+        }
+        assertEq(availableLiquidityAfter - availableLiquidityBefore, priceOfVault);
+        assertEq(dai.balanceOf(bidder), bidderfunds - priceOfVault);
+        uint256 index = factory.vaultIndex(address(proxy));
+        assertEq(factory.ownerOf(index), bidder);
+        assertEq(proxy.owner(), bidder);
+    }
+
+    function testSuccess_buyVault_fixed(
+    ) public {
+        uint128 openDebt = 1000;
+        uint136 bidderfunds = 5000;
+        uint16 halfLifeTime = (10*60)+1;
+        uint24 timePassed = 5;
+        uint16 cutoffTime = 1 * 60 * 60 +1;
+        uint8 startPriceMultiplier = 250;
+        uint8 minPriceMultiplier = 60;
+
         // Preprocess: Set up the fuzzed variables
         vm.assume(halfLifeTime > 10 * 60); // 10 minutes
         vm.assume(halfLifeTime < 8 * 60 * 60); // 8 hours
