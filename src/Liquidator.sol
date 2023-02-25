@@ -163,9 +163,9 @@ contract Liquidator is Owned {
         auctionInformation[vault].inAuction = true;
 
         //A malicious msg.sender can pass a self created contract as vault (not an actual Arcadia-Vault) that returns true on liquidateVault().
-        //This would successfully start an auction, but as long as as no collision with an actual Arcadia-vault contract address is found, this is not an issue.
+        //This would successfully start an auction, but as long as no collision with an actual Arcadia-vault contract address is found, this is not an issue.
         //The malicious non-vault would be in auction indefinitely, but does not block any 'real' auctions of Arcadia-Vaults.
-        //One exception is if an attacker finds a pre-image of his custom contract with the same contract address of an Arcadia-Vault.
+        //One exception is if an attacker finds a pre-image of his custom contract with the same contract address of an Arcadia-Vault (deployed via create2).
         //The attacker could in theory: start auction of malicious contract, self-destruct and create Arcadia-vault with identical contract address.
         //This Vault could never be auctioned since auctionInformation[vault].inAuction would return true.
         //Finding such a collision requires finding a collision of the keccak256 hash function.
@@ -186,7 +186,6 @@ contract Liquidator is Owned {
         auctionInformation[vault].originalOwner = originalOwner;
         auctionInformation[vault].trustedCreditor = msg.sender;
         auctionInformation[vault].base = base;
-
     }
 
     /**
@@ -228,10 +227,10 @@ contract Liquidator is Owned {
             if (timePassed > auctionInfo.cutoffTime) {
                 //Cut-off time passed -> return the minimal value defined by minPriceMultiplier (2 decimals precision).
                 //No overflow possible: uint128 * uint8
-                price = auctionInfo.openDebt * auctionInfo.minPriceMultiplier / 1e2;
+                price = uint256(auctionInfo.openDebt) * auctionInfo.minPriceMultiplier / 1e2;
             } else {
                 //Bring to 18 decimals precision for LogExpMath.pow()
-                //No overflow possible: uint128 * uint64
+                //No overflow possible: uin32 * uint64
                 timePassed = timePassed * 1e18;
 
                 //pow(base, timePassed) has 18 decimals and is strictly smaller than 1 (-> smaller as 1e18)
@@ -240,7 +239,8 @@ contract Liquidator is Owned {
                 //hence we need to divide the result by 1e20.
                 price = auctionInfo.openDebt
                     * (
-                        LogExpMath.pow(auctionInfo.base, timePassed) * (auctionInfo.startPriceMultiplier - auctionInfo.minPriceMultiplier)
+                        LogExpMath.pow(auctionInfo.base, timePassed)
+                            * (auctionInfo.startPriceMultiplier - auctionInfo.minPriceMultiplier)
                             + 1e18 * uint256(auctionInfo.minPriceMultiplier)
                     ) / 1e20;
             }
