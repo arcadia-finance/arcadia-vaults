@@ -1417,7 +1417,7 @@ contract AssetManagementTest is vaultTests {
         assetAmounts[0] = 1000;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("MR_BPD: Asset not in mainreg");
+        vm.expectRevert();
         vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
@@ -1440,7 +1440,7 @@ contract AssetManagementTest is vaultTests {
         assetAmounts[0] = 1;
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("MR_BPD: Asset not in mainreg");
+        vm.expectRevert();
         vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }

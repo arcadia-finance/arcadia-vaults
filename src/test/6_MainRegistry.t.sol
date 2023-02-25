@@ -224,6 +224,8 @@ contract PriceModuleManagementTest is MainRegistryTest {
                     ASSET MANAGEMENT
 /////////////////////////////////////////////////////////////// */
 contract AssetManagementTest is MainRegistryTest {
+    using stdStorage for StdStorage;
+
     function setUp() public override {
         super.setUp();
 
@@ -421,7 +423,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = 1;
 
         vm.startPrank(proxyAddr);
-        vm.expectRevert("MR_BPD: Asset not in mainreg");
+        vm.expectRevert();
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
@@ -603,6 +605,33 @@ contract AssetManagementTest is MainRegistryTest {
         vm.expectRevert("Guardian: withdraw paused");
         mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
+    }
+
+    function testRevert_batchProcessWithdrawal_AssetNotInMainreg(
+        uint128 amountDeposited,
+        uint128 amountWithdrawn,
+        address asset
+    ) public {
+        vm.assume(amountDeposited >= amountWithdrawn);
+
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.inMainRegistry.selector).with_key(address(asset))
+            .checked_write(true);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(eth);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountDeposited;
+
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.inMainRegistry.selector).with_key(address(asset))
+            .checked_write(false);
+
+        vm.prank(proxyAddr);
+        vm.expectRevert();
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
     }
 
     function testSuccess_batchProcessWithdrawal(uint128 amountDeposited, uint128 amountWithdrawn) public {

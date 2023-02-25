@@ -209,7 +209,6 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
             assetAddress = assetAddresses[i];
             assetTypes[i] = assetToAssetInformation[assetAddress].assetType;
 
-            require(inMainRegistry[assetAddress], "MR_BPD: Asset not in mainreg");
             IPricingModule(assetToAssetInformation[assetAddress].pricingModule).processDeposit(
                 msg.sender, assetAddress, assetIds[i], amounts[i]
             );
