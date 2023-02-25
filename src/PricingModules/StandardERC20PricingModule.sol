@@ -59,7 +59,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
     {
         require(!inPricingModule[asset], "PM20_AA: already added");
         //View function, reverts in OracleHub if sequence is not correct
-        IOraclesHub(oracleHub).checkOracleSequence(oracles);
+        IOraclesHub(oracleHub).checkOracleSequence(oracles, asset);
 
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
@@ -127,7 +127,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
      * - asset: The contract address of the asset
      * - assetId: Since ERC20 tokens have no Id, the Id should be set to 0
      * - assetAmount: The Amount of tokens, ERC20 tokens can have any Decimals precision smaller than 18.
-     * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
+     * - baseCurrency: The BaseCurrency in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
      * @return collateralFactor The Collateral Factor of the asset

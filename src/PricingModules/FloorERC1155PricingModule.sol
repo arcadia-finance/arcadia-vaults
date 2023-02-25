@@ -55,7 +55,7 @@ contract FloorERC1155PricingModule is PricingModule {
         uint256 maxExposure
     ) external onlyOwner {
         //View function, reverts in OracleHub if sequence is not correct
-        IOraclesHub(oracleHub).checkOracleSequence(oracles);
+        IOraclesHub(oracleHub).checkOracleSequence(oracles, asset);
 
         require(!inPricingModule[asset], "PM1155_AA: already added");
         inPricingModule[asset] = true;
@@ -130,7 +130,7 @@ contract FloorERC1155PricingModule is PricingModule {
      * - asset: The contract address of the asset
      * - assetId: The Id of the asset
      * - assetAmount: The Amount of tokens
-     * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
+     * - baseCurrency: The BaseCurrency in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
      * @return collateralFactor The Collateral Factor of the asset

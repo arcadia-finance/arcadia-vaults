@@ -172,18 +172,18 @@ abstract contract GasTestFixture is DeployArcadiaVaults {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** 10),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "GenStoreFront",
-                baseAsset: "ETH",
+                quoteAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                baseAsset: "GenStoreFront",
+                quoteAsset: "ETH",
                 oracle: address(oracleGenericStoreFrontToEth),
-                quoteAssetAddress: address(genericStoreFront),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(genericStoreFront),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );
 
         floorERC721PricingModule.addAsset(
-            address(mayc), 0, type(uint256).max, oracleWmaycToUsdArr, riskVars, type(uint128).max
+            address(mayc), 0, type(uint256).max, oracleMaycToUsdArr, riskVars, type(uint128).max
         );
         floorERC1155PricingModule.addAsset(
             address(genericStoreFront), 1, oracleGenericStoreFrontToEthEthToUsd, riskVars, type(uint128).max

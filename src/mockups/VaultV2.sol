@@ -440,8 +440,8 @@ contract VaultV2 {
      * Can only be called by the proxy vault owner to avoid attacks where malicous actors can deposit 1 wei assets,
      * increasing gas costs upon credit issuance and withrawals.
      * Example inputs:
-     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
-     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * [wETH, DAI, BAYC, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, BAYC, BAYC, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
      * @param assetAddresses The contract addresses of the asset. For each asset to be deposited one address,
      * even if multiple assets of the same contract address are deposited.
      * @param assetIds The asset IDs that will be deposited for ERC721 & ERC1155.
@@ -479,8 +479,8 @@ contract VaultV2 {
      * are deposited, the assetAddress must be repeated in assetAddresses.
      * The ERC20 gets deposited by transferFrom. ERC721 & ERC1155 using safeTransferFrom.
      * Example inputs:
-     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
-     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * [wETH, DAI, BAYC, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, BAYC, BAYC, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
      * @param assetAddresses The contract addresses of the asset. For each asset to be deposited one address,
      * even if multiple assets of the same contract address are deposited.
      * @param assetIds The asset IDs that will be deposited for ERC721 & ERC1155.
@@ -539,8 +539,8 @@ contract VaultV2 {
      * Will fail if "the value after withdrawal / open debt (including unrealised debt) > collateral threshold".
      * If no debt is taken yet on this proxy vault, users are free to withraw any asset at any time.
      * Example inputs:
-     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
-     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * [wETH, DAI, BAYC, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, BAYC, BAYC, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
      * @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
      * even if multiple assets of the same contract address are withdrawn.
      * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
@@ -582,8 +582,8 @@ contract VaultV2 {
      * The ERC20 get withdrawn by transfers. ERC721 & ERC1155 using safeTransferFrom.
      * Will fail if balance on proxy vault is not sufficient for one of the withdrawals.
      * Example inputs:
-     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
-     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * [wETH, DAI, BAYC, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, BAYC, BAYC, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
      * @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
      * even if multiple assets of the same contract address are withdrawn.
      * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
