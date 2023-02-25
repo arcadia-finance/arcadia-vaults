@@ -128,6 +128,15 @@ contract OracleHub is Owned, IOraclesHub {
         return oracleIsInUse;
     }
 
+    /**
+     * @notice Returns the state of an oracle
+     * @param oracle The address of the oracle to be checked
+     * @return boolean indicationg if the oracle is active or not
+     */
+    function isActive(address oracle) external view returns (bool) {
+        return oracleToOracleInformation[oracle].isActive;
+    }
+
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/

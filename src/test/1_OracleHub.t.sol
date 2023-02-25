@@ -341,6 +341,28 @@ contract OracleHubTest is Test {
         oracleHub.checkOracleSequence(oraclesSnxToEth);
     }
 
+    function testSuccess_isActive_negative(address oracle) public {
+        assertFalse(oracleHub.isActive(address(oracle)));
+    }
+
+    function testSuccess_isActive_positive() public {
+        vm.prank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
+                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                quoteAsset: "ETH",
+                baseAsset: "USD",
+                oracle: address(oracleEthToUsd),
+                quoteAssetAddress: address(eth),
+                baseAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+
+        assertTrue(oracleHub.isActive(address(oracleEthToUsd)));
+    }
+
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/

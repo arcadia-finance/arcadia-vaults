@@ -78,6 +78,36 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
     }
 
     /**
+     * @notice Sets a new oracle sequence in the case one of the oracles is decomissioned.
+     * @param asset The contract address of the asset
+     * @param newOracles An array of addresses of oracle contracts, to price the asset in USD
+     * @param decommissionedOracle The contract address of the decommissioned oracle
+     */
+    function setOracles(address asset, address[] calldata newOracles, address decommissionedOracle)
+        external
+        onlyOwner
+    {
+        // If asset is not added to the Pricing Module, oldOracles will have length 0
+        // In this case the for loop will be skipped and the function will revert.
+        address[] memory oldOracles = assetToInformation[asset].oracles;
+        uint256 oraclesLength = oldOracles.length;
+        for (uint256 i; i < oraclesLength;) {
+            if (oldOracles[i] == decommissionedOracle) {
+                require(!IOraclesHub(oracleHub).isActive(oldOracles[i]), "PM20_SO: Oracle still active");
+                //View function, reverts in OracleHub if sequence is not correct
+                IOraclesHub(oracleHub).checkOracleSequence(newOracles);
+                assetToInformation[asset].oracles = newOracles;
+                return;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        //If length of oldOracles was zero, or decommissionedOracle was not in the oldOracles array
+        revert("PM20_SO: Unknown Oracle");
+    }
+
+    /**
      * @notice Returns the information that is stored in the StandardERC20PricingModule for a given ERC20 token.
      * @param asset The Token address of the asset.
      * @return assetUnit The unit (10 ** decimals) of the asset.
