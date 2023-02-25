@@ -399,6 +399,14 @@ contract Vault is IVault {
     {
         require(msg.sender == liquidator, "V_LV: Only Liquidator");
 
+        //Cache trustedCreditor
+        trustedCreditor_ = trustedCreditor;
+
+        //Close margin account
+        isTrustedCreditorSet = false;
+        trustedCreditor = address(0);
+        liquidator = address(0);
+
         //If getLiquidationValue (total value discounted with liquidation factor) is smaller than openDebt,
         //the Vault is unhealthy and is succesfully liquidated.
         //Liquidations are triggered by the trustedCreditor (via Liquidator), the openDebt is
@@ -411,13 +419,6 @@ contract Vault is IVault {
         //Transfer ownership of the Vault itself to the Liquidator
         originalOwner = owner;
         _transferOwnership(msg.sender);
-
-        //Cashe trustedCreditor
-        trustedCreditor_ = trustedCreditor;
-
-        //Close margin account
-        isTrustedCreditorSet = false;
-        trustedCreditor = address(0);
 
         return (originalOwner, baseCurrency, trustedCreditor_);
     }
