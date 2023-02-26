@@ -23,6 +23,7 @@ import { IPricingModule } from "../interfaces/IPricingModule.sol";
 abstract contract PricingModule is Owned, IPricingModule {
     address public immutable mainRegistry;
     address public immutable oracleHub;
+    uint256 public immutable assetType;
     address public riskManager;
 
     address[] public assetsInPricingModule;
@@ -62,11 +63,18 @@ abstract contract PricingModule is Owned, IPricingModule {
      * @notice A Pricing Module must always be initialised with the address of the Main Registry and the Oracle-Hub
      * @param mainRegistry_ The address of the Main Registry
      * @param oracleHub_ The address of the Oracle-Hub
+     * @param assetType_ Identifier for the type of asset, necessary for the deposit and withdraw logic in the vaults.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      * @param riskManager_ The address of the Risk Manager
      */
-    constructor(address mainRegistry_, address oracleHub_, address riskManager_) Owned(msg.sender) {
+    constructor(address mainRegistry_, address oracleHub_, uint256 assetType_, address riskManager_)
+        Owned(msg.sender)
+    {
         mainRegistry = mainRegistry_;
         oracleHub = oracleHub_;
+        assetType = assetType_;
         riskManager = riskManager_;
     }
 
@@ -201,8 +209,9 @@ abstract contract PricingModule is Owned, IPricingModule {
 
     /**
      * @notice Processes the deposit of tokens if it is white-listed
+     * param vault The address of the vault asset is deposited in, where applicable
      * @param asset The address of the asset
-     * param assetId The Id of the asset where applicable
+     * param assetId The Id of the asset, where applicable
      * @param amount The amount of tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
      */
@@ -215,7 +224,9 @@ abstract contract PricingModule is Owned, IPricingModule {
 
     /**
      * @notice Processes the withdrawal of tokens to increase the maxExposure
+     * param vault The address of the vault asset is withdrawn from
      * @param asset The address of the asset
+     * param assetId The Id of the asset, where applicable
      * @param amount the amount of tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens will ever be deposited
      */

@@ -229,8 +229,10 @@ contract Liquidator is Owned {
                 //Multipliers have 2 decimals precision and LogExpMath.pow() has 18 decimals precision,
                 //hence we need to divide the result by 1e20.
                 price = openDebt
-                    * (LogExpMath.pow(base, timePassed) * (startPriceMultiplier - minPriceMultiplier) + minPriceMultiplier)
-                    / 1e20;
+                    * (
+                        LogExpMath.pow(base, timePassed) * (startPriceMultiplier - minPriceMultiplier)
+                            + 1e18 * uint256(minPriceMultiplier)
+                    ) / 1e20;
             }
         }
     }

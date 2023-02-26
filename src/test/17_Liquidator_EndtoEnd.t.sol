@@ -176,11 +176,6 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         amounts1[1] = 100 * 10 ** Constants.ethDecimals;
         amounts1[2] = 100_000 * 10 ** Constants.safemoonDecimals;
 
-        uint256[] memory types1 = new uint256[](3);
-        types1[0] = 0;
-        types1[1] = 0;
-        types1[2] = 0;
-
         vm.startPrank(vaultOwner1);
         proxy1 = Vault(
             factory.createVault(
@@ -199,7 +194,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         eth.approve(address(proxy1), type(uint256).max);
         safemoon.approve(address(proxy1), type(uint256).max);
 
-        proxy1.deposit(tokens1, ids1, amounts1, types1);
+        proxy1.deposit(tokens1, ids1, amounts1);
         vm.stopPrank();
 
         address[] memory tokens2 = new address[](2);
@@ -213,10 +208,6 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         uint256[] memory amounts2 = new uint256[](2); // total value = 100_000 + 300_000, coll value = 200_000, liq value = 222_222.2222222
         amounts2[0] = 5000 * 10 ** Constants.linkDecimals;
         amounts2[1] = 100 * 10 ** Constants.ethDecimals;
-
-        uint256[] memory types2 = new uint256[](2);
-        types2[0] = 0;
-        types2[1] = 0;
 
         vm.startPrank(vaultOwner2);
         proxy2 = Vault(
@@ -235,7 +226,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         link.approve(address(proxy2), type(uint256).max);
         eth.approve(address(proxy2), type(uint256).max);
 
-        proxy2.deposit(tokens2, ids2, amounts2, types2);
+        proxy2.deposit(tokens2, ids2, amounts2);
         vm.stopPrank();
 
         // available margin proxy1 = 325k, minus fee (0.1%) = 324_675
