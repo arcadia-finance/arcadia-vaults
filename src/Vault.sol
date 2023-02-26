@@ -889,11 +889,13 @@ contract Vault is IVault {
 
         uint256 k;
         uint256 erc1155StoredLength = erc1155Stored.length;
+        uint256 cacheId;
         for (; k < erc1155StoredLength;) {
             cacheAddr = erc1155Stored[k];
+            cacheId = erc1155TokenIds[k];
             assetAddresses[i] = cacheAddr;
-            assetIds[i] = erc1155TokenIds[k];
-            assetAmounts[i] = erc1155Balances[cacheAddr][erc1155TokenIds[k]];
+            assetIds[i] = cacheId;
+            assetAmounts[i] = erc1155Balances[cacheAddr][cacheId];
             unchecked {
                 ++i;
             }
@@ -919,7 +921,8 @@ contract Vault is IVault {
             }
         } else if (type_ == 1) {
             bool isStored;
-            for (uint256 i; i < erc721Stored.length;) {
+            uint256 erc721StoredLength = erc721Stored.length;
+            for (uint256 i; i < erc721StoredLength;) {
                 if (erc721Stored[i] == token && erc721TokenIds[i] == id) {
                     isStored = true;
                     break;
