@@ -518,8 +518,6 @@ contract Vault is IVault {
         );
 
         _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
-
-        require(erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT, "V_D: Too many assets");
     }
 
     /**
@@ -576,6 +574,8 @@ contract Vault is IVault {
                 ++i;
             }
         }
+
+        require(erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT, "V_D: Too many assets");
     }
 
     /**
