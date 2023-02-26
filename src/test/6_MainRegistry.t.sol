@@ -618,7 +618,7 @@ contract AssetManagementTest is MainRegistryTest {
             .checked_write(true);
 
         address[] memory assetAddresses = new address[](1);
-        assetAddresses[0] = address(eth);
+        assetAddresses[0] = asset;
 
         uint256[] memory assetIds = new uint256[](1);
         assetIds[0] = 0;
@@ -626,8 +626,10 @@ contract AssetManagementTest is MainRegistryTest {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amountDeposited;
 
-        stdstore.target(address(mainRegistry)).sig(mainRegistry.inMainRegistry.selector).with_key(address(asset))
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.inMainRegistry.selector).with_key(asset)
             .checked_write(false);
+
+        assetAmounts[0] = amountWithdrawn;
 
         vm.prank(proxyAddr);
         vm.expectRevert();
