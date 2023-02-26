@@ -763,12 +763,14 @@ contract Vault is IVault {
     function _withdrawERC721(address to, address ERC721Address, uint256 id) internal {
         uint256 tokenIdLength = erc721TokenIds.length;
 
+        uint256 i;
         if (tokenIdLength == 1) {
-            // there was only one ERC721 stored on the contract, safe to remove both lists
+            //There was only one ERC721 stored on the contract, safe to remove both lists
+            require(erc721TokenIds[0] == id && erc721Stored[0] == ERC721Address, "V_W721: Unknown asset");
             erc721TokenIds.pop();
             erc721Stored.pop();
         } else {
-            for (uint256 i; i < tokenIdLength;) {
+            for (i; i < tokenIdLength;) {
                 if (erc721TokenIds[i] == id && erc721Stored[i] == ERC721Address) {
                     erc721TokenIds[i] = erc721TokenIds[tokenIdLength - 1];
                     erc721TokenIds.pop();
@@ -780,6 +782,9 @@ contract Vault is IVault {
                     ++i;
                 }
             }
+            //for loop should break, otherwise we never went into the if-branch, meaning the token being withdrawn
+            //is unknown and not properly deposited.
+            require(i < tokenIdLength, "V_W721: Unknown asset");
         }
 
         IERC721(ERC721Address).safeTransferFrom(address(this), to, id);

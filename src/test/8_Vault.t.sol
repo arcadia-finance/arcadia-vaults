@@ -94,7 +94,6 @@ abstract contract vaultTests is DeployArcadiaVaults {
         stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault_)).checked_write(true);
         stdstore.target(address(factory)).sig(factory.vaultIndex.selector).with_key(address(vault_)).checked_write(10);
         factory.setOwnerOf(vaultOwner, 10);
-        //        stdstore.target(address(factory)).sig(factory._ownerOf.selector).with_key(uint256(10)).checked_write(vaultOwner);
     }
 
     function openMarginAccount() internal {
@@ -1299,6 +1298,10 @@ contract VaultActionTest is vaultTests {
             ASSET DEPOSIT/WITHDRAWN LOGIC
 /////////////////////////////////////////////////////////////// */
 contract AssetManagementTest is vaultTests {
+    using stdStorage for StdStorage;
+
+    VaultTestExtension public vault2;
+
     function setUp() public override {
         super.setUp();
         deployFactory();
@@ -1718,6 +1721,89 @@ contract AssetManagementTest is vaultTests {
 
         vm.startPrank(vaultOwner);
         vm.expectRevert(stdError.arithmeticError);
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+    }
+
+    function testRevert_withdraw_ERC721TransferAndWithdrawTokenOneERC721Deposited() public {
+        bayc.mint(vaultOwner, 20);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(bayc);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 20;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 1;
+
+        vm.startPrank(vaultOwner);
+        bayc.approve(address(vault_), 20);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+
+        vm.prank(vaultOwner);
+        vault2 = new VaultTestExtension(address(mainRegistry), 2);
+        stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault2)).checked_write(true);
+        stdstore.target(address(factory)).sig(factory.vaultIndex.selector).with_key(address(vault2)).checked_write(11);
+        factory.setOwnerOf(vaultOwner, 11);
+
+        mayc.mint(vaultOwner, 10);
+        mayc.mint(vaultOwner, 11);
+
+        assetAddresses[0] = address(mayc);
+        assetIds[0] = 10;
+
+        vm.startPrank(vaultOwner);
+        mayc.approve(address(vault2), 10);
+        vault2.deposit(assetAddresses, assetIds, assetAmounts);
+        mayc.safeTransferFrom(vaultOwner, address(vault_), 11);
+        vm.stopPrank();
+
+        assetIds[0] = 11;
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_W721: Unknown asset");
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+    }
+
+    function testRevert_withdraw_ERC721TransferAndWithdrawTokenNotOneERC721Deposited(uint128[] calldata tokenIdsDeposit)
+        public
+    {
+        vm.assume(tokenIdsDeposit.length < vault_.ASSET_LIMIT());
+        vm.assume(tokenIdsDeposit.length != 1);
+
+        depositBaycInVault(tokenIdsDeposit, vaultOwner);
+
+        vm.prank(vaultOwner);
+        vault2 = new VaultTestExtension(address(mainRegistry), 2);
+        stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault2)).checked_write(true);
+        stdstore.target(address(factory)).sig(factory.vaultIndex.selector).with_key(address(vault2)).checked_write(11);
+        factory.setOwnerOf(vaultOwner, 11);
+
+        mayc.mint(vaultOwner, 10);
+        mayc.mint(vaultOwner, 11);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(mayc);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 10;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 1;
+
+        vm.startPrank(vaultOwner);
+        mayc.approve(address(vault2), 10);
+        vault2.deposit(assetAddresses, assetIds, assetAmounts);
+        mayc.safeTransferFrom(vaultOwner, address(vault_), 11);
+        vm.stopPrank();
+
+        assetIds[0] = 11;
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_W721: Unknown asset");
         vault_.withdraw(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
