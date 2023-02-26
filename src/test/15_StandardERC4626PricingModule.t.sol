@@ -50,12 +50,14 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
 
         standardERC4626PricingModule = new StandardERC4626PricingModule(
             address(mainRegistry),
             address(oracleHub),
+            0,
             address(standardERC20PricingModule)
         );
 
@@ -73,6 +75,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
     function testSuccess_deployment() public {
         assertEq(standardERC4626PricingModule.mainRegistry(), address(mainRegistry));
         assertEq(standardERC4626PricingModule.oracleHub(), address(oracleHub));
+        assertEq(standardERC4626PricingModule.assetType(), 0);
         assertEq(standardERC4626PricingModule.erc20PricingModule(), address(standardERC20PricingModule));
     }
 
