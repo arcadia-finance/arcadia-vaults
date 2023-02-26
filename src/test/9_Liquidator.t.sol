@@ -429,8 +429,8 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
         // And: The price is calculated outside correctly
         uint256 auctionTime = (uint256(currentTime) - uint256(startTime)) * 1e18;
-        uint256 multiplier =
-            (startPriceMultiplier - minPriceMultiplier) * LogExpMath.pow(base, auctionTime) + minPriceMultiplier;
+        uint256 multiplier = (startPriceMultiplier - minPriceMultiplier) * LogExpMath.pow(base, auctionTime)
+            + 1e18 * uint256(minPriceMultiplier);
         uint256 expectedPrice = uint256(openDebt) * multiplier / 1e20;
 
         // Then: The price is calculated correctly
