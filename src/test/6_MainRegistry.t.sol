@@ -23,15 +23,18 @@ abstract contract MainRegistryTest is DeployArcadiaVaults {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
         floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            1
         );
         floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            2
         );
         vm.stopPrank();
     }
@@ -221,6 +224,8 @@ contract PriceModuleManagementTest is MainRegistryTest {
                     ASSET MANAGEMENT
 /////////////////////////////////////////////////////////////// */
 contract AssetManagementTest is MainRegistryTest {
+    using stdStorage for StdStorage;
+
     function setUp() public override {
         super.setUp();
 
@@ -302,22 +307,11 @@ contract AssetManagementTest is MainRegistryTest {
         // When: unprivilegedAddress_ calls addAsset
         // Then: addAsset should revert with "MR: Only PriceMod."
         vm.expectRevert("MR: Only PriceMod.");
-        mainRegistry.addAsset(address(eth));
+        mainRegistry.addAsset(address(eth), 0);
         vm.stopPrank();
     }
 
-    function testSuccess_addAsset_EmptyListRiskVariables(address newAsset) public {
-        vm.assume(mainRegistry.inMainRegistry(newAsset) == false);
-        // When: standardERC20PricingModule calls addAsset with input of address(eth)
-        vm.startPrank(address(standardERC20PricingModule));
-        mainRegistry.addAsset(address(newAsset));
-        vm.stopPrank();
-
-        // Then: inMainRegistry for address(eth) should return true
-        assertTrue(mainRegistry.inMainRegistry(address(eth)));
-    }
-
-    function testRevert_addAsset_OverwriteAssetNegative() public {
+    function testRevert_addAsset_OverwriteAsset() public {
         // Given: creatorAddress calls addPricingModule and setAssetsToNonUpdatable,
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
@@ -325,17 +319,38 @@ contract AssetManagementTest is MainRegistryTest {
 
         // When: standardERC20PricingModule has eth added as asset
 
-        // Then: assetToPricingModule for address(eth) should return address(standardERC20PricingModule)
-        assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
-
         vm.startPrank(address(floorERC721PricingModule));
         // When: floorERC721PricingModule calls addAsset
         // Then: addAsset should revert with "MR_AA: Asset already in mainreg"
         vm.expectRevert("MR_AA: Asset already in mainreg");
-        mainRegistry.addAsset(address(eth));
+        mainRegistry.addAsset(address(eth), 0);
+        vm.stopPrank();
+    }
+
+    function testRevert_addAsset_InvalidAssetType(address newAsset, uint256 assetType) public {
+        vm.assume(mainRegistry.inMainRegistry(newAsset) == false);
+        vm.assume(assetType > type(uint96).max);
+
+        // When: standardERC20PricingModule calls addAsset with assetType greater than uint96.max
+        // Then: addAsset should revert with "MR_AA: Invalid AssetType"
+        vm.startPrank(address(standardERC20PricingModule));
+        vm.expectRevert("MR_AA: Invalid AssetType");
+        mainRegistry.addAsset(newAsset, assetType);
+        vm.stopPrank();
+    }
+
+    function testSuccess_addAsset(address newAsset, uint96 assetType) public {
+        vm.assume(mainRegistry.inMainRegistry(newAsset) == false);
+        // When: standardERC20PricingModule calls addAsset with input of address(eth)
+        vm.startPrank(address(standardERC20PricingModule));
+        mainRegistry.addAsset(newAsset, assetType);
         vm.stopPrank();
 
-        assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
+        // Then: inMainRegistry for address(eth) should return true
+        assertTrue(mainRegistry.inMainRegistry(newAsset));
+        (uint96 assetType_, address pricingModule) = mainRegistry.assetToAssetInformation(newAsset);
+        assertEq(assetType_, assetType);
+        assertEq(pricingModule, address(standardERC20PricingModule));
     }
 
     function testRevert_batchProcessDeposit_NonVault(address unprivilegedAddress_) public {
@@ -408,7 +423,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = 1;
 
         vm.startPrank(proxyAddr);
-        vm.expectRevert("MR_BPD: Asset not in mainreg");
+        vm.expectRevert();
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
@@ -451,10 +466,11 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amount;
 
         vm.prank(proxyAddr);
-        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        uint256[] memory assetTypes = mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+
+        assertEq(assetTypes[0], 0);
 
         (, uint128 exposure) = standardERC20PricingModule.exposure(address(eth));
-
         assertEq(exposure, amount);
     }
 
@@ -472,7 +488,10 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[1] = amountLink;
 
         vm.prank(proxyAddr);
-        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        uint256[] memory assetTypes = mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+
+        assertEq(assetTypes[0], 0);
+        assertEq(assetTypes[1], 0);
 
         (, uint256 exposureEth) = standardERC20PricingModule.exposure(address(eth));
         (, uint256 exposureLink) = standardERC20PricingModule.exposure(address(link));
@@ -588,6 +607,36 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
+    function testRevert_batchProcessWithdrawal_AssetNotInMainreg(
+        uint128 amountDeposited,
+        uint128 amountWithdrawn,
+        address asset
+    ) public {
+        vm.assume(amountDeposited >= amountWithdrawn);
+
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.inMainRegistry.selector).with_key(address(asset))
+            .checked_write(true);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = asset;
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountDeposited;
+
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.inMainRegistry.selector).with_key(asset).checked_write(
+            false
+        );
+
+        assetAmounts[0] = amountWithdrawn;
+
+        vm.prank(proxyAddr);
+        vm.expectRevert();
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
+    }
+
     function testSuccess_batchProcessWithdrawal(uint128 amountDeposited, uint128 amountWithdrawn) public {
         vm.assume(amountDeposited >= amountWithdrawn);
 
@@ -610,7 +659,9 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amountWithdrawn;
 
         vm.prank(proxyAddr);
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
+        uint256[] memory assetTypes = mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
+
+        assertEq(assetTypes[0], 0);
 
         (, exposure) = standardERC20PricingModule.exposure(address(eth));
 

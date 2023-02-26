@@ -460,13 +460,13 @@ contract Vault is IVault {
         (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
 
         // withdraw to actionHandler
-        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
+        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, actionHandler);
 
         // execute Action
         ActionData memory incoming = IActionBase(actionHandler).executeAction(actionData);
 
         // deposit from actionHandler into vault
-        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);
+        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, actionHandler);
 
         uint256 usedMargin = getUsedMargin();
         if (usedMargin > 0) {
@@ -497,27 +497,19 @@ contract Vault is IVault {
      * @param assetIds The asset IDs that will be deposited for ERC721 & ERC1155.
      * When depositing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be deposited.
-     * @param assetTypes The types of the assets to be deposited.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      */
-    function deposit(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        uint256[] calldata assetTypes
-    ) external onlyOwner {
+    function deposit(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts)
+        external
+        onlyOwner
+    {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
-                && assetAddressesLength == assetTypes.length,
+            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
             "V_D: Length mismatch"
         );
 
-        _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+        _deposit(assetAddresses, assetIds, assetAmounts, msg.sender);
     }
 
     /**
@@ -534,22 +526,17 @@ contract Vault is IVault {
      * @param assetIds The asset IDs that will be deposited for ERC721 & ERC1155.
      * When depositing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be deposited.
-     * @param assetTypes The types of the assets to be deposited.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      * @param from The address to deposit from.
      */
     function _deposit(
         address[] memory assetAddresses,
         uint256[] memory assetIds,
         uint256[] memory assetAmounts,
-        uint256[] memory assetTypes,
         address from
     ) internal {
         //reverts in mainregistry if invalid input
-        IMainRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        uint256[] memory assetTypes =
+            IMainRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
@@ -596,27 +583,19 @@ contract Vault is IVault {
      * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
      * When withdrawing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be withdrawn.
-     * @param assetTypes The types of the assets to be withdrawn.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      */
-    function withdraw(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        uint256[] calldata assetTypes
-    ) external onlyOwner {
+    function withdraw(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts)
+        external
+        onlyOwner
+    {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
-                && assetAddressesLength == assetTypes.length,
+            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
             "V_W: Length mismatch"
         );
 
-        _withdraw(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+        _withdraw(assetAddresses, assetIds, assetAmounts, msg.sender);
 
         uint256 usedMargin = getUsedMargin();
         if (usedMargin != 0) {
@@ -639,11 +618,6 @@ contract Vault is IVault {
      * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
      * When withdrawing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be withdrawn.
-     * @param assetTypes The types of the assets to be withdrawn.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      * @param to The address to withdraw to.
      */
 
@@ -651,10 +625,10 @@ contract Vault is IVault {
         address[] memory assetAddresses,
         uint256[] memory assetIds,
         uint256[] memory assetAmounts,
-        uint256[] memory assetTypes,
         address to
     ) internal {
-        IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts); //reverts in mainregistry if invalid input
+        uint256[] memory assetTypes =
+            IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts); //reverts in mainregistry if invalid input
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {

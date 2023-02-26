@@ -32,15 +32,15 @@ contract gasDeploys is GasTestFixture {
     }
 
     function testDeployPricingModuleERC20() public {
-        new StandardERC20PricingModule(address(mainRegistry), address(oracleHub));
+        new StandardERC20PricingModule(address(mainRegistry), address(oracleHub), 0);
     }
 
     function testDeployPricingModuleERC721() public {
-        new FloorERC721PricingModule(address(mainRegistry), address(oracleHub));
+        new FloorERC721PricingModule(address(mainRegistry), address(oracleHub), 1);
     }
 
     function testDeployPricingModuleERC1155() public {
-        new FloorERC1155PricingModule(address(mainRegistry), address(oracleHub));
+        new FloorERC1155PricingModule(address(mainRegistry), address(oracleHub), 2);
     }
 
     function testDeployOracleHub() public {
