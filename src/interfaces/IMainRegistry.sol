@@ -45,23 +45,31 @@ interface IMainRegistry {
      * @param assetAddresses An array of addresses of the assets
      * @param assetIds An array of asset ids
      * @param amounts An array of amounts to be deposited
+     * @return assetTypes The identifiers of the types of the assets deposited.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      */
     function batchProcessDeposit(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) external;
+    ) external returns (uint256[] memory);
 
     /**
      * @notice Batch withdrawal multiple assets
      * @param assetAddresses An array of addresses of the assets
      * @param amounts An array of amounts to be withdrawn
+     * @return assetTypes The identifiers of the types of the assets withdrawn.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      */
     function batchProcessWithdrawal(
         address[] calldata assetAddresses,
         uint256[] calldata assetIds,
         uint256[] calldata amounts
-    ) external;
+    ) external returns (uint256[] memory);
 
     /**
      * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency

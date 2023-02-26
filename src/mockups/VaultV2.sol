@@ -59,13 +59,13 @@ contract VaultV2 {
     uint256[] public erc721TokenIds;
     uint256[] public erc1155TokenIds;
 
-    mapping(address => bool) public isAssetManager;
+    mapping(address => mapping(address => bool)) public isAssetManager;
 
     struct AddressSlot {
         address value;
     }
 
-    event Upgraded(address oldImplementation, address newImplementation, uint16 oldVersion, uint16 newversion);
+    event Upgraded(address oldImplementation, address newImplementation, uint16 oldVersion, uint16 indexed newVersion);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
@@ -89,7 +89,8 @@ contract VaultV2 {
      */
     modifier onlyAssetManager() {
         require(
-            msg.sender == owner || msg.sender == trustedCreditor || isAssetManager[msg.sender], "V: Only Asset Manager"
+            msg.sender == owner || msg.sender == trustedCreditor || isAssetManager[owner][msg.sender],
+            "V: Only Asset Manager"
         );
         _;
     }
@@ -259,11 +260,36 @@ contract VaultV2 {
         require(ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) == 0, "V_CTMA: NON-ZERO OPEN POSITION");
 
         isTrustedCreditorSet = false;
+        trustedCreditor = address(0);
     }
 
     /* ///////////////////////////////////////////////////////////////
                           MARGIN REQUIREMENTS
     /////////////////////////////////////////////////////////////// */
+
+    /**
+     * @notice Checks if the Vault is healthy and still has free margin.
+     * @param debtIncrease The amount with which the debt is increased.
+     * @param totalOpenDebt The total open Debt against the Vault.
+     * @return success Boolean indicating if there is sufficient margin to back a certain amount of Debt.
+     * @dev Only one of the values can be non-zero, or we check on a certain increase of debt, or we check on a total amount of debt.
+     * @dev If both values are zero, we check if the vault is currently healthy.
+     */
+    function isVaultHealthy(uint256 debtIncrease, uint256 totalOpenDebt)
+        external
+        view
+        returns (bool success, address trustedCreditor_)
+    {
+        if (totalOpenDebt != 0) {
+            //Check if vault is healthy for a given amount of openDebt.
+            success = getCollateralValue() >= totalOpenDebt;
+        } else {
+            //Check if vault is still healthy after an increase of debt.
+            success = getCollateralValue() >= getUsedMargin() + debtIncrease;
+        }
+
+        return (success, trustedCreditor);
+    }
 
     /**
      * @notice Returns the total value of the vault in a specific baseCurrency
@@ -376,7 +402,14 @@ contract VaultV2 {
         originalOwner = owner;
         _transferOwnership(msg.sender);
 
-        return (originalOwner, baseCurrency, trustedCreditor);
+        //Cashe trustedCreditor
+        trustedCreditor_ = trustedCreditor;
+
+        //Close margin account
+        isTrustedCreditorSet = false;
+        trustedCreditor = address(0);
+
+        return (originalOwner, baseCurrency, trustedCreditor_);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -394,7 +427,7 @@ contract VaultV2 {
      * - Chain interactions with the Trusted Creditor together with vault actions (eg. borrow deposit and trade in one transaction).
      */
     function setAssetManager(address assetManager, bool value) external onlyOwner {
-        isAssetManager[assetManager] = value;
+        isAssetManager[msg.sender][assetManager] = value;
     }
 
     /**
@@ -406,25 +439,31 @@ contract VaultV2 {
      * The only requirements are that the recipient tokens of the interactions are allowlisted, deposited back into the vault and
      * that the Vault is in a healthy state at the end of the transaction.
      */
-    function vaultManagementAction(address actionHandler, bytes calldata actionData) external onlyAssetManager {
+    function vaultManagementAction(address actionHandler, bytes calldata actionData)
+        external
+        onlyAssetManager
+        returns (address)
+    {
         require(IMainRegistry(registry).isActionAllowed(actionHandler), "V_VMA: Action not allowed");
 
         (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
 
         // withdraw to actionHandler
-        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
+        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, actionHandler);
 
         // execute Action
         ActionData memory incoming = IActionBase(actionHandler).executeAction(actionData);
 
         // deposit from actionHandler into vault
-        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);
+        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, actionHandler);
 
         uint256 usedMargin = getUsedMargin();
         if (usedMargin > 0) {
             uint256 collValue = getCollateralValue();
             require(collValue >= usedMargin, "V_VMA: coll. value too low");
         }
+
+        return trustedCreditor;
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -447,29 +486,19 @@ contract VaultV2 {
      * @param assetIds The asset IDs that will be deposited for ERC721 & ERC1155.
      * When depositing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be deposited.
-     * @param assetTypes The types of the assets to be deposited.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      */
-    function deposit(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        uint256[] calldata assetTypes
-    ) external onlyOwner {
+    function deposit(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts)
+        external
+        onlyOwner
+    {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
-                && assetAddressesLength == assetTypes.length,
+            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
             "V_D: Length mismatch"
         );
 
-        _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
-
-        require(erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT, "V_D: Too many assets");
+        _deposit(assetAddresses, assetIds, assetAmounts, msg.sender);
     }
 
     /**
@@ -486,22 +515,17 @@ contract VaultV2 {
      * @param assetIds The asset IDs that will be deposited for ERC721 & ERC1155.
      * When depositing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be deposited.
-     * @param assetTypes The types of the assets to be deposited.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      * @param from The address to deposit from.
      */
     function _deposit(
         address[] memory assetAddresses,
         uint256[] memory assetIds,
         uint256[] memory assetAmounts,
-        uint256[] memory assetTypes,
         address from
     ) internal {
         //reverts in mainregistry if invalid input
-        IMainRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        uint256[] memory assetTypes =
+            IMainRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
@@ -526,6 +550,8 @@ contract VaultV2 {
                 ++i;
             }
         }
+
+        require(erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT, "V_D: Too many assets");
     }
 
     /**
@@ -546,27 +572,19 @@ contract VaultV2 {
      * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
      * When withdrawing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be withdrawn.
-     * @param assetTypes The types of the assets to be withdrawn.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      */
-    function withdraw(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        uint256[] calldata assetTypes
-    ) external onlyOwner {
+    function withdraw(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts)
+        external
+        onlyOwner
+    {
         uint256 assetAddressesLength = assetAddresses.length;
 
         require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
-                && assetAddressesLength == assetTypes.length,
+            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
             "V_W: Length mismatch"
         );
 
-        _withdraw(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+        _withdraw(assetAddresses, assetIds, assetAmounts, msg.sender);
 
         uint256 usedMargin = getUsedMargin();
         if (usedMargin != 0) {
@@ -589,11 +607,6 @@ contract VaultV2 {
      * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
      * When withdrawing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be withdrawn.
-     * @param assetTypes The types of the assets to be withdrawn.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      * @param to The address to withdraw to.
      */
 
@@ -601,10 +614,10 @@ contract VaultV2 {
         address[] memory assetAddresses,
         uint256[] memory assetIds,
         uint256[] memory assetAmounts,
-        uint256[] memory assetTypes,
         address to
     ) internal {
-        IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts); //reverts in mainregistry if invalid input
+        uint256[] memory assetTypes =
+            IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts); //reverts in mainregistry if invalid input
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
@@ -663,7 +676,7 @@ contract VaultV2 {
      * @param id The ID of the token to be transferred.
      */
     function _depositERC721(address from, address ERC721Address, uint256 id) internal {
-        IERC721(ERC721Address).transferFrom(from, address(this), id);
+        IERC721(ERC721Address).safeTransferFrom(from, address(this), id);
 
         erc721Stored.push(ERC721Address);
         erc721TokenIds.push(id);
@@ -882,6 +895,45 @@ contract VaultV2 {
             }
             unchecked {
                 ++k;
+            }
+        }
+    }
+
+    function skim(address token, uint256 id, uint256 type_) public {
+        require(msg.sender == owner, "V_S: Only owner can skim");
+
+        if (token == address(0)) {
+            payable(owner).transfer(address(this).balance);
+            return;
+        }
+
+        if (type_ == 0) {
+            uint256 balance = IERC20(token).balanceOf(address(this));
+            uint256 balanceStored = erc20Balances[token];
+            if (balance > balanceStored) {
+                require(IERC20(token).transfer(owner, balance - balanceStored), "V_S: ERC20 transfer failed");
+            }
+        } else if (type_ == 1) {
+            bool isStored;
+            for (uint256 i; i < erc721Stored.length;) {
+                if (erc721Stored[i] == token && erc721TokenIds[i] == id) {
+                    isStored = true;
+                    break;
+                }
+                unchecked {
+                    ++i;
+                }
+            }
+
+            if (!isStored) {
+                IERC721(token).safeTransferFrom(address(this), owner, id);
+            }
+        } else if (type_ == 2) {
+            uint256 balance = IERC1155(token).balanceOf(address(this), id);
+            uint256 balanceStored = erc1155Balances[token][id];
+
+            if (balance > balanceStored) {
+                IERC1155(token).safeTransferFrom(address(this), owner, id, balance - balanceStored, "");
             }
         }
     }

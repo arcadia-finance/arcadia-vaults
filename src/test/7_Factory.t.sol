@@ -83,12 +83,31 @@ contract FactoryTest is DeployArcadiaVaults {
     }
 
     function testSuccess_createVault_DeployNewProxyWithLogicOwner(uint256 salt, address sender) public {
+        vm.assume(sender != address(0));
         uint256 amountBefore = factory.allVaultsLength();
         vm.prank(sender);
-        vm.assume(sender != address(0));
         address actualDeployed = factory.createVault(salt, 0, address(0));
         assertEq(amountBefore + 1, factory.allVaultsLength());
         assertEq(Vault(actualDeployed).owner(), address(sender));
+    }
+
+    function testSuccess_createVault_CreationCannotBeFrontRunnedWithIdenticalSalt(
+        uint256 salt,
+        address sender0,
+        address sender1
+    ) public {
+        vm.assume(sender0 != sender1);
+        vm.assume(sender0 != address(0));
+        vm.assume(sender1 != address(0));
+
+        //Broadcast changes the tx.origin, prank only changes the msg.sender, not tx.origin
+        vm.broadcast(sender0);
+        address proxy0 = factory.createVault(salt, 0, address(0));
+
+        vm.broadcast(sender1);
+        address proxy1 = factory.createVault(salt, 0, address(0));
+
+        assertTrue(proxy0 != proxy1);
     }
 
     function testRevert_createVault_CreateNonExistingVaultVersion(uint16 vaultVersion) public {
