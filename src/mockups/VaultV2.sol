@@ -261,6 +261,7 @@ contract VaultV2 {
 
         isTrustedCreditorSet = false;
         trustedCreditor = address(0);
+        liquidator = address(0);
     }
 
     /* ///////////////////////////////////////////////////////////////
