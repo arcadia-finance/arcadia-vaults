@@ -905,6 +905,8 @@ contract LiquidationLogicTest is vaultTests {
         assertEq(trustedCreditor, address(pool));
 
         assertEq(vault_.owner(), address(liquidator));
+        assertEq(vault_.isTrustedCreditorSet(), false);
+        assertEq(vault_.trustedCreditor(), address(0));
 
         uint256 index = factory.vaultIndex(address(vault_));
         assertEq(factory.ownerOf(index), address(liquidator));
@@ -992,11 +994,11 @@ contract VaultActionTest is vaultTests {
     function testSuccess_setAssetManager(address assetManager, bool startValue, bool endvalue) public {
         vm.prank(vaultOwner);
         vault_.setAssetManager(assetManager, startValue);
-        assertEq(vault_.isAssetManager(assetManager), startValue);
+        assertEq(vault_.isAssetManager(vaultOwner, assetManager), startValue);
 
         vm.prank(vaultOwner);
         vault_.setAssetManager(assetManager, endvalue);
-        assertEq(vault_.isAssetManager(assetManager), endvalue);
+        assertEq(vault_.isAssetManager(vaultOwner, assetManager), endvalue);
     }
 
     function testRevert_vaultManagementAction_NonAssetManager(address sender, address assetManager) public {
@@ -1008,6 +1010,21 @@ contract VaultActionTest is vaultTests {
         proxy_.setAssetManager(assetManager, true);
 
         vm.startPrank(sender);
+        vm.expectRevert("V: Only Asset Manager");
+        proxy_.vaultManagementAction(address(action), new bytes(0));
+        vm.stopPrank();
+    }
+
+    function testRevert_vaultManagementAction_OwnerChanged(address assetManager) public {
+        address newOwner = address(60); //Annoying to fuzz since it often fuzzes to existing contracts without an onERC721Received
+
+        vm.prank(vaultOwner);
+        proxy_.setAssetManager(assetManager, true);
+
+        vm.prank(vaultOwner);
+        factory.safeTransferFrom(vaultOwner, newOwner, address(proxy_));
+
+        vm.startPrank(assetManager);
         vm.expectRevert("V: Only Asset Manager");
         proxy_.vaultManagementAction(address(action), new bytes(0));
         vm.stopPrank();
