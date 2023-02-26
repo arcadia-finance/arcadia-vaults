@@ -295,8 +295,4 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
         require(_ownerOf[tokenId] != address(0), "ERC721Metadata: URI query for nonexistent token");
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
     }
-
-    function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
-        return this.onERC721Received.selector;
-    }
 }
