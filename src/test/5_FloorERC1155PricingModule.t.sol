@@ -39,7 +39,8 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
 
         floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            2
         );
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
         vm.stopPrank();

@@ -10,7 +10,7 @@ import "../../../lib/forge-std/src/Test.sol";
 
 import "../../Factory.sol";
 import "../../Proxy.sol";
-import "../../Vault.sol";
+import { Vault, ActionData } from "../../Vault.sol";
 import { ERC20Mock } from "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
@@ -18,7 +18,7 @@ import "../../MainRegistry.sol";
 import { PricingModule, StandardERC20PricingModule } from "../../PricingModules/StandardERC20PricingModule.sol";
 import { FloorERC721PricingModule } from "../../PricingModules/FloorERC721PricingModule.sol";
 import { FloorERC1155PricingModule } from "../../PricingModules/FloorERC1155PricingModule.sol";
-import "../../Liquidator.sol";
+import { Liquidator, LogExpMath } from "../../Liquidator.sol";
 import "../../OracleHub.sol";
 import "../../utils/Constants.sol";
 import "../../mockups/ArcadiaOracle.sol";
@@ -29,6 +29,10 @@ contract mainRegistryExtension is MainRegistry {
     using FixedPointMathLib for uint256;
 
     constructor(address factory_) MainRegistry(factory_) { }
+
+    function setAssetType(address asset, uint96 assetType) public {
+        assetToAssetInformation[asset].assetType = assetType;
+    }
 }
 
 contract FactoryExtension is Factory {
@@ -304,15 +308,18 @@ contract DeployArcadiaVaults is Test {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
         floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            1
         );
         floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            2
         );
 
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
@@ -353,6 +360,9 @@ contract DeployArcadiaVaults is Test {
 
         floorERC721PricingModule.addAsset(
             address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars_, type(uint128).max
+        );
+        floorERC721PricingModule.addAsset(
+            address(mayc), 0, type(uint256).max, oracleWmaycToUsdArr, riskVars_, type(uint128).max
         );
 
         floorERC1155PricingModule.addAsset(

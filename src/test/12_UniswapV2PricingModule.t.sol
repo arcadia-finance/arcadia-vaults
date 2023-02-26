@@ -12,9 +12,13 @@ import "../mockups/UniswapV2PairMock.sol";
 import { UniswapV2PricingModule } from "../PricingModules/UniswapV2PricingModule.sol";
 
 contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
-    constructor(address mainRegistry_, address oracleHub_, address uniswapV2Factory_, address erc20PricingModule_)
-        UniswapV2PricingModule(mainRegistry_, oracleHub_, uniswapV2Factory_, erc20PricingModule_)
-    { }
+    constructor(
+        address mainRegistry_,
+        address oracleHub_,
+        uint256 assetType_,
+        address uniswapV2Factory_,
+        address erc20PricingModule_
+    ) UniswapV2PricingModule(mainRegistry_, oracleHub_, assetType_, uniswapV2Factory_, erc20PricingModule_) { }
 
     function getTrustedTokenAmounts(
         address pair,
@@ -95,6 +99,7 @@ abstract contract UniswapV2PricingModuleTest is DeployArcadiaVaults {
         uniswapV2PricingModule = new UniswapV2PricingModuleExtension(
             address(mainRegistry),
             address(oracleHub),
+            0,
             address(uniswapV2Factory),
             address(standardERC20PricingModule)
         );
@@ -117,6 +122,7 @@ contract DeploymentTest is UniswapV2PricingModuleTest {
     function testSuccess_deployment() public {
         assertEq(uniswapV2PricingModule.mainRegistry(), address(mainRegistry));
         assertEq(uniswapV2PricingModule.oracleHub(), address(oracleHub));
+        assertEq(uniswapV2PricingModule.assetType(), 0);
         assertEq(uniswapV2PricingModule.uniswapV2Factory(), address(uniswapV2Factory));
         assertEq(uniswapV2PricingModule.erc20PricingModule(), address(standardERC20PricingModule));
     }

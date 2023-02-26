@@ -24,4 +24,7 @@ interface IChainLinkData {
 
     // @notice Returns the minimum answer, added by arcadia
     function minAnswer() external view returns (int192);
+
+    // @notice Returns the minimum answer, added by arcadia
+    function maxAnswer() external view returns (int192);
 }

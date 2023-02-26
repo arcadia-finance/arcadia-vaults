@@ -123,6 +123,8 @@ contract BaseGuardianUnitTest is Test {
         vm.stopPrank();
     }
 
+    event GuardianChanged(address indexed oldGuardian, address indexed newGuardian);
+
     function testRevert_changeGuardian_onlyOwner(address nonOwner_) public {
         // Given: the contract owner is owner
         vm.assume(nonOwner_ != owner);
@@ -143,6 +145,8 @@ contract BaseGuardianUnitTest is Test {
         // Given: the contract owner is owner
         vm.startPrank(owner);
         // When: the owner changes the guardian
+        vm.expectEmit(true, true, false, false);
+        emit GuardianChanged(guardian, newGuardian_);
         baseGuardian.changeGuardian(newGuardian_);
         vm.stopPrank();
         // Then: the guardian is changed

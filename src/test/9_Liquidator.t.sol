@@ -573,7 +573,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
 
         vm.startPrank(bidder);
         dai.approve(address(liquidator_), type(uint256).max);
-        vm.expectRevert(stdError.arithmeticError);
+        vm.expectRevert("TRANSFER_FROM_FAILED");
         liquidator_.buyVault(address(proxy));
         vm.stopPrank();
     }
