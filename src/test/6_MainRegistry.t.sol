@@ -626,8 +626,9 @@ contract AssetManagementTest is MainRegistryTest {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amountDeposited;
 
-        stdstore.target(address(mainRegistry)).sig(mainRegistry.inMainRegistry.selector).with_key(asset)
-            .checked_write(false);
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.inMainRegistry.selector).with_key(asset).checked_write(
+            false
+        );
 
         assetAmounts[0] = amountWithdrawn;
 
