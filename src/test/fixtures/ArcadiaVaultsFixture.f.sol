@@ -352,7 +352,7 @@ contract DeployArcadiaVaults is Test {
             address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars_, type(uint128).max
         );
         floorERC721PricingModule.addAsset(
-            address(mayc), 0, type(uint256).max, oracleWmaycToUsdArr, riskVars_, type(uint128).max
+            address(mayc), 0, type(uint256).max, oracleMaycToUsdArr, riskVars_, type(uint128).max
         );
 
         floorERC1155PricingModule.addAsset(

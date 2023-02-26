@@ -222,7 +222,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
     function testRevert_processDeposit_NotOne(uint256 assetId, address vault, uint256 amount) public {
         vm.assume(amount != 1); //Not in range
         vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, 1);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, 1);
 
         vm.startPrank(address(mainRegistry));
         vm.expectRevert("PM721_PD: Amount not 1");
@@ -261,7 +261,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
     function testRevert_processWithdrawal_NotOne(uint256 assetId, address vault, uint256 amount) public {
         vm.assume(amount != 1); //Not in range
         vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, 1);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, 1);
 
         vm.startPrank(address(mainRegistry));
         vm.expectRevert("PM721_PW: Amount not 1");
