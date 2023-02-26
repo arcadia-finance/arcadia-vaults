@@ -8,7 +8,7 @@ pragma solidity ^0.8.13;
 
 import { LogExpMath } from "./utils/LogExpMath.sol";
 import { IFactory } from "./interfaces/IFactory.sol";
-import { IERC20 } from "./interfaces/IERC20.sol";
+import { ERC20, SafeTransferLib } from "../lib/solmate/src/utils/SafeTransferLib.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { ILendingPool } from "./interfaces/ILendingPool.sol";
 import { Owned } from "lib/solmate/src/auth/Owned.sol";
@@ -20,6 +20,8 @@ import { Owned } from "lib/solmate/src/auth/Owned.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Owned {
+    using SafeTransferLib for ERC20;
+
     address public immutable factory;
 
     // Sets the begin price of the auction
@@ -251,11 +253,8 @@ contract Liquidator is Owned {
 
         //Transfer funds, equal to the current auction price from the bidder to the Creditor contract.
         //The bidder should have approved the Liquidation contract for at least an amount of priceOfVault.
-        require(
-            IERC20(auctionInformation_.baseCurrency).transferFrom(
-                msg.sender, auctionInformation_.trustedCreditor, priceOfVault
-            ),
-            "LQ_BV: transfer from failed"
+        ERC20(auctionInformation_.baseCurrency).safeTransferFrom(
+            msg.sender, auctionInformation_.trustedCreditor, priceOfVault
         );
 
         (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder) =

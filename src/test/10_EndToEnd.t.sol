@@ -12,6 +12,7 @@ import { LendingPool, DebtToken, ERC20, DataTypes } from "../../lib/arcadia-lend
 import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 import { ActionMultiCall } from "../actions/MultiCall.sol";
 import { MultiActionMock } from "../mockups/MultiActionMock.sol";
+import { FixedPointMathLib } from "../../lib/solmate/src/utils/FixedPointMathLib.sol";
 
 abstract contract EndToEndTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;

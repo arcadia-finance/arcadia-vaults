@@ -7,7 +7,6 @@
 pragma solidity ^0.8.13;
 
 import "../utils/LogExpMath.sol";
-import "../interfaces/IERC20.sol";
 import "../interfaces/IERC721.sol";
 import "../interfaces/IERC1155.sol";
 import "../interfaces/IERC4626.sol";
@@ -16,6 +15,7 @@ import "../interfaces/ITrustedCreditor.sol";
 import "../interfaces/IActionBase.sol";
 import { IFactory } from "../interfaces/IFactory.sol";
 import { ActionData } from "../actions/utils/ActionData.sol";
+import { ERC20, SafeTransferLib } from "../../lib/solmate/src/utils/SafeTransferLib.sol";
 
 /**
  * @title An Arcadia Vault used to deposit a combination of all kinds of assets
@@ -32,10 +32,12 @@ import { ActionData } from "../actions/utils/ActionData.sol";
  * For whitelists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
 contract VaultV2 {
+    using SafeTransferLib for ERC20;
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
      */
+
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     uint256 public constant ASSET_LIMIT = 15;
 
@@ -205,10 +207,10 @@ contract VaultV2 {
     /**
      * @notice Sets the baseCurrency of a vault.
      * @param baseCurrency_ the new baseCurrency for the vault.
-     * @dev First checks if there is no locked value. If there is no value locked then a new baseCurrency is set.
+     * @dev First checks if there is no trusted creditor set. If there is none set, then a new baseCurrency is set.
      */
     function setBaseCurrency(address baseCurrency_) external onlyOwner {
-        require(getUsedMargin() == 0, "V_SBC: Non-zero open position");
+        require(!isTrustedCreditorSet, "V_SBC: Trusted Creditor Set");
         _setBaseCurrency(baseCurrency_);
     }
 
@@ -390,6 +392,14 @@ contract VaultV2 {
     {
         require(msg.sender == liquidator, "V_LV: Only Liquidator");
 
+        //Cache trustedCreditor
+        trustedCreditor_ = trustedCreditor;
+
+        //Close margin account
+        isTrustedCreditorSet = false;
+        trustedCreditor = address(0);
+        liquidator = address(0);
+
         //If getLiquidationValue (total value discounted with liquidation factor) is smaller than openDebt,
         //the Vault is unhealthy and is succesfully liquidated.
         //Liquidations are triggered by the trustedCreditor (via Liquidator), the openDebt is
@@ -402,13 +412,6 @@ contract VaultV2 {
         //Transfer ownership of the Vault itself to the Liquidator
         originalOwner = owner;
         _transferOwnership(msg.sender);
-
-        //Cashe trustedCreditor
-        trustedCreditor_ = trustedCreditor;
-
-        //Close margin account
-        isTrustedCreditorSet = false;
-        trustedCreditor = address(0);
 
         return (originalOwner, baseCurrency, trustedCreditor_);
     }
@@ -492,13 +495,7 @@ contract VaultV2 {
         external
         onlyOwner
     {
-        uint256 assetAddressesLength = assetAddresses.length;
-
-        require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
-            "V_D: Length mismatch"
-        );
-
+        //No need to check that all arrays have equal length, this check is already done in the MainRegistry.
         _deposit(assetAddresses, assetIds, assetAmounts, msg.sender);
     }
 
@@ -578,17 +575,11 @@ contract VaultV2 {
         external
         onlyOwner
     {
-        uint256 assetAddressesLength = assetAddresses.length;
-
-        require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
-            "V_W: Length mismatch"
-        );
-
+        //No need to check that all arrays have equal length, this check is already done in the MainRegistry.
         _withdraw(assetAddresses, assetIds, assetAmounts, msg.sender);
 
         uint256 usedMargin = getUsedMargin();
-        if (usedMargin != 0) {
+        if (usedMargin > 0) {
             require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }
@@ -654,7 +645,7 @@ contract VaultV2 {
      * @param amount The amount of ERC20 tokens to be transferred.
      */
     function _depositERC20(address from, address ERC20Address, uint256 amount) internal {
-        require(IERC20(ERC20Address).transferFrom(from, address(this), amount), "V_D20: Transfer from failed");
+        ERC20(ERC20Address).safeTransferFrom(from, address(this), amount);
 
         uint256 currentBalance = erc20Balances[ERC20Address];
 
@@ -744,7 +735,7 @@ contract VaultV2 {
             }
         }
 
-        require(IERC20(ERC20Address).transfer(to, amount), "V_W20: Transfer failed");
+        ERC20(ERC20Address).safeTransfer(to, amount);
     }
 
     /**
@@ -762,12 +753,14 @@ contract VaultV2 {
     function _withdrawERC721(address to, address ERC721Address, uint256 id) internal {
         uint256 tokenIdLength = erc721TokenIds.length;
 
+        uint256 i;
         if (tokenIdLength == 1) {
-            // there was only one ERC721 stored on the contract, safe to remove both lists
+            //There was only one ERC721 stored on the contract, safe to remove both lists
+            require(erc721TokenIds[0] == id && erc721Stored[0] == ERC721Address, "V_W721: Unknown asset");
             erc721TokenIds.pop();
             erc721Stored.pop();
         } else {
-            for (uint256 i; i < tokenIdLength;) {
+            for (i; i < tokenIdLength;) {
                 if (erc721TokenIds[i] == id && erc721Stored[i] == ERC721Address) {
                     erc721TokenIds[i] = erc721TokenIds[tokenIdLength - 1];
                     erc721TokenIds.pop();
@@ -779,6 +772,9 @@ contract VaultV2 {
                     ++i;
                 }
             }
+            //for loop should break, otherwise we never went into the if-branch, meaning the token being withdrawn
+            //is unknown and not properly deposited.
+            require(i < tokenIdLength, "V_W721: Unknown asset");
         }
 
         IERC721(ERC721Address).safeTransferFrom(address(this), to, id);
@@ -886,11 +882,13 @@ contract VaultV2 {
 
         uint256 k;
         uint256 erc1155StoredLength = erc1155Stored.length;
+        uint256 cacheId;
         for (; k < erc1155StoredLength;) {
             cacheAddr = erc1155Stored[k];
+            cacheId = erc1155TokenIds[k];
             assetAddresses[i] = cacheAddr;
-            assetIds[i] = erc1155TokenIds[k];
-            assetAmounts[i] = erc1155Balances[cacheAddr][erc1155TokenIds[k]];
+            assetIds[i] = cacheId;
+            assetAmounts[i] = erc1155Balances[cacheAddr][cacheId];
             unchecked {
                 ++i;
             }
@@ -909,14 +907,15 @@ contract VaultV2 {
         }
 
         if (type_ == 0) {
-            uint256 balance = IERC20(token).balanceOf(address(this));
+            uint256 balance = ERC20(token).balanceOf(address(this));
             uint256 balanceStored = erc20Balances[token];
             if (balance > balanceStored) {
-                require(IERC20(token).transfer(owner, balance - balanceStored), "V_S: ERC20 transfer failed");
+                ERC20(token).safeTransfer(owner, balance - balanceStored);
             }
         } else if (type_ == 1) {
             bool isStored;
-            for (uint256 i; i < erc721Stored.length;) {
+            uint256 erc721StoredLength = erc721Stored.length;
+            for (uint256 i; i < erc721StoredLength;) {
                 if (erc721Stored[i] == token && erc721TokenIds[i] == id) {
                     isStored = true;
                     break;
