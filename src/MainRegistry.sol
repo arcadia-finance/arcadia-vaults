@@ -330,6 +330,12 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         uint256 valueInUsd;
         uint256 valueInBaseCurrency;
 
+        //Get the BaseCurrency-USD rate if the BaseCurrency is different from USD
+        if (baseCurrency > 0) {
+            (, rateBaseCurrencyToUsd,,,) =
+                IChainLinkData(baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle).latestRoundData();
+        }
+
         //Loop over all assets
         for (uint256 i; i < assetAddressesLength;) {
             assetAddress = assetAddresses[i];
@@ -363,33 +369,17 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
                     //USD has hardcoded precision of 18 decimals (baseCurrencyUnitCorrection set to 1)
                     //Since internal precision of value calculations is also 18 decimals, no need for a unit correction.
                     valuesAndRiskVarPerAsset[i].valueInBaseCurrency = valueInUsd;
-
-                    //If the baseCurrency is different from USD, both valueInUsd and valueInBaseCurrency can be non-zero.
                 } else {
-                    if (valueInBaseCurrency > 0) {
-                        //Bring value from internal 18 decimals to the actual number of decimals of the baseCurrency
-                        unchecked {
-                            valuesAndRiskVarPerAsset[i].valueInBaseCurrency =
-                                valueInBaseCurrency / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-                        }
-                    }
-                    if (valueInUsd > 0) {
-                        //Check if the BaseCurrency-USD rate is already fetched, this should be done only once per loop!
-                        if (rateBaseCurrencyToUsd == 0) {
-                            //Get the BaseCurrency-USD rate
-                            (, rateBaseCurrencyToUsd,,,) = IChainLinkData(
-                                baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle
-                            ).latestRoundData();
-                        }
-
-                        //Calculate the valueInBaseCurrency from the valueInUsd and the rateBaseCurrencyToUsd
-                        //And bring the final valueInBaseCurrency from internal 18 decimals to the actual number of decimals of baseCurrency
-                        unchecked {
-                            valuesAndRiskVarPerAsset[i].valueInBaseCurrency = valueInUsd.mulDivDown(
+                    //If the baseCurrency is different from USD, both valueInUsd and valueInBaseCurrency can be non-zero.
+                    //Calculate the equivalent of valueInUsd denominated in BaseCurrency and add it to valueInBaseCurrency.
+                    //And bring the final valueInBaseCurrency from internal 18 decimals to the actual number of decimals of baseCurrency
+                    unchecked {
+                        valuesAndRiskVarPerAsset[i].valueInBaseCurrency = (
+                            valueInUsd.mulDivDown(
                                 baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracleUnit,
                                 uint256(rateBaseCurrencyToUsd)
-                            ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
-                        }
+                            ) + valueInBaseCurrency
+                        ) / baseCurrencyToInformation[baseCurrency].baseCurrencyUnitCorrection;
                     }
                 }
             }
