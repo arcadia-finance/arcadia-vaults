@@ -373,6 +373,7 @@ contract BorrowAndRepay is EndToEndTest {
 
     function testSuccess_repay_ExactDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll) public {
         vm.assume(amountEth > 0);
+        vm.assume(amountCredit > 0);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor_);
 
@@ -411,6 +412,7 @@ contract BorrowAndRepay is EndToEndTest {
     {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
+        vm.assume(amountCredit > 0);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor_);
 
@@ -456,6 +458,7 @@ contract BorrowAndRepay is EndToEndTest {
         uint128 toRepay
     ) public {
         vm.assume(amountEth > 0);
+        vm.assume(toRepay > 0);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor_);
 
