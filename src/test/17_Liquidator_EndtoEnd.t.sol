@@ -75,12 +75,12 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSafemoonToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "SAFE",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "SAFE",
+                quoteAsset: "USD",
                 oracle: address(oracleSafemoonToUsd),
-                quoteAssetAddress: address(safemoon),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(safemoon),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );

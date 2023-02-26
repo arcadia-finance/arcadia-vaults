@@ -17,6 +17,11 @@ import { Owned } from "lib/solmate/src/auth/Owned.sol";
  * @author Arcadia Finance
  * @notice The Oracle Hub stores the addresses and other necessary information of the Price Oracles and returns rates of assets
  * @dev No end-user should directly interact with the Oracle-Hub, only the Main Registry, Sub-Registries or the contract owner.
+ * @dev Terminology:
+ * - oracles are named as BaseAsset/QuoteAsset: The oracle rate reflects how much of the QuoteAsset is required to buy 1 unit of the BaseAsset
+ * - The BaseCurrency is the final currency in which the asset is denominated
+ * It might get confusing since the BaseCurrency is very often the QuoteAsset of a trading pair.
+ * We know it's annoying, but we didn't choose the terminology ¯\_(ツ)_/¯, blame TradFi
  */
 contract OracleHub is Owned, IOraclesHub {
     using FixedPointMathLib for uint256;
@@ -27,12 +32,12 @@ contract OracleHub is Owned, IOraclesHub {
     struct OracleInformation {
         bool isActive;
         uint64 oracleUnit;
-        uint8 baseAssetBaseCurrency;
-        bool baseAssetIsBaseCurrency;
+        uint8 quoteAssetBaseCurrency;
+        bool quoteAssetIsBaseCurrency;
         address oracle;
-        address quoteAssetAddress;
-        bytes16 quoteAsset;
+        address baseAssetAddress;
         bytes16 baseAsset;
+        bytes16 quoteAsset;
     }
 
     /**
@@ -49,13 +54,13 @@ contract OracleHub is Owned, IOraclesHub {
      * @param oracleInformation A Struct with information about the Oracle:
      * - isActive: Boolean indicating if the oracle is active or decommissioned (and returns value 0)
      * - oracleUnit: the unit of the oracle, equal to 10 to the power of the number of decimals of the oracle
-     * - baseAssetBaseCurrency: a unique identifier if the base asset can be used as baseCurrency of a vault,
-     * 0 by default if the base asset cannot be used as baseCurrency
-     * - baseAssetIsBaseCurrency: boolean indicating if the base asset can be used as baseCurrency of a vault
+     * - quoteAssetBaseCurrency: a unique identifier if the quote asset can be used as baseCurrency of a vault,
+     * 0 by default if the quote asset cannot be used as baseCurrency
+     * - quoteAssetIsBaseCurrency: boolean indicating if the quote asset can be used as baseCurrency of a vault
      * - oracle: The contract address of the oracle
-     * - quoteAssetAddress: The contract address of the quote asset
-     * - quoteAsset: The symbol of the quote assets (only used for readability purpose)
+     * - baseAssetAddress: The contract address of the base asset
      * - baseAsset: The symbol of the base assets (only used for readability purpose)
+     * - quoteAsset: The symbol of the quote assets (only used for readability purpose)
      * @dev It is not possible to overwrite the information of an existing Oracle in the Oracle Hub.
      * @dev Oracles can't have more than 18 decimals.
      */
@@ -70,27 +75,32 @@ contract OracleHub is Owned, IOraclesHub {
     /**
      * @notice Checks if a series of oracles adheres to a predefined ruleset
      * @param oracles An array of addresses of oracle contracts
+     * @param asset The contract address of the base-asset.
      * @dev Function will do nothing if all checks pass, but reverts if at least one check fails.
      * The following checks are performed:
-     * - The oracle-address must be previously added to the Oracle-Hub.
-     * - The last oracle in the series must have USD as base-asset.
-     * - The Base-asset of all oracles must be equal to the quote-asset of the next oracle (except for the last oracle in the series).
+     * - The oracle-address must be previously added to the Oracle-Hub and must still be active.
+     * - The first oracle in the series must have asset as base-asset
+     * - The last oracle in the series must have USD as quote-asset.
+     * - The quote-asset of all oracles must be equal to the base-asset of the next oracle (except for the last oracle in the series).
      */
-    function checkOracleSequence(address[] calldata oracles) external view {
+    function checkOracleSequence(address[] calldata oracles, address asset) external view {
         uint256 oracleAdressesLength = oracles.length;
+        require(oracleAdressesLength > 0, "OH_COS: Min 1 Oracle");
         require(oracleAdressesLength <= 3, "OH_COS: Max 3 Oracles");
         address oracle;
         for (uint256 i; i < oracleAdressesLength;) {
             oracle = oracles[i];
-            require(inOracleHub[oracle], "OH_COS: Unknown Oracle");
-            if (i > 0) {
+            require(oracleToOracleInformation[oracle].isActive, "OH_COS: Oracle not active");
+            if (i == 0) {
+                require(asset == oracleToOracleInformation[oracle].baseAssetAddress, "OH_COS: No Match First bAsset");
+            } else {
                 require(
-                    oracleToOracleInformation[oracles[i - 1]].baseAsset == oracleToOracleInformation[oracle].quoteAsset,
-                    "OH_COS: No Match qAsset and bAsset"
+                    oracleToOracleInformation[oracles[i - 1]].quoteAsset == oracleToOracleInformation[oracle].baseAsset,
+                    "OH_COS: No Match bAsset and qAsset"
                 );
             }
             if (i == oracleAdressesLength - 1) {
-                require(oracleToOracleInformation[oracle].baseAsset == "USD", "OH_COS: Last bAsset not USD");
+                require(oracleToOracleInformation[oracle].quoteAsset == "USD", "OH_COS: Last qAsset not USD");
             }
             unchecked {
                 ++i;
@@ -135,7 +145,7 @@ contract OracleHub is Owned, IOraclesHub {
     /**
      * @notice Returns the rate of a certain asset, denominated in USD or in another BaseCurrency
      * @param oracles An array of addresses of oracle contracts
-     * @param baseCurrency The BaseCurrency (base-asset) in which the rate is ideally expressed
+     * @param baseCurrency The BaseCurrency in which the rate is ideally expressed
      * @return rateInUsd The rate of the asset denominated in USD, integer with 18 Decimals precision
      * @return rateInBaseCurrency The rate of the asset denominated in a BaseCurrency different from USD, integer with 18 Decimals precision
      * @dev The Function will loop over all oracles-addresses and find the total rate of the asset by
@@ -148,10 +158,10 @@ contract OracleHub is Owned, IOraclesHub {
      * - Third and final rate will overflow when R1 * R2 * R3 * 10**(18 - D1 - D2) > MAXUINT256
      * @dev The rate of an asset will be denominated in a baseCurrency different from USD if and only if
      * the given baseCurrency is different from USD (baseCurrency is not 0) and one of the intermediate oracles to price the asset has
-     * the given baseCurrency as base-asset.
+     * the given baseCurrency as quote-asset.
      * The rate of an asset will be denominated in USD if the baseCurrency is USD (baseCurrency equals 0) or
      * the given baseCurrency is different from USD (baseCurrency is not 0) but none of the oracles to price the asset has
-     * the given baseCurrency as base-asset.
+     * the given baseCurrency as quote-asset.
      * Only one of the two values can be different from 0.
      */
     function getRate(address[] memory oracles, uint256 baseCurrency)
@@ -176,11 +186,11 @@ contract OracleHub is Owned, IOraclesHub {
 
             rate = rate.mulDivDown(uint256(tempRate), oracleToOracleInformation[oracleAddressAtIndex].oracleUnit);
 
-            if (oracleToOracleInformation[oracleAddressAtIndex].baseAssetIsBaseCurrency) {
-                if (oracleToOracleInformation[oracleAddressAtIndex].baseAssetBaseCurrency == 0) {
+            if (oracleToOracleInformation[oracleAddressAtIndex].quoteAssetIsBaseCurrency) {
+                if (oracleToOracleInformation[oracleAddressAtIndex].quoteAssetBaseCurrency == 0) {
                     //If rate is expressed in USD, return rate expressed in USD
                     return (rate, 0);
-                } else if (oracleToOracleInformation[oracleAddressAtIndex].baseAssetBaseCurrency == baseCurrency) {
+                } else if (oracleToOracleInformation[oracleAddressAtIndex].quoteAssetBaseCurrency == baseCurrency) {
                     //If rate is expressed in baseCurrency, return rate expressed in baseCurrency
                     return (0, rate);
                 }
@@ -191,6 +201,6 @@ contract OracleHub is Owned, IOraclesHub {
             }
         }
         //Since all series of oracles must end with USD, it should be impossible to arrive at this point
-        revert("OH_GR: No bAsset in USD or bCurr");
+        revert("OH_GR: No qAsset in USD or bCurr");
     }
 }

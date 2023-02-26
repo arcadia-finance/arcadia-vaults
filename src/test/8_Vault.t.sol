@@ -806,8 +806,8 @@ contract MarginRequirementsTest is vaultTests {
 
         (, uint256[] memory assetIds,) = depositBaycInVault(tokenIds, vaultOwner);
         uint256 depositBaycValue = (
-            (Constants.WAD * rateWbaycToEth * rateEthToUsd)
-                / 10 ** (Constants.oracleEthToUsdDecimals + Constants.oracleWbaycToEthDecimals)
+            (Constants.WAD * rateBaycToEth * rateEthToUsd)
+                / 10 ** (Constants.oracleEthToUsdDecimals + Constants.oracleBaycToEthDecimals)
         ) * assetIds.length;
         assertEq(
             ((depositValueEth + depositValueLink + depositBaycValue) / 10 ** (18 - Constants.daiDecimals) * collFactor_)
@@ -1863,9 +1863,8 @@ contract AssetManagementTest is vaultTests {
         vm.assume(assetIds.length >= amountsWithdrawn && assetIds.length > 1 && amountsWithdrawn > 1);
 
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint256 rateInUsd = (
-            ((Constants.WAD * rateWbaycToEth) / 10 ** Constants.oracleWbaycToEthDecimals) * rateEthToUsd
-        ) / 10 ** Constants.oracleEthToUsdDecimals / 10 ** (18 - Constants.daiDecimals);
+        uint256 rateInUsd = (((Constants.WAD * rateBaycToEth) / 10 ** Constants.oracleBaycToEthDecimals) * rateEthToUsd)
+            / 10 ** Constants.oracleEthToUsdDecimals / 10 ** (18 - Constants.daiDecimals);
 
         uint128 maxAmountCredit = uint128(((assetIds.length - amountsWithdrawn) * rateInUsd * collFactor_) / 100);
 
@@ -1961,9 +1960,8 @@ contract AssetManagementTest is vaultTests {
 
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        uint256 rateInUsd = (
-            ((Constants.WAD * rateWbaycToEth) / 10 ** Constants.oracleWbaycToEthDecimals) * rateEthToUsd
-        ) / 10 ** Constants.oracleEthToUsdDecimals / 10 ** (18 - Constants.daiDecimals);
+        uint256 rateInUsd = (((Constants.WAD * rateBaycToEth) / 10 ** Constants.oracleBaycToEthDecimals) * rateEthToUsd)
+            / 10 ** Constants.oracleEthToUsdDecimals / 10 ** (18 - Constants.daiDecimals);
         uint256 valueOfDeposit = rateInUsd * assetIds.length;
 
         uint256 valueOfWithdrawal = rateInUsd * randomAmounts;

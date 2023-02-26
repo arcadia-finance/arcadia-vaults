@@ -927,7 +927,7 @@ contract PricingLogicTest is MainRegistryTest {
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
 
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
         vm.stopPrank();
     }
@@ -976,11 +976,11 @@ contract PricingLogicTest is MainRegistryTest {
     }
 
     function testSuccess_getListOfValuesPerAsset() public {
-        // Given: oracleOwner calls transmit for rateEthToUsd, rateLinkToUsd and rateWbaycToEth
+        // Given: oracleOwner calls transmit for rateEthToUsd, rateLinkToUsd and rateBaycToEth
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-        oracleWbaycToEth.transmit(int256(rateWbaycToEth));
+        oracleBaycToEth.transmit(int256(rateBaycToEth));
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0,
@@ -1009,8 +1009,8 @@ contract PricingLogicTest is MainRegistryTest {
             / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 linkValueInEth = (linkValueInUsd * 10 ** Constants.oracleEthToUsdDecimals) / rateEthToUsd
             / 10 ** (18 - Constants.ethDecimals);
-        uint256 baycValueInEth = (Constants.WAD * rateWbaycToEth * assetAmounts[2])
-            / 10 ** Constants.oracleWbaycToEthDecimals / 10 ** (18 - Constants.ethDecimals);
+        uint256 baycValueInEth = (Constants.WAD * rateBaycToEth * assetAmounts[2])
+            / 10 ** Constants.oracleBaycToEthDecimals / 10 ** (18 - Constants.ethDecimals);
 
         uint256[] memory expectedListOfValuesPerAsset = new uint256[](3);
         expectedListOfValuesPerAsset[0] = ethValueInEth;
@@ -1075,11 +1075,11 @@ contract PricingLogicTest is MainRegistryTest {
 
     function testSuccess_getTotalValue() public {
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        // Given: oracleOwner calls transmit for rateEthToUsd, rateLinkToUsd and rateWbaycToEth
+        // Given: oracleOwner calls transmit for rateEthToUsd, rateLinkToUsd and rateBaycToEth
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-        oracleWbaycToEth.transmit(int256(rateWbaycToEth));
+        oracleBaycToEth.transmit(int256(rateBaycToEth));
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0,
@@ -1107,8 +1107,8 @@ contract PricingLogicTest is MainRegistryTest {
             / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 linkValueInEth = (linkValueInUsd * 10 ** Constants.oracleEthToUsdDecimals) / rateEthToUsd
             / 10 ** (18 - Constants.ethDecimals);
-        uint256 baycValueInEth = (Constants.WAD * rateWbaycToEth * assetAmounts[2])
-            / 10 ** Constants.oracleWbaycToEthDecimals / 10 ** (18 - Constants.ethDecimals);
+        uint256 baycValueInEth = (Constants.WAD * rateBaycToEth * assetAmounts[2])
+            / 10 ** Constants.oracleBaycToEthDecimals / 10 ** (18 - Constants.ethDecimals);
 
         uint256 expectedTotalValue = ethValueInEth + linkValueInEth + baycValueInEth;
 
@@ -1260,18 +1260,32 @@ contract PricingLogicTest is MainRegistryTest {
                 ) * 10 ** linkDecimals
         );
 
+        ArcadiaOracle oracle = arcadiaOracleFixture.initMockedOracle(0, "LINK / USD");
         vm.startPrank(creatorAddress);
         link = new ERC20Mock(
             "LINK Mock",
             "mLINK",
-            linkDecimals
+            linkDecimals);
+        address[] memory oracleAssetToUsdArr = new address[](1);
+        oracleAssetToUsdArr[0] = address(oracle);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "LINK",
+                quoteAsset: "USD",
+                oracle: address(oracle),
+                baseAssetAddress: address(link),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
+            })
         );
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
+        standardERC20PricingModule.addAsset(address(link), oracleAssetToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsdNew));
-        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
+        oracle.transmit(int256(rateLinkToUsd));
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
@@ -1316,17 +1330,32 @@ contract PricingLogicTest is MainRegistryTest {
                     / 10 ** (Constants.oracleLinkToUsdDecimals - linkDecimals)
         );
 
+        ArcadiaOracle oracle = arcadiaOracleFixture.initMockedOracle(0, "LINK / USD");
         vm.startPrank(creatorAddress);
         link = new ERC20Mock(
             "LINK Mock",
             "mLINK",
             linkDecimals);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
+        address[] memory oracleAssetToUsdArr = new address[](1);
+        oracleAssetToUsdArr[0] = address(oracle);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 0,
+                quoteAssetBaseCurrency: 0,
+                baseAsset: "ASSET",
+                quoteAsset: "USD",
+                oracle: address(oracle),
+                baseAssetAddress: address(link),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        standardERC20PricingModule.addAsset(address(link), oracleAssetToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsdNew));
-        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
+        oracle.transmit(int256(rateLinkToUsd));
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
