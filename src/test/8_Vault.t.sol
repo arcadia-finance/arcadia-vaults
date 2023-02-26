@@ -1409,7 +1409,7 @@ contract AssetManagementTest is vaultTests {
         }
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_D: Length mismatch");
+        vm.expectRevert("MR_BPD: LENGTH_MISMATCH");
         vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
@@ -1691,7 +1691,7 @@ contract AssetManagementTest is vaultTests {
         }
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_W: Length mismatch");
+        vm.expectRevert("MR_BPW: LENGTH_MISMATCH");
         vault_.withdraw(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }

@@ -502,13 +502,7 @@ contract Vault is IVault {
         external
         onlyOwner
     {
-        uint256 assetAddressesLength = assetAddresses.length;
-
-        require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
-            "V_D: Length mismatch"
-        );
-
+        //No need to check that all arrays have equal length, this check is already done in the MainRegistry.
         _deposit(assetAddresses, assetIds, assetAmounts, msg.sender);
     }
 
@@ -588,17 +582,11 @@ contract Vault is IVault {
         external
         onlyOwner
     {
-        uint256 assetAddressesLength = assetAddresses.length;
-
-        require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length,
-            "V_W: Length mismatch"
-        );
-
+        //No need to check that all arrays have equal length, this check is already done in the MainRegistry.
         _withdraw(assetAddresses, assetIds, assetAmounts, msg.sender);
 
         uint256 usedMargin = getUsedMargin();
-        if (usedMargin != 0) {
+        if (usedMargin > 0) {
             require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }

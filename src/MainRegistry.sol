@@ -275,7 +275,7 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         uint256[] calldata amounts
     ) external whenWithdrawNotPaused onlyVault returns (uint256[] memory assetTypes) {
         uint256 addressesLength = assetAddresses.length;
-        require(addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
+        require(addressesLength == assetIds.length && addressesLength == amounts.length, "MR_BPW: LENGTH_MISMATCH");
 
         address assetAddress;
         assetTypes = new uint256[](addressesLength);
