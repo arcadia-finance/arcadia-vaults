@@ -149,7 +149,7 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
      * - A call to the oracle reverts
      * - The oracle returns the minimum value
      * - The oracle returns the maximum value
-     * - The oracle didn't upadet for over a week
+     * - The oracle didn't update for over a week
      * @dev This function could be called to set an oracle address for the basecurrency USD (since it is initiated with the zero address).
      * This oracle is however never used, hence would not cause any problems (exept gas waste).
      */
