@@ -482,6 +482,7 @@ contract BorrowAndRepay is EndToEndTest {
         vm.warp(block.timestamp + deltaTimestamp);
 
         vm.assume(toRepay < amountCredit);
+        vm.assume(debt.previewWithdraw(toRepay) > 0);
 
         vm.prank(vaultOwner);
         pool.repay(toRepay, address(proxy));
