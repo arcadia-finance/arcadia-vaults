@@ -9,7 +9,9 @@ pragma solidity ^0.8.13;
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
 contract AbstractPricingModuleExtension is PricingModule {
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) { }
+    constructor(address mainRegistry_, address oracleHub_, uint256 assetType_)
+        PricingModule(mainRegistry_, oracleHub_, assetType_, msg.sender)
+    { }
 
     function setRiskVariablesForAsset(address asset, RiskVarInput[] memory riskVarInputs) public {
         _setRiskVariablesForAsset(asset, riskVarInputs);
@@ -40,7 +42,8 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         vm.prank(creatorAddress);
         abstractPricingModule = new AbstractPricingModuleExtension(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
     }
 
@@ -48,15 +51,17 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
                        DEPLOYMENT
     ///////////////////////////////////////////////////////////////*/
 
-    function testSuccess_deployment(address mainRegistry_, address oracleHub_) public {
+    function testSuccess_deployment(address mainRegistry_, address oracleHub_, uint256 assetType_) public {
         vm.prank(creatorAddress);
         abstractPricingModule = new AbstractPricingModuleExtension(
             mainRegistry_,
-            oracleHub_
+            oracleHub_,
+            assetType_
         );
 
         assertEq(abstractPricingModule.mainRegistry(), mainRegistry_);
         assertEq(abstractPricingModule.oracleHub(), oracleHub_);
+        assertEq(abstractPricingModule.assetType(), assetType_);
         assertEq(abstractPricingModule.riskManager(), creatorAddress);
     }
 
@@ -310,13 +315,13 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         address unprivilegedAddress_,
         address asset,
         uint128 amount,
-        address vault
+        address vault_
     ) public {
         vm.assume(unprivilegedAddress_ != address(mainRegistry));
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("APM: ONLY_MAIN_REGISTRY");
-        abstractPricingModule.processDeposit(vault, asset, 0, amount);
+        abstractPricingModule.processDeposit(vault_, asset, 0, amount);
         vm.stopPrank();
     }
 
@@ -325,7 +330,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         uint128 exposure,
         uint128 amount,
         uint128 maxExposure,
-        address vault
+        address vault_
     ) public {
         vm.assume(exposure <= type(uint128).max - amount);
         vm.assume(exposure + amount > maxExposure);
@@ -333,7 +338,7 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
 
         vm.startPrank(address(mainRegistry));
         vm.expectRevert("APM_PD: Exposure not in limits");
-        abstractPricingModule.processDeposit(vault, address(asset), 0, amount);
+        abstractPricingModule.processDeposit(vault_, address(asset), 0, amount);
         vm.stopPrank();
     }
 
@@ -342,14 +347,14 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         uint128 exposure,
         uint128 amount,
         uint128 maxExposure,
-        address vault
+        address vault_
     ) public {
         vm.assume(exposure <= type(uint128).max - amount);
         vm.assume(exposure + amount <= maxExposure);
         abstractPricingModule.setExposure(asset, exposure, maxExposure);
 
         vm.prank(address(mainRegistry));
-        abstractPricingModule.processDeposit(vault, address(asset), 0, amount);
+        abstractPricingModule.processDeposit(vault_, address(asset), 0, amount);
 
         (, uint128 actualExposure) = abstractPricingModule.exposure(address(asset));
         uint128 expectedExposure = exposure + amount;
@@ -362,13 +367,13 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         address asset,
         uint128 id,
         uint128 amount,
-        address vault
+        address vault_
     ) public {
         vm.assume(unprivilegedAddress_ != address(mainRegistry));
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("APM: ONLY_MAIN_REGISTRY");
-        abstractPricingModule.processWithdrawal(vault, asset, id, amount);
+        abstractPricingModule.processWithdrawal(vault_, asset, id, amount);
         vm.stopPrank();
     }
 
@@ -378,14 +383,14 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         uint128 amount,
         uint128 maxExposure,
         uint128 id,
-        address vault
+        address vault_
     ) public {
         vm.assume(maxExposure >= exposure);
         vm.assume(exposure >= amount);
         abstractPricingModule.setExposure(asset, exposure, maxExposure);
 
         vm.prank(address(mainRegistry));
-        abstractPricingModule.processWithdrawal(vault, asset, id, amount);
+        abstractPricingModule.processWithdrawal(vault_, asset, id, amount);
 
         (, uint128 actualExposure) = abstractPricingModule.exposure(address(asset));
         uint128 expectedExposure = exposure - amount;

@@ -58,7 +58,8 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
         require(vaultVersion <= latestVaultVersion, "FTRY_CV: Unknown vault version");
         require(!vaultVersionBlocked[vaultVersion], "FTRY_CV: Vault version blocked");
 
-        vault = address(new Proxy{salt: bytes32(salt)}(vaultDetails[vaultVersion].logic));
+        //Hash tx.origin with the user provided salt to avoid front-running vault deployment with an identical salt.
+        vault = address(new Proxy{salt: keccak256(abi.encodePacked(salt, tx.origin))}(vaultDetails[vaultVersion].logic));
 
         IVault(vault).initialize(msg.sender, vaultDetails[vaultVersion].registry, uint16(vaultVersion), baseCurrency);
 
@@ -237,8 +238,9 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Function called by a Vault at the start of a liquidation to transfer ownership.
+     * @notice Function called by a Vault at the start of a liquidation to transfer ownership to the Liquidator contract.
      * @param liquidator The contract address of the liquidator.
+     * @dev This transfer bypasses the standard transferFrom and safeTransferFrom from the ERC-721 standard.
      */
     function liquidate(address liquidator) external whenLiquidateNotPaused {
         require(isVault(msg.sender), "FTRY: Not a vault");
@@ -292,9 +294,5 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
     function tokenURI(uint256 tokenId) public view override returns (string memory uri) {
         require(_ownerOf[tokenId] != address(0), "ERC721Metadata: URI query for nonexistent token");
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
-    }
-
-    function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
-        return this.onERC721Received.selector;
     }
 }

@@ -39,7 +39,8 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
 
         floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            1
         );
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         vm.stopPrank();
@@ -218,6 +219,20 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         assertEq(actualExposure, 0);
     }
 
+    function testRevert_processDeposit_NotOne(uint256 assetId, address vault, uint256 amount) public {
+        vm.assume(amount != 1); //Not in range
+        vm.prank(creatorAddress);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, 1);
+
+        vm.startPrank(address(mainRegistry));
+        vm.expectRevert("PM721_PD: Amount not 1");
+        floorERC721PricingModule.processDeposit(vault, address(bayc), assetId, amount);
+        vm.stopPrank();
+
+        (, uint128 actualExposure) = floorERC721PricingModule.exposure(address(bayc));
+        assertEq(actualExposure, 0);
+    }
+
     function testSuccess_processDeposit_Positive(uint256 assetId, address vault) public {
         vm.prank(creatorAddress);
         floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, 1);
@@ -240,6 +255,17 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("APM: ONLY_MAIN_REGISTRY");
         floorERC721PricingModule.processWithdrawal(vault, address(bayc), 1, 1);
+        vm.stopPrank();
+    }
+
+    function testRevert_processWithdrawal_NotOne(uint256 assetId, address vault, uint256 amount) public {
+        vm.assume(amount != 1); //Not in range
+        vm.prank(creatorAddress);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, 1);
+
+        vm.startPrank(address(mainRegistry));
+        vm.expectRevert("PM721_PW: Amount not 1");
+        floorERC721PricingModule.processWithdrawal(vault, address(bayc), assetId, amount);
         vm.stopPrank();
     }
 

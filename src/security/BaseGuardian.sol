@@ -54,8 +54,8 @@ abstract contract BaseGuardian is Owned {
      * @dev Allows onlyOwner to change the guardian address.
      */
     function changeGuardian(address guardian_) external onlyOwner {
-        guardian = guardian_;
         emit GuardianChanged(guardian, guardian_);
+        guardian = guardian_;
     }
 
     /**

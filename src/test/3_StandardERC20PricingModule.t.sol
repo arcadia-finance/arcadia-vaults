@@ -39,7 +39,8 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         vm.stopPrank();
