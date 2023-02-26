@@ -145,6 +145,46 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         }
     }
 
+    /**
+     * @notice Sets a new oracle for the rate baseCurrency-USD.
+     * @param baseCurrency The identifier of the baseCurrency for which the new oracle is set.
+     * @param newOracle The new oracle address.
+     * @dev This function is part of an oracle failsafe mechanism.
+     * New oracles can only be set if the current oracle is not performing as intended:
+     * - A call to the oracle reverts
+     * - The oracle returns the minimum value
+     * - The oracle returns the maximum value
+     * - The oracle didn't update for over a week
+     * @dev This function could be called to set an oracle address for the basecurrency USD (since it is initiated with the zero address).
+     * This oracle is however never used, hence would not cause any problems (exept gas waste).
+     */
+    function setOracle(uint256 baseCurrency, address newOracle) external onlyOwner {
+        require(baseCurrency < baseCurrencyCounter, "MR_SO: UNKNOWN_BASECURRENCY");
+
+        bool oracleIsHealthy = true;
+        address oldOracle = baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle;
+
+        try IChainLinkData(oldOracle).latestRoundData() returns (
+            uint80, int256 answer, uint256, uint256 updatedAt, uint80
+        ) {
+            if (answer <= IChainLinkData(IChainLinkData(oldOracle).aggregator()).minAnswer()) {
+                oracleIsHealthy = false;
+            } else if (answer >= IChainLinkData(IChainLinkData(oldOracle).aggregator()).maxAnswer()) {
+                oracleIsHealthy = false;
+            } else if (updatedAt <= block.timestamp - 1 weeks) {
+                oracleIsHealthy = false;
+            }
+        } catch {
+            oracleIsHealthy = false;
+        }
+
+        if (oracleIsHealthy) {
+            revert("MR_SO: ORACLE_HEALTHY");
+        } else {
+            baseCurrencyToInformation[baseCurrency].baseCurrencyToUsdOracle = newOracle;
+        }
+    }
+
     /* ///////////////////////////////////////////////////////////////
                         PRICE MODULE MANAGEMENT
     /////////////////////////////////////////////////////////////// */
