@@ -32,10 +32,7 @@ contract gasRepay_1ERC20 is GasTestFixture {
         s_assetAmounts = new uint256[](1);
         s_assetAmounts[0] = 10 ** Constants.ethDecimals;
 
-        s_assetTypes = new uint256[](1);
-        s_assetTypes[0] = 0;
-
-        proxy.deposit(s_assetAddresses, s_assetIds, s_assetAmounts, s_assetTypes);
+        proxy.deposit(s_assetAddresses, s_assetIds, s_assetAmounts);
 
         uint256 valueEth = (((10 ** 18 * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * s_assetAmounts[0])
             / 10 ** Constants.ethDecimals;

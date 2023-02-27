@@ -39,13 +39,7 @@ contract gasLiquidate_2ERC202ERC721 is GasTestFixture {
         s_assetAmounts[2] = 1;
         s_assetAmounts[3] = 1;
 
-        s_assetTypes = new uint256[](4);
-        s_assetTypes[0] = 0;
-        s_assetTypes[1] = 0;
-        s_assetTypes[2] = 1;
-        s_assetTypes[3] = 1;
-
-        proxy.deposit(s_assetAddresses, s_assetIds, s_assetAmounts, s_assetTypes);
+        proxy.deposit(s_assetAddresses, s_assetIds, s_assetAmounts);
 
         uint256 valueEth = (((10 ** 18 * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * s_assetAmounts[0])
             / 10 ** Constants.ethDecimals;

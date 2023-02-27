@@ -12,6 +12,7 @@ import { LendingPool, DebtToken, ERC20, DataTypes } from "../../lib/arcadia-lend
 import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 import { ActionMultiCall } from "../actions/MultiCall.sol";
 import { MultiActionMock } from "../mockups/MultiActionMock.sol";
+import { FixedPointMathLib } from "../../lib/solmate/src/utils/FixedPointMathLib.sol";
 
 abstract contract EndToEndTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -83,12 +84,7 @@ abstract contract EndToEndTest is DeployArcadiaVaults {
     /////////////////////////////////////////////////////////////// */
     function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
+        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
     {
         assetAddresses = new address[](1);
         assetAddresses[0] = address(token);
@@ -99,14 +95,11 @@ abstract contract EndToEndTest is DeployArcadiaVaults {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = amount;
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.prank(tokenCreatorAddress);
         token.mint(sender, amount);
 
         vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 }
@@ -294,12 +287,8 @@ contract BorrowAndRepay is EndToEndTest {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        ) = depositERC20InVault(eth, amountEth, vaultOwner);
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint128 amountCredit = uint128(proxy.getFreeMargin() - 1);
 
@@ -309,7 +298,7 @@ contract BorrowAndRepay is EndToEndTest {
         assetAmounts[0] = amountEthWithdrawal;
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_W: coll. value too low!");
-        proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.withdraw(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -326,12 +315,8 @@ contract BorrowAndRepay is EndToEndTest {
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
 
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        ) = depositERC20InVault(eth, amountEth, vaultOwner);
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.assume(
             proxy.getFreeMargin()
@@ -345,7 +330,7 @@ contract BorrowAndRepay is EndToEndTest {
         assetAmounts[0] = amountEthWithdrawal;
         vm.startPrank(vaultOwner);
         proxy.getFreeMargin();
-        proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.withdraw(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -389,6 +374,7 @@ contract BorrowAndRepay is EndToEndTest {
 
     function testSuccess_repay_ExactDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll) public {
         vm.assume(amountEth > 0);
+        vm.assume(amountCredit > 0);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor_);
 
@@ -427,6 +413,7 @@ contract BorrowAndRepay is EndToEndTest {
     {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
+        vm.assume(amountCredit > 0);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor_);
 
@@ -472,6 +459,7 @@ contract BorrowAndRepay is EndToEndTest {
         uint128 toRepay
     ) public {
         vm.assume(amountEth > 0);
+        vm.assume(toRepay > 0);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor_);
 
@@ -494,6 +482,7 @@ contract BorrowAndRepay is EndToEndTest {
         vm.warp(block.timestamp + deltaTimestamp);
 
         vm.assume(toRepay < amountCredit);
+        vm.assume(debt.previewWithdraw(toRepay) > 0);
 
         vm.prank(vaultOwner);
         pool.repay(toRepay, address(proxy));
