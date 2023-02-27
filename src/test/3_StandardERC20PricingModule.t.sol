@@ -72,6 +72,13 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
+    function testRevert_addAsset_BadOracleSequence() public {
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("OH_COS: Min 1 Oracle");
+        standardERC20PricingModule.addAsset(address(eth), new address[](0), emptyRiskVarInput, type(uint128).max);
+        vm.stopPrank();
+    }
+
     function testRevert_addAsset_MoreThan18Decimals() public {
         vm.prank(tokenCreatorAddress);
         ERC20Mock asset = new ERC20Mock("ASSET", "ASSET", 19);
@@ -147,6 +154,88 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
 
         // Then: address(eth) should be inPricingModule
         assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
+    }
+
+    function testRevert_setOracles_NonOwner(address asset, address oracle, address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("UNAUTHORIZED");
+        standardERC20PricingModule.setOracles(asset, oracleEthToUsdArr, oracle);
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracles_UnknownAsset(address asset, address oracle) public {
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM20_SO: Unknown Oracle");
+        standardERC20PricingModule.setOracles(asset, new address[](0), oracle);
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracles_UnknownOracle(address oracle) public {
+        vm.assume(oracle != address(oracleEthToUsd));
+
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM20_SO: Unknown Oracle");
+        standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr, oracle);
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracles_ActiveOracle() public {
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM20_SO: Oracle still active");
+        standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr, address(oracleEthToUsd));
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracles_BadOracleSequence() public {
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+
+        vm.prank(oracleOwner);
+        oracleEthToUsd.transmit(0);
+        oracleHub.decommissionOracle(address(oracleEthToUsd));
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("OH_COS: Oracle not active");
+        standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr, address(oracleEthToUsd));
+        vm.stopPrank();
+    }
+
+    function testSuccess_setOracles() public {
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+
+        vm.prank(oracleOwner);
+        oracleEthToUsd.transmit(0);
+        oracleHub.decommissionOracle(address(oracleEthToUsd));
+
+        ArcadiaOracle oracle = arcadiaOracleFixture.initMockedOracle(0, "ETH / USD");
+        vm.startPrank(creatorAddress);
+        address[] memory oracleAssetToUsdArr = new address[](1);
+        oracleAssetToUsdArr[0] = address(oracle);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "ETH",
+                quoteAsset: "USD",
+                oracle: address(oracle),
+                baseAssetAddress: address(eth),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);
+        standardERC20PricingModule.setOracles(address(eth), oracleAssetToUsdArr, address(oracleEthToUsd));
     }
 
     /*///////////////////////////////////////////////////////////////
