@@ -14,7 +14,10 @@ contract FactoryTest is DeployArcadiaVaults {
     MainRegistry internal mainRegistry2;
 
     //events
-    event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 length);
+    event Transfer(address indexed from, address indexed to, uint256 indexed id);
+    event VaultUpgraded(address indexed vaultAddress, uint16 oldVersion, uint16 indexed newVersion);
+    event VaultVersionAdded(uint16 indexed version, address indexed registry, address indexed logic, bytes32 versionRoot);
+    event VaultVersionBlocked(uint16 version);
 
     //this is a before
     constructor() DeployArcadiaVaults() { }
@@ -68,6 +71,10 @@ contract FactoryTest is DeployArcadiaVaults {
     function testSuccess_createVault_DeployVaultContractMappings(uint256 salt) public {
         uint256 amountBefore = factory.allVaultsLength();
 
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(0), address(this), 1);
+        vm.expectEmit(false, true, true, true);
+        emit VaultUpgraded(address(0), 0, 1);
         address actualDeployed = factory.createVault(salt, 0, address(0));
         assertEq(amountBefore + 1, factory.allVaultsLength());
         assertEq(actualDeployed, factory.allVaults(factory.allVaultsLength() - 1));
@@ -548,8 +555,11 @@ contract FactoryTest is DeployArcadiaVaults {
 
         uint256 latestVaultVersionPre = factory.latestVaultVersion();
 
-        vm.prank(creatorAddress);
+        vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit VaultVersionAdded(uint16(latestVaultVersionPre + 1), mainRegistry_, logic, Constants.upgradeRoot1To2);
         factory.setNewVaultInfo(mainRegistry_, logic, Constants.upgradeRoot1To2, data);
+        vm.stopPrank();
 
         (address registry_, address addresslogic_, bytes32 root, bytes memory data_) =
             factory.vaultDetails(latestVaultVersionPre + 1);
@@ -652,8 +662,11 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(vaultVersion <= currentVersion);
         vm.assume(vaultVersion != 0);
 
-        vm.prank(creatorAddress);
+        vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit VaultVersionBlocked(vaultVersion);
         factory.blockVaultVersion(vaultVersion);
+        vm.stopPrank();
 
         assertTrue(factory.vaultVersionBlocked(vaultVersion));
     }
