@@ -161,7 +161,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
         vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
 
-        assetInfo = Assets({assetAddresses: assetAddresses, assetIds: assetIds, assetAmounts: assetAmounts});
+        assetInfo = Assets({ assetAddresses: assetAddresses, assetIds: assetIds, assetAmounts: assetAmounts });
     }
 
     function depositLinkInVault(uint8 amount, address sender)

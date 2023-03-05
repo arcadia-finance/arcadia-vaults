@@ -220,7 +220,7 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         inMainRegistry[assetAddress] = true;
         assetsInMainRegistry.push(assetAddress);
         assetToAssetInformation[assetAddress] =
-            AssetInformation({assetType: uint96(assetType), pricingModule: msg.sender});
+            AssetInformation({ assetType: uint96(assetType), pricingModule: msg.sender });
     }
 
     /**
