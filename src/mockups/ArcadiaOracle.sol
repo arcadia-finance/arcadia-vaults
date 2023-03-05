@@ -54,7 +54,7 @@ contract ArcadiaOracle is Owned {
             offchain_connectors[_transmitter].role != Role.Transmitter,
             "Oracle: Address is already saved as Transmitter!"
         );
-        offchain_connectors[_transmitter] = OffchainConnector({ isActive: true, role: Role.Transmitter });
+        offchain_connectors[_transmitter] = OffchainConnector({isActive: true, role: Role.Transmitter});
     }
 
     /**

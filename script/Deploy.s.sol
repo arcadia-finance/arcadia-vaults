@@ -336,7 +336,7 @@ contract ArcadiaVaultDeployer is Test {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_DEPLOYER");
 
         vm.startBroadcast(anvilPrivateKey);
-        payable(address(weth)).call{ value: 5000 ether }("");
+        payable(address(weth)).call{value: 5000 ether}("");
         payable(vm.addr(userPrivateKey)).transfer(1000 ether);
         payable(vm.addr(deployerPrivateKey)).transfer(1000 ether);
         weth.transfer(vm.addr(userPrivateKey), 5000 ether);
@@ -445,6 +445,5 @@ contract ArcadiaVaultDeployer is Test {
         );
 
         vm.stopBroadcast();
-
     }
 }
