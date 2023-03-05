@@ -34,6 +34,12 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
 
     PricingModule.RiskVarInput[] riskVarInputs_;
 
+    event RiskManagerUpdated(address riskManager);
+    event RiskVariablesSet(
+        address indexed asset, uint8 indexed baseCurrencyId, uint16 collateralFactor, uint16 liquidationFactor
+    );
+    event MaxExposureSet(address indexed asset, uint128 maxExposure);
+
     //this is a before
     constructor() DeployArcadiaVaults() { }
 
@@ -52,12 +58,15 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     ///////////////////////////////////////////////////////////////*/
 
     function testSuccess_deployment(address mainRegistry_, address oracleHub_, uint256 assetType_) public {
-        vm.prank(creatorAddress);
+        vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit RiskManagerUpdated(creatorAddress);
         abstractPricingModule = new AbstractPricingModuleExtension(
             mainRegistry_,
             oracleHub_,
             assetType_
         );
+        vm.stopPrank();
 
         assertEq(abstractPricingModule.mainRegistry(), mainRegistry_);
         assertEq(abstractPricingModule.oracleHub(), oracleHub_);
@@ -72,8 +81,11 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     function testSuccess_setRiskManager(address newRiskManager) public {
         assertEq(abstractPricingModule.riskManager(), creatorAddress);
 
-        vm.prank(creatorAddress);
+        vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit RiskManagerUpdated(newRiskManager);
         abstractPricingModule.setRiskManager(newRiskManager);
+        vm.stopPrank();
 
         assertEq(abstractPricingModule.riskManager(), newRiskManager);
     }
@@ -179,13 +191,14 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         assertEq(liquidationFactor_, 0);
     }
 
-    function testSuccess_setRiskVariables(address asset, uint256 baseCurrency, PricingModule.RiskVars memory riskVars_)
+    function testSuccess_setRiskVariables(address asset, uint8 baseCurrency, PricingModule.RiskVars memory riskVars_)
         public
     {
         vm.assume(riskVars_.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
-
         vm.assume(riskVars_.liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR);
 
+        vm.expectEmit(true, true, true, true);
+        emit RiskVariablesSet(asset, baseCurrency, riskVars_.collateralFactor, riskVars_.liquidationFactor);
         abstractPricingModule.setRiskVariables(asset, baseCurrency, riskVars_);
 
         (uint16 collateralFactor_, uint16 liquidationFactor_) =
@@ -229,20 +242,30 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
             type(uint256).max
         );
 
-        for (uint256 i; i < riskVarInputs_.length; ++i) {
+        for (uint256 i; i < riskVarInputs.length; ++i) {
             riskVarInputs_.push(riskVarInputs[i]);
-            vm.assume(riskVarInputs_[i].collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
-            vm.assume(riskVarInputs_[i].liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR);
+            vm.assume(riskVarInputs[i].collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR);
+            vm.assume(riskVarInputs[i].liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         }
 
         vm.startPrank(creatorAddress);
+        for (uint256 i; i < riskVarInputs.length; ++i) {
+            vm.expectEmit(true, true, true, true);
+            emit RiskVariablesSet(
+                riskVarInputs[i].asset,
+                riskVarInputs[i].baseCurrency,
+                riskVarInputs[i].collateralFactor,
+                riskVarInputs[i].liquidationFactor
+            );
+        }
         abstractPricingModule.setBatchRiskVariables(riskVarInputs_);
+        vm.stopPrank();
 
-        for (uint256 i; i < riskVarInputs_.length; ++i) {
+        for (uint256 i; i < riskVarInputs.length; ++i) {
             (uint16 collateralFactor_, uint16 liquidationFactor_) =
-                abstractPricingModule.getRiskVariables(riskVarInputs_[i].asset, riskVarInputs_[i].baseCurrency);
-            assertEq(collateralFactor_, riskVarInputs_[i].collateralFactor);
-            assertEq(liquidationFactor_, riskVarInputs_[i].liquidationFactor);
+                abstractPricingModule.getRiskVariables(riskVarInputs[i].asset, riskVarInputs[i].baseCurrency);
+            assertEq(collateralFactor_, riskVarInputs[i].collateralFactor);
+            assertEq(liquidationFactor_, riskVarInputs[i].liquidationFactor);
         }
     }
 
@@ -280,7 +303,17 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
         }
 
         vm.startPrank(creatorAddress);
+        for (uint256 i; i < riskVarInputs.length; ++i) {
+            vm.expectEmit(true, true, true, true);
+            emit RiskVariablesSet(
+                asset,
+                riskVarInputs[i].baseCurrency,
+                riskVarInputs[i].collateralFactor,
+                riskVarInputs[i].liquidationFactor
+            );
+        }
         abstractPricingModule.setRiskVariablesForAsset(asset, riskVarInputs_);
+        vm.stopPrank();
 
         for (uint256 i; i < riskVarInputs.length; ++i) {
             (uint16 collateralFactor_, uint16 liquidationFactor_) =
@@ -304,8 +337,11 @@ contract AbstractPricingModuleTest is DeployArcadiaVaults {
     }
 
     function testSuccess_setExposureOfAsset(address asset, uint128 maxExposure) public {
-        vm.prank(creatorAddress);
+        vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit MaxExposureSet(asset, maxExposure);
         abstractPricingModule.setExposureOfAsset(asset, maxExposure);
+        vm.stopPrank();
 
         (uint128 actualMaxExposure,) = abstractPricingModule.exposure(asset);
         assertEq(actualMaxExposure, maxExposure);
