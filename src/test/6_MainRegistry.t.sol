@@ -13,6 +13,11 @@ import "../utils/CompareArrays.sol";
 abstract contract MainRegistryTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
+    event AllowedActionSet(address indexed action, bool allowed);
+    event BaseCurrencyAdded(address indexed assetAddress, uint8 indexed baseCurrencyId, bytes8 label);
+    event PricingModuleAdded(address pricingModule);
+    event AssetAdded(address indexed assetAddress, address indexed pricingModule, uint8 assetType);
+
     //this is a before
     constructor() DeployArcadiaVaults() { }
 
@@ -44,26 +49,21 @@ abstract contract MainRegistryTest is DeployArcadiaVaults {
                         DEPLOYMENT
 /////////////////////////////////////////////////////////////// */
 contract DeploymentTest is MainRegistryTest {
-    function setUp() public override {
-        super.setUp();
-    }
+    function setUp() public override { }
 
     function testSuccess_deployment_UsdAsBaseCurrency() public {
-        // Given: All necessary contracts deployed on setup
-        // When:
-        // Then: baseCurrencyLabel should return "USD"
+        vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit BaseCurrencyAdded(address(0), 0, "USD");
+        mainRegistry = new mainRegistryExtension(address(factory));
+        vm.stopPrank();
+
         (, address assetaddress,,, bytes8 baseCurrencyLabel) = mainRegistry.baseCurrencyToInformation(0);
         assertEq(assetaddress, address(0));
         assertTrue(bytes8("USD") == baseCurrencyLabel);
         assertEq(mainRegistry.assetToBaseCurrency(address(0)), 0);
         assertEq(mainRegistry.baseCurrencies(0), address(0));
-    }
-
-    function testSuccess_deployment_BaseCurrencyCounterIsOne() public {
-        // Given: All necessary contracts deployed on setup
-        // When:
-        // Then: baseCurrencyCounter should return 1
-        assertEq(1, mainRegistry.baseCurrencyCounter());
+        assertEq(mainRegistry.baseCurrencyCounter(), 1);
     }
 }
 
@@ -76,8 +76,11 @@ contract ExternalContractsTest is MainRegistryTest {
     }
 
     function testSuccess_setAllowedAction_Owner(address action, bool allowed) public {
-        vm.prank(creatorAddress);
+        vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit AllowedActionSet(action, allowed);
         mainRegistry.setAllowedAction(action, allowed);
+        vm.stopPrank();
 
         assertEq(mainRegistry.isActionAllowed(action), allowed);
     }
@@ -165,6 +168,8 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
 
         // When: creatorAddress calls addBaseCurrency
+        vm.expectEmit(true, true, true, true);
+        emit BaseCurrencyAdded(address(dai), 2, "DAI");
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -390,6 +395,8 @@ contract PriceModuleManagementTest is MainRegistryTest {
         // Given: All necessary contracts deployed on setup
         // When: creatorAddress calls addPricingModule for address(standardERC20PricingModule)
         vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit PricingModuleAdded(address(standardERC20PricingModule));
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         vm.stopPrank();
 
@@ -517,10 +524,12 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
-    function testSuccess_addAsset(address newAsset, uint96 assetType) public {
+    function testSuccess_addAsset(address newAsset, uint8 assetType) public {
         vm.assume(mainRegistry.inMainRegistry(newAsset) == false);
         // When: standardERC20PricingModule calls addAsset with input of address(eth)
         vm.startPrank(address(standardERC20PricingModule));
+        vm.expectEmit(true, true, true, true);
+        emit AssetAdded(newAsset, address(standardERC20PricingModule), assetType);
         mainRegistry.addAsset(newAsset, assetType);
         vm.stopPrank();
 
