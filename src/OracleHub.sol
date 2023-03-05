@@ -40,8 +40,8 @@ contract OracleHub is Owned, IOraclesHub {
         bytes16 quoteAsset;
     }
 
-    event OracleAdded(address oracle, address quoteAsset, bytes16 baseAsset);
-    event OracleDecommissioned(address oracle, bool isActive);
+    event OracleAdded(address indexed oracle, address indexed quoteAsset, bytes16 baseAsset);
+    event OracleDecommissioned(address indexed oracle, bool isActive);
 
     /**
      * @notice Constructor
@@ -73,6 +73,7 @@ contract OracleHub is Owned, IOraclesHub {
         require(oracleInformation.oracleUnit <= 1_000_000_000_000_000_000, "OH_AO: Maximal 18 decimals");
         inOracleHub[oracle] = true;
         oracleToOracleInformation[oracle] = oracleInformation;
+
         emit OracleAdded(oracle, oracleInformation.baseAssetAddress, oracleInformation.quoteAsset);
     }
 
@@ -138,6 +139,7 @@ contract OracleHub is Owned, IOraclesHub {
         }
 
         oracleToOracleInformation[oracle].isActive = oracleIsInUse;
+
         emit OracleDecommissioned(oracle, oracleIsInUse);
 
         return oracleIsInUse;
