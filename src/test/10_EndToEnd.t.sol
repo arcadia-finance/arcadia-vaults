@@ -602,7 +602,9 @@ contract DoActionWithLeverage is EndToEndTest {
 
         bytes[] memory dataArr = new bytes[](2);
         dataArr[0] = abi.encodeWithSignature("approve(address,uint256)", address(pool), type(uint256).max);
-        dataArr[1] = abi.encodeWithSignature("executeRepay(address,address,address,uint256)", address(pool), address(dai), address(proxy), 0);
+        dataArr[1] = abi.encodeWithSignature(
+            "executeRepay(address,address,address,uint256)", address(pool), address(dai), address(proxy), 0
+        );
 
         address[] memory tos = new address[](2);
         tos[0] = address(dai);

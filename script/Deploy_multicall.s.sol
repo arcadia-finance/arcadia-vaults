@@ -14,9 +14,7 @@ contract ArcadiaMultiCallDeployer is Test {
     MainRegistry public mainRegistry;
     ActionMultiCall public actionMultiCall;
 
-    constructor() {
-        
-    }
+    constructor() { }
 
     function deployMultiCall() public {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");

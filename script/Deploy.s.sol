@@ -9,22 +9,22 @@ pragma solidity ^0.8.13;
 import "../lib/forge-std/src/Test.sol";
 import { DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstants } from "./Constants/DeployConstants.sol";
 
-import "../src/Factory.sol";
-import "../src/Proxy.sol";
-import "../src/Vault.sol";
-//import { ERC20 } from "../lib/solmate/src/tokens/ERC20.sol";
-import "../src/MainRegistry.sol";
+import { Factory } from "../src/Factory.sol";
+import { Proxy } from "../src/Proxy.sol";
+import { Vault } from "../src/Vault.sol";
+import { MainRegistry } from "../src/MainRegistry.sol";
 import { PricingModule, StandardERC20PricingModule } from "../src/PricingModules/StandardERC20PricingModule.sol";
-import "../src/Liquidator.sol";
-import "../src/OracleHub.sol";
+import { Liquidator } from "../src/Liquidator.sol";
+import { OracleHub } from "../src/OracleHub.sol";
 import { RiskConstants } from "../src/utils/RiskConstants.sol";
 
-import "../src/actions/MultiCall.sol";
+import { ActionMultiCall } from "../src/actions/MultiCall.sol";
+import { DataTypes } from "../lib/arcadia-lending/src/libraries/DataTypes.sol";
 
-import { DebtToken } from "../lib/arcadia-lending/src/DebtToken.sol";
-import {LendingPool, ERC20 } from "../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../lib/arcadia-lending/src/Tranche.sol";
-import {TrustedCreditor} from "../lib/arcadia-lending/src/TrustedCreditor.sol";
+import { ERC20, DebtToken } from "../lib/arcadia-lending/src/DebtToken.sol";
+import { LendingPool } from "../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../lib/arcadia-lending/src/Tranche.sol";
+import { TrustedCreditor } from "../lib/arcadia-lending/src/TrustedCreditor.sol";
 
 contract ArcadiaVaultDeployer is Test {
     Factory public factory;
@@ -154,12 +154,21 @@ contract ArcadiaVaultDeployer is Test {
 
         btcToEthEthToUsdOracleInfo = OracleHub.OracleInformation({
             oracleUnit: uint64(DeployNumbers.oracleBtcToEthUnit),
+            quoteAssetBaseCurrency: uint8(DeployNumbers.EthBaseCurrency),
             baseAsset: "BTC",
             quoteAsset: "wETH",
             oracle: vm.envAddress("oracleBtcToEth_mainnet"),
             baseAssetAddress: vm.envAddress("btc_mainnet"),
             quoteAssetIsBaseCurrency: true,
             isActive: true
+        });
+
+        ethBaseCurrencyInfo = MainRegistry.BaseCurrencyInformation({
+            baseCurrencyToUsdOracleUnit: uint64(DeployNumbers.oracleEthToUsdUnit),
+            assetAddress: vm.envAddress("eth_mainnet"),
+            baseCurrencyToUsdOracle: address(vm.envAddress("oracleEthToUsd_mainnet")),
+            baseCurrencyLabel: "wETH",
+            baseCurrencyUnitCorrection: uint64(10 ** (18 - DeployNumbers.ethDecimals))
         });
 
         usdcBaseCurrencyInfo = MainRegistry.BaseCurrencyInformation({
@@ -327,7 +336,7 @@ contract ArcadiaVaultDeployer is Test {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_DEPLOYER");
 
         vm.startBroadcast(anvilPrivateKey);
-        payable(address(weth)).call{value: 5000 ether}("");
+        payable(address(weth)).call{ value: 5000 ether }("");
         payable(vm.addr(userPrivateKey)).transfer(1000 ether);
         payable(vm.addr(deployerPrivateKey)).transfer(1000 ether);
         weth.transfer(vm.addr(userPrivateKey), 5000 ether);
@@ -364,13 +373,21 @@ contract ArcadiaVaultDeployer is Test {
         PricingModule.RiskVarInput[] memory riskVarsUsdc_ = riskVarsUsdc;
         PricingModule.RiskVarInput[] memory riskVarsBtc_ = riskVarsBtc;
 
-        standardERC20PricingModule.addAsset(vm.envAddress("dai_mainnet"), oracleDaiToUsdArr, riskVarsDai_, type(uint128).max);
-        standardERC20PricingModule.addAsset(vm.envAddress("eth_mainnet"), oracleEthToUsdArr, riskVarsEth_, type(uint128).max);
+        standardERC20PricingModule.addAsset(
+            vm.envAddress("dai_mainnet"), oracleDaiToUsdArr, riskVarsDai_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            vm.envAddress("eth_mainnet"), oracleEthToUsdArr, riskVarsEth_, type(uint128).max
+        );
         standardERC20PricingModule.addAsset(
             vm.envAddress("link_mainnet"), oracleLinkToEthEthToUsdArr, riskVarsLink_, type(uint128).max
         );
-        standardERC20PricingModule.addAsset(vm.envAddress("snx_mainnet"), oracleSnxToUsdArr, riskVarsSnx_, type(uint128).max);
-        standardERC20PricingModule.addAsset(vm.envAddress("usdc_mainnet"), oracleUsdcToUsdArr, riskVarsUsdc_, type(uint128).max);
+        standardERC20PricingModule.addAsset(
+            vm.envAddress("snx_mainnet"), oracleSnxToUsdArr, riskVarsSnx_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            vm.envAddress("usdc_mainnet"), oracleUsdcToUsdArr, riskVarsUsdc_, type(uint128).max
+        );
         standardERC20PricingModule.addAsset(
             vm.envAddress("btc_mainnet"), oracleBtcToEthEthToUsdArr, riskVarsBtc_, type(uint128).max
         );
@@ -385,7 +402,8 @@ contract ArcadiaVaultDeployer is Test {
         assets[0] = usdc;
         assets[1] = weth;
 
-        pool_weth = new LendingPool(ERC20(address(weth)), 0x12e463251Bc79677FD980aA6c301d5Fb85101cCb, address(factory), address(0));
+        pool_weth =
+        new LendingPool(ERC20(address(weth)), 0x12e463251Bc79677FD980aA6c301d5Fb85101cCb, address(factory), address(0));
         srTranche_weth = new Tranche(address(pool_weth), "Senior", "SR");
         jrTranche_weth = new Tranche(address(pool_weth), "Junior", "JR");
 
@@ -395,8 +413,18 @@ contract ArcadiaVaultDeployer is Test {
         pool_weth.addTranche(address(jrTranche_weth), 40, 20);
         pool_weth.setTreasuryInterestWeight(10);
         pool_weth.setTreasuryLiquidationWeight(80);
+        pool_weth.setSupplyCap(5000 * 10 ** 18);
+        pool_weth.setInterestConfig(
+            DataTypes.InterestRateConfiguration({
+                baseRatePerYear: 30_000_000_000_000_000,
+                lowSlopePerYear: 85_000_000_000_000_000,
+                highSlopePerYear: 1_250_000_000_000_000_000,
+                utilisationThreshold: 80_000
+            })
+        );
 
-        pool_usdc = new LendingPool(ERC20(address(usdc)), 0x12e463251Bc79677FD980aA6c301d5Fb85101cCb, address(factory), address(0));
+        pool_usdc =
+        new LendingPool(ERC20(address(usdc)), 0x12e463251Bc79677FD980aA6c301d5Fb85101cCb, address(factory), address(0));
         srTranche_usdc = new Tranche(address(pool_usdc), "Senior", "SR");
         jrTranche_usdc = new Tranche(address(pool_usdc), "Junior", "JR");
 
@@ -406,6 +434,15 @@ contract ArcadiaVaultDeployer is Test {
         pool_usdc.addTranche(address(jrTranche_usdc), 40, 20);
         pool_usdc.setTreasuryInterestWeight(10);
         pool_usdc.setTreasuryLiquidationWeight(80);
+        pool_usdc.setSupplyCap(500_000 * 10 ** 6);
+        pool_usdc.setInterestConfig(
+            DataTypes.InterestRateConfiguration({
+                baseRatePerYear: 25_000_000_000_000_000,
+                lowSlopePerYear: 70_000_000_000_000_000,
+                highSlopePerYear: 1_000_000_000_000_000_000,
+                utilisationThreshold: 80_000
+            })
+        );
 
         vm.stopBroadcast();
 
@@ -416,7 +453,6 @@ contract ArcadiaVaultDeployer is Test {
         // vm.prank(0x75C0c372da875a4Fc78E8A37f58618a6D18904e8);
 
         // usdc.transfer(vm.addr(deployerPrivateKey), 5*10**6*10**6);
-
 
         // vm.prank(0xF04a5cC80B1E94C69B48f5ee68a08CD2F09A7c3E);
         // weth.tranfser(address(deployerPrivateKey), 500*10**18);
@@ -431,10 +467,6 @@ contract ArcadiaVaultDeployer is Test {
         // proxy_weth = Vault(factory.createVault(123, 0, address(weth)));
         // proxy_usdc = Vault(factory.createVault(123, 0, address(usdc)));
 
-
-
-
         // proxy_weth.deposit()
-
     }
 }

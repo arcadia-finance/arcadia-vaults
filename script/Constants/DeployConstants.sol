@@ -95,5 +95,4 @@ library DeployRiskConstants {
     uint16 public constant btc_liqFact_0 = 80; //usd
     uint16 public constant btc_liqFact_1 = 82; //eth
     uint16 public constant btc_liqFact_2 = 80; //usdc
-
 }
