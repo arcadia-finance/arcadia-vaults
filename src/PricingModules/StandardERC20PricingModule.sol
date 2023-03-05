@@ -32,9 +32,15 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
     /**
      * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry_ The address of the Main-registry
-     * @param oracleHub_ The address of the Oracle-Hub
+     * @param oracleHub_ The address of the Oracle-Hub.
+     * @param assetType_ Identifier for the type of asset, necessary for the deposit and withdraw logic in the vaults.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) { }
+    constructor(address mainRegistry_, address oracleHub_, uint256 assetType_)
+        PricingModule(mainRegistry_, oracleHub_, assetType_, msg.sender)
+    { }
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -59,7 +65,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
     {
         require(!inPricingModule[asset], "PM20_AA: already added");
         //View function, reverts in OracleHub if sequence is not correct
-        IOraclesHub(oracleHub).checkOracleSequence(oracles);
+        IOraclesHub(oracleHub).checkOracleSequence(oracles, asset);
 
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
@@ -74,7 +80,37 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
         exposure[asset].maxExposure = maxExposure;
 
         //Will revert in MainRegistry if asset can't be added
-        IMainRegistry(mainRegistry).addAsset(asset);
+        IMainRegistry(mainRegistry).addAsset(asset, assetType);
+    }
+
+    /**
+     * @notice Sets a new oracle sequence in the case one of the oracles is decomissioned.
+     * @param asset The contract address of the asset
+     * @param newOracles An array of addresses of oracle contracts, to price the asset in USD
+     * @param decommissionedOracle The contract address of the decommissioned oracle
+     */
+    function setOracles(address asset, address[] calldata newOracles, address decommissionedOracle)
+        external
+        onlyOwner
+    {
+        // If asset is not added to the Pricing Module, oldOracles will have length 0
+        // In this case the for loop will be skipped and the function will revert.
+        address[] memory oldOracles = assetToInformation[asset].oracles;
+        uint256 oraclesLength = oldOracles.length;
+        for (uint256 i; i < oraclesLength;) {
+            if (oldOracles[i] == decommissionedOracle) {
+                require(!IOraclesHub(oracleHub).isActive(oldOracles[i]), "PM20_SO: Oracle still active");
+                //View function, reverts in OracleHub if sequence is not correct
+                IOraclesHub(oracleHub).checkOracleSequence(newOracles, asset);
+                assetToInformation[asset].oracles = newOracles;
+                return;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        //If length of oldOracles was zero, or decommissionedOracle was not in the oldOracles array
+        revert("PM20_SO: Unknown Oracle");
     }
 
     /**
@@ -97,7 +133,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
      * - asset: The contract address of the asset
      * - assetId: Since ERC20 tokens have no Id, the Id should be set to 0
      * - assetAmount: The Amount of tokens, ERC20 tokens can have any Decimals precision smaller than 18.
-     * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
+     * - baseCurrency: The BaseCurrency in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
      * @return collateralFactor The Collateral Factor of the asset

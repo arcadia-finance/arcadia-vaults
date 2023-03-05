@@ -54,7 +54,7 @@ contract ArcadiaOracle is Owned {
             offchain_connectors[_transmitter].role != Role.Transmitter,
             "Oracle: Address is already saved as Transmitter!"
         );
-        offchain_connectors[_transmitter] = OffchainConnector({isActive: true, role: Role.Transmitter});
+        offchain_connectors[_transmitter] = OffchainConnector({ isActive: true, role: Role.Transmitter });
     }
 
     /**
@@ -116,8 +116,13 @@ contract ArcadiaOracle is Owned {
     }
 
     int192 public minAnswer = 100;
+    int192 public maxAnswer = type(int192).max - 100;
 
     function setMinAnswer(int192 minAnswer_) public {
         minAnswer = minAnswer_;
+    }
+
+    function setMaxAnswer(int192 maxAnswer_) public {
+        maxAnswer = maxAnswer_;
     }
 }

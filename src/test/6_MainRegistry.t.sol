@@ -23,15 +23,18 @@ abstract contract MainRegistryTest is DeployArcadiaVaults {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
         floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            1
         );
         floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            2
         );
         vm.stopPrank();
     }
@@ -92,6 +95,12 @@ contract ExternalContractsTest is MainRegistryTest {
 /* ///////////////////////////////////////////////////////////////
                     BASE CURRENCY MANAGEMENT
 /////////////////////////////////////////////////////////////// */
+contract RevertingOracle {
+    function latestRoundData() public pure returns (uint80, int256, uint256, uint256, uint80) {
+        revert();
+    }
+}
+
 contract BaseCurrencyManagementTest is MainRegistryTest {
     function setUp() public override {
         super.setUp();
@@ -170,6 +179,178 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         // Then: baseCurrencyCounter should return 2
         assertEq(2, mainRegistry.baseCurrencyCounter());
     }
+
+    function testRevert_setOracle_NonOwner(uint256 baseCurrency, address newOracle, address unprivilegedAddress_)
+        public
+    {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("UNAUTHORIZED");
+        mainRegistry.setOracle(baseCurrency, newOracle);
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracle_NonBaseCurrency(uint256 baseCurrency, address newOracle) public {
+        vm.assume(baseCurrency >= mainRegistry.baseCurrencyCounter());
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("MR_SO: UNKNOWN_BASECURRENCY");
+        mainRegistry.setOracle(baseCurrency, newOracle);
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracle_HealthyOracle(
+        address newOracle,
+        int192 minAnswer,
+        int192 maxAnswer,
+        int256 price,
+        uint24 timePassed
+    ) public {
+        vm.assume(minAnswer >= 0);
+        vm.assume(price > minAnswer);
+        vm.assume(price < maxAnswer);
+        vm.assume(timePassed <= 1 weeks);
+
+        vm.prank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        vm.warp(2 weeks); //to not run into an underflow
+
+        vm.prank(oracleOwner);
+        oracleDaiToUsd.transmit(price);
+        oracleDaiToUsd.setMinAnswer(minAnswer);
+        oracleDaiToUsd.setMaxAnswer(maxAnswer);
+
+        vm.warp(block.timestamp + timePassed);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("MR_SO: ORACLE_HEALTHY");
+        mainRegistry.setOracle(1, newOracle);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setOracle_RevertingOracle(address newOracle) public {
+        RevertingOracle revertingOracle = new RevertingOracle();
+
+        vm.prank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(revertingOracle),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        vm.prank(creatorAddress);
+        mainRegistry.setOracle(1, newOracle);
+
+        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        assertEq(oracle, newOracle);
+    }
+
+    function testSuccess_setOracle_MinAnswer(address newOracle, int192 minAnswer, int192 price) public {
+        vm.assume(minAnswer >= 0);
+        vm.assume(price <= minAnswer);
+
+        vm.prank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        vm.prank(oracleOwner);
+        oracleDaiToUsd.transmit(price);
+        oracleDaiToUsd.setMinAnswer(minAnswer);
+        oracleDaiToUsd.setMaxAnswer(type(int192).max);
+
+        vm.prank(creatorAddress);
+        mainRegistry.setOracle(1, newOracle);
+
+        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        assertEq(oracle, newOracle);
+    }
+
+    function testSuccess_setOracle_MaxAnswer(address newOracle, int192 maxAnswer, int256 price) public {
+        vm.assume(maxAnswer >= 0);
+        vm.assume(price >= maxAnswer);
+
+        vm.prank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        vm.prank(oracleOwner);
+        oracleDaiToUsd.transmit(price);
+        oracleDaiToUsd.setMinAnswer(0);
+        oracleDaiToUsd.setMaxAnswer(maxAnswer);
+
+        vm.prank(creatorAddress);
+        mainRegistry.setOracle(1, newOracle);
+
+        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        assertEq(oracle, newOracle);
+    }
+
+    function testSuccess_setOracle_UpdateTooOld(
+        address newOracle,
+        int192 minAnswer,
+        int192 maxAnswer,
+        int256 price,
+        uint32 timePassed
+    ) public {
+        vm.assume(minAnswer >= 0);
+        vm.assume(price >= minAnswer);
+        vm.assume(price <= maxAnswer);
+        vm.assume(timePassed > 1 weeks);
+
+        vm.prank(creatorAddress);
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
+                assetAddress: address(dai),
+                baseCurrencyToUsdOracle: address(oracleDaiToUsd),
+                baseCurrencyLabel: "DAI",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.daiDecimals))
+            })
+        );
+
+        vm.warp(2 weeks); //to not run into an underflow
+
+        vm.prank(oracleOwner);
+        oracleDaiToUsd.transmit(price);
+        oracleDaiToUsd.setMinAnswer(minAnswer);
+        oracleDaiToUsd.setMaxAnswer(maxAnswer);
+
+        vm.warp(block.timestamp + timePassed);
+
+        vm.prank(creatorAddress);
+        mainRegistry.setOracle(1, newOracle);
+
+        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        assertEq(oracle, newOracle);
+    }
 }
 
 /* ///////////////////////////////////////////////////////////////
@@ -221,6 +402,8 @@ contract PriceModuleManagementTest is MainRegistryTest {
                     ASSET MANAGEMENT
 /////////////////////////////////////////////////////////////// */
 contract AssetManagementTest is MainRegistryTest {
+    using stdStorage for StdStorage;
+
     function setUp() public override {
         super.setUp();
 
@@ -302,22 +485,11 @@ contract AssetManagementTest is MainRegistryTest {
         // When: unprivilegedAddress_ calls addAsset
         // Then: addAsset should revert with "MR: Only PriceMod."
         vm.expectRevert("MR: Only PriceMod.");
-        mainRegistry.addAsset(address(eth));
+        mainRegistry.addAsset(address(eth), 0);
         vm.stopPrank();
     }
 
-    function testSuccess_addAsset_EmptyListRiskVariables(address newAsset) public {
-        vm.assume(mainRegistry.inMainRegistry(newAsset) == false);
-        // When: standardERC20PricingModule calls addAsset with input of address(eth)
-        vm.startPrank(address(standardERC20PricingModule));
-        mainRegistry.addAsset(address(newAsset));
-        vm.stopPrank();
-
-        // Then: inMainRegistry for address(eth) should return true
-        assertTrue(mainRegistry.inMainRegistry(address(eth)));
-    }
-
-    function testRevert_addAsset_OverwriteAssetNegative() public {
+    function testRevert_addAsset_OverwriteAsset() public {
         // Given: creatorAddress calls addPricingModule and setAssetsToNonUpdatable,
         vm.startPrank(creatorAddress);
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
@@ -325,17 +497,38 @@ contract AssetManagementTest is MainRegistryTest {
 
         // When: standardERC20PricingModule has eth added as asset
 
-        // Then: assetToPricingModule for address(eth) should return address(standardERC20PricingModule)
-        assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
-
         vm.startPrank(address(floorERC721PricingModule));
         // When: floorERC721PricingModule calls addAsset
         // Then: addAsset should revert with "MR_AA: Asset already in mainreg"
         vm.expectRevert("MR_AA: Asset already in mainreg");
-        mainRegistry.addAsset(address(eth));
+        mainRegistry.addAsset(address(eth), 0);
+        vm.stopPrank();
+    }
+
+    function testRevert_addAsset_InvalidAssetType(address newAsset, uint256 assetType) public {
+        vm.assume(mainRegistry.inMainRegistry(newAsset) == false);
+        vm.assume(assetType > type(uint96).max);
+
+        // When: standardERC20PricingModule calls addAsset with assetType greater than uint96.max
+        // Then: addAsset should revert with "MR_AA: Invalid AssetType"
+        vm.startPrank(address(standardERC20PricingModule));
+        vm.expectRevert("MR_AA: Invalid AssetType");
+        mainRegistry.addAsset(newAsset, assetType);
+        vm.stopPrank();
+    }
+
+    function testSuccess_addAsset(address newAsset, uint96 assetType) public {
+        vm.assume(mainRegistry.inMainRegistry(newAsset) == false);
+        // When: standardERC20PricingModule calls addAsset with input of address(eth)
+        vm.startPrank(address(standardERC20PricingModule));
+        mainRegistry.addAsset(newAsset, assetType);
         vm.stopPrank();
 
-        assertEq(address(standardERC20PricingModule), mainRegistry.assetToPricingModule(address(eth)));
+        // Then: inMainRegistry for address(eth) should return true
+        assertTrue(mainRegistry.inMainRegistry(newAsset));
+        (uint96 assetType_, address pricingModule) = mainRegistry.assetToAssetInformation(newAsset);
+        assertEq(assetType_, assetType);
+        assertEq(pricingModule, address(standardERC20PricingModule));
     }
 
     function testRevert_batchProcessDeposit_NonVault(address unprivilegedAddress_) public {
@@ -408,7 +601,7 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = 1;
 
         vm.startPrank(proxyAddr);
-        vm.expectRevert("MR_BPD: Asset not in mainreg");
+        vm.expectRevert();
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
@@ -451,10 +644,11 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amount;
 
         vm.prank(proxyAddr);
-        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        uint256[] memory assetTypes = mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+
+        assertEq(assetTypes[0], 0);
 
         (, uint128 exposure) = standardERC20PricingModule.exposure(address(eth));
-
         assertEq(exposure, amount);
     }
 
@@ -472,7 +666,10 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[1] = amountLink;
 
         vm.prank(proxyAddr);
-        mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        uint256[] memory assetTypes = mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+
+        assertEq(assetTypes[0], 0);
+        assertEq(assetTypes[1], 0);
 
         (, uint256 exposureEth) = standardERC20PricingModule.exposure(address(eth));
         (, uint256 exposureLink) = standardERC20PricingModule.exposure(address(link));
@@ -588,6 +785,36 @@ contract AssetManagementTest is MainRegistryTest {
         vm.stopPrank();
     }
 
+    function testRevert_batchProcessWithdrawal_AssetNotInMainreg(
+        uint128 amountDeposited,
+        uint128 amountWithdrawn,
+        address asset
+    ) public {
+        vm.assume(amountDeposited >= amountWithdrawn);
+
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.inMainRegistry.selector).with_key(address(asset))
+            .checked_write(true);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = asset;
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountDeposited;
+
+        stdstore.target(address(mainRegistry)).sig(mainRegistry.inMainRegistry.selector).with_key(asset).checked_write(
+            false
+        );
+
+        assetAmounts[0] = amountWithdrawn;
+
+        vm.prank(proxyAddr);
+        vm.expectRevert();
+        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
+    }
+
     function testSuccess_batchProcessWithdrawal(uint128 amountDeposited, uint128 amountWithdrawn) public {
         vm.assume(amountDeposited >= amountWithdrawn);
 
@@ -610,7 +837,9 @@ contract AssetManagementTest is MainRegistryTest {
         assetAmounts[0] = amountWithdrawn;
 
         vm.prank(proxyAddr);
-        mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
+        uint256[] memory assetTypes = mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
+
+        assertEq(assetTypes[0], 0);
 
         (, exposure) = standardERC20PricingModule.exposure(address(eth));
 
@@ -698,209 +927,9 @@ contract PricingLogicTest is MainRegistryTest {
         standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
 
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
         vm.stopPrank();
-    }
-
-    function testSucccess_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsd(
-        uint256 rateEthToUsdNew,
-        uint256 amountLink,
-        uint8 linkDecimals
-    ) public {
-        // Given: linkDecimals is less than equal to 18, rateEthToUsdNew is less than equal to max uint256 value and bigger than 0,
-        // creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule,
-        // oracleOwner calls transmit with rateEthToUsdNew and rateLinkToUsd
-        vm.assume(linkDecimals <= 18);
-        vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
-        vm.assume(rateEthToUsdNew > 0);
-        vm.assume(
-            amountLink
-                <= type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD
-                    / 10 ** (Constants.oracleEthToUsdDecimals - Constants.oracleLinkToUsdDecimals)
-        );
-        vm.assume(
-            amountLink
-                <= (
-                    ((type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD) * 10 ** Constants.oracleEthToUsdDecimals)
-                        / 10 ** Constants.oracleLinkToUsdDecimals
-                ) * 10 ** linkDecimals
-        );
-
-        vm.startPrank(creatorAddress);
-        link = new ERC20Mock(
-            "LINK Mock",
-            "mLINK",
-            linkDecimals
-        );
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
-        vm.stopPrank();
-
-        vm.startPrank(oracleOwner);
-        oracleEthToUsd.transmit(int256(rateEthToUsdNew));
-        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-        vm.stopPrank();
-
-        // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
-        // actualTotalValue is getTotalValue for assetAddresses, assetIds, assetAmounts and Constants.EthBaseCurrency,
-        // expectedTotalValue is linkValueInEth
-        address[] memory assetAddresses = new address[](1);
-        assetAddresses[0] = address(link);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amountLink;
-
-        uint256 actualTotalValue =
-            mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
-
-        uint256 linkValueInUsd = (assetAmounts[0] * rateLinkToUsd * Constants.WAD)
-            / 10 ** Constants.oracleLinkToUsdDecimals / 10 ** linkDecimals;
-        uint256 linkValueInEth = (linkValueInUsd * 10 ** Constants.oracleEthToUsdDecimals) / rateEthToUsdNew
-            / 10 ** (18 - Constants.ethDecimals);
-
-        uint256 expectedTotalValue = linkValueInEth;
-
-        // Then: expectedTotalValue should be equal to actualTotalValue
-        assertEq(expectedTotalValue, actualTotalValue);
-    }
-
-    function testRevert_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsdOverflow(
-        uint256 rateEthToUsdNew,
-        uint256 amountLink,
-        uint8 linkDecimals
-    ) public {
-        // Given: linkDecimals is less than oracleEthToUsdDecimals, rateEthToUsdNew is less than equal to max uint256 value and bigger than 0,
-        // creatorAddress calls addBaseCurrency, calls addPricingModule with standardERC20PricingModule,
-        // oracleOwner calls transmit with rateEthToUsdNew and rateLinkToUsd
-        vm.assume(linkDecimals < Constants.oracleEthToUsdDecimals);
-        vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
-        vm.assume(rateEthToUsdNew > 0);
-        vm.assume(
-            amountLink
-                > ((type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD) * 10 ** Constants.oracleEthToUsdDecimals)
-                    / 10 ** (Constants.oracleLinkToUsdDecimals - linkDecimals)
-        );
-
-        vm.startPrank(creatorAddress);
-        link = new ERC20Mock(
-            "LINK Mock",
-            "mLINK",
-            linkDecimals);
-        standardERC20PricingModule.addAsset(address(link), oracleLinkToUsdArr, emptyRiskVarInput, type(uint128).max);
-        vm.stopPrank();
-
-        vm.startPrank(oracleOwner);
-        oracleEthToUsd.transmit(int256(rateEthToUsdNew));
-        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-        vm.stopPrank();
-
-        // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
-        // getTotalValue is called
-        address[] memory assetAddresses = new address[](1);
-        assetAddresses[0] = address(link);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amountLink;
-
-        // Then: getTotalValue should revert with arithmetic overflow
-        vm.expectRevert(bytes(""));
-        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
-    }
-
-    function testRevert_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsdWithRateZero(uint256 amountLink)
-        public
-    {
-        // Given: amountLink bigger than 0, oracleOwner calls transmit for 0 and rateLinkToUsd
-        vm.assume(amountLink > 0);
-
-        vm.startPrank(oracleOwner);
-        oracleEthToUsd.transmit(int256(0));
-        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-        vm.stopPrank();
-
-        // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
-        // getTotalValue is called
-        address[] memory assetAddresses = new address[](1);
-        assetAddresses[0] = address(link);
-
-        uint256[] memory assetIds = new uint256[](1);
-        assetIds[0] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](1);
-        assetAmounts[0] = amountLink;
-
-        // Then: getTotalValue should revert
-        vm.expectRevert(bytes(""));
-        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
-    }
-
-    function testRevert_getTotalValue_UnknownBaseCurrency() public {
-        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(bayc);
-
-        uint256[] memory assetIds = new uint256[](2);
-        assetIds[0] = 0;
-        assetIds[1] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](2);
-        assetAmounts[0] = 10;
-        assetAmounts[1] = 10;
-        // When: getTotalValue called
-
-        // Then: getTotalValue should revert with "MR_GTV: Unknown BaseCurrency"
-        vm.expectRevert("MR_GTV: Unknown BaseCurrency");
-        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.SafemoonBaseCurrency);
-    }
-
-    function testRevert_getListOfValuesPerAsset_UnknownBaseCurrency() public {
-        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(bayc);
-
-        uint256[] memory assetIds = new uint256[](2);
-        assetIds[0] = 0;
-        assetIds[1] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](2);
-        assetAmounts[0] = 10;
-        assetAmounts[1] = 10;
-        // When: getTotalValue called
-
-        // Then: getTotalValue should revert with "" ("EvmError: Revert")
-        vm.expectRevert();
-        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.SafemoonBaseCurrency);
-    }
-
-    function testRevert_getTotalValue_UnknownAsset() public {
-        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        // Given: assetAddresses index 0 is address(safemoon), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
-        address[] memory assetAddresses = new address[](2);
-        assetAddresses[0] = address(safemoon);
-        assetAddresses[1] = address(bayc);
-
-        uint256[] memory assetIds = new uint256[](2);
-        assetIds[0] = 0;
-        assetIds[1] = 0;
-
-        uint256[] memory assetAmounts = new uint256[](2);
-        assetAmounts[0] = 10;
-        assetAmounts[1] = 10;
-        // When: getTotalValue called
-
-        // Then: getTotalValue should revert with "MR_GTV: Unknown asset"
-        vm.expectRevert(bytes(""));
-        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
     }
 
     function testRevert_getListOfValuesPerAsset_UnknownAsset() public {
@@ -920,60 +949,38 @@ contract PricingLogicTest is MainRegistryTest {
         // When: getTotalValue called
 
         // Then: getTotalValue should revert with "" ("EvmError: Revert")
-        vm.expectRevert();
-        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, Constants.UsdBaseCurrency);
+        vm.expectRevert(bytes(""));
+        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, 0);
     }
 
-    function testSuccess_getTotalValue() public {
+    function testRevert_getListOfValuesPerAsset_UnknownBaseCurrency(uint256 basecurrency) public {
+        vm.assume(basecurrency >= 3);
         //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
-        // Given: oracleOwner calls transmit for rateEthToUsd, rateLinkToUsd and rateWbaycToEth
-        vm.startPrank(oracleOwner);
-        oracleEthToUsd.transmit(int256(rateEthToUsd));
-        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-        oracleWbaycToEth.transmit(int256(rateWbaycToEth));
-        vm.stopPrank();
-
-        // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0,
-        // assetAmounts index 0 is 10 multiplied by ethDecimals, index 1 is 10 multiplied by linkDecimals, index 2 is 1, actualTotalValue is getTotalValue,
-        // expectedTotalValue is ethValueInEth plus linkValueInEth plus baycValueInEth
-        address[] memory assetAddresses = new address[](3);
+        // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
+        address[] memory assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
-        assetAddresses[1] = address(link);
-        assetAddresses[2] = address(bayc);
+        assetAddresses[1] = address(bayc);
 
-        uint256[] memory assetIds = new uint256[](3);
+        uint256[] memory assetIds = new uint256[](2);
         assetIds[0] = 0;
         assetIds[1] = 0;
-        assetIds[2] = 0;
 
-        uint256[] memory assetAmounts = new uint256[](3);
-        assetAmounts[0] = 10 ** Constants.ethDecimals;
-        assetAmounts[1] = 10 ** Constants.linkDecimals;
-        assetAmounts[2] = 1;
+        uint256[] memory assetAmounts = new uint256[](2);
+        assetAmounts[0] = 10;
+        assetAmounts[1] = 10;
+        // When: getTotalValue called
 
-        uint256 actualTotalValue =
-            mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, Constants.EthBaseCurrency);
-
-        uint256 ethValueInEth = assetAmounts[0];
-        uint256 linkValueInUsd = (Constants.WAD * rateLinkToUsd * assetAmounts[1])
-            / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
-        uint256 linkValueInEth = (linkValueInUsd * 10 ** Constants.oracleEthToUsdDecimals) / rateEthToUsd
-            / 10 ** (18 - Constants.ethDecimals);
-        uint256 baycValueInEth = (Constants.WAD * rateWbaycToEth * assetAmounts[2])
-            / 10 ** Constants.oracleWbaycToEthDecimals / 10 ** (18 - Constants.ethDecimals);
-
-        uint256 expectedTotalValue = ethValueInEth + linkValueInEth + baycValueInEth;
-
-        // Then: expectedTotalValue should be equal to actualTotalValue
-        assertEq(expectedTotalValue, actualTotalValue);
+        // Then: getListOfValuesPerAsset should revert with "" ("EvmError: Revert")
+        vm.expectRevert(bytes(""));
+        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, basecurrency);
     }
 
     function testSuccess_getListOfValuesPerAsset() public {
-        // Given: oracleOwner calls transmit for rateEthToUsd, rateLinkToUsd and rateWbaycToEth
+        // Given: oracleOwner calls transmit for rateEthToUsd, rateLinkToUsd and rateBaycToEth
         vm.startPrank(oracleOwner);
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
-        oracleWbaycToEth.transmit(int256(rateWbaycToEth));
+        oracleBaycToEth.transmit(int256(rateBaycToEth));
         vm.stopPrank();
 
         // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0,
@@ -1002,8 +1009,8 @@ contract PricingLogicTest is MainRegistryTest {
             / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 linkValueInEth = (linkValueInUsd * 10 ** Constants.oracleEthToUsdDecimals) / rateEthToUsd
             / 10 ** (18 - Constants.ethDecimals);
-        uint256 baycValueInEth = (Constants.WAD * rateWbaycToEth * assetAmounts[2])
-            / 10 ** Constants.oracleWbaycToEthDecimals / 10 ** (18 - Constants.ethDecimals);
+        uint256 baycValueInEth = (Constants.WAD * rateBaycToEth * assetAmounts[2])
+            / 10 ** Constants.oracleBaycToEthDecimals / 10 ** (18 - Constants.ethDecimals);
 
         uint256[] memory expectedListOfValuesPerAsset = new uint256[](3);
         expectedListOfValuesPerAsset[0] = ethValueInEth;
@@ -1016,6 +1023,121 @@ contract PricingLogicTest is MainRegistryTest {
         }
         // Then: expectedListOfValuesPerAsset array should be equal to actualListOfValuesPerAsset
         assertTrue(CompareArrays.compareArrays(expectedListOfValuesPerAsset, actualListOfValuesPerAsset));
+    }
+
+    function testRevert_getListOfValuesPerAsset_UnknownBaseCurrency(address basecurrency) public {
+        vm.assume(basecurrency != address(0));
+        vm.assume(basecurrency != address(dai));
+        vm.assume(basecurrency != address(eth));
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(bayc);
+
+        uint256[] memory assetIds = new uint256[](2);
+        assetIds[0] = 0;
+        assetIds[1] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](2);
+        assetAmounts[0] = 10;
+        assetAmounts[1] = 10;
+        // When: getTotalValue called
+
+        // Then: getTotalValue should revert with "" ("EvmError: Revert")
+        vm.expectRevert("MR_GLVA: UNKNOWN_BASECURRENCY");
+        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, basecurrency);
+    }
+
+    function testRevert_getTotalValue_UnknownBaseCurrency(address basecurrency) public {
+        vm.assume(basecurrency != address(0));
+        vm.assume(basecurrency != address(dai));
+        vm.assume(basecurrency != address(eth));
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(bayc);
+
+        uint256[] memory assetIds = new uint256[](2);
+        assetIds[0] = 0;
+        assetIds[1] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](2);
+        assetAmounts[0] = 10;
+        assetAmounts[1] = 10;
+        // When: getTotalValue called
+
+        // Then: getTotalValue should revert with "" ("EvmError: Revert")
+        vm.expectRevert("MR_GTV: UNKNOWN_BASECURRENCY");
+        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, basecurrency);
+    }
+
+    function testSuccess_getTotalValue() public {
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: oracleOwner calls transmit for rateEthToUsd, rateLinkToUsd and rateBaycToEth
+        vm.startPrank(oracleOwner);
+        oracleEthToUsd.transmit(int256(rateEthToUsd));
+        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
+        oracleBaycToEth.transmit(int256(rateBaycToEth));
+        vm.stopPrank();
+
+        // When: assetAddresses index 0 is address(eth), index 1 is address(link), index 2 is address(bayc), assetIds index 0, 1 and 2 is 0,
+        // assetAmounts index 0 is 10 multiplied by ethDecimals, index 1 is 10 multiplied by linkDecimals, index 2 is 1, actualTotalValue is getTotalValue,
+        // expectedTotalValue is ethValueInEth plus linkValueInEth plus baycValueInEth
+        address[] memory assetAddresses = new address[](3);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(link);
+        assetAddresses[2] = address(bayc);
+
+        uint256[] memory assetIds = new uint256[](3);
+        assetIds[0] = 0;
+        assetIds[1] = 0;
+        assetIds[2] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](3);
+        assetAmounts[0] = 10 ** Constants.ethDecimals;
+        assetAmounts[1] = 10 ** Constants.linkDecimals;
+        assetAmounts[2] = 1;
+
+        uint256 actualTotalValue = mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, address(eth));
+
+        uint256 ethValueInEth = assetAmounts[0];
+        uint256 linkValueInUsd = (Constants.WAD * rateLinkToUsd * assetAmounts[1])
+            / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
+        uint256 linkValueInEth = (linkValueInUsd * 10 ** Constants.oracleEthToUsdDecimals) / rateEthToUsd
+            / 10 ** (18 - Constants.ethDecimals);
+        uint256 baycValueInEth = (Constants.WAD * rateBaycToEth * assetAmounts[2])
+            / 10 ** Constants.oracleBaycToEthDecimals / 10 ** (18 - Constants.ethDecimals);
+
+        uint256 expectedTotalValue = ethValueInEth + linkValueInEth + baycValueInEth;
+
+        // Then: expectedTotalValue should be equal to actualTotalValue
+        assertEq(expectedTotalValue, actualTotalValue);
+    }
+
+    function testRevert_getCollateralValue_UnknownBaseCurrency(address basecurrency) public {
+        vm.assume(basecurrency != address(0));
+        vm.assume(basecurrency != address(dai));
+        vm.assume(basecurrency != address(eth));
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(bayc);
+
+        uint256[] memory assetIds = new uint256[](2);
+        assetIds[0] = 0;
+        assetIds[1] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](2);
+        assetAmounts[0] = 10;
+        assetAmounts[1] = 10;
+        // When: getTotalValue called
+
+        // Then: getCollateralValue should revert with "" ("EvmError: Revert")
+        vm.expectRevert("MR_GCV: UNKNOWN_BASECURRENCY");
+        mainRegistry.getCollateralValue(assetAddresses, assetIds, assetAmounts, basecurrency);
     }
 
     function testSuccess_getCollateralValue(int64 rateEthToUsd_, uint64 amountEth, uint16 collateralFactor_) public {
@@ -1054,6 +1176,30 @@ contract PricingLogicTest is MainRegistryTest {
         assertEq(expectedCollateralValue, actualCollateralValue);
     }
 
+    function testRevert_getLiquidationValue_UnknownBaseCurrency(address basecurrency) public {
+        vm.assume(basecurrency != address(0));
+        vm.assume(basecurrency != address(dai));
+        vm.assume(basecurrency != address(eth));
+        //Does not test on overflow, test to check if function correctly returns value in BaseCurrency or USD
+        // Given: assetAddresses index 0 is address(eth), index 1 is address(bayc), assetIds index 0 and 1 is 0, assetAmounts index 0 and 1 is 10
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(eth);
+        assetAddresses[1] = address(bayc);
+
+        uint256[] memory assetIds = new uint256[](2);
+        assetIds[0] = 0;
+        assetIds[1] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](2);
+        assetAmounts[0] = 10;
+        assetAmounts[1] = 10;
+        // When: getTotalValue called
+
+        // Then: getLiquidationValue should revert with "" ("EvmError: Revert")
+        vm.expectRevert("MR_GLV: UNKNOWN_BASECURRENCY");
+        mainRegistry.getLiquidationValue(assetAddresses, assetIds, assetAmounts, basecurrency);
+    }
+
     function testSuccess_getLiquidationValue(int64 rateEthToUsd_, uint64 amountEth, uint16 liquidationFactor_) public {
         vm.assume(liquidationFactor_ <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         vm.assume(rateEthToUsd_ > 0);
@@ -1088,5 +1234,170 @@ contract PricingLogicTest is MainRegistryTest {
         uint256 expectedLiquidationValue = ethValueInUsd * liquidationFactor_ / 100;
 
         assertEq(expectedLiquidationValue, actualLiquidationValue);
+    }
+
+    function testSucccess_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsd(
+        uint256 rateEthToUsdNew,
+        uint256 amountLink,
+        uint8 linkDecimals
+    ) public {
+        // Given: linkDecimals is less than equal to 18, rateEthToUsdNew is less than equal to max uint256 value and bigger than 0,
+        // creatorAddress calls addBaseCurrency with emptyList, calls addPricingModule with standardERC20PricingModule,
+        // oracleOwner calls transmit with rateEthToUsdNew and rateLinkToUsd
+        vm.assume(linkDecimals <= 18);
+        vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
+        vm.assume(rateEthToUsdNew > 0);
+        vm.assume(
+            amountLink
+                <= type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD
+                    / 10 ** (Constants.oracleEthToUsdDecimals - Constants.oracleLinkToUsdDecimals)
+        );
+        vm.assume(
+            amountLink
+                <= (
+                    ((type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD) * 10 ** Constants.oracleEthToUsdDecimals)
+                        / 10 ** Constants.oracleLinkToUsdDecimals
+                ) * 10 ** linkDecimals
+        );
+
+        ArcadiaOracle oracle = arcadiaOracleFixture.initMockedOracle(0, "LINK / USD");
+        vm.startPrank(creatorAddress);
+        link = new ERC20Mock(
+            "LINK Mock",
+            "mLINK",
+            linkDecimals);
+        address[] memory oracleAssetToUsdArr = new address[](1);
+        oracleAssetToUsdArr[0] = address(oracle);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "LINK",
+                quoteAsset: "USD",
+                oracle: address(oracle),
+                baseAssetAddress: address(link),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        standardERC20PricingModule.addAsset(address(link), oracleAssetToUsdArr, emptyRiskVarInput, type(uint128).max);
+        vm.stopPrank();
+
+        vm.startPrank(oracleOwner);
+        oracleEthToUsd.transmit(int256(rateEthToUsdNew));
+        oracle.transmit(int256(rateLinkToUsd));
+        vm.stopPrank();
+
+        // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
+        // actualTotalValue is getTotalValue for assetAddresses, assetIds, assetAmounts and Constants.EthBaseCurrency,
+        // expectedTotalValue is linkValueInEth
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        uint256 actualTotalValue = mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, address(eth));
+
+        uint256 linkValueInUsd = (assetAmounts[0] * rateLinkToUsd * Constants.WAD)
+            / 10 ** Constants.oracleLinkToUsdDecimals / 10 ** linkDecimals;
+        uint256 linkValueInEth = (linkValueInUsd * 10 ** Constants.oracleEthToUsdDecimals) / rateEthToUsdNew
+            / 10 ** (18 - Constants.ethDecimals);
+
+        uint256 expectedTotalValue = linkValueInEth;
+
+        // Then: expectedTotalValue should be equal to actualTotalValue
+        assertEq(expectedTotalValue, actualTotalValue);
+    }
+
+    function testRevert_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsdOverflow(
+        uint256 rateEthToUsdNew,
+        uint256 amountLink,
+        uint8 linkDecimals
+    ) public {
+        // Given: linkDecimals is less than oracleEthToUsdDecimals, rateEthToUsdNew is less than equal to max uint256 value and bigger than 0,
+        // creatorAddress calls addBaseCurrency, calls addPricingModule with standardERC20PricingModule,
+        // oracleOwner calls transmit with rateEthToUsdNew and rateLinkToUsd
+        vm.assume(linkDecimals < Constants.oracleEthToUsdDecimals);
+        vm.assume(rateEthToUsdNew <= uint256(type(int256).max));
+        vm.assume(rateEthToUsdNew > 0);
+        vm.assume(
+            amountLink
+                > ((type(uint256).max / uint256(rateLinkToUsd) / Constants.WAD) * 10 ** Constants.oracleEthToUsdDecimals)
+                    / 10 ** (Constants.oracleLinkToUsdDecimals - linkDecimals)
+        );
+
+        ArcadiaOracle oracle = arcadiaOracleFixture.initMockedOracle(0, "LINK / USD");
+        vm.startPrank(creatorAddress);
+        link = new ERC20Mock(
+            "LINK Mock",
+            "mLINK",
+            linkDecimals);
+        address[] memory oracleAssetToUsdArr = new address[](1);
+        oracleAssetToUsdArr[0] = address(oracle);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 0,
+                quoteAssetBaseCurrency: 0,
+                baseAsset: "ASSET",
+                quoteAsset: "USD",
+                oracle: address(oracle),
+                baseAssetAddress: address(link),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        standardERC20PricingModule.addAsset(address(link), oracleAssetToUsdArr, emptyRiskVarInput, type(uint128).max);
+        vm.stopPrank();
+
+        vm.startPrank(oracleOwner);
+        oracleEthToUsd.transmit(int256(rateEthToUsdNew));
+        oracle.transmit(int256(rateLinkToUsd));
+        vm.stopPrank();
+
+        // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
+        // getTotalValue is called
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        // Then: getTotalValue should revert with arithmetic overflow
+        vm.expectRevert(bytes(""));
+        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, address(eth));
+    }
+
+    function testRevert_getTotalValue_CalculateValueInBaseCurrencyFromValueInUsdWithRateZero(uint256 amountLink)
+        public
+    {
+        // Given: amountLink bigger than 0, oracleOwner calls transmit for 0 and rateLinkToUsd
+        vm.assume(amountLink > 0);
+
+        vm.startPrank(oracleOwner);
+        oracleEthToUsd.transmit(int256(0));
+        oracleLinkToUsd.transmit(int256(rateLinkToUsd));
+        vm.stopPrank();
+
+        // When: assetAddresses index 0 is address(link), assetIds index 0 is 0, assetAmounts index 0 is amountLink,
+        // getTotalValue is called
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(link);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = amountLink;
+
+        // Then: getTotalValue should revert
+        vm.expectRevert(bytes(""));
+        mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, address(eth));
     }
 }

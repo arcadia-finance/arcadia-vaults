@@ -39,15 +39,24 @@ contract UniswapV2PricingModule is PricingModule {
 
     /**
      * @notice A Pricing-Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
-     * @param _mainRegistry The address of the Main-registry
-     * @param _oracleHub The address of the Oracle-Hub
-     * @param _uniswapV2Factory The factory for Uniswap V2 pairs
+     * @param mainRegistry_ The address of the Main-registry
+     * @param oracleHub_ The address of the Oracle-Hub
+     * @param assetType_ Identifier for the type of asset, necessary for the deposit and withdraw logic in the vaults.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
+     * @param uniswapV2Factory_ The factory for Uniswap V2 pairs
+     * @param erc20PricingModule_ The address of the Pricing Module for standard ERC20 tokens.
      */
-    constructor(address _mainRegistry, address _oracleHub, address _uniswapV2Factory, address _erc20PricingModule)
-        PricingModule(_mainRegistry, _oracleHub, msg.sender)
-    {
-        uniswapV2Factory = _uniswapV2Factory;
-        erc20PricingModule = _erc20PricingModule;
+    constructor(
+        address mainRegistry_,
+        address oracleHub_,
+        uint256 assetType_,
+        address uniswapV2Factory_,
+        address erc20PricingModule_
+    ) PricingModule(mainRegistry_, oracleHub_, assetType_, msg.sender) {
+        uniswapV2Factory = uniswapV2Factory_;
+        erc20PricingModule = erc20PricingModule_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -96,7 +105,7 @@ contract UniswapV2PricingModule is PricingModule {
         exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
-        IMainRegistry(mainRegistry).addAsset(asset);
+        IMainRegistry(mainRegistry).addAsset(asset, assetType);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -109,7 +118,7 @@ contract UniswapV2PricingModule is PricingModule {
      * - asset: The contract address of the LP-token
      * - assetId: Since ERC20 tokens have no Id, the Id should be set to 0
      * - assetAmount: The Amount of tokens, ERC20 tokens can have any Decimals precision smaller than 18.
-     * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
+     * - baseCurrency: The BaseCurrency in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
      * @return collateralFactor The Collateral Factor of the asset

@@ -6,7 +6,6 @@
  */
 pragma solidity ^0.8.13;
 
-import { IERC20 } from "./interfaces/IERC20.sol";
 import { IERC721 } from "./interfaces/IERC721.sol";
 import { IERC1155 } from "./interfaces/IERC1155.sol";
 import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
@@ -16,6 +15,7 @@ import { IFactory } from "./interfaces/IFactory.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IOraclesHub } from "./PricingModules/interfaces/IOraclesHub.sol";
 import { ActionData } from "./actions/utils/ActionData.sol";
+import { ERC20, SafeTransferLib } from "../lib/solmate/src/utils/SafeTransferLib.sol";
 
 /**
  * @title An Arcadia Vault used to manage all your assets and take margin.
@@ -30,10 +30,12 @@ import { ActionData } from "./actions/utils/ActionData.sol";
  * For allowlists or liquidation strategies specific to your protocol, contact: dev at arcadia.finance
  */
 contract Vault is IVault {
+    using SafeTransferLib for ERC20;
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
      */
+
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     uint256 public constant ASSET_LIMIT = 15;
 
@@ -57,7 +59,7 @@ contract Vault is IVault {
     uint256[] public erc721TokenIds;
     uint256[] public erc1155TokenIds;
 
-    mapping(address => bool) public isAssetManager;
+    mapping(address => mapping(address => bool)) public isAssetManager;
 
     struct AddressSlot {
         address value;
@@ -87,7 +89,8 @@ contract Vault is IVault {
      */
     modifier onlyAssetManager() {
         require(
-            msg.sender == owner || msg.sender == trustedCreditor || isAssetManager[msg.sender], "V: Only Asset Manager"
+            msg.sender == owner || msg.sender == trustedCreditor || isAssetManager[owner][msg.sender],
+            "V: Only Asset Manager"
         );
         _;
     }
@@ -214,10 +217,10 @@ contract Vault is IVault {
     /**
      * @notice Sets the baseCurrency of a vault.
      * @param baseCurrency_ the new baseCurrency for the vault.
-     * @dev First checks if there is no locked value. If there is no value locked then a new baseCurrency is set.
+     * @dev First checks if there is no trusted creditor set. If there is none set, then a new baseCurrency is set.
      */
     function setBaseCurrency(address baseCurrency_) external onlyOwner {
-        require(getUsedMargin() == 0, "V_SBC: Non-zero open position");
+        require(!isTrustedCreditorSet, "V_SBC: Trusted Creditor Set");
         _setBaseCurrency(baseCurrency_);
     }
 
@@ -270,6 +273,7 @@ contract Vault is IVault {
 
         isTrustedCreditorSet = false;
         trustedCreditor = address(0);
+        liquidator = address(0);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -398,6 +402,14 @@ contract Vault is IVault {
     {
         require(msg.sender == liquidator, "V_LV: Only Liquidator");
 
+        //Cache trustedCreditor
+        trustedCreditor_ = trustedCreditor;
+
+        //Close margin account
+        isTrustedCreditorSet = false;
+        trustedCreditor = address(0);
+        liquidator = address(0);
+
         //If getLiquidationValue (total value discounted with liquidation factor) is smaller than openDebt,
         //the Vault is unhealthy and is succesfully liquidated.
         //Liquidations are triggered by the trustedCreditor (via Liquidator), the openDebt is
@@ -411,7 +423,7 @@ contract Vault is IVault {
         originalOwner = owner;
         _transferOwnership(msg.sender);
 
-        return (originalOwner, baseCurrency, trustedCreditor);
+        return (originalOwner, baseCurrency, trustedCreditor_);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -429,7 +441,7 @@ contract Vault is IVault {
      * - Chain interactions with the Trusted Creditor together with vault actions (eg. borrow deposit and trade in one transaction).
      */
     function setAssetManager(address assetManager, bool value) external onlyOwner {
-        isAssetManager[assetManager] = value;
+        isAssetManager[msg.sender][assetManager] = value;
     }
 
     /**
@@ -451,13 +463,13 @@ contract Vault is IVault {
         (ActionData memory outgoing,,,) = abi.decode(actionData, (ActionData, ActionData, address[], bytes[]));
 
         // withdraw to actionHandler
-        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, outgoing.assetTypes, actionHandler);
+        _withdraw(outgoing.assets, outgoing.assetIds, outgoing.assetAmounts, actionHandler);
 
         // execute Action
         ActionData memory incoming = IActionBase(actionHandler).executeAction(actionData);
 
         // deposit from actionHandler into vault
-        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, incoming.assetTypes, actionHandler);
+        _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, actionHandler);
 
         uint256 usedMargin = getUsedMargin();
         if (usedMargin > 0) {
@@ -481,36 +493,20 @@ contract Vault is IVault {
      * Can only be called by the proxy vault owner to avoid attacks where malicous actors can deposit 1 wei assets,
      * increasing gas costs upon credit issuance and withrawals.
      * Example inputs:
-     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
-     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * [wETH, DAI, BAYC, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, BAYC, BAYC, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
      * @param assetAddresses The contract addresses of the asset. For each asset to be deposited one address,
      * even if multiple assets of the same contract address are deposited.
      * @param assetIds The asset IDs that will be deposited for ERC721 & ERC1155.
      * When depositing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be deposited.
-     * @param assetTypes The types of the assets to be deposited.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      */
-    function deposit(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        uint256[] calldata assetTypes
-    ) external onlyOwner {
-        uint256 assetAddressesLength = assetAddresses.length;
-
-        require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
-                && assetAddressesLength == assetTypes.length,
-            "V_D: Length mismatch"
-        );
-
-        _deposit(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
-
-        require(erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT, "V_D: Too many assets");
+    function deposit(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts)
+        external
+        onlyOwner
+    {
+        //No need to check that all arrays have equal length, this check is already done in the MainRegistry.
+        _deposit(assetAddresses, assetIds, assetAmounts, msg.sender);
     }
 
     /**
@@ -520,29 +516,24 @@ contract Vault is IVault {
      * are deposited, the assetAddress must be repeated in assetAddresses.
      * The ERC20 gets deposited by transferFrom. ERC721 & ERC1155 using safeTransferFrom.
      * Example inputs:
-     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
-     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * [wETH, DAI, BAYC, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, BAYC, BAYC, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
      * @param assetAddresses The contract addresses of the asset. For each asset to be deposited one address,
      * even if multiple assets of the same contract address are deposited.
      * @param assetIds The asset IDs that will be deposited for ERC721 & ERC1155.
      * When depositing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be deposited.
-     * @param assetTypes The types of the assets to be deposited.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      * @param from The address to deposit from.
      */
     function _deposit(
         address[] memory assetAddresses,
         uint256[] memory assetIds,
         uint256[] memory assetAmounts,
-        uint256[] memory assetTypes,
         address from
     ) internal {
         //reverts in mainregistry if invalid input
-        IMainRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
+        uint256[] memory assetTypes =
+            IMainRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
@@ -567,6 +558,8 @@ contract Vault is IVault {
                 ++i;
             }
         }
+
+        require(erc20Stored.length + erc721Stored.length + erc1155Stored.length <= ASSET_LIMIT, "V_D: Too many assets");
     }
 
     /**
@@ -580,37 +573,23 @@ contract Vault is IVault {
      * Will fail if "the value after withdrawal / open debt (including unrealised debt) > collateral threshold".
      * If no debt is taken yet on this proxy vault, users are free to withraw any asset at any time.
      * Example inputs:
-     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
-     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * [wETH, DAI, BAYC, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, BAYC, BAYC, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
      * @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
      * even if multiple assets of the same contract address are withdrawn.
      * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
      * When withdrawing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be withdrawn.
-     * @param assetTypes The types of the assets to be withdrawn.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      */
-    function withdraw(
-        address[] calldata assetAddresses,
-        uint256[] calldata assetIds,
-        uint256[] calldata assetAmounts,
-        uint256[] calldata assetTypes
-    ) external onlyOwner {
-        uint256 assetAddressesLength = assetAddresses.length;
-
-        require(
-            assetAddressesLength == assetIds.length && assetAddressesLength == assetAmounts.length
-                && assetAddressesLength == assetTypes.length,
-            "V_W: Length mismatch"
-        );
-
-        _withdraw(assetAddresses, assetIds, assetAmounts, assetTypes, msg.sender);
+    function withdraw(address[] calldata assetAddresses, uint256[] calldata assetIds, uint256[] calldata assetAmounts)
+        external
+        onlyOwner
+    {
+        //No need to check that all arrays have equal length, this check is already done in the MainRegistry.
+        _withdraw(assetAddresses, assetIds, assetAmounts, msg.sender);
 
         uint256 usedMargin = getUsedMargin();
-        if (usedMargin != 0) {
+        if (usedMargin > 0) {
             require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
         }
     }
@@ -623,18 +602,13 @@ contract Vault is IVault {
      * The ERC20 get withdrawn by transfers. ERC721 & ERC1155 using safeTransferFrom.
      * Will fail if balance on proxy vault is not sufficient for one of the withdrawals.
      * Example inputs:
-     * [wETH, DAI, Bayc, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
-     * [Interleave, Interleave, Bayc, Bayc, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
+     * [wETH, DAI, BAYC, Interleave], [0, 0, 15, 2], [10**18, 10**18, 1, 100], [0, 0, 1, 2]
+     * [Interleave, Interleave, BAYC, BAYC, wETH], [3, 5, 16, 17, 0], [123, 456, 1, 1, 10**18], [2, 2, 1, 1, 0]
      * @param assetAddresses The contract addresses of the asset. For each asset to be withdrawn one address,
      * even if multiple assets of the same contract address are withdrawn.
      * @param assetIds The asset IDs that will be withdrawn for ERC721 & ERC1155.
      * When withdrawing an ERC20, this will be disregarded, HOWEVER a value (eg. 0) must be filled!
      * @param assetAmounts The amounts of the assets to be withdrawn.
-     * @param assetTypes The types of the assets to be withdrawn.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * Any other number = failed tx
      * @param to The address to withdraw to.
      */
 
@@ -642,10 +616,10 @@ contract Vault is IVault {
         address[] memory assetAddresses,
         uint256[] memory assetIds,
         uint256[] memory assetAmounts,
-        uint256[] memory assetTypes,
         address to
     ) internal {
-        IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts); //reverts in mainregistry if invalid input
+        uint256[] memory assetTypes =
+            IMainRegistry(registry).batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts); //reverts in mainregistry if invalid input
 
         uint256 assetAddressesLength = assetAddresses.length;
         for (uint256 i; i < assetAddressesLength;) {
@@ -681,7 +655,7 @@ contract Vault is IVault {
      * @param amount The amount of ERC20 tokens to be transferred.
      */
     function _depositERC20(address from, address ERC20Address, uint256 amount) internal {
-        require(IERC20(ERC20Address).transferFrom(from, address(this), amount), "V_D20: Transfer from failed");
+        ERC20(ERC20Address).safeTransferFrom(from, address(this), amount);
 
         uint256 currentBalance = erc20Balances[ERC20Address];
 
@@ -771,7 +745,7 @@ contract Vault is IVault {
             }
         }
 
-        require(IERC20(ERC20Address).transfer(to, amount), "V_W20: Transfer failed");
+        ERC20(ERC20Address).safeTransfer(to, amount);
     }
 
     /**
@@ -789,12 +763,14 @@ contract Vault is IVault {
     function _withdrawERC721(address to, address ERC721Address, uint256 id) internal {
         uint256 tokenIdLength = erc721TokenIds.length;
 
+        uint256 i;
         if (tokenIdLength == 1) {
-            // there was only one ERC721 stored on the contract, safe to remove both lists
+            //There was only one ERC721 stored on the contract, safe to remove both lists
+            require(erc721TokenIds[0] == id && erc721Stored[0] == ERC721Address, "V_W721: Unknown asset");
             erc721TokenIds.pop();
             erc721Stored.pop();
         } else {
-            for (uint256 i; i < tokenIdLength;) {
+            for (i; i < tokenIdLength;) {
                 if (erc721TokenIds[i] == id && erc721Stored[i] == ERC721Address) {
                     erc721TokenIds[i] = erc721TokenIds[tokenIdLength - 1];
                     erc721TokenIds.pop();
@@ -806,6 +782,9 @@ contract Vault is IVault {
                     ++i;
                 }
             }
+            //for loop should break, otherwise we never went into the if-branch, meaning the token being withdrawn
+            //is unknown and not properly deposited.
+            require(i < tokenIdLength, "V_W721: Unknown asset");
         }
 
         IERC721(ERC721Address).safeTransferFrom(address(this), to, id);
@@ -913,11 +892,13 @@ contract Vault is IVault {
 
         uint256 k;
         uint256 erc1155StoredLength = erc1155Stored.length;
+        uint256 cacheId;
         for (; k < erc1155StoredLength;) {
             cacheAddr = erc1155Stored[k];
+            cacheId = erc1155TokenIds[k];
             assetAddresses[i] = cacheAddr;
-            assetIds[i] = erc1155TokenIds[k];
-            assetAmounts[i] = erc1155Balances[cacheAddr][erc1155TokenIds[k]];
+            assetIds[i] = cacheId;
+            assetAmounts[i] = erc1155Balances[cacheAddr][cacheId];
             unchecked {
                 ++i;
             }
@@ -936,14 +917,15 @@ contract Vault is IVault {
         }
 
         if (type_ == 0) {
-            uint256 balance = IERC20(token).balanceOf(address(this));
+            uint256 balance = ERC20(token).balanceOf(address(this));
             uint256 balanceStored = erc20Balances[token];
             if (balance > balanceStored) {
-                require(IERC20(token).transfer(owner, balance - balanceStored), "V_S: ERC20 transfer failed");
+                ERC20(token).safeTransfer(owner, balance - balanceStored);
             }
         } else if (type_ == 1) {
             bool isStored;
-            for (uint256 i; i < erc721Stored.length;) {
+            uint256 erc721StoredLength = erc721Stored.length;
+            for (uint256 i; i < erc721StoredLength;) {
                 if (erc721Stored[i] == token && erc721TokenIds[i] == id) {
                     isStored = true;
                     break;

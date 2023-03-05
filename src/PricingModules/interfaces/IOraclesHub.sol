@@ -10,13 +10,21 @@ interface IOraclesHub {
     /**
      * @notice Checks if a series of oracles adheres to a predefined ruleset
      * @param oracles An array of addresses of oracle contracts
+     * @param asset The contract address of the base-asset.
      */
-    function checkOracleSequence(address[] memory oracles) external view;
+    function checkOracleSequence(address[] memory oracles, address asset) external view;
+
+    /**
+     * @notice Returns the state of an oracle
+     * @param oracle The address of the oracle to be checked
+     * @return boolean indicationg if the oracle is active or not
+     */
+    function isActive(address oracle) external view returns (bool);
 
     /**
      * @notice Returns the exchange rate of a certain asset, denominated in USD or in another BaseCurrency
      * @param oracles An array of addresses of oracle contracts
-     * @param baseCurrency The BaseCurrency (base-asset) in which the exchange rate is ideally expressed
+     * @param baseCurrency The BaseCurrency in which the exchange rate is ideally expressed
      * @return rateInUsd The exchange rate of the asset denominated in USD, integer with 18 Decimals precision
      * @return rateInBaseCurrency The exchange rate of the asset denominated in a BaseCurrency different from USD, integer with 18 Decimals precision
      */

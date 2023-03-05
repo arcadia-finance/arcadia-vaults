@@ -46,16 +46,14 @@ library Constants {
     uint256 internal constant interleaveCreditRatingUsd = 0;
     uint256 internal constant interleaveCreditRatingEth = 0;
     uint256 internal constant interleaveCreditRatingDai = 0;
-    uint256 internal constant wbaycDecimals = 16;
-    uint256 internal constant wmaycDecimals = 14;
 
     uint256 internal constant oracleDaiToUsdDecimals = 18;
     uint256 internal constant oracleEthToUsdDecimals = 8;
     uint256 internal constant oracleLinkToUsdDecimals = 8;
     uint256 internal constant oracleSnxToEthDecimals = 18;
     uint256 internal constant oracleSafemoonToUsdDecimals = 18;
-    uint256 internal constant oracleWbaycToEthDecimals = 18;
-    uint256 internal constant oracleWmaycToUsdDecimals = 8;
+    uint256 internal constant oracleBaycToEthDecimals = 18;
+    uint256 internal constant oracleMaycToUsdDecimals = 8;
     uint256 internal constant oracleInterleaveToEthDecimals = 10;
 
     uint256 internal constant oracleDaiToUsdUnit = 10 ** oracleDaiToUsdDecimals;
@@ -63,8 +61,8 @@ library Constants {
     uint256 internal constant oracleLinkToUsdUnit = 10 ** oracleLinkToUsdDecimals;
     uint256 internal constant oracleSnxToEthUnit = 10 ** oracleSnxToEthDecimals;
     uint256 internal constant oracleSafemoonToUsdUnit = 10 ** oracleSafemoonToUsdDecimals;
-    uint256 internal constant oracleWbaycToEthUnit = 10 ** oracleWbaycToEthDecimals;
-    uint256 internal constant oracleWmaycToUsdUnit = 10 ** oracleWmaycToUsdDecimals;
+    uint256 internal constant oracleBaycToEthUnit = 10 ** oracleBaycToEthDecimals;
+    uint256 internal constant oracleMaycToUsdUnit = 10 ** oracleMaycToUsdDecimals;
     uint256 internal constant oracleInterleaveToEthUnit = 10 ** oracleInterleaveToEthDecimals;
 
     uint256 internal constant assetDecimals = 18;

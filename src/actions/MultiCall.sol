@@ -47,6 +47,8 @@ contract ActionMultiCall is ActionBase {
         for (uint256 i; i < incoming.assets.length;) {
             if (incoming.assetTypes[i] == 0) {
                 incoming.assetAmounts[i] = IERC20(incoming.assets[i]).balanceOf(address(this));
+            } else if (incoming.assetTypes[i] == 1) {
+                incoming.assetAmounts[i] = 1;
             } else if (incoming.assetTypes[i] == 2) {
                 incoming.assetAmounts[i] = IERC1155(incoming.assets[i]).balanceOf(address(this), incoming.assetIds[i]);
             }

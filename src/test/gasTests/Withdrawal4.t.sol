@@ -39,13 +39,7 @@ contract gasWithdrawal4_2ERC202ERC721 is GasTestFixture {
         s_assetAmounts[2] = 1;
         s_assetAmounts[3] = 1;
 
-        s_assetTypes = new uint256[](4);
-        s_assetTypes[0] = 0;
-        s_assetTypes[1] = 0;
-        s_assetTypes[2] = 1;
-        s_assetTypes[3] = 1;
-
-        proxy.deposit(s_assetAddresses, s_assetIds, s_assetAmounts, s_assetTypes);
+        proxy.deposit(s_assetAddresses, s_assetIds, s_assetAmounts);
         vm.stopPrank();
     }
 
@@ -56,7 +50,7 @@ contract gasWithdrawal4_2ERC202ERC721 is GasTestFixture {
     function testGetRemainingValue() public view {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
             proxy.generateAssetData();
-        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, 0);
+        mainRegistry.getListOfValuesPerAsset(assetAddresses, assetIds, assetAmounts, address(0));
         proxy.getFreeMargin();
     }
 
@@ -73,7 +67,6 @@ contract gasWithdrawal4_2ERC202ERC721 is GasTestFixture {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -84,18 +77,14 @@ contract gasWithdrawal4_2ERC202ERC721 is GasTestFixture {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = 5 * 10 ** (Constants.ethDecimals - 1);
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.startPrank(vaultOwner);
-        proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.withdraw(assetAddresses, assetIds, assetAmounts);
     }
 
     function testWithdrawal_1_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
@@ -106,18 +95,14 @@ contract gasWithdrawal4_2ERC202ERC721 is GasTestFixture {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 1;
-
         vm.startPrank(vaultOwner);
-        proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.withdraw(assetAddresses, assetIds, assetAmounts);
     }
 
     function testWithdrawal_1_ERC20_1_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
@@ -131,19 +116,14 @@ contract gasWithdrawal4_2ERC202ERC721 is GasTestFixture {
         assetAmounts[0] = 10 ** (Constants.ethDecimals);
         assetAmounts[1] = 1;
 
-        assetTypes = new uint256[](2);
-        assetTypes[0] = 0;
-        assetTypes[1] = 1;
-
         vm.startPrank(vaultOwner);
-        proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.withdraw(assetAddresses, assetIds, assetAmounts);
     }
 
     function testWithdrawal_2_ERC20_2_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](4);
         assetAddresses[0] = address(eth);
@@ -163,13 +143,7 @@ contract gasWithdrawal4_2ERC202ERC721 is GasTestFixture {
         assetAmounts[2] = 1;
         assetAmounts[3] = 1;
 
-        assetTypes = new uint256[](4);
-        assetTypes[0] = 0;
-        assetTypes[1] = 0;
-        assetTypes[2] = 1;
-        assetTypes[3] = 1;
-
         vm.startPrank(vaultOwner);
-        proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.withdraw(assetAddresses, assetIds, assetAmounts);
     }
 }

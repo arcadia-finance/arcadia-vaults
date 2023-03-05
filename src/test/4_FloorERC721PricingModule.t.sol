@@ -39,7 +39,8 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
 
         floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            1
         );
         mainRegistry.addPricingModule(address(floorERC721PricingModule));
         vm.stopPrank();
@@ -58,7 +59,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         // Then: addAsset should revert with "UNAUTHORIZED"
         vm.expectRevert("UNAUTHORIZED");
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
         vm.stopPrank();
     }
@@ -68,11 +69,11 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         // When: creatorAddress addAsset twice
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
         vm.expectRevert("PM721_AA: already added");
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
         vm.stopPrank();
     }
@@ -82,7 +83,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with empty list credit ratings
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
         vm.stopPrank();
 
@@ -93,8 +94,8 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
             floorERC721PricingModule.getAssetInformation(address(bayc));
         assertEq(idRangeStart, 0);
         assertEq(idRangeEnd, type(uint256).max);
-        for (uint256 i; i < oracleWbaycToEthEthToUsd.length; ++i) {
-            assertEq(oracles[i], oracleWbaycToEthEthToUsd[i]);
+        for (uint256 i; i < oracleBaycToEthEthToUsd.length; ++i) {
+            assertEq(oracles[i], oracleBaycToEthEthToUsd[i]);
         }
         assertTrue(floorERC721PricingModule.isAllowListed(address(bayc), 0));
     }
@@ -113,7 +114,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
 
         // Then: addAsset should add asset
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars_, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars_, type(uint128).max
         );
         vm.stopPrank();
 
@@ -125,7 +126,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with full list credit ratings
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, type(uint128).max
         );
         vm.stopPrank();
 
@@ -142,7 +143,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.prank(creatorAddress);
         // When: creatorAddress calls addAsset
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, 9999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+            address(bayc), 0, 9999, oracleBaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
 
         // Then: address(bayc) should return true on isAllowListed for id's 0 to 9999
@@ -165,7 +166,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.prank(creatorAddress);
         // When: creatorAddress calls addAsset
         floorERC721PricingModule.addAsset(
-            address(bayc), 10, 999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+            address(bayc), 10, 999, oracleBaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
 
         // Then: isAllowListed for address(bayc) should return false
@@ -181,7 +182,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
     {
         vm.prank(creatorAddress);
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, type(uint128).max
         );
 
         vm.assume(unprivilegedAddress_ != address(mainRegistry));
@@ -194,7 +195,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
 
     function testRevert_processDeposit_OverExposure(uint256 assetId, address vault) public {
         vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, 1);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, 1);
 
         vm.startPrank(address(mainRegistry));
         floorERC721PricingModule.processDeposit(vault, address(bayc), assetId, 1);
@@ -207,7 +208,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
     function testRevert_processDeposit_WrongID(uint256 assetId, address vault) public {
         vm.assume(assetId > 0); //Not in range
         vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, 0, oracleWbaycToEthEthToUsd, riskVars, 1);
+        floorERC721PricingModule.addAsset(address(bayc), 0, 0, oracleBaycToEthEthToUsd, riskVars, 1);
 
         vm.startPrank(address(mainRegistry));
         vm.expectRevert("PM721_PD: ID not allowed");
@@ -218,9 +219,23 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         assertEq(actualExposure, 0);
     }
 
+    function testRevert_processDeposit_NotOne(uint256 assetId, address vault, uint256 amount) public {
+        vm.assume(amount != 1); //Not in range
+        vm.prank(creatorAddress);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, 1);
+
+        vm.startPrank(address(mainRegistry));
+        vm.expectRevert("PM721_PD: Amount not 1");
+        floorERC721PricingModule.processDeposit(vault, address(bayc), assetId, amount);
+        vm.stopPrank();
+
+        (, uint128 actualExposure) = floorERC721PricingModule.exposure(address(bayc));
+        assertEq(actualExposure, 0);
+    }
+
     function testSuccess_processDeposit_Positive(uint256 assetId, address vault) public {
         vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, 1);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, 1);
 
         vm.prank(address(mainRegistry));
         floorERC721PricingModule.processDeposit(vault, address(bayc), assetId, 1);
@@ -232,7 +247,7 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
     function testRevert_processWithdrawal_NonMainRegistry(address unprivilegedAddress_, address vault) public {
         vm.prank(creatorAddress);
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, type(uint128).max
         );
 
         vm.assume(unprivilegedAddress_ != address(mainRegistry));
@@ -243,9 +258,20 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
+    function testRevert_processWithdrawal_NotOne(uint256 assetId, address vault, uint256 amount) public {
+        vm.assume(amount != 1); //Not in range
+        vm.prank(creatorAddress);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, 1);
+
+        vm.startPrank(address(mainRegistry));
+        vm.expectRevert("PM721_PW: Amount not 1");
+        floorERC721PricingModule.processWithdrawal(vault, address(bayc), assetId, amount);
+        vm.stopPrank();
+    }
+
     function testSuccess_processWithdrawal(uint256 assetId, address vault) public {
         vm.prank(creatorAddress);
-        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars, 1);
+        floorERC721PricingModule.addAsset(address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars, 1);
 
         vm.prank(address(mainRegistry));
         floorERC721PricingModule.processDeposit(vault, address(bayc), assetId, 1);
@@ -266,12 +292,12 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         // Given: creatorAddress calls addAsset, expectedValueInBaseCurrency is zero
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, 999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+            address(bayc), 0, 999, oracleBaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (rateWbaycToEth * rateEthToUsd * Constants.WAD)
-            / 10 ** (Constants.oracleWbaycToEthDecimals + Constants.oracleEthToUsdDecimals);
+        uint256 expectedValueInUsd = (rateBaycToEth * rateEthToUsd * Constants.WAD)
+            / 10 ** (Constants.oracleBaycToEthDecimals + Constants.oracleEthToUsdDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
         IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
@@ -293,13 +319,12 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         // Given: creatorAddress calls addAsset, expectedValueInUsd is zero
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, 999, oracleWbaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
+            address(bayc), 0, 999, oracleBaycToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
         vm.stopPrank();
 
         uint256 expectedValueInUsd = 0;
-        uint256 expectedValueInBaseCurrency =
-            (rateWbaycToEth * Constants.WAD) / 10 ** Constants.oracleWbaycToEthDecimals;
+        uint256 expectedValueInBaseCurrency = (rateBaycToEth * Constants.WAD) / 10 ** Constants.oracleBaycToEthDecimals;
 
         IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(bayc),
@@ -320,11 +345,11 @@ contract FloorERC721PricingModuleTest is DeployArcadiaVaults {
         vm.startPrank(creatorAddress);
         // Given: creatorAddress calls addAsset, expectedValueInBaseCurrency is zero
         floorERC721PricingModule.addAsset(
-            address(mayc), 0, 999, oracleWmaycToUsdArr, emptyRiskVarInput, type(uint128).max
+            address(mayc), 0, 999, oracleMaycToUsdArr, emptyRiskVarInput, type(uint128).max
         );
         vm.stopPrank();
 
-        uint256 expectedValueInUsd = (rateWmaycToUsd * Constants.WAD) / 10 ** Constants.oracleWmaycToUsdDecimals;
+        uint256 expectedValueInUsd = (rateMaycToUsd * Constants.WAD) / 10 ** Constants.oracleMaycToUsdDecimals;
         uint256 expectedValueInBaseCurrency = 0;
 
         IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({

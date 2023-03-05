@@ -8,7 +8,7 @@ pragma solidity ^0.8.13;
 
 import { LogExpMath } from "./utils/LogExpMath.sol";
 import { IFactory } from "./interfaces/IFactory.sol";
-import { IERC20 } from "./interfaces/IERC20.sol";
+import { ERC20, SafeTransferLib } from "../lib/solmate/src/utils/SafeTransferLib.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { ILendingPool } from "./interfaces/ILendingPool.sol";
 import { Owned } from "lib/solmate/src/auth/Owned.sol";
@@ -20,6 +20,8 @@ import { Owned } from "lib/solmate/src/auth/Owned.sol";
  * @dev contact: dev at arcadia.finance
  */
 contract Liquidator is Owned {
+    using SafeTransferLib for ERC20;
+
     address public immutable factory;
 
     // Sets the begin price of the auction
@@ -51,8 +53,14 @@ contract Liquidator is Owned {
         bool inAuction;
         uint80 maxInitiatorFee;
         address baseCurrency;
+        uint16 startPriceMultiplier;
+        uint8 minPriceMultiplier;
+        uint8 initiatorRewardWeight;
+        uint8 penaltyWeight;
+        uint16 cutoffTime;
         address originalOwner;
         address trustedCreditor;
+        uint64 base;
     }
 
     constructor(address factory_) Owned(msg.sender) {
@@ -157,9 +165,9 @@ contract Liquidator is Owned {
         auctionInformation[vault].inAuction = true;
 
         //A malicious msg.sender can pass a self created contract as vault (not an actual Arcadia-Vault) that returns true on liquidateVault().
-        //This would successfully start an auction, but as long as as no collision with an actual Arcadia-vault contract address is found, this is not an issue.
+        //This would successfully start an auction, but as long as no collision with an actual Arcadia-vault contract address is found, this is not an issue.
         //The malicious non-vault would be in auction indefinitely, but does not block any 'real' auctions of Arcadia-Vaults.
-        //One exception is if an attacker finds a pre-image of his custom contract with the same contract address of an Arcadia-Vault.
+        //One exception is if an attacker finds a pre-image of his custom contract with the same contract address of an Arcadia-Vault (deployed via create2).
         //The attacker could in theory: start auction of malicious contract, self-destruct and create Arcadia-vault with identical contract address.
         //This Vault could never be auctioned since auctionInformation[vault].inAuction would return true.
         //Finding such a collision requires finding a collision of the keccak256 hash function.
@@ -172,8 +180,14 @@ contract Liquidator is Owned {
         auctionInformation[vault].startTime = uint32(block.timestamp);
         auctionInformation[vault].maxInitiatorFee = maxInitiatorFee;
         auctionInformation[vault].baseCurrency = baseCurrency;
+        auctionInformation[vault].startPriceMultiplier = startPriceMultiplier;
+        auctionInformation[vault].minPriceMultiplier = minPriceMultiplier;
+        auctionInformation[vault].initiatorRewardWeight = initiatorRewardWeight;
+        auctionInformation[vault].penaltyWeight = penaltyWeight;
+        auctionInformation[vault].cutoffTime = cutoffTime;
         auctionInformation[vault].originalOwner = originalOwner;
         auctionInformation[vault].trustedCreditor = msg.sender;
+        auctionInformation[vault].base = base;
     }
 
     /**
@@ -191,13 +205,12 @@ contract Liquidator is Owned {
             return (0, false);
         }
 
-        price = _calcPriceOfVault(auctionInformation[vault].startTime, auctionInformation[vault].openDebt);
+        price = _calcPriceOfVault(auctionInformation[vault]);
     }
 
     /**
      * @notice Function returns the current auction price given time passed and the openDebt.
-     * @param startTime The timestamp the auction started.
-     * @param openDebt The open debt taken by `originalOwner`.
+     * @param auctionInfo The auctioninfo
      * @return price The total price for which the vault can be purchased.
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault and immediately ends the auction
      * @dev Price P(t) decreases exponentially over time: P(t) = openDebt * [(SPM - MPM) * base^t + MPM]
@@ -207,28 +220,31 @@ contract Liquidator is Owned {
      * t: time passed since start auction (in seconds, 18 decimals precision)
      * @dev LogExpMath was made in solidity 0.7, where operatoins were unchecked.
      */
-    function _calcPriceOfVault(uint256 startTime, uint256 openDebt) internal view returns (uint256 price) {
+    function _calcPriceOfVault(AuctionInformation memory auctionInfo) internal view returns (uint256 price) {
         //Time passed is a difference of two Uint32 -> can't overflow
         uint256 timePassed;
         unchecked {
-            timePassed = block.timestamp - startTime; //time duration in seconds
+            timePassed = block.timestamp - auctionInfo.startTime; //time duration in seconds
 
-            if (timePassed > cutoffTime) {
+            if (timePassed > auctionInfo.cutoffTime) {
                 //Cut-off time passed -> return the minimal value defined by minPriceMultiplier (2 decimals precision).
                 //No overflow possible: uint128 * uint8
-                price = openDebt * minPriceMultiplier / 1e2;
+                price = uint256(auctionInfo.openDebt) * auctionInfo.minPriceMultiplier / 1e2;
             } else {
                 //Bring to 18 decimals precision for LogExpMath.pow()
-                //No overflow possible: uint128 * uint64
+                //No overflow possible: uin32 * uint64
                 timePassed = timePassed * 1e18;
 
                 //pow(base, timePassed) has 18 decimals and is strictly smaller than 1 (-> smaller as 1e18)
                 //No overflow possible: uint128 * uint64 * uint8
                 //Multipliers have 2 decimals precision and LogExpMath.pow() has 18 decimals precision,
                 //hence we need to divide the result by 1e20.
-                price = openDebt
-                    * (LogExpMath.pow(base, timePassed) * (startPriceMultiplier - minPriceMultiplier) + minPriceMultiplier)
-                    / 1e20;
+                price = auctionInfo.openDebt
+                    * (
+                        LogExpMath.pow(auctionInfo.base, timePassed)
+                            * (auctionInfo.startPriceMultiplier - auctionInfo.minPriceMultiplier)
+                            + 1e18 * uint256(auctionInfo.minPriceMultiplier)
+                    ) / 1e20;
             }
         }
     }
@@ -243,17 +259,14 @@ contract Liquidator is Owned {
         AuctionInformation memory auctionInformation_ = auctionInformation[vault];
         require(auctionInformation_.inAuction, "LQ_BV: Not for sale");
 
-        uint256 priceOfVault = _calcPriceOfVault(auctionInformation_.startTime, auctionInformation_.openDebt);
+        uint256 priceOfVault = _calcPriceOfVault(auctionInformation_);
         //Stop the auction, this will prevent any possible reentrance attacks.
         auctionInformation[vault].inAuction = false;
 
         //Transfer funds, equal to the current auction price from the bidder to the Creditor contract.
         //The bidder should have approved the Liquidation contract for at least an amount of priceOfVault.
-        require(
-            IERC20(auctionInformation_.baseCurrency).transferFrom(
-                msg.sender, auctionInformation_.trustedCreditor, priceOfVault
-            ),
-            "LQ_BV: transfer from failed"
+        ERC20(auctionInformation_.baseCurrency).safeTransferFrom(
+            msg.sender, auctionInformation_.trustedCreditor, priceOfVault
         );
 
         (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder) =
