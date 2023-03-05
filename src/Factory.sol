@@ -36,7 +36,9 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
     address[] public allVaults;
 
     event VaultUpgraded(address indexed vaultAddress, uint16 oldVersion, uint16 indexed newVersion);
-    event VaultVersionAdded(uint16 indexed version, address indexed registry, address indexed logic, bytes32 versionRoot);
+    event VaultVersionAdded(
+        uint16 indexed version, address indexed registry, address indexed logic, bytes32 versionRoot
+    );
     event VaultVersionBlocked(uint16 version);
 
     constructor() ERC721("Arcadia Vault", "ARCADIA") { }

@@ -16,7 +16,9 @@ contract FactoryTest is DeployArcadiaVaults {
     //events
     event Transfer(address indexed from, address indexed to, uint256 indexed id);
     event VaultUpgraded(address indexed vaultAddress, uint16 oldVersion, uint16 indexed newVersion);
-    event VaultVersionAdded(uint16 indexed version, address indexed registry, address indexed logic, bytes32 versionRoot);
+    event VaultVersionAdded(
+        uint16 indexed version, address indexed registry, address indexed logic, bytes32 versionRoot
+    );
     event VaultVersionBlocked(uint16 version);
 
     //this is a before
