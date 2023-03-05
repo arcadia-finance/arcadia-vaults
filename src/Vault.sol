@@ -153,9 +153,6 @@ contract Vault is IVault {
             require(success, "V_UV: Invalid vault version");
         }
 
-        vaultVersion = newVersion;
-        _getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
-
         //Cache old parameters
         address oldImplementation = _getAddressSlot(_IMPLEMENTATION_SLOT).value;
         address oldRegistry = registry;

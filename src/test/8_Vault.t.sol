@@ -1390,14 +1390,9 @@ contract AssetManagementTest is vaultTests {
     }
 
     //input as uint8 to prevent too long lists as fuzz input
-    function testRevert_deposit_LengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen, uint8 typesLen)
-        public
-    {
-        vm.assume((addrLen != idLen && addrLen != amountLen && addrLen != typesLen));
-        vm.assume(
-            addrLen <= vault_.ASSET_LIMIT() && idLen <= vault_.ASSET_LIMIT() && amountLen <= vault_.ASSET_LIMIT()
-                && typesLen <= vault_.ASSET_LIMIT()
-        );
+    function testRevert_deposit_LengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen) public {
+        vm.assume((addrLen != idLen && addrLen != amountLen));
+        vm.assume(addrLen <= vault_.ASSET_LIMIT() && idLen <= vault_.ASSET_LIMIT() && amountLen <= vault_.ASSET_LIMIT());
 
         address[] memory assetAddresses = new address[](addrLen);
         for (uint256 i; i < addrLen; ++i) {
