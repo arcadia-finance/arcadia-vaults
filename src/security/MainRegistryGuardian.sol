@@ -17,21 +17,19 @@ import { BaseGuardian } from "./BaseGuardian.sol";
 abstract contract MainRegistryGuardian is BaseGuardian {
     /*
     //////////////////////////////////////////////////////////////
-                            EVENTS
-    //////////////////////////////////////////////////////////////
-    */
-
-    event PauseUpdate(address account, bool withdrawPauseUpdate, bool depositPauseUpdate);
-
-    /*
-    //////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////
     */
     bool public withdrawPaused;
     bool public depositPaused;
 
-    constructor() { }
+    /*
+    //////////////////////////////////////////////////////////////
+                            EVENTS
+    //////////////////////////////////////////////////////////////
+    */
+
+    event PauseUpdate(bool withdrawPauseUpdate, bool depositPauseUpdate);
 
     /*
     //////////////////////////////////////////////////////////////
@@ -57,6 +55,8 @@ abstract contract MainRegistryGuardian is BaseGuardian {
         _;
     }
 
+    constructor() { }
+
     /**
      * @inheritdoc BaseGuardian
      */
@@ -65,7 +65,8 @@ abstract contract MainRegistryGuardian is BaseGuardian {
         withdrawPaused = true;
         depositPaused = true;
         pauseTimestamp = block.timestamp;
-        emit PauseUpdate(msg.sender, true, true);
+
+        emit PauseUpdate(true, true);
     }
 
     /**
@@ -79,7 +80,8 @@ abstract contract MainRegistryGuardian is BaseGuardian {
     function unPause(bool withdrawPaused_, bool depositPaused_) external onlyOwner {
         withdrawPaused = withdrawPaused && withdrawPaused_;
         depositPaused = depositPaused && depositPaused_;
-        emit PauseUpdate(msg.sender, withdrawPaused, depositPaused);
+
+        emit PauseUpdate(withdrawPaused, depositPaused);
     }
 
     /**
@@ -90,7 +92,8 @@ abstract contract MainRegistryGuardian is BaseGuardian {
         if (withdrawPaused || depositPaused) {
             withdrawPaused = false;
             depositPaused = false;
-            emit PauseUpdate(msg.sender, false, false);
+
+            emit PauseUpdate(false, false);
         }
     }
 }

@@ -15,7 +15,13 @@ import { Owned } from "lib/solmate/src/auth/Owned.sol";
  *
  */
 abstract contract BaseGuardian is Owned {
+    /*
+    //////////////////////////////////////////////////////////////
+                            STORAGE
+    //////////////////////////////////////////////////////////////
+    */
     address public guardian;
+    uint256 public pauseTimestamp;
 
     /*
     //////////////////////////////////////////////////////////////
@@ -24,15 +30,6 @@ abstract contract BaseGuardian is Owned {
     */
 
     event GuardianChanged(address indexed oldGuardian, address indexed newGuardian);
-
-    /*
-    //////////////////////////////////////////////////////////////
-                            STORAGE
-    //////////////////////////////////////////////////////////////
-    */
-    uint256 public pauseTimestamp;
-
-    constructor() Owned(msg.sender) { }
 
     /*
     //////////////////////////////////////////////////////////////
@@ -47,6 +44,8 @@ abstract contract BaseGuardian is Owned {
         require(msg.sender == guardian, "Guardian: Only guardian");
         _;
     }
+
+    constructor() Owned(msg.sender) { }
 
     /**
      * @notice This function is used to set the guardian address
