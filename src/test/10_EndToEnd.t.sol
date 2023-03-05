@@ -521,6 +521,106 @@ contract DoActionWithLeverage is EndToEndTest {
         proxy.setAssetManager(address(pool), true);
     }
 
+    function testSuccess_doActionWithLeverage_repayExact(uint32 daiDebt, uint72 daiCollateral, uint32 ethOut) public {
+        (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0); //18 decimals
+        (uint256 daiRate,) = oracleHub.getRate(oracleDaiToUsdArr, 0); //18 decimals
+
+        uint256 daiIn = uint256(ethOut) * ethRate / 10 ** Constants.ethDecimals * 10 ** Constants.daiDecimals / daiRate;
+
+        //With leverage -> daiIn should be bigger than the available collateral
+        vm.assume(daiIn > daiCollateral);
+
+        uint256 daiMargin = daiIn - daiCollateral;
+
+        //Action is successfull -> total debt after transaction should be smaller than the Collateral Value
+        vm.assume(daiMargin + daiDebt <= collateralFactor * daiIn / 100);
+
+        //Set initial debt
+        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(daiDebt);
+        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(daiDebt);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(daiDebt);
+
+        //Deposit daiCollateral in Vault (have to burn first to avoid overflow)
+        vm.prank(liquidityProvider);
+        dai.burn(type(uint64).max);
+        depositERC20InVault(dai, daiCollateral, vaultOwner);
+
+        //Prepare input parameters
+        bytes[] memory data = new bytes[](3);
+        address[] memory to = new address[](3);
+
+        data[0] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), daiIn);
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)", address(dai), address(eth), daiIn, uint256(ethOut)
+        );
+        data[2] = abi.encodeWithSignature("approve(address,uint256)", address(proxy), uint256(ethOut));
+
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(multiActionMock), ethOut);
+
+        to[0] = address(dai);
+        to[1] = address(multiActionMock);
+        to[2] = address(eth);
+
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataOut.assets[0] = address(dai);
+        assetDataOut.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+        assetDataOut.assetAmounts[0] = daiCollateral;
+
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataIn.assets[0] = address(eth);
+        assetDataIn.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        //Do swap on leverage
+        vm.prank(vaultOwner);
+        pool.doActionWithLeverage(daiMargin, address(proxy), address(action), callData, emptyBytes3);
+
+        assertEq(dai.balanceOf(address(pool)), type(uint128).max - daiMargin);
+        assertEq(dai.balanceOf(address(multiActionMock)), daiIn);
+        assertEq(eth.balanceOf(address(proxy)), ethOut);
+        assertEq(debt.balanceOf(address(proxy)), uint256(daiDebt) + daiMargin);
+
+        uint256 debtAmount = proxy.getUsedMargin();
+
+        bytes[] memory dataArr = new bytes[](2);
+        dataArr[0] = abi.encodeWithSignature("approve(address,uint256)", address(pool), type(uint256).max);
+        dataArr[1] = abi.encodeWithSignature(
+            "executeRepay(address,address,address,uint256)", address(pool), address(dai), address(proxy), 0
+        );
+
+        address[] memory tos = new address[](2);
+        tos[0] = address(dai);
+        tos[1] = address(action);
+
+        ActionData memory ad;
+
+        vm.startPrank(liquidityProvider);
+        dai.transfer(address(action), debtAmount);
+        action.executeAction(abi.encode(ad, ad, tos, dataArr));
+        vm.stopPrank();
+
+        assertEq(debt.balanceOf(address(proxy)), 0);
+        assertEq(proxy.getUsedMargin(), 0);
+    }
+
     function testSuccess_doActionWithLeverage(uint32 daiDebt, uint72 daiCollateral, uint32 ethOut) public {
         (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0); //18 decimals
         (uint256 daiRate,) = oracleHub.getRate(oracleDaiToUsdArr, 0); //18 decimals
