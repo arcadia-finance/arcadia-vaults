@@ -314,7 +314,7 @@ contract Liquidator is Owned {
             uint128(liquidationInitiatorReward),
             uint128(liquidationPenalty),
             uint128(remainder)
-            );
+        );
     }
 
     /**
@@ -362,7 +362,7 @@ contract Liquidator is Owned {
             uint128(liquidationInitiatorReward),
             uint128(liquidationPenalty),
             uint128(remainder)
-            );
+        );
     }
 
     /**

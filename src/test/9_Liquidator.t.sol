@@ -670,7 +670,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
                 uint128(liquidationInitiatorReward),
                 uint128(liquidationPenalty),
                 uint128(remainder)
-                );
+            );
             liquidator_.buyVault(address(proxy));
             vm.stopPrank();
         }
@@ -852,7 +852,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
                 uint128(liquidationInitiatorReward),
                 0,
                 0
-                );
+            );
             liquidator_.endAuction(address(proxy), to);
             vm.stopPrank();
         }
