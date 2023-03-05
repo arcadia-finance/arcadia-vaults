@@ -67,8 +67,9 @@ contract VaultV2 {
         address value;
     }
 
-    event Upgraded(address oldImplementation, address newImplementation, uint16 oldVersion, uint16 indexed newVersion);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event BaseCurrencySet(address baseCurrency);
+    event TrustedMarginAccountChanged(address indexed protocol, address indexed liquidator);
+    event AssetManagerSet(address indexed owner, address indexed assetManager, bool value);
 
     /**
      * @dev Throws if called by any account other than the factory address.
@@ -126,6 +127,8 @@ contract VaultV2 {
         registry = registry_;
         vaultVersion = vaultVersion_;
         baseCurrency = baseCurrency_;
+
+        emit BaseCurrencySet(baseCurrency_);
     }
 
     /**
@@ -159,7 +162,7 @@ contract VaultV2 {
         //Data can be added by the factory for complex instructions.
         this.upgradeHook(oldImplementation, oldRegistry, oldVersion, data);
 
-        emit Upgraded(oldImplementation, newImplementation, oldVersion, newVersion);
+        //Event emitted by Factory.
     }
 
     /**
@@ -192,12 +195,12 @@ contract VaultV2 {
 
     /**
      * @notice Transfers ownership of the contract to a new account (`newOwner`).
-     * Internal function without access restriction.
+     * @param newOwner The new owner of the Vault
      */
     function _transferOwnership(address newOwner) internal {
-        address oldOwner = owner;
         owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
+
+        //Event emitted by Factory.
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -221,6 +224,8 @@ contract VaultV2 {
     function _setBaseCurrency(address baseCurrency_) internal {
         require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
         baseCurrency = baseCurrency_;
+
+        emit BaseCurrencySet(baseCurrency_);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -250,6 +255,8 @@ contract VaultV2 {
             _setBaseCurrency(baseCurrency_);
         }
         isTrustedCreditorSet = true;
+
+        emit TrustedMarginAccountChanged(creditor, liquidator_);
     }
 
     /**
@@ -264,6 +271,8 @@ contract VaultV2 {
         isTrustedCreditorSet = false;
         trustedCreditor = address(0);
         liquidator = address(0);
+
+        emit TrustedMarginAccountChanged(address(0), address(0));
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -413,6 +422,8 @@ contract VaultV2 {
         originalOwner = owner;
         _transferOwnership(msg.sender);
 
+        emit TrustedMarginAccountChanged(address(0), address(0));
+
         return (originalOwner, baseCurrency, trustedCreditor_);
     }
 
@@ -432,6 +443,8 @@ contract VaultV2 {
      */
     function setAssetManager(address assetManager, bool value) external onlyOwner {
         isAssetManager[msg.sender][assetManager] = value;
+
+        emit AssetManagerSet(msg.sender, assetManager, value);
     }
 
     /**

@@ -65,16 +65,9 @@ contract Vault is IVault {
         address value;
     }
 
-    event Upgraded(address oldImplementation, address newImplementation, uint16 oldVersion, uint16 indexed newVersion);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event Initialized(uint16 indexed vaultVersion_, address indexed registry_, address owner_, address baseCurrency_);
-    event BaseCurrencyUpdated(address indexed oldBaseCurrency, address indexed newBaseCurrency);
-    event TrustedMarginAccountOpened(address indexed protocol, address indexed liquidator, address baseCurrency);
-    event MarginPositionUpdate(address baseCurrency_, uint256 amount, bool success);
-    event TrustedMarginAccountClosed(address protocol);
-    event LiquidationStarted(address indexed originalOwner, address indexed baseCurrency, uint256 openDebt);
-    event AssetManagerSet(address indexed assetManager, bool value);
-    event VaultManagementAction(address indexed actionHandler, bytes actionData);
+    event BaseCurrencySet(address baseCurrency);
+    event TrustedMarginAccountChanged(address indexed protocol, address indexed liquidator);
+    event AssetManagerSet(address indexed owner, address indexed assetManager, bool value);
 
     /**
      * @dev Throws if called by any account other than the factory address.
@@ -132,7 +125,8 @@ contract Vault is IVault {
         registry = registry_;
         vaultVersion = vaultVersion_;
         baseCurrency = baseCurrency_;
-        emit Initialized(vaultVersion_, registry_, owner_, baseCurrency_);
+
+        emit BaseCurrencySet(baseCurrency_);
     }
 
     /**
@@ -166,7 +160,7 @@ contract Vault is IVault {
         //Data can be added by the factory for complex instructions.
         this.upgradeHook(oldImplementation, oldRegistry, oldVersion, data);
 
-        emit Upgraded(oldImplementation, newImplementation, oldVersion, newVersion);
+        //Event emitted by Factory.
     }
 
     /**
@@ -211,12 +205,12 @@ contract Vault is IVault {
 
     /**
      * @notice Transfers ownership of the contract to a new account (`newOwner`).
-     * Internal function without access restriction.
+     * @param newOwner The new owner of the Vault
      */
     function _transferOwnership(address newOwner) internal {
-        address oldOwner = owner;
         owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
+
+        //Event emitted by Factory.
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -231,8 +225,6 @@ contract Vault is IVault {
     function setBaseCurrency(address baseCurrency_) external onlyOwner {
         require(!isTrustedCreditorSet, "V_SBC: Trusted Creditor Set");
         _setBaseCurrency(baseCurrency_);
-
-        emit BaseCurrencyUpdated(baseCurrency, baseCurrency_);
     }
 
     /**
@@ -242,6 +234,8 @@ contract Vault is IVault {
     function _setBaseCurrency(address baseCurrency_) internal {
         require(IMainRegistry(registry).isBaseCurrency(baseCurrency_), "V_SBC: baseCurrency not found");
         baseCurrency = baseCurrency_;
+
+        emit BaseCurrencySet(baseCurrency_);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -270,8 +264,9 @@ contract Vault is IVault {
         if (baseCurrency != baseCurrency_) {
             _setBaseCurrency(baseCurrency_);
         }
-        emit TrustedMarginAccountOpened(creditor, liquidator_, baseCurrency_);
         isTrustedCreditorSet = true;
+
+        emit TrustedMarginAccountChanged(creditor, liquidator_);
     }
 
     /**
@@ -287,7 +282,7 @@ contract Vault is IVault {
         trustedCreditor = address(0);
         liquidator = address(0);
 
-        emit TrustedMarginAccountClosed(trustedCreditor);
+        emit TrustedMarginAccountChanged(address(0), address(0));
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -436,7 +431,8 @@ contract Vault is IVault {
         //Transfer ownership of the Vault itself to the Liquidator
         originalOwner = owner;
         _transferOwnership(msg.sender);
-        emit LiquidationStarted(originalOwner, baseCurrency, openDebt);
+
+        emit TrustedMarginAccountChanged(address(0), address(0));
 
         return (originalOwner, baseCurrency, trustedCreditor_);
     }
@@ -457,6 +453,8 @@ contract Vault is IVault {
      */
     function setAssetManager(address assetManager, bool value) external onlyOwner {
         isAssetManager[msg.sender][assetManager] = value;
+
+        emit AssetManagerSet(msg.sender, assetManager, value);
     }
 
     /**
