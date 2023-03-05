@@ -6,19 +6,20 @@
  */
 pragma solidity ^0.8.13;
 
-import {PricingModule} from "./AbstractPricingModule.sol";
-import {IOraclesHub} from "./interfaces/IOraclesHub.sol";
-import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
-import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
-
+import { PricingModule, IPricingModule } from "./AbstractPricingModule.sol";
+import { IOraclesHub } from "./interfaces/IOraclesHub.sol";
+import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
+import { IERC20 } from "../interfaces/IERC20.sol";
+import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import { IStandardERC20PricingModule } from "./interfaces/IStandardERC20PricingModule.sol";
 /**
  * @title Sub-registry for Standard ERC20 tokens
  * @author Arcadia Finance
  * @notice The StandardERC20PricingModule stores pricing logic and basic information for ERC20 tokens for which a direct price feed exists
  * @dev No end-user should directly interact with the StandardERC20PricingModule, only the Main-registry, Oracle-Hub or the contract owner
  */
-contract StandardERC20PricingModule is PricingModule {
+
+contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModule {
     using FixedPointMathLib for uint256;
 
     mapping(address => AssetInformation) public assetToInformation;
@@ -31,9 +32,15 @@ contract StandardERC20PricingModule is PricingModule {
     /**
      * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry_ The address of the Main-registry
-     * @param oracleHub_ The address of the Oracle-Hub
+     * @param oracleHub_ The address of the Oracle-Hub.
+     * @param assetType_ Identifier for the type of asset, necessary for the deposit and withdraw logic in the vaults.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
+    constructor(address mainRegistry_, address oracleHub_, uint256 assetType_)
+        PricingModule(mainRegistry_, oracleHub_, assetType_, msg.sender)
+    { }
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -58,13 +65,13 @@ contract StandardERC20PricingModule is PricingModule {
     {
         require(!inPricingModule[asset], "PM20_AA: already added");
         //View function, reverts in OracleHub if sequence is not correct
-        IOraclesHub(oracleHub).checkOracleSequence(oracles);
+        IOraclesHub(oracleHub).checkOracleSequence(oracles, asset);
 
         inPricingModule[asset] = true;
         assetsInPricingModule.push(asset);
 
         uint256 assetUnit = 10 ** IERC20(asset).decimals();
-        require(assetUnit <= 1000000000000000000, "PM20_AA: Maximal 18 decimals");
+        require(assetUnit <= 1e18, "PM20_AA: Maximal 18 decimals");
 
         assetToInformation[asset].assetUnit = uint64(assetUnit); //Can safely cast to uint64, we previously checked it is smaller than 10e18
         assetToInformation[asset].oracles = oracles;
@@ -73,7 +80,37 @@ contract StandardERC20PricingModule is PricingModule {
         exposure[asset].maxExposure = maxExposure;
 
         //Will revert in MainRegistry if asset can't be added
-        IMainRegistry(mainRegistry).addAsset(asset);
+        IMainRegistry(mainRegistry).addAsset(asset, assetType);
+    }
+
+    /**
+     * @notice Sets a new oracle sequence in the case one of the oracles is decomissioned.
+     * @param asset The contract address of the asset
+     * @param newOracles An array of addresses of oracle contracts, to price the asset in USD
+     * @param decommissionedOracle The contract address of the decommissioned oracle
+     */
+    function setOracles(address asset, address[] calldata newOracles, address decommissionedOracle)
+        external
+        onlyOwner
+    {
+        // If asset is not added to the Pricing Module, oldOracles will have length 0
+        // In this case the for loop will be skipped and the function will revert.
+        address[] memory oldOracles = assetToInformation[asset].oracles;
+        uint256 oraclesLength = oldOracles.length;
+        for (uint256 i; i < oraclesLength;) {
+            if (oldOracles[i] == decommissionedOracle) {
+                require(!IOraclesHub(oracleHub).isActive(oldOracles[i]), "PM20_SO: Oracle still active");
+                //View function, reverts in OracleHub if sequence is not correct
+                IOraclesHub(oracleHub).checkOracleSequence(newOracles, asset);
+                assetToInformation[asset].oracles = newOracles;
+                return;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        //If length of oldOracles was zero, or decommissionedOracle was not in the oldOracles array
+        revert("PM20_SO: Unknown Oracle");
     }
 
     /**
@@ -96,7 +133,7 @@ contract StandardERC20PricingModule is PricingModule {
      * - asset: The contract address of the asset
      * - assetId: Since ERC20 tokens have no Id, the Id should be set to 0
      * - assetAmount: The Amount of tokens, ERC20 tokens can have any Decimals precision smaller than 18.
-     * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
+     * - baseCurrency: The BaseCurrency in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
      * @return collateralFactor The Collateral Factor of the asset
@@ -110,7 +147,7 @@ contract StandardERC20PricingModule is PricingModule {
      * However no check in StandardERC20PricingModule is necessary, since the check if the asset is allow listed (and hence added to PricingModule)
      * is already done in the Main-Registry.
      */
-    function getValue(GetValueInput memory getValueInput)
+    function getValue(IPricingModule.GetValueInput memory getValueInput)
         public
         view
         override

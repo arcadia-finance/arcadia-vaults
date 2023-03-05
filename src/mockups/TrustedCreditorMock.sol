@@ -6,7 +6,7 @@
  */
 pragma solidity ^0.8.13;
 
-import {TrustedCreditor} from "../../lib/arcadia-lending/src/TrustedCreditor.sol";
+import { TrustedCreditor } from "../../lib/arcadia-lending/src/TrustedCreditor.sol";
 
 contract TrustedCreditorMock is TrustedCreditor {
     bool isCallSuccesfull;
@@ -16,7 +16,7 @@ contract TrustedCreditorMock is TrustedCreditor {
 
     mapping(address => uint256) openPosition;
 
-    constructor() TrustedCreditor() {}
+    constructor() TrustedCreditor() { }
 
     function openMarginAccount(uint256)
         external

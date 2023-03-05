@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.13;
 
 library Constants {
     // Math
@@ -46,16 +46,14 @@ library Constants {
     uint256 internal constant interleaveCreditRatingUsd = 0;
     uint256 internal constant interleaveCreditRatingEth = 0;
     uint256 internal constant interleaveCreditRatingDai = 0;
-    uint256 internal constant wbaycDecimals = 16;
-    uint256 internal constant wmaycDecimals = 14;
 
     uint256 internal constant oracleDaiToUsdDecimals = 18;
     uint256 internal constant oracleEthToUsdDecimals = 8;
     uint256 internal constant oracleLinkToUsdDecimals = 8;
     uint256 internal constant oracleSnxToEthDecimals = 18;
     uint256 internal constant oracleSafemoonToUsdDecimals = 18;
-    uint256 internal constant oracleWbaycToEthDecimals = 18;
-    uint256 internal constant oracleWmaycToUsdDecimals = 8;
+    uint256 internal constant oracleBaycToEthDecimals = 18;
+    uint256 internal constant oracleMaycToUsdDecimals = 8;
     uint256 internal constant oracleInterleaveToEthDecimals = 10;
 
     uint256 internal constant oracleDaiToUsdUnit = 10 ** oracleDaiToUsdDecimals;
@@ -63,8 +61,8 @@ library Constants {
     uint256 internal constant oracleLinkToUsdUnit = 10 ** oracleLinkToUsdDecimals;
     uint256 internal constant oracleSnxToEthUnit = 10 ** oracleSnxToEthDecimals;
     uint256 internal constant oracleSafemoonToUsdUnit = 10 ** oracleSafemoonToUsdDecimals;
-    uint256 internal constant oracleWbaycToEthUnit = 10 ** oracleWbaycToEthDecimals;
-    uint256 internal constant oracleWmaycToUsdUnit = 10 ** oracleWmaycToUsdDecimals;
+    uint256 internal constant oracleBaycToEthUnit = 10 ** oracleBaycToEthDecimals;
+    uint256 internal constant oracleMaycToUsdUnit = 10 ** oracleMaycToUsdDecimals;
     uint256 internal constant oracleInterleaveToEthUnit = 10 ** oracleInterleaveToEthDecimals;
 
     uint256 internal constant assetDecimals = 18;
@@ -77,6 +75,6 @@ library Constants {
     bytes32 internal constant upgradeRoot1To2 = 0x472ba66bf173e177005d95fe17be2002ac4c417ff5bef6fb20a1e357f75bf394;
     bytes32 internal constant upgradeRoot1To1 = 0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f;
 
-    uint256 internal constant interestRate = 5e16; //5% with 18 decimals precision
-    uint256 internal constant utilisationThreshold = 8e4; //80% with 5 decimals precision
+    uint72 internal constant interestRate = 5e16; //5% with 18 decimals precision
+    uint40 internal constant utilisationThreshold = 8e4; //80% with 5 decimals precision
 }

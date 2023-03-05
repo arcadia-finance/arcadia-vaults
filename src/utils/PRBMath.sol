@@ -24,11 +24,11 @@ library PRBMath {
     uint256 internal constant SCALE = 1e18;
 
     /// @dev Largest power of two that is a divisor of `SCALE`.
-    uint256 internal constant SCALE_LPOTD = 262144;
+    uint256 internal constant SCALE_LPOTD = 262_144;
 
     /// @dev The `SCALE` number inverted mod 2^256.
     uint256 internal constant SCALE_INVERSE =
-        78156646155174841979727994598816262306175212592076161876661_508869554232690281;
+        78_156_646_155_174_841_979_727_994_598_816_262_306_175_212_592_076_161_876_661_508_869_554_232_690_281;
 
     /// FUNCTIONS ///
 

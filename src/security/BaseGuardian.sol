@@ -5,9 +5,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.13;
 
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
+import { Owned } from "lib/solmate/src/auth/Owned.sol";
 
 /**
  * @title Factory Guardian
@@ -32,7 +32,7 @@ abstract contract BaseGuardian is Owned {
     */
     uint256 public pauseTimestamp;
 
-    constructor() Owned(msg.sender) {}
+    constructor() Owned(msg.sender) { }
 
     /*
     //////////////////////////////////////////////////////////////
@@ -54,8 +54,8 @@ abstract contract BaseGuardian is Owned {
      * @dev Allows onlyOwner to change the guardian address.
      */
     function changeGuardian(address guardian_) external onlyOwner {
-        guardian = guardian_;
         emit GuardianChanged(guardian, guardian_);
+        guardian = guardian_;
     }
 
     /**
@@ -71,7 +71,7 @@ abstract contract BaseGuardian is Owned {
      *  All users have now at least a two-day window to withdraw assets and close positions before
      *  the protocol can again be paused (by or the owner or the guardian.
      */
-    function pause() external virtual onlyGuardian {}
+    function pause() external virtual onlyGuardian { }
 
     /**
      * @notice This function is used to unpause the contract.
@@ -81,5 +81,5 @@ abstract contract BaseGuardian is Owned {
      *  All users have now at least a two-day window to withdraw assets and close positions before
      *  the protocol can again be paused (by the guardian)
      */
-    function unPause() external virtual {}
+    function unPause() external virtual { }
 }

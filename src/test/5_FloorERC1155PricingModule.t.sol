@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
@@ -12,7 +12,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     //this is a before
-    constructor() DeployArcadiaVaults() {}
+    constructor() DeployArcadiaVaults() { }
 
     //this is a before each
     function setUp() public {
@@ -39,7 +39,8 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
 
         floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            2
         );
         mainRegistry.addPricingModule(address(floorERC1155PricingModule));
         vm.stopPrank();
@@ -173,7 +174,9 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
                     RISK VARIABLES MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
 
-    function testRevert_processDeposit_NonMainRegistry(address unprivilegedAddress_, uint128 amount) public {
+    function testRevert_processDeposit_NonMainRegistry(address unprivilegedAddress_, uint128 amount, address vault)
+        public
+    {
         vm.prank(creatorAddress);
         floorERC1155PricingModule.addAsset(
             address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput, type(uint128).max
@@ -183,11 +186,11 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("APM: ONLY_MAIN_REGISTRY");
-        floorERC1155PricingModule.processDeposit(address(interleave), 1, amount);
+        floorERC1155PricingModule.processDeposit(vault, address(interleave), 1, amount);
         vm.stopPrank();
     }
 
-    function testRevert_processDeposit_OverExposure(uint128 amount, uint128 maxExposure) public {
+    function testRevert_processDeposit_OverExposure(uint128 amount, uint128 maxExposure, address vault) public {
         vm.assume(maxExposure > 0); //Asset is whitelisted
         vm.assume(amount > maxExposure);
         vm.prank(creatorAddress);
@@ -197,11 +200,11 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
 
         vm.startPrank(address(mainRegistry));
         vm.expectRevert("PM1155_PD: Exposure not in limits");
-        floorERC1155PricingModule.processDeposit(address(interleave), 1, amount);
+        floorERC1155PricingModule.processDeposit(vault, address(interleave), 1, amount);
         vm.stopPrank();
     }
 
-    function testRevert_processDeposit_WrongID(uint256 assetId, uint128 amount) public {
+    function testRevert_processDeposit_WrongID(uint256 assetId, uint128 amount, address vault) public {
         vm.assume(assetId > 0); //Wrong Id
         vm.prank(creatorAddress);
         floorERC1155PricingModule.addAsset(
@@ -210,21 +213,21 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
 
         vm.startPrank(address(mainRegistry));
         vm.expectRevert("PM1155_PD: ID not allowed");
-        floorERC1155PricingModule.processDeposit(address(interleave), assetId, amount);
+        floorERC1155PricingModule.processDeposit(vault, address(interleave), assetId, amount);
         vm.stopPrank();
 
         (, uint128 actualExposure) = floorERC1155PricingModule.exposure(address(interleave));
         assertEq(actualExposure, 0);
     }
 
-    function testSuccess_processDeposit_Positive(uint128 amount) public {
+    function testSuccess_processDeposit_Positive(uint128 amount, address vault) public {
         vm.prank(creatorAddress);
         floorERC1155PricingModule.addAsset(
             address(interleave), 1, oracleInterleaveToEthEthToUsd, emptyRiskVarInput, type(uint128).max
         );
 
         vm.prank(address(mainRegistry));
-        floorERC1155PricingModule.processDeposit(address(interleave), 1, amount);
+        floorERC1155PricingModule.processDeposit(vault, address(interleave), 1, amount);
 
         (, uint128 actualExposure) = floorERC1155PricingModule.exposure(address(interleave));
         assertEq(actualExposure, amount);
@@ -247,7 +250,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleInterleaveToEthDecimals + Constants.oracleEthToUsdDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(interleave),
             assetId: 1,
             assetAmount: amountInterleave,
@@ -275,7 +278,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency =
             (amountInterleave * rateInterleaveToEth * Constants.WAD) / 10 ** (Constants.oracleInterleaveToEthDecimals);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(interleave),
             assetId: 1,
             assetAmount: amountInterleave,
@@ -303,7 +306,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleInterleaveToEthDecimals + Constants.oracleEthToUsdDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(interleave),
             assetId: 1,
             assetAmount: amountInterleave,
@@ -348,7 +351,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
             (rateInterleaveToEthNew * Constants.WAD) / 10 ** Constants.oracleInterleaveToEthDecimals
         ) * amountInterleave;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(interleave),
             assetId: 1,
             assetAmount: amountInterleave,
@@ -385,7 +388,7 @@ contract FloorERC1155PricingModuleTest is DeployArcadiaVaults {
         );
         vm.stopPrank();
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(interleave),
             assetId: 1,
             assetAmount: amountInterleave,

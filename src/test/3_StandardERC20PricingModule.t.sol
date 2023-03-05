@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
@@ -12,7 +12,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     //this is a before
-    constructor() DeployArcadiaVaults() {}
+    constructor() DeployArcadiaVaults() { }
 
     //this is a before each
     function setUp() public {
@@ -39,7 +39,8 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
         vm.stopPrank();
@@ -71,15 +72,38 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         vm.stopPrank();
     }
 
+    function testRevert_addAsset_BadOracleSequence() public {
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("OH_COS: Min 1 Oracle");
+        standardERC20PricingModule.addAsset(address(eth), new address[](0), emptyRiskVarInput, type(uint128).max);
+        vm.stopPrank();
+    }
+
     function testRevert_addAsset_MoreThan18Decimals() public {
         vm.prank(tokenCreatorAddress);
-        eth = new ERC20Mock("ETH Mock", "mETH", 19);
+        ERC20Mock asset = new ERC20Mock("ASSET", "ASSET", 19);
+        ArcadiaOracle oracle = arcadiaOracleFixture.initMockedOracle(0, "ASSET / USD");
+        address[] memory oracleAssetToUsdArr = new address[](1);
+        oracleAssetToUsdArr[0] = address(oracle);
+        vm.prank(creatorAddress);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 0,
+                quoteAssetBaseCurrency: 0,
+                baseAsset: "ASSET",
+                quoteAsset: "USD",
+                oracle: address(oracle),
+                baseAssetAddress: address(asset),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
 
         // When: creatorAddress calls addAsset with 19 decimals
         // Then: addAsset should revert with "PM20_AA: Maximal 18 decimals"
         vm.startPrank(creatorAddress);
         vm.expectRevert("PM20_AA: Maximal 18 decimals");
-        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+        standardERC20PricingModule.addAsset(address(asset), oracleAssetToUsdArr, riskVars, type(uint128).max);
         vm.stopPrank();
     }
 
@@ -132,6 +156,88 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         assertTrue(standardERC20PricingModule.inPricingModule(address(eth)));
     }
 
+    function testRevert_setOracles_NonOwner(address asset, address oracle, address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("UNAUTHORIZED");
+        standardERC20PricingModule.setOracles(asset, oracleEthToUsdArr, oracle);
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracles_UnknownAsset(address asset, address oracle) public {
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM20_SO: Unknown Oracle");
+        standardERC20PricingModule.setOracles(asset, new address[](0), oracle);
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracles_UnknownOracle(address oracle) public {
+        vm.assume(oracle != address(oracleEthToUsd));
+
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM20_SO: Unknown Oracle");
+        standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr, oracle);
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracles_ActiveOracle() public {
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("PM20_SO: Oracle still active");
+        standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr, address(oracleEthToUsd));
+        vm.stopPrank();
+    }
+
+    function testRevert_setOracles_BadOracleSequence() public {
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+
+        vm.prank(oracleOwner);
+        oracleEthToUsd.transmit(0);
+        oracleHub.decommissionOracle(address(oracleEthToUsd));
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert("OH_COS: Oracle not active");
+        standardERC20PricingModule.setOracles(address(eth), oracleEthToUsdArr, address(oracleEthToUsd));
+        vm.stopPrank();
+    }
+
+    function testSuccess_setOracles() public {
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars, type(uint128).max);
+
+        vm.prank(oracleOwner);
+        oracleEthToUsd.transmit(0);
+        oracleHub.decommissionOracle(address(oracleEthToUsd));
+
+        ArcadiaOracle oracle = arcadiaOracleFixture.initMockedOracle(0, "ETH / USD");
+        vm.startPrank(creatorAddress);
+        address[] memory oracleAssetToUsdArr = new address[](1);
+        oracleAssetToUsdArr[0] = address(oracle);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: uint64(Constants.oracleEthToUsdUnit),
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "ETH",
+                quoteAsset: "USD",
+                oracle: address(oracle),
+                baseAssetAddress: address(eth),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(creatorAddress);
+        standardERC20PricingModule.setOracles(address(eth), oracleAssetToUsdArr, address(oracleEthToUsd));
+    }
+
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/
@@ -147,7 +253,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(eth),
             assetId: 0,
             assetAmount: amountEth,
@@ -173,7 +279,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency = (amountSnx * rateSnxToEth * Constants.WAD)
             / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(snx),
             assetId: 0,
             assetAmount: amountSnx,
@@ -199,7 +305,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(link),
             assetId: 0,
             assetAmount: amountLink,
@@ -243,7 +349,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         ) / 10 ** Constants.ethDecimals;
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(eth),
             assetId: 0,
             assetAmount: amountEth,
@@ -277,7 +383,7 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(eth),
             assetId: 0,
             assetAmount: amountEth,

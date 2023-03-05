@@ -7,17 +7,17 @@
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import {DeployAddresses, DeployNumbers, DeployBytes} from "./Constants/DeployConstants.sol";
+import { DeployAddresses, DeployNumbers, DeployBytes } from "./Constants/DeployConstants.sol";
 
 import "../src/Factory.sol";
 import "../src/Proxy.sol";
 import "../src/Vault.sol";
-import {ERC20} from "../lib/solmate/src/tokens/ERC20.sol";
+import { ERC20 } from "../lib/solmate/src/tokens/ERC20.sol";
 import "../src/MainRegistry.sol";
-import {PricingModule, StandardERC20PricingModule} from "../src/PricingModules/StandardERC20PricingModule.sol";
+import { PricingModule, StandardERC20PricingModule } from "../src/PricingModules/StandardERC20PricingModule.sol";
 import "../src/Liquidator.sol";
 import "../src/OracleHub.sol";
-import {RiskConstants} from "../src/utils/RiskConstants.sol";
+import { RiskConstants } from "../src/utils/RiskConstants.sol";
 
 contract ArcadiaVaultDeployer is Test {
     Factory public factory;
@@ -77,67 +77,67 @@ contract ArcadiaVaultDeployer is Test {
 
         daiToUsdOracleInfo = OracleHub.OracleInformation({
             oracleUnit: uint64(DeployNumbers.oracleDaiToUsdUnit),
-            baseAssetBaseCurrency: uint8(DeployNumbers.UsdBaseCurrency),
-            quoteAsset: "DAI",
-            baseAsset: "USD",
+            quoteAssetBaseCurrency: uint8(DeployNumbers.UsdBaseCurrency),
+            baseAsset: "DAI",
+            quoteAsset: "USD",
             oracle: DeployAddresses.oracleDaiToUsd,
-            quoteAssetAddress: DeployAddresses.dai,
-            baseAssetIsBaseCurrency: true,
+            baseAssetAddress: DeployAddresses.dai,
+            quoteAssetIsBaseCurrency: true,
             isActive: true
         });
 
         ethToUsdOracleInfo = OracleHub.OracleInformation({
             oracleUnit: uint64(DeployNumbers.oracleEthToUsdUnit),
-            baseAssetBaseCurrency: uint8(DeployNumbers.UsdBaseCurrency),
-            quoteAsset: "ETH",
-            baseAsset: "USD",
+            quoteAssetBaseCurrency: uint8(DeployNumbers.UsdBaseCurrency),
+            baseAsset: "ETH",
+            quoteAsset: "USD",
             oracle: DeployAddresses.oracleEthToUsd,
-            quoteAssetAddress: DeployAddresses.eth,
-            baseAssetIsBaseCurrency: true,
+            baseAssetAddress: DeployAddresses.eth,
+            quoteAssetIsBaseCurrency: true,
             isActive: true
         });
 
         linkToEthEthToUsdOracleInfo = OracleHub.OracleInformation({
             oracleUnit: uint64(DeployNumbers.oracleLinkToEthUnit),
-            baseAssetBaseCurrency: uint8(DeployNumbers.EthBaseCurrency),
-            quoteAsset: "LINK",
-            baseAsset: "ETH",
+            quoteAssetBaseCurrency: uint8(DeployNumbers.EthBaseCurrency),
+            baseAsset: "LINK",
+            quoteAsset: "ETH",
             oracle: DeployAddresses.oracleLinkToEth,
-            quoteAssetAddress: DeployAddresses.link,
-            baseAssetIsBaseCurrency: true,
+            baseAssetAddress: DeployAddresses.link,
+            quoteAssetIsBaseCurrency: true,
             isActive: true
         });
 
         snxToUsdOracleInfo = OracleHub.OracleInformation({
             oracleUnit: uint64(DeployNumbers.oracleSnxToUsdUnit),
-            baseAssetBaseCurrency: uint8(DeployNumbers.UsdBaseCurrency),
-            quoteAsset: "SNX",
-            baseAsset: "USD",
+            quoteAssetBaseCurrency: uint8(DeployNumbers.UsdBaseCurrency),
+            baseAsset: "SNX",
+            quoteAsset: "USD",
             oracle: DeployAddresses.oracleSnxToUsd,
-            quoteAssetAddress: DeployAddresses.snx,
-            baseAssetIsBaseCurrency: true,
+            baseAssetAddress: DeployAddresses.snx,
+            quoteAssetIsBaseCurrency: true,
             isActive: true
         });
 
         usdcToUsdOracleInfo = OracleHub.OracleInformation({
             oracleUnit: uint64(DeployNumbers.oracleUsdcToUsdUnit),
-            baseAssetBaseCurrency: uint8(DeployNumbers.UsdBaseCurrency),
-            quoteAsset: "USDC",
-            baseAsset: "USD",
+            quoteAssetBaseCurrency: uint8(DeployNumbers.UsdBaseCurrency),
+            baseAsset: "USDC",
+            quoteAsset: "USD",
             oracle: DeployAddresses.oracleUsdcToUsd,
-            quoteAssetAddress: DeployAddresses.usdc,
-            baseAssetIsBaseCurrency: true,
+            baseAssetAddress: DeployAddresses.usdc,
+            quoteAssetIsBaseCurrency: true,
             isActive: true
         });
 
         btcToEthEthToUsdOracleInfo = OracleHub.OracleInformation({
             oracleUnit: uint64(DeployNumbers.oracleBtcToEthUnit),
-            baseAssetBaseCurrency: uint8(DeployNumbers.EthBaseCurrency),
-            quoteAsset: "BTC",
-            baseAsset: "ETH",
+            quoteAssetBaseCurrency: uint8(DeployNumbers.EthBaseCurrency),
+            baseAsset: "BTC",
+            quoteAsset: "ETH",
             oracle: DeployAddresses.oracleBtcToEth,
-            quoteAssetAddress: DeployAddresses.btc,
-            baseAssetIsBaseCurrency: true,
+            baseAssetAddress: DeployAddresses.btc,
+            quoteAssetIsBaseCurrency: true,
             isActive: true
         });
 
@@ -204,7 +204,8 @@ contract ArcadiaVaultDeployer is Test {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
 
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
@@ -223,8 +224,7 @@ contract ArcadiaVaultDeployer is Test {
         );
 
         vault = new Vault(address(mainRegistry), 1);
-        factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1, "");
 
         vm.stopBroadcast();
     }

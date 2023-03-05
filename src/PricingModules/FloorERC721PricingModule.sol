@@ -4,9 +4,9 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
-import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
+import { PricingModule, IMainRegistry, IOraclesHub } from "./AbstractPricingModule.sol";
 
 /**
  * @title Pricing Module for ERC721 tokens for which a oracle exists for the floor price of the collection
@@ -28,8 +28,14 @@ contract FloorERC721PricingModule is PricingModule {
      * @notice A Pricing Module must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry_ The address of the Main-registry
      * @param oracleHub_ The address of the Oracle-Hub
+     * @param assetType_ Identifier for the type of asset, necessary for the deposit and withdraw logic in the vaults.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      */
-    constructor(address mainRegistry_, address oracleHub_) PricingModule(mainRegistry_, oracleHub_, msg.sender) {}
+    constructor(address mainRegistry_, address oracleHub_, uint256 assetType_)
+        PricingModule(mainRegistry_, oracleHub_, assetType_, msg.sender)
+    { }
 
     /*///////////////////////////////////////////////////////////////
                         ASSET MANAGEMENT
@@ -58,7 +64,7 @@ contract FloorERC721PricingModule is PricingModule {
         uint256 maxExposure
     ) external onlyOwner {
         //View function, reverts in OracleHub if sequence is not correct
-        IOraclesHub(oracleHub).checkOracleSequence(oracles);
+        IOraclesHub(oracleHub).checkOracleSequence(oracles, asset);
 
         require(!inPricingModule[asset], "PM721_AA: already added");
         inPricingModule[asset] = true;
@@ -73,7 +79,7 @@ contract FloorERC721PricingModule is PricingModule {
         exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
-        IMainRegistry(mainRegistry).addAsset(asset);
+        IMainRegistry(mainRegistry).addAsset(asset, assetType);
     }
 
     /**
@@ -134,10 +140,12 @@ contract FloorERC721PricingModule is PricingModule {
      * @notice Processes the deposit of a token address and the corresponding Id if it is white-listed
      * @param asset The address of the asset
      * @param assetId The Id of the asset
-     * @dev amount of a deposit in ERC721 pricing module is always 1
+     * @param amount the amount of ERC721 tokens
+     * @dev amount of a deposit in ERC721 pricing module must be 1
      */
-    function processDeposit(address asset, uint256 assetId, uint256) external override onlyMainReg {
+    function processDeposit(address, address asset, uint256 assetId, uint256 amount) external override onlyMainReg {
         require(isIdInRange(asset, assetId), "PM721_PD: ID not allowed");
+        require(amount == 1, "PM721_PD: Amount not 1");
 
         exposure[asset].exposure += 1;
         require(exposure[asset].exposure <= exposure[asset].maxExposure, "PM721_PD: Exposure not in limits");
@@ -146,9 +154,11 @@ contract FloorERC721PricingModule is PricingModule {
     /**
      * @notice Processes the withdrawal of tokens to increase the maxExposure
      * @param asset The address of the asset
-     * @dev amount of a deposit in ERC721 pricing module is always 1
+     * @param amount the amount of ERC721 tokens
+     * @dev amount of a deposit in ERC721 pricing module must be 1
      */
-    function processWithdrawal(address asset, uint256) external override onlyMainReg {
+    function processWithdrawal(address, address asset, uint256, uint256 amount) external override onlyMainReg {
+        require(amount == 1, "PM721_PW: Amount not 1");
         exposure[asset].exposure -= 1;
     }
 
@@ -162,7 +172,7 @@ contract FloorERC721PricingModule is PricingModule {
      * - assetAddress: The contract address of the asset
      * - assetId: The Id of the asset
      * - assetAmount: Since ERC721 tokens have no amount, the amount should be set to 0
-     * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
+     * - baseCurrency: The BaseCurrency in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
      * @return collateralFactor The Collateral Factor of the asset

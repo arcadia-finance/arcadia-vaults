@@ -4,16 +4,16 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
 import "../../../lib/forge-std/src/Test.sol";
-import {RiskModule} from "../../RiskModule.sol";
-import {RiskConstants} from "../../utils/RiskConstants.sol";
+import { RiskModule } from "../../RiskModule.sol";
+import { RiskConstants } from "../../utils/RiskConstants.sol";
 
 contract RiskModuleTest is Test {
     using stdStorage for StdStorage;
 
-    constructor() {}
+    constructor() { }
 
     function testSuccess_calculateCollateralFactor_Success(
         uint128 firstValue,

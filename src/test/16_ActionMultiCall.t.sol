@@ -4,12 +4,12 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
-import {MultiActionMock} from "../mockups/MultiActionMock.sol";
+import { MultiActionMock } from "../mockups/MultiActionMock.sol";
 
-import {ActionMultiCall} from "../actions/MultiCall.sol";
+import { ActionMultiCall } from "../actions/MultiCall.sol";
 import "../actions/utils/ActionData.sol";
 
 contract ActionMultiCallTest is DeployArcadiaVaults {

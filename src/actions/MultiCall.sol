@@ -4,11 +4,11 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.13;
+pragma solidity ^0.8.13;
 
-import {ActionBase, ActionData} from "./ActionBase.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
-import {IERC1155} from "../interfaces/IERC1155.sol";
+import { ActionBase, ActionData } from "./ActionBase.sol";
+import { IERC20 } from "../interfaces/IERC20.sol";
+import { IERC1155 } from "../interfaces/IERC1155.sol";
 
 /**
  * @title Generic multicall action
@@ -19,7 +19,7 @@ import {IERC1155} from "../interfaces/IERC1155.sol";
  */
 
 contract ActionMultiCall is ActionBase {
-    constructor(address mainRegistry_) ActionBase(mainRegistry_) {}
+    constructor(address mainRegistry_) ActionBase(mainRegistry_) { }
 
     /**
      * @notice Calls a series of addresses with arbitrrary calldata
@@ -47,6 +47,8 @@ contract ActionMultiCall is ActionBase {
         for (uint256 i; i < incoming.assets.length;) {
             if (incoming.assetTypes[i] == 0) {
                 incoming.assetAmounts[i] = IERC20(incoming.assets[i]).balanceOf(address(this));
+            } else if (incoming.assetTypes[i] == 1) {
+                incoming.assetAmounts[i] = 1;
             } else if (incoming.assetTypes[i] == 2) {
                 incoming.assetAmounts[i] = IERC1155(incoming.assets[i]).balanceOf(address(this), incoming.assetIds[i]);
             }

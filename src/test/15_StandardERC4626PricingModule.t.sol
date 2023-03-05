@@ -4,12 +4,12 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {ERC4626Mock} from "../mockups/ERC4626Mock.sol";
-import {StandardERC4626PricingModule} from "../PricingModules/StandardERC4626PricingModule.sol";
+import { ERC4626Mock } from "../mockups/ERC4626Mock.sol";
+import { StandardERC4626PricingModule } from "../PricingModules/StandardERC4626PricingModule.sol";
 
 contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -50,12 +50,14 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
 
         standardERC4626PricingModule = new StandardERC4626PricingModule(
             address(mainRegistry),
             address(oracleHub),
+            0,
             address(standardERC20PricingModule)
         );
 
@@ -73,6 +75,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
     function testSuccess_deployment() public {
         assertEq(standardERC4626PricingModule.mainRegistry(), address(mainRegistry));
         assertEq(standardERC4626PricingModule.oracleHub(), address(oracleHub));
+        assertEq(standardERC4626PricingModule.assetType(), 0);
         assertEq(standardERC4626PricingModule.erc20PricingModule(), address(standardERC20PricingModule));
     }
 
@@ -167,7 +170,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(ybEth),
             assetId: 0,
             assetAmount: 1, //100% of the shares
@@ -201,7 +204,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency = (amountSnx * rateSnxToEth * Constants.WAD)
             / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(ybSnx),
             assetId: 0,
             assetAmount: 1, //100% of the shares
@@ -234,7 +237,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(ybLink),
             assetId: 0,
             assetAmount: 1, //100% of the shares
@@ -268,7 +271,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
         vm.store(address(eth), loc2, mockedBalanceOf);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(ybEth),
             assetId: 0,
             assetAmount: 0,
@@ -324,7 +327,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
         vm.store(address(eth), loc2, mockedBalanceOf);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(ybEth),
             assetId: 0,
             assetAmount: shares,
@@ -376,7 +379,7 @@ contract standardERC4626PricingModuleTest is DeployArcadiaVaults {
         bytes32 mockedBalanceOf = bytes32(abi.encode(totalAssets));
         vm.store(address(eth), loc2, mockedBalanceOf);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(ybEth),
             assetId: 0,
             assetAmount: shares,

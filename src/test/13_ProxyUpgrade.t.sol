@@ -4,14 +4,14 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import "../mockups/VaultV2.sol";
+import { VaultV2 } from "../mockups/VaultV2.sol";
 
-import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import { LendingPool, DebtToken, ERC20 } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 
 contract VaultV2Test is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -42,14 +42,9 @@ contract VaultV2Test is DeployArcadiaVaults {
     //this is a before
     constructor() DeployArcadiaVaults() {
         vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
         debt = DebtToken(address(pool));
 
@@ -92,21 +87,20 @@ contract VaultV2Test is DeployArcadiaVaults {
         safemoon.approve(address(proxy), type(uint256).max);
         dai.approve(address(liquidator), type(uint256).max);
 
-        vaultV2 = new VaultV2();
+        vaultV2 = new VaultV2(address(mainRegistry), 2);
         vm.stopPrank();
     }
 
-    function testSuccess_confirmNewVaultInfo(uint256 salt) public {
+    function testSuccess_getVaultVersionRoot(uint256 salt) public {
         vm.assume(salt > 0);
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         assertEq(factory.getVaultVersionRoot(), Constants.upgradeRoot1To2);
 
-        vm.startPrank(address(123456789));
+        vm.startPrank(address(123_456_789));
         proxyAddr2 = factory.createVault(salt, 0, address(0));
         vaultV2 = VaultV2(proxyAddr2);
         assertEq(vaultV2.returnFive(), 5);
@@ -126,8 +120,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         Checks memory checkBefore = createCompareStruct();
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
@@ -140,6 +133,8 @@ contract VaultV2Test is DeployArcadiaVaults {
         vm.startPrank(vaultOwner);
         factory.upgradeVaultVersion(address(proxy), factory.latestVaultVersion(), proofs);
         vm.stopPrank();
+
+        assertEq(VaultV2(proxyAddr).check(), 5);
 
         Checks memory checkAfter = createCompareStruct();
 
@@ -161,8 +156,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         Checks memory checkBefore = createCompareStruct();
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
@@ -189,8 +183,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         vm.assume(sender != address(6));
 
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vaultV2), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
 
         bytes32[] memory proofs = new bytes32[](1);
@@ -204,12 +197,7 @@ contract VaultV2Test is DeployArcadiaVaults {
 
     function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
+        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
     {
         assetAddresses = new address[](1);
         assetAddresses[0] = address(token);
@@ -220,25 +208,17 @@ contract VaultV2Test is DeployArcadiaVaults {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = amount;
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.prank(tokenCreatorAddress);
         token.mint(sender, amount);
 
         vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
     function depositERC20InVaultV2(ERC20Mock token, uint128 amount, address sender)
         public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
+        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
     {
         assetAddresses = new address[](1);
         assetAddresses[0] = address(token);
@@ -249,30 +229,21 @@ contract VaultV2Test is DeployArcadiaVaults {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = amount;
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.prank(tokenCreatorAddress);
         token.mint(sender, amount);
 
         vm.startPrank(sender);
-        vaultV2.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vaultV2.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
     function depositERC721InVault(ERC721Mock token, uint128[] memory tokenIds, address sender)
         public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
+        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
     {
         assetAddresses = new address[](tokenIds.length);
         assetIds = new uint256[](tokenIds.length);
         assetAmounts = new uint256[](tokenIds.length);
-        assetTypes = new uint256[](tokenIds.length);
 
         uint256 tokenIdToWorkWith;
         for (uint256 i; i < tokenIds.length; ++i) {
@@ -285,36 +256,28 @@ contract VaultV2Test is DeployArcadiaVaults {
             assetAddresses[i] = address(token);
             assetIds[i] = tokenIdToWorkWith;
             assetAmounts[i] = 1;
-            assetTypes[i] = 1;
         }
 
         vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
     function depositERC1155InVault(ERC1155Mock token, uint256 tokenId, uint256 amount, address sender)
         public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
+        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
     {
         assetAddresses = new address[](1);
         assetIds = new uint256[](1);
         assetAmounts = new uint256[](1);
-        assetTypes = new uint256[](1);
 
         token.mint(sender, tokenId, amount);
         assetAddresses[0] = address(token);
         assetIds[0] = tokenId;
         assetAmounts[0] = amount;
-        assetTypes[0] = 2;
 
         vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 

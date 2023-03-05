@@ -4,14 +4,14 @@
  *
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
 interface IVault {
     /**
      * @notice Returns the Vault version.
      * @return verion The Vault version.
      */
-    function vaultVersion() external view returns (uint8);
+    function vaultVersion() external view returns (uint16);
 
     /**
      * @notice Initiates the variables of the vault
@@ -27,7 +27,8 @@ interface IVault {
      * @param newImplementation The contract with the new vault logic.
      * @param newVersion The new version of the vault logic.
      */
-    function upgradeVault(address newImplementation, uint16 newVersion) external;
+    function upgradeVault(address newImplementation, address newRegistry, uint16 newVersion, bytes calldata data)
+        external;
 
     /**
      * @notice Transfers ownership of the contract to a new account.

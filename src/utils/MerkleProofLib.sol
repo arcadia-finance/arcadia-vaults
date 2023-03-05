@@ -15,7 +15,7 @@ library MerkleProofLib {
                 let offset := proof.offset
                 // Iterate over proof elements to compute root hash.
                 // prettier-ignore
-                for {} 1 {} {
+                for { } 1 { } {
                     // Slot of `leaf` in scratch space.
                     // If the condition is true: 0x20, otherwise: 0x00.
                     let scratch := shl(5, gt(leaf, calldataload(offset)))

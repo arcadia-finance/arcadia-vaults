@@ -4,12 +4,12 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {LendingPool, DebtToken, ERC20, DataTypes} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import { LendingPool, DebtToken, ERC20, DataTypes } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 
 contract LiquidatorEndToEnd is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -59,7 +59,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         link.mint(vaultOwner1, 1_000_000 * 10 ** Constants.linkDecimals);
         link.mint(vaultOwner2, 1_000_000 * 10 ** Constants.linkDecimals);
         eth.mint(vaultOwner1, 100_000 * 10 ** Constants.ethDecimals);
-        eth.mint(vaultOwner2, 100_00 * 10 ** Constants.ethDecimals);
+        eth.mint(vaultOwner2, 10_000 * 10 ** Constants.ethDecimals);
         safemoon.mint(vaultOwner1, 100_000 * 10 ** Constants.safemoonDecimals);
         vm.stopPrank();
 
@@ -75,12 +75,12 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSafemoonToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "SAFE",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "SAFE",
+                quoteAsset: "USD",
                 oracle: address(oracleSafemoonToUsd),
-                quoteAssetAddress: address(safemoon),
-                baseAssetIsBaseCurrency: true,
+                baseAssetAddress: address(safemoon),
+                quoteAssetIsBaseCurrency: true,
                 isActive: true
             })
         );
@@ -114,14 +114,9 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
 
         standardERC20PricingModule.addAsset(address(safemoon), oracleSafemoonToUsdArr, riskVars_, type(uint128).max);
 
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), treasuryAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), treasuryAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
         DataTypes.InterestRateConfiguration memory config = DataTypes.InterestRateConfiguration({
             baseRatePerYear: Constants.interestRate,
@@ -177,14 +172,9 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         ids1[2] = 0;
 
         uint256[] memory amounts1 = new uint256[](3); // total value = 100_000 + 300_000 + 500_000, coll value = 450_000, liq value = 500_000
-        amounts1[0] = 5_000 * 10 ** Constants.linkDecimals;
+        amounts1[0] = 5000 * 10 ** Constants.linkDecimals;
         amounts1[1] = 100 * 10 ** Constants.ethDecimals;
         amounts1[2] = 100_000 * 10 ** Constants.safemoonDecimals;
-
-        uint256[] memory types1 = new uint256[](3);
-        types1[0] = 0;
-        types1[1] = 0;
-        types1[2] = 0;
 
         vm.startPrank(vaultOwner1);
         proxy1 = Vault(
@@ -204,7 +194,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         eth.approve(address(proxy1), type(uint256).max);
         safemoon.approve(address(proxy1), type(uint256).max);
 
-        proxy1.deposit(tokens1, ids1, amounts1, types1);
+        proxy1.deposit(tokens1, ids1, amounts1);
         vm.stopPrank();
 
         address[] memory tokens2 = new address[](2);
@@ -216,12 +206,8 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         ids2[1] = 0;
 
         uint256[] memory amounts2 = new uint256[](2); // total value = 100_000 + 300_000, coll value = 200_000, liq value = 222_222.2222222
-        amounts2[0] = 5_000 * 10 ** Constants.linkDecimals;
+        amounts2[0] = 5000 * 10 ** Constants.linkDecimals;
         amounts2[1] = 100 * 10 ** Constants.ethDecimals;
-
-        uint256[] memory types2 = new uint256[](2);
-        types2[0] = 0;
-        types2[1] = 0;
 
         vm.startPrank(vaultOwner2);
         proxy2 = Vault(
@@ -240,7 +226,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         link.approve(address(proxy2), type(uint256).max);
         eth.approve(address(proxy2), type(uint256).max);
 
-        proxy2.deposit(tokens2, ids2, amounts2, types2);
+        proxy2.deposit(tokens2, ids2, amounts2);
         vm.stopPrank();
 
         // available margin proxy1 = 325k, minus fee (0.1%) = 324_675
@@ -249,7 +235,7 @@ contract LiquidatorEndToEnd is DeployArcadiaVaults {
         vm.startPrank(vaultOwner1);
         proxy1.openTrustedMarginAccount(address(pool));
         pool.borrow(
-            449_550_449550449551 * 10 ** Constants.daiDecimals / 10 ** 12, address(proxy1), vaultOwner1, 0xae12fa
+            449_550_449_550_449_551 * 10 ** Constants.daiDecimals / 10 ** 12, address(proxy1), vaultOwner1, 0xae12fa
         );
         vm.stopPrank();
 

@@ -4,12 +4,12 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {ATokenMock} from "../mockups/ATokenMock.sol";
-import {ATokenPricingModule} from "../PricingModules/ATokenPricingModule.sol";
+import { ATokenMock } from "../mockups/ATokenMock.sol";
+import { ATokenPricingModule } from "../PricingModules/ATokenPricingModule.sol";
 
 contract aTokenPricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -50,12 +50,14 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
 
         aTokenPricingModule = new ATokenPricingModule(
             address(mainRegistry),
             address(oracleHub),
+            0,
             address(standardERC20PricingModule)
         );
 
@@ -73,6 +75,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
     function testSuccess_deployment() public {
         assertEq(aTokenPricingModule.mainRegistry(), address(mainRegistry));
         assertEq(aTokenPricingModule.oracleHub(), address(oracleHub));
+        assertEq(aTokenPricingModule.assetType(), 0);
         assertEq(aTokenPricingModule.erc20PricingModule(), address(standardERC20PricingModule));
     }
 
@@ -164,7 +167,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleEthToUsdDecimals + Constants.ethDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(aEth),
             assetId: 0,
             assetAmount: amountEth,
@@ -191,7 +194,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         uint256 expectedValueInBaseCurrency = (amountSnx * rateSnxToEth * Constants.WAD)
             / 10 ** (Constants.oracleSnxToEthDecimals + Constants.snxDecimals);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(aSnx),
             assetId: 0,
             assetAmount: amountSnx,
@@ -217,7 +220,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
             / 10 ** (Constants.oracleLinkToUsdDecimals + Constants.linkDecimals);
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(aLink),
             assetId: 0,
             assetAmount: amountLink,
@@ -260,7 +263,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
 
         uint256 expectedValueInBaseCurrency = 0;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(aEth),
             assetId: 0,
             assetAmount: amountEth,
@@ -290,7 +293,7 @@ contract aTokenPricingModuleTest is DeployArcadiaVaults {
         aTokenPricingModule.addAsset(address(aEth), emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(aEth),
             assetId: 0,
             assetAmount: amountEth,

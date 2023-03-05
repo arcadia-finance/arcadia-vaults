@@ -4,11 +4,11 @@
  *
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
 interface IPricingModule {
     struct GetValueInput {
-        address assetAddress; //The contract address of the asset
+        address asset; //The contract address of the asset
         uint256 assetId; //The Id of the asset
         uint256 assetAmount; //The Amount of tokens
         uint256 baseCurrency; //Identifier of the BaseCurrency in which the value is ideally expressed
@@ -39,12 +39,12 @@ interface IPricingModule {
      * @param id The Id of the asset where applicable
      * @param amount The amount of tokens
      */
-    function processDeposit(address asset, uint256 id, uint256 amount) external;
+    function processDeposit(address vault, address asset, uint256 id, uint256 amount) external;
 
     /**
      * @notice Processes the withdrawal of tokens to increase the maxExposure
      * @param asset The address of the asset
      * @param amount The amount of tokens
      */
-    function processWithdrawal(address asset, uint256 amount) external;
+    function processWithdrawal(address vault, address asset, uint256 id, uint256 amount) external;
 }

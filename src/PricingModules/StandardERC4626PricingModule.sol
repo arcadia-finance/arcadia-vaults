@@ -4,12 +4,12 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
-import {PricingModule, IMainRegistry, IOraclesHub} from "./AbstractPricingModule.sol";
-import {IERC4626} from "../interfaces/IERC4626.sol";
-import {IStandardERC20PricingModule} from "./interfaces/IStandardERC20PricingModule.sol";
-import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import { PricingModule, IMainRegistry, IOraclesHub } from "./AbstractPricingModule.sol";
+import { IERC4626 } from "../interfaces/IERC4626.sol";
+import { IStandardERC20PricingModule } from "./interfaces/IStandardERC20PricingModule.sol";
+import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 /**
  * @title Sub-registry for Standard ERC4626 tokens
@@ -32,12 +32,17 @@ contract StandardERC4626PricingModule is PricingModule {
     /**
      * @notice A Sub-Registry must always be initialised with the address of the Main-Registry and of the Oracle-Hub
      * @param mainRegistry_ The address of the Main-registry
-     * @param oracleHub_ The address of the Oracle-Hub
+     * @param oracleHub_ The address of the Oracle-Hub.
+     * @param assetType_ Identifier for the type of asset, necessary for the deposit and withdraw logic in the vaults.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
+     * @param erc20PricingModule_ The address of the Pricing Module for standard ERC20 tokens.
      */
-    constructor(address mainRegistry_, address oracleHub_, address _erc20PricingModule)
-        PricingModule(mainRegistry_, oracleHub_, msg.sender)
+    constructor(address mainRegistry_, address oracleHub_, uint256 assetType_, address erc20PricingModule_)
+        PricingModule(mainRegistry_, oracleHub_, assetType_, msg.sender)
     {
-        erc20PricingModule = _erc20PricingModule;
+        erc20PricingModule = erc20PricingModule_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -78,7 +83,7 @@ contract StandardERC4626PricingModule is PricingModule {
         exposure[asset].maxExposure = uint128(maxExposure);
 
         //Will revert in MainRegistry if asset can't be added
-        IMainRegistry(mainRegistry).addAsset(asset);
+        IMainRegistry(mainRegistry).addAsset(asset, assetType);
     }
 
     /**
@@ -107,7 +112,7 @@ contract StandardERC4626PricingModule is PricingModule {
      * - assetAddress: The contract address of the asset
      * - assetId: Since ERC4626 tokens have no Id, the Id should be set to 0
      * - assetAmount: The Amount of Shares, ERC4626 tokens can have any Decimals precision smaller than 18.
-     * - baseCurrency: The BaseCurrency (base-asset) in which the value is ideally expressed
+     * - baseCurrency: The BaseCurrency in which the value is ideally expressed
      * @return valueInUsd The value of the asset denominated in USD with 18 Decimals precision
      * @return valueInBaseCurrency The value of the asset denominated in BaseCurrency different from USD with 18 Decimals precision
      * @return collateralFactor The Collateral Factor of the asset

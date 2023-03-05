@@ -4,36 +4,38 @@
  *
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
-import {Proxy} from "./Proxy.sol";
-import {IVault} from "./interfaces/IVault.sol";
-import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
-import {ERC721} from "../lib/solmate/src/tokens/ERC721.sol";
-import {Strings} from "./utils/Strings.sol";
-import {MerkleProofLib} from "./utils/MerkleProofLib.sol";
-import {FactoryGuardian} from "./security/FactoryGuardian.sol";
+import { Proxy } from "./Proxy.sol";
+import { IVault } from "./interfaces/IVault.sol";
+import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
 
-contract Factory is ERC721, FactoryGuardian {
+import { IFactory } from "./interfaces/IFactory.sol";
+import { ERC721 } from "../lib/solmate/src/tokens/ERC721.sol";
+import { Strings } from "./utils/Strings.sol";
+import { MerkleProofLib } from "./utils/MerkleProofLib.sol";
+import { FactoryGuardian } from "./security/FactoryGuardian.sol";
+
+contract Factory is IFactory, ERC721, FactoryGuardian {
     using Strings for uint256;
 
-    struct vaultVersionInfo {
+    struct VaultVersionInfo {
         address registry;
         address logic;
         bytes32 versionRoot;
+        bytes data;
     }
 
     mapping(uint256 => bool) public vaultVersionBlocked;
     mapping(address => uint256) public vaultIndex;
-    mapping(uint256 => vaultVersionInfo) public vaultDetails;
+    mapping(uint256 => VaultVersionInfo) public vaultDetails;
 
-    bool public newVaultInfoSet;
     uint16 public latestVaultVersion;
     string public baseURI;
 
     address[] public allVaults;
 
-    constructor() ERC721("Arcadia Vault", "ARCADIA") {}
+    constructor() ERC721("Arcadia Vault", "ARCADIA") { }
 
     /*///////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT
@@ -56,7 +58,8 @@ contract Factory is ERC721, FactoryGuardian {
         require(vaultVersion <= latestVaultVersion, "FTRY_CV: Unknown vault version");
         require(!vaultVersionBlocked[vaultVersion], "FTRY_CV: Vault version blocked");
 
-        vault = address(new Proxy{salt: bytes32(salt)}(vaultDetails[vaultVersion].logic));
+        //Hash tx.origin with the user provided salt to avoid front-running vault deployment with an identical salt.
+        vault = address(new Proxy{salt: keccak256(abi.encodePacked(salt, tx.origin))}(vaultDetails[vaultVersion].logic));
 
         IVault(vault).initialize(msg.sender, vaultDetails[vaultVersion].registry, uint16(vaultVersion), baseCurrency);
 
@@ -105,9 +108,9 @@ contract Factory is ERC721, FactoryGuardian {
 
         require(canUpgrade, "FTR_UVV: Version not allowed");
 
-        address newImplementation = vaultDetails[version].logic;
-        //TODO: add registry update to the vault
-        IVault(vault).upgradeVault(newImplementation, version);
+        IVault(vault).upgradeVault(
+            vaultDetails[version].logic, vaultDetails[version].registry, version, vaultDetails[version].data
+        );
     }
 
     /**
@@ -177,8 +180,7 @@ contract Factory is ERC721, FactoryGuardian {
 
     /**
      * @notice Function to set new contracts to be used for new deployed vaults
-     * @dev Two step function to confirm new logic to be used for newly deployed vaults.
-     * Changing any of the contracts does NOT change the contracts for existing deployed vaults,
+     * @dev Changing any of the contracts does NOT change the contracts for existing deployed vaults,
      * unless the vault owner explicitly chooses to upgrade their vault to a newer version
      * If a new Main Registry contract is set, all the BaseCurrencies currently stored in the Factory
      * are checked against the new Main Registry contract. If they do not match, the function reverts.
@@ -186,14 +188,12 @@ contract Factory is ERC721, FactoryGuardian {
      * @param logic The contract address of the Vault logic
      * @param versionRoot The root of the merkle tree of all the compatible vault versions
      */
-    function setNewVaultInfo(address registry, address logic, bytes32 versionRoot) external onlyOwner {
+    function setNewVaultInfo(address registry, address logic, bytes32 versionRoot, bytes calldata data)
+        external
+        onlyOwner
+    {
         require(versionRoot != bytes32(0), "FTRY_SNVI: version root is zero");
         require(logic != address(0), "FTRY_SNVI: logic address is zero");
-
-        vaultDetails[latestVaultVersion + 1].registry = registry;
-        vaultDetails[latestVaultVersion + 1].logic = logic;
-        vaultDetails[latestVaultVersion + 1].versionRoot = versionRoot;
-        newVaultInfoSet = true;
 
         //If there is a new Main Registry Contract, Check that baseCurrencies in factory and main registry match
         if (vaultDetails[latestVaultVersion].registry != registry && latestVaultVersion != 0) {
@@ -211,24 +211,15 @@ contract Factory is ERC721, FactoryGuardian {
                 }
             }
         }
-    }
 
-    /**
-     * @notice Function confirms the new contracts to be used for new deployed vaults
-     * @dev Two step function to confirm new logic to be used for new deployed vaults.
-     * Changing any of the contracts does NOT change the contracts for already deployed vaults,
-     * unless the vault owner explicitly chooses to upgrade their vault version to a newer version
-     * ToDo Add a time lock between setting a new vault version, and confirming a new vault version
-     * If no new vault info is being set (newVaultInfoSet is false), this function will not do anything
-     * The variable factoryInitialised is set to true as soon as one vault version is confirmed
-     */
-    function confirmNewVaultInfo() public onlyOwner {
-        if (newVaultInfoSet) {
-            unchecked {
-                ++latestVaultVersion;
-            }
-            newVaultInfoSet = false;
+        unchecked {
+            ++latestVaultVersion;
         }
+
+        vaultDetails[latestVaultVersion].registry = registry;
+        vaultDetails[latestVaultVersion].logic = logic;
+        vaultDetails[latestVaultVersion].versionRoot = versionRoot;
+        vaultDetails[latestVaultVersion].data = data;
     }
 
     /**
@@ -247,8 +238,9 @@ contract Factory is ERC721, FactoryGuardian {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Function called by a Vault at the start of a liquidation to transfer ownership.
+     * @notice Function called by a Vault at the start of a liquidation to transfer ownership to the Liquidator contract.
      * @param liquidator The contract address of the liquidator.
+     * @dev This transfer bypasses the standard transferFrom and safeTransferFrom from the ERC-721 standard.
      */
     function liquidate(address liquidator) external whenLiquidateNotPaused {
         require(isVault(msg.sender), "FTRY: Not a vault");
@@ -278,14 +270,6 @@ contract Factory is ERC721, FactoryGuardian {
         numberOfVaults = allVaults.length;
     }
 
-    /**
-     * @notice Returns address of the most recent Main Registry
-     * @return registry The contract addres of the Main Registry of the latest Vault Version
-     */
-    function getCurrentRegistry() external view returns (address registry) {
-        registry = vaultDetails[latestVaultVersion].registry;
-    }
-
     /*///////////////////////////////////////////////////////////////
                         ERC-721 LOGIC
     ///////////////////////////////////////////////////////////////*/
@@ -310,9 +294,5 @@ contract Factory is ERC721, FactoryGuardian {
     function tokenURI(uint256 tokenId) public view override returns (string memory uri) {
         require(_ownerOf[tokenId] != address(0), "ERC721Metadata: URI query for nonexistent token");
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
-    }
-
-    function onERC721Received(address, address, uint256, bytes calldata) public pure returns (bytes4) {
-        return this.onERC721Received.selector;
     }
 }

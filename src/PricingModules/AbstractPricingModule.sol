@@ -6,10 +6,12 @@
  */
 pragma solidity ^0.8.13;
 
-import {IOraclesHub} from "./interfaces/IOraclesHub.sol";
-import {IMainRegistry} from "./interfaces/IMainRegistry.sol";
-import {RiskConstants} from "../utils/RiskConstants.sol";
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
+import { IOraclesHub } from "./interfaces/IOraclesHub.sol";
+import { IMainRegistry } from "./interfaces/IMainRegistry.sol";
+import { IPricingModule } from "../interfaces/IPricingModule.sol";
+import { RiskConstants } from "../utils/RiskConstants.sol";
+import { Owned } from "lib/solmate/src/auth/Owned.sol";
+import { IPricingModule } from "../interfaces/IPricingModule.sol";
 
 /**
  * @title Abstract Pricing Module
@@ -18,9 +20,10 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
  * @dev No end-user should directly interact with Sub-Registries, only the Main Registry, Oracle-Hub or the contract owner
  * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main Registry
  */
-abstract contract PricingModule is Owned {
+abstract contract PricingModule is Owned, IPricingModule {
     address public immutable mainRegistry;
     address public immutable oracleHub;
+    uint256 public immutable assetType;
     address public riskManager;
 
     address[] public assetsInPricingModule;
@@ -28,14 +31,6 @@ abstract contract PricingModule is Owned {
     mapping(address => bool) public inPricingModule;
     mapping(address => Exposure) public exposure;
     mapping(address => mapping(uint256 => RiskVars)) public assetRiskVars;
-
-    //struct with input variables necessary to avoid stack too deep error
-    struct GetValueInput {
-        address asset;
-        uint256 assetId;
-        uint256 assetAmount;
-        uint256 baseCurrency;
-    }
 
     struct Exposure {
         uint128 maxExposure;
@@ -68,11 +63,18 @@ abstract contract PricingModule is Owned {
      * @notice A Pricing Module must always be initialised with the address of the Main Registry and the Oracle-Hub
      * @param mainRegistry_ The address of the Main Registry
      * @param oracleHub_ The address of the Oracle-Hub
+     * @param assetType_ Identifier for the type of asset, necessary for the deposit and withdraw logic in the vaults.
+     * 0 = ERC20
+     * 1 = ERC721
+     * 2 = ERC1155
      * @param riskManager_ The address of the Risk Manager
      */
-    constructor(address mainRegistry_, address oracleHub_, address riskManager_) Owned(msg.sender) {
+    constructor(address mainRegistry_, address oracleHub_, uint256 assetType_, address riskManager_)
+        Owned(msg.sender)
+    {
         mainRegistry = mainRegistry_;
         oracleHub = oracleHub_;
+        assetType = assetType_;
         riskManager = riskManager_;
     }
 
@@ -115,7 +117,7 @@ abstract contract PricingModule is Owned {
      * one denominated in USD and the other one in the different BaseCurrency).
      * @dev All price feeds should be fetched in the Oracle-Hub
      */
-    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) {}
+    function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) { }
 
     /*///////////////////////////////////////////////////////////////
                     RISK VARIABLES MANAGEMENT
@@ -207,12 +209,13 @@ abstract contract PricingModule is Owned {
 
     /**
      * @notice Processes the deposit of tokens if it is white-listed
+     * param vault The address of the vault asset is deposited in, where applicable
      * @param asset The address of the asset
-     * param assetId The Id of the asset where applicable
+     * param assetId The Id of the asset, where applicable
      * @param amount The amount of tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
      */
-    function processDeposit(address asset, uint256, uint256 amount) external virtual onlyMainReg {
+    function processDeposit(address, address asset, uint256, uint256 amount) external virtual onlyMainReg {
         require(
             exposure[asset].exposure + uint128(amount) <= exposure[asset].maxExposure, "APM_PD: Exposure not in limits"
         );
@@ -221,11 +224,13 @@ abstract contract PricingModule is Owned {
 
     /**
      * @notice Processes the withdrawal of tokens to increase the maxExposure
+     * param vault The address of the vault asset is withdrawn from
      * @param asset The address of the asset
+     * param assetId The Id of the asset, where applicable
      * @param amount the amount of tokens
      * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens will ever be deposited
      */
-    function processWithdrawal(address asset, uint256 amount) external virtual onlyMainReg {
+    function processWithdrawal(address, address asset, uint256, uint256 amount) external virtual onlyMainReg {
         exposure[asset].exposure -= uint128(amount);
     }
 }

@@ -5,9 +5,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.13;
 
-import {BaseGuardian} from "./BaseGuardian.sol";
+import { BaseGuardian } from "./BaseGuardian.sol";
 
 /**
  * @title Factory Guardian
@@ -31,7 +31,7 @@ abstract contract FactoryGuardian is BaseGuardian {
     bool public createPaused;
     bool public liquidatePaused;
 
-    constructor() {}
+    constructor() { }
 
     /*
     //////////////////////////////////////////////////////////////
