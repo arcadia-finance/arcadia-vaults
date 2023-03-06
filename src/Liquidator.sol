@@ -63,6 +63,22 @@ contract Liquidator is Owned {
         uint64 base;
     }
 
+    event WeightsSet(uint8 initiatorRewardWeight, uint8 penaltyWeight);
+    event AuctionCurveParametersSet(uint64 base, uint16 cutoffTime);
+    event StartPriceMultiplierSet(uint16 startPriceMultiplier);
+    event MinimumPriceMultiplierSet(uint8 minPriceMultiplier);
+    event AuctionStarted(address indexed vault, address indexed creditor, address baseCurrency, uint128 openDebt);
+    event AuctionFinished(
+        address indexed vault,
+        address indexed creditor,
+        address baseCurrency,
+        uint128 price,
+        uint128 badDebt,
+        uint128 initiatorReward,
+        uint128 liquidationPenalty,
+        uint128 remainder
+    );
+
     constructor(address factory_) Owned(msg.sender) {
         factory = factory_;
         initiatorRewardWeight = 1;
@@ -88,6 +104,8 @@ contract Liquidator is Owned {
 
         initiatorRewardWeight = uint8(initiatorRewardWeight_);
         penaltyWeight = uint8(penaltyWeight_);
+
+        emit WeightsSet(uint8(initiatorRewardWeight_), uint8(penaltyWeight_));
     }
 
     /**
@@ -121,6 +139,8 @@ contract Liquidator is Owned {
         //Store the new parameters
         base = base_;
         cutoffTime = cutoffTime_;
+
+        emit AuctionCurveParametersSet(base_, cutoffTime_);
     }
 
     /**
@@ -135,6 +155,8 @@ contract Liquidator is Owned {
         require(startPriceMultiplier_ > 100, "LQ_SSPM: multiplier too low");
         require(startPriceMultiplier_ < 301, "LQ_SSPM: multiplier too high");
         startPriceMultiplier = startPriceMultiplier_;
+
+        emit StartPriceMultiplierSet(startPriceMultiplier_);
     }
 
     /**
@@ -145,6 +167,8 @@ contract Liquidator is Owned {
     function setMinimumPriceMultiplier(uint8 minPriceMultiplier_) external onlyOwner {
         require(minPriceMultiplier_ < 91, "LQ_SMPM: multiplier too high");
         minPriceMultiplier = minPriceMultiplier_;
+
+        emit MinimumPriceMultiplierSet(minPriceMultiplier_);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -188,6 +212,8 @@ contract Liquidator is Owned {
         auctionInformation[vault].originalOwner = originalOwner;
         auctionInformation[vault].trustedCreditor = msg.sender;
         auctionInformation[vault].base = base;
+
+        emit AuctionStarted(vault, trustedCreditor, baseCurrency, uint128(openDebt));
     }
 
     /**
@@ -278,6 +304,17 @@ contract Liquidator is Owned {
 
         //Change ownership of the auctioned vault to the bidder.
         IFactory(factory).safeTransferFrom(address(this), msg.sender, vault);
+
+        emit AuctionFinished(
+            vault,
+            auctionInformation_.trustedCreditor,
+            auctionInformation_.baseCurrency,
+            uint128(priceOfVault),
+            uint128(badDebt),
+            uint128(liquidationInitiatorReward),
+            uint128(liquidationPenalty),
+            uint128(remainder)
+        );
     }
 
     /**
@@ -315,6 +352,17 @@ contract Liquidator is Owned {
 
         //Change ownership of the auctioned vault to the protocol owner.
         IFactory(factory).safeTransferFrom(address(this), to, vault);
+
+        emit AuctionFinished(
+            vault,
+            auctionInformation_.trustedCreditor,
+            auctionInformation_.baseCurrency,
+            0,
+            uint128(badDebt),
+            uint128(liquidationInitiatorReward),
+            uint128(liquidationPenalty),
+            uint128(remainder)
+        );
     }
 
     /**

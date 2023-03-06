@@ -79,6 +79,8 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
 
         exposure[asset].maxExposure = maxExposure;
 
+        emit MaxExposureSet(asset, maxExposure);
+
         //Will revert in MainRegistry if asset can't be added
         IMainRegistry(mainRegistry).addAsset(asset, assetType);
     }

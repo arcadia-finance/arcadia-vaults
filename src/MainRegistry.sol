@@ -55,6 +55,11 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         bytes8 baseCurrencyLabel;
     }
 
+    event BaseCurrencyAdded(address indexed assetAddress, uint8 indexed baseCurrencyId, bytes8 label);
+    event AllowedActionSet(address indexed action, bool allowed);
+    event PricingModuleAdded(address pricingModule);
+    event AssetAdded(address indexed assetAddress, address indexed pricingModule, uint8 assetType);
+
     /**
      * @dev Only Pricing Modules can call functions mwith this modifier.
      */
@@ -96,6 +101,8 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         isBaseCurrency[address(0)] = true;
         baseCurrencies.push(address(0));
         baseCurrencyCounter = 1;
+
+        emit BaseCurrencyAdded(address(0), 0, "USD");
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -110,6 +117,8 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
      */
     function setAllowedAction(address action, bool allowed) external onlyOwner {
         isActionAllowed[action] = allowed;
+
+        emit AllowedActionSet(action, allowed);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -143,6 +152,10 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         unchecked {
             ++baseCurrencyCounter;
         }
+
+        emit BaseCurrencyAdded(
+            baseCurrencyInformation.assetAddress, uint8(baseCurrencyCounter), baseCurrencyInformation.baseCurrencyLabel
+        );
     }
 
     /**
@@ -197,6 +210,8 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         require(!isPricingModule[pricingModule], "MR_APM: PriceMod. not unique");
         isPricingModule[pricingModule] = true;
         pricingModules.push(pricingModule);
+
+        emit PricingModuleAdded(pricingModule);
     }
 
     /* ///////////////////////////////////////////////////////////////
@@ -221,6 +236,8 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
         assetsInMainRegistry.push(assetAddress);
         assetToAssetInformation[assetAddress] =
             AssetInformation({ assetType: uint96(assetType), pricingModule: msg.sender });
+
+        emit AssetAdded(assetAddress, msg.sender, uint8(assetType));
     }
 
     /**

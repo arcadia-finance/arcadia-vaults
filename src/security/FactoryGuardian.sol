@@ -17,21 +17,19 @@ import { BaseGuardian } from "./BaseGuardian.sol";
 abstract contract FactoryGuardian is BaseGuardian {
     /*
     //////////////////////////////////////////////////////////////
-                            EVENTS
-    //////////////////////////////////////////////////////////////
-    */
-
-    event PauseUpdate(address account, bool createPauseUpdate, bool liquidatePauseUpdate);
-
-    /*
-    //////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////
     */
     bool public createPaused;
     bool public liquidatePaused;
 
-    constructor() { }
+    /*
+    //////////////////////////////////////////////////////////////
+                            EVENTS
+    //////////////////////////////////////////////////////////////
+    */
+
+    event PauseUpdate(bool createPauseUpdate, bool liquidatePauseUpdate);
 
     /*
     //////////////////////////////////////////////////////////////
@@ -57,6 +55,8 @@ abstract contract FactoryGuardian is BaseGuardian {
         _;
     }
 
+    constructor() { }
+
     /**
      * @inheritdoc BaseGuardian
      */
@@ -65,7 +65,7 @@ abstract contract FactoryGuardian is BaseGuardian {
         createPaused = true;
         liquidatePaused = true;
         pauseTimestamp = block.timestamp;
-        emit PauseUpdate(msg.sender, true, true);
+        emit PauseUpdate(true, true);
     }
 
     /**
@@ -79,7 +79,7 @@ abstract contract FactoryGuardian is BaseGuardian {
     function unPause(bool createPaused_, bool liquidatePaused_) external onlyOwner {
         createPaused = createPaused && createPaused_;
         liquidatePaused = liquidatePaused && liquidatePaused_;
-        emit PauseUpdate(msg.sender, createPaused, liquidatePaused);
+        emit PauseUpdate(createPaused, liquidatePaused);
     }
 
     /**
@@ -90,7 +90,7 @@ abstract contract FactoryGuardian is BaseGuardian {
         if (createPaused || liquidatePaused) {
             createPaused = false;
             liquidatePaused = false;
-            emit PauseUpdate(msg.sender, false, false);
+            emit PauseUpdate(false, false);
         }
     }
 }

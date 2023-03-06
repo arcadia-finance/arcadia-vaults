@@ -11,6 +11,11 @@ import "./fixtures/ArcadiaVaultsFixture.f.sol";
 contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
+    event RiskVariablesSet(
+        address indexed asset, uint8 indexed baseCurrencyId, uint16 collateralFactor, uint16 liquidationFactor
+    );
+    event MaxExposureSet(address indexed asset, uint128 maxExposure);
+
     //this is a before
     constructor() DeployArcadiaVaults() { }
 
@@ -111,6 +116,8 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // Given: All necessary contracts deployed on setup
         vm.startPrank(creatorAddress);
         // When: creatorAddress calls addAsset with empty list credit ratings
+        vm.expectEmit(true, true, true, true);
+        emit MaxExposureSet(address(eth), type(uint128).max);
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
 
@@ -139,6 +146,10 @@ contract StandardERC20PricingModuleTest is DeployArcadiaVaults {
         // When: creatorAddress calls addAsset with wrong number of credits
 
         // Then: addAsset should add asset
+        vm.expectEmit(true, true, true, true);
+        emit RiskVariablesSet(address(eth), 0, collateralFactor, liquidationFactor);
+        vm.expectEmit(true, true, true, true);
+        emit MaxExposureSet(address(eth), type(uint128).max);
         standardERC20PricingModule.addAsset(address(eth), oracleEthToUsdArr, riskVars_, type(uint128).max);
         vm.stopPrank();
 
