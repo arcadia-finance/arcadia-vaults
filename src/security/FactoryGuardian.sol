@@ -33,6 +33,14 @@ abstract contract FactoryGuardian is BaseGuardian {
 
     /*
     //////////////////////////////////////////////////////////////
+                            ERRORS
+    //////////////////////////////////////////////////////////////
+    */
+
+    error FunctionIsPaused();
+
+    /*
+    //////////////////////////////////////////////////////////////
                             MODIFIERS
     //////////////////////////////////////////////////////////////
     */
@@ -42,7 +50,7 @@ abstract contract FactoryGuardian is BaseGuardian {
      * It throws if create vault is paused.
      */
     modifier whenCreateNotPaused() {
-        require(!createPaused, "Guardian: create paused");
+        if (createPaused) revert FunctionIsPaused();
         _;
     }
 
@@ -51,7 +59,7 @@ abstract contract FactoryGuardian is BaseGuardian {
      * It throws if liquidate vault is paused.
      */
     modifier whenLiquidateNotPaused() {
-        require(!liquidatePaused, "Guardian: liquidate paused");
+        if (liquidatePaused) revert FunctionIsPaused();
         _;
     }
 
