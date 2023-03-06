@@ -33,17 +33,16 @@ import { ERC20, SafeTransferLib } from "../../lib/solmate/src/utils/SafeTransfer
  */
 contract VaultV2 {
     using SafeTransferLib for ERC20;
-    /**
-     * @dev Storage slot with the address of the current implementation.
-     * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
-     */
 
+    // Storage slot with the address of the current implementation.
+    // This is the hardcoded keccak-256 hash of: "eip1967.proxy.implementation" subtracted by 1.
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     uint256 public constant ASSET_LIMIT = 15;
 
     bool public isTrustedCreditorSet;
 
     uint16 public vaultVersion;
+    uint128 public fixedLiquidationCost;
 
     address public liquidator;
     address public owner;
@@ -135,7 +134,7 @@ contract VaultV2 {
      * @notice Updates the vault version and stores a new address in the EIP1967 implementation slot.
      * @param newImplementation The contract with the new vault logic.
      * @param newRegistry The MainRegistry for this specific implementation (might be identical as the old registry)
-     * @param data Arbitrary data, can contain instructions to execute on the new logic
+     * @param data Arbitrary data, can contain instructions to execute when updating Vault to new logic
      * @param newVersion The new version of the vault logic.
      */
     function upgradeVault(address newImplementation, address newRegistry, uint16 newVersion, bytes calldata data)
@@ -145,7 +144,7 @@ contract VaultV2 {
         if (isTrustedCreditorSet) {
             //If a trustedCreditor is set, new version should be compatible.
             //openMarginAccount() is a view function, cannot modify state.
-            (bool success,,) = ITrustedCreditor(trustedCreditor).openMarginAccount(newVersion);
+            (bool success,,,) = ITrustedCreditor(trustedCreditor).openMarginAccount(newVersion);
             require(success, "V_UV: Invalid vault version");
         }
 
@@ -245,12 +244,13 @@ contract VaultV2 {
         require(!isTrustedCreditorSet, "V_OTMA: ALREADY SET");
 
         //openMarginAccount() is a view function, cannot modify state.
-        (bool success, address baseCurrency_, address liquidator_) =
+        (bool success, address baseCurrency_, address liquidator_, uint256 fixedLiquidationCost_) =
             ITrustedCreditor(creditor).openMarginAccount(vaultVersion);
         require(success, "V_OTMA: Invalid Version");
 
         liquidator = liquidator_;
         trustedCreditor = creditor;
+        fixedLiquidationCost = uint128(fixedLiquidationCost_);
         if (baseCurrency != baseCurrency_) {
             _setBaseCurrency(baseCurrency_);
         }
@@ -284,30 +284,32 @@ contract VaultV2 {
      * @param debtIncrease The amount with which the debt is increased.
      * @param totalOpenDebt The total open Debt against the Vault.
      * @return success Boolean indicating if there is sufficient margin to back a certain amount of Debt.
+     * @return trustedCreditor_ The contract address of the trusted creditor.
+     * @return vaultVersion_ The vault version.
      * @dev Only one of the values can be non-zero, or we check on a certain increase of debt, or we check on a total amount of debt.
      * @dev If both values are zero, we check if the vault is currently healthy.
      */
     function isVaultHealthy(uint256 debtIncrease, uint256 totalOpenDebt)
         external
         view
-        returns (bool success, address trustedCreditor_)
+        returns (bool success, address trustedCreditor_, uint256 vaultVersion_)
     {
         if (totalOpenDebt != 0) {
             //Check if vault is healthy for a given amount of openDebt.
-            success = getCollateralValue() >= totalOpenDebt;
+            success = getCollateralValue() >= totalOpenDebt + fixedLiquidationCost;
         } else {
             //Check if vault is still healthy after an increase of debt.
-            success = getCollateralValue() >= getUsedMargin() + debtIncrease;
+            success = getCollateralValue() >= getUsedMargin() + debtIncrease + fixedLiquidationCost;
         }
 
-        return (success, trustedCreditor);
+        return (success, trustedCreditor, vaultVersion);
     }
 
     /**
      * @notice Returns the total value of the vault in a specific baseCurrency
      * @dev Fetches all stored assets with their amounts on the proxy vault.
      * Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
-     * @param baseCurrency_ The basecurrency to return the value in.
+     * @param baseCurrency_ The baseCurrency to return the value in.
      * @return vaultValue Total value stored on the vault, expressed in baseCurrency.
      */
     function getVaultValue(address baseCurrency_) external view returns (uint256 vaultValue) {
@@ -413,7 +415,7 @@ contract VaultV2 {
         //the Vault is unhealthy and is succesfully liquidated.
         //Liquidations are triggered by the trustedCreditor (via Liquidator), the openDebt is
         //passed to avoid the need of another contract call back to trustedCreditor.
-        require(getLiquidationValue() < openDebt, "V_LV: Vault is healthy");
+        require(getLiquidationValue() < openDebt + fixedLiquidationCost, "V_LV: Vault is healthy");
 
         //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
         IFactory(IMainRegistry(registry).factory()).liquidate(msg.sender);
@@ -451,6 +453,8 @@ contract VaultV2 {
      * @notice Calls external action handler to execute and interact with external logic.
      * @param actionHandler The address of the action handler.
      * @param actionData A bytes object containing two actionAssetData structs, an address array and a bytes array.
+     * @return trustedCreditor_ The contract address of the trusted creditor.
+     * @return vaultVersion_ The vault version.
      * @dev Similar to flash loans, this function optimistically calls external logic and checks for the vault state at the very end.
      * @dev vaultManagementAction can interact with and chain together any DeFi protocol to swap, stake, claim...
      * The only requirements are that the recipient tokens of the interactions are allowlisted, deposited back into the vault and
@@ -459,7 +463,7 @@ contract VaultV2 {
     function vaultManagementAction(address actionHandler, bytes calldata actionData)
         external
         onlyAssetManager
-        returns (address)
+        returns (address, uint256)
     {
         require(IMainRegistry(registry).isActionAllowed(actionHandler), "V_VMA: Action not allowed");
 
@@ -477,10 +481,10 @@ contract VaultV2 {
         uint256 usedMargin = getUsedMargin();
         if (usedMargin > 0) {
             uint256 collValue = getCollateralValue();
-            require(collValue >= usedMargin, "V_VMA: coll. value too low");
+            require(collValue >= usedMargin + fixedLiquidationCost, "V_VMA: coll. value too low");
         }
 
-        return trustedCreditor;
+        return (trustedCreditor, vaultVersion);
     }
 
     /* ///////////////////////////////////////////////////////////////
