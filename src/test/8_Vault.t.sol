@@ -494,8 +494,11 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency() public {
+    function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency(uint128 fixedLiquidationCost) public {
         assertEq(vault_.baseCurrency(), address(0));
+
+        vm.prank(creatorAddress);
+        pool.setFixedLiquidationCost(fixedLiquidationCost);
 
         vm.startPrank(vaultOwner);
         vm.expectEmit(true, true, true, true);
@@ -508,6 +511,7 @@ contract MarginAccountSettingsTest is vaultTests {
         assertEq(vault_.liquidator(), address(liquidator));
         assertEq(vault_.trustedCreditor(), address(pool));
         assertEq(vault_.baseCurrency(), address(dai));
+        assertEq(vault_.fixedLiquidationCost(), fixedLiquidationCost);
         assertTrue(vault_.isTrustedCreditorSet());
     }
 
@@ -621,10 +625,12 @@ contract MarginRequirementsTest is vaultTests {
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        (bool success,) = vault_.isVaultHealthy(marginIncrease, 0);
+        (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(marginIncrease, 0);
 
         // Then: The action is not succesfull
         assertTrue(!success);
+        assertEq(creditor, address(pool));
+        assertEq(version, 1);
     }
 
     function testSuccess_isVaultHealthy_debtIncrease_SufficientMargin(
@@ -661,10 +667,12 @@ contract MarginRequirementsTest is vaultTests {
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        (bool success,) = vault_.isVaultHealthy(marginIncrease, 0);
+        (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(marginIncrease, 0);
 
         // Then: The action is succesfull
         assertTrue(success);
+        assertEq(creditor, address(pool));
+        assertEq(version, 1);
     }
 
     function testSuccess_isVaultHealthy_totalOpenDebt_InsufficientMargin(
@@ -697,10 +705,12 @@ contract MarginRequirementsTest is vaultTests {
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        (bool success,) = vault_.isVaultHealthy(0, totalOpenDebt);
+        (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(0, totalOpenDebt);
 
         // Then: The action is not succesfull
         assertTrue(!success);
+        assertEq(creditor, address(pool));
+        assertEq(version, 1);
     }
 
     function testSuccess_isVaultHealthy_totalOpenDebt_SufficientMargin(
@@ -733,10 +743,12 @@ contract MarginRequirementsTest is vaultTests {
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        (bool success,) = vault_.isVaultHealthy(0, totalOpenDebt);
+        (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(0, totalOpenDebt);
 
         // Then: The action is succesfull
         assertTrue(success);
+        assertEq(creditor, address(pool));
+        assertEq(version, 1);
     }
 
     function testSuccess_getVaultValue(uint8 depositAmount) public {

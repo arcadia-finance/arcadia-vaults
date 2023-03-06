@@ -775,4 +775,68 @@ contract DoActionWithLeverage is EndToEndTest {
         pool.doActionWithLeverage(daiMargin, address(proxy), address(action), callData, emptyBytes3);
         vm.stopPrank();
     }
+
+    function testRevert_doActionWithLeverage_DifferentTrustedCreditor() public {
+        vm.startPrank(vaultOwner);
+        proxy.closeTrustedMarginAccount();
+        proxy.setAssetManager(address(pool), true);
+        vm.stopPrank();
+
+        //Prepare input parameters
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](0),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](0),
+            assetTypes: new uint256[](0),
+            actionBalances: new uint256[](0)
+        });
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](0),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](0),
+            assetTypes: new uint256[](0),
+            actionBalances: new uint256[](0)
+        });
+        bytes[] memory data = new bytes[](0);
+        address[] memory to = new address[](0);
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        //Do swap on leverage
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("LP_DAWL: Reverted");
+        pool.doActionWithLeverage(0, address(proxy), address(action), callData, emptyBytes3);
+        vm.stopPrank();
+    }
+
+    function testRevert_doActionWithLeverage_BadVaultVersion() public {
+        vm.prank(creatorAddress);
+        pool.setVaultVersion(1, false);
+
+        //Prepare input parameters
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](0),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](0),
+            assetTypes: new uint256[](0),
+            actionBalances: new uint256[](0)
+        });
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](0),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](0),
+            assetTypes: new uint256[](0),
+            actionBalances: new uint256[](0)
+        });
+        bytes[] memory data = new bytes[](0);
+        address[] memory to = new address[](0);
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        //Do swap on leverage
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("LP_DAWL: Reverted");
+        pool.doActionWithLeverage(0, address(proxy), address(action), callData, emptyBytes3);
+        vm.stopPrank();
+    }
 }

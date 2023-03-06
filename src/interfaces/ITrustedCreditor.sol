@@ -13,8 +13,9 @@ interface ITrustedCreditor {
      * @return success Bool indicating if all requirements are met.
      * @return baseCurrency The base currency of the application.
      * @return liquidator The liquidator of the application.
+     * @return fixedLiquidationCost Estimated fixed costs (independent of size of debt) to liquidate a position.
      */
-    function openMarginAccount(uint256 vaultVersion) external view returns (bool, address, address);
+    function openMarginAccount(uint256 vaultVersion) external view returns (bool, address, address, uint256);
 
     /**
      * @notice Returns the open position of the vault.
