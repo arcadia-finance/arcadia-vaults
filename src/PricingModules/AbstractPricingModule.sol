@@ -49,6 +49,12 @@ abstract contract PricingModule is Owned, IPricingModule {
         uint16 liquidationFactor;
     }
 
+    event RiskManagerUpdated(address riskManager);
+    event RiskVariablesSet(
+        address indexed asset, uint8 indexed baseCurrencyId, uint16 collateralFactor, uint16 liquidationFactor
+    );
+    event MaxExposureSet(address indexed asset, uint128 maxExposure);
+
     modifier onlyRiskManager() {
         require(msg.sender == riskManager, "APM: ONLY_RISK_MANAGER");
         _;
@@ -76,6 +82,8 @@ abstract contract PricingModule is Owned, IPricingModule {
         oracleHub = oracleHub_;
         assetType = assetType_;
         riskManager = riskManager_;
+
+        emit RiskManagerUpdated(riskManager_);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -87,6 +95,8 @@ abstract contract PricingModule is Owned, IPricingModule {
      */
     function setRiskManager(address riskManager_) external onlyOwner {
         riskManager = riskManager_;
+
+        emit RiskManagerUpdated(riskManager_);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -194,6 +204,8 @@ abstract contract PricingModule is Owned, IPricingModule {
         require(riskVars.liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR, "APM_SRV: Liq.Fact not in limits");
 
         assetRiskVars[asset][baseCurrency] = riskVars;
+
+        emit RiskVariablesSet(asset, uint8(baseCurrency), riskVars.collateralFactor, riskVars.liquidationFactor);
     }
 
     /**
@@ -205,6 +217,8 @@ abstract contract PricingModule is Owned, IPricingModule {
     function setExposureOfAsset(address asset, uint256 maxExposure) public virtual onlyRiskManager {
         require(maxExposure <= type(uint128).max, "APM_SEA: Max Exp. not in limits");
         exposure[asset].maxExposure = uint128(maxExposure);
+
+        emit MaxExposureSet(asset, uint128(maxExposure));
     }
 
     /**

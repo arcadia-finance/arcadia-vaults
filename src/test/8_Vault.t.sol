@@ -257,6 +257,8 @@ contract DeploymentTest is vaultTests {
 contract VaultManagementTest is vaultTests {
     using stdStorage for StdStorage;
 
+    event BaseCurrencySet(address baseCurrency);
+
     function setUp() public override {
         vm.prank(vaultOwner);
         vault_ = new VaultTestExtension(address(mainRegistry), 1);
@@ -281,6 +283,8 @@ contract VaultManagementTest is vaultTests {
         vault_.setVaultVersion(0);
         vault_.setOwner(address(0));
 
+        vm.expectEmit(true, true, true, true);
+        emit BaseCurrencySet(address(0));
         vault_.initialize(owner_, address(mainRegistry), vaultVersion_, address(0));
 
         assertEq(vault_.owner(), owner_);
@@ -310,16 +314,16 @@ contract VaultManagementTest is vaultTests {
         assertEq(expectedVersion, newVersion);
     }
 
-    function testRevert_upgradeVault_byNonOwner(
+    function testRevert_upgradeVault_byNonFactory(
         address newImplementation,
         address newRegistry,
         uint16 newVersion,
-        address nonOwner,
+        address nonFactory,
         bytes calldata data
     ) public {
-        vm.assume(nonOwner != address(factory));
+        vm.assume(nonFactory != address(factory));
 
-        vm.startPrank(nonOwner);
+        vm.startPrank(nonFactory);
         vm.expectRevert("V: Only Factory");
         vault_.upgradeVault(newImplementation, newRegistry, newVersion, data);
         vm.stopPrank();
@@ -394,6 +398,8 @@ contract OwnershipManagementTest is vaultTests {
 contract BaseCurrencyLogicTest is vaultTests {
     using stdStorage for StdStorage;
 
+    event BaseCurrencySet(address baseCurrency);
+
     function setUp() public override {
         super.setUp();
         deployFactory();
@@ -401,8 +407,11 @@ contract BaseCurrencyLogicTest is vaultTests {
     }
 
     function testSuccess_setBaseCurrency() public {
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit BaseCurrencySet(address(eth));
         vault_.setBaseCurrency(address(eth));
+        vm.stopPrank();
 
         assertEq(vault_.baseCurrency(), address(eth));
     }
@@ -447,6 +456,9 @@ contract MarginAccountSettingsTest is vaultTests {
 
     TrustedCreditorMock trustedCreditor;
 
+    event BaseCurrencySet(address baseCurrency);
+    event TrustedMarginAccountChanged(address indexed protocol, address indexed liquidator);
+
     function setUp() public override {
         super.setUp();
         deployFactory();
@@ -485,8 +497,13 @@ contract MarginAccountSettingsTest is vaultTests {
     function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency() public {
         assertEq(vault_.baseCurrency(), address(0));
 
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit BaseCurrencySet(address(dai));
+        vm.expectEmit(true, true, true, true);
+        emit TrustedMarginAccountChanged(address(pool), address(liquidator));
         vault_.openTrustedMarginAccount(address(pool));
+        vm.stopPrank();
 
         assertEq(vault_.liquidator(), address(liquidator));
         assertEq(vault_.trustedCreditor(), address(pool));
@@ -499,8 +516,11 @@ contract MarginAccountSettingsTest is vaultTests {
         stdstore.target(address(vault_)).sig(vault_.baseCurrency.selector).checked_write(address(dai));
         assertEq(vault_.baseCurrency(), address(dai));
 
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit TrustedMarginAccountChanged(address(pool), address(liquidator));
         vault_.openTrustedMarginAccount(address(pool));
+        vm.stopPrank();
 
         assertEq(vault_.liquidator(), address(liquidator));
         assertEq(vault_.trustedCreditor(), address(pool));
@@ -543,8 +563,11 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.prank(vaultOwner);
         vault_.openTrustedMarginAccount(address(pool));
 
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit TrustedMarginAccountChanged(address(0), address(0));
         vault_.closeTrustedMarginAccount();
+        vm.stopPrank();
 
         assertTrue(!vault_.isTrustedCreditorSet());
         assertTrue(vault_.trustedCreditor() == address(0));
@@ -869,6 +892,8 @@ contract MarginRequirementsTest is vaultTests {
 contract LiquidationLogicTest is vaultTests {
     using stdStorage for StdStorage;
 
+    event TrustedMarginAccountChanged(address indexed protocol, address indexed liquidator);
+
     function setUp() public override {
         super.setUp();
         deployFactory();
@@ -894,8 +919,11 @@ contract LiquidationLogicTest is vaultTests {
     function testSuccess_liquidateVault(uint128 openDebt) public {
         vm.assume(openDebt > 0);
 
-        vm.prank(address(liquidator));
+        vm.startPrank(address(liquidator));
+        vm.expectEmit(true, true, true, true);
+        emit TrustedMarginAccountChanged(address(0), address(0));
         (address originalOwner, address baseCurrency, address trustedCreditor) = vault_.liquidateVault(openDebt);
+        vm.stopPrank();
 
         assertEq(originalOwner, vaultOwner);
         assertEq(baseCurrency, address(dai));
@@ -919,6 +947,8 @@ contract VaultActionTest is vaultTests {
 
     VaultTestExtension public proxy_;
     TrustedCreditorMock public trustedCreditor;
+
+    event AssetManagerSet(address indexed owner, address indexed assetManager, bool value);
 
     function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
@@ -981,12 +1011,18 @@ contract VaultActionTest is vaultTests {
     }
 
     function testSuccess_setAssetManager(address assetManager, bool startValue, bool endvalue) public {
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit AssetManagerSet(vaultOwner, assetManager, startValue);
         vault_.setAssetManager(assetManager, startValue);
+        vm.stopPrank();
         assertEq(vault_.isAssetManager(vaultOwner, assetManager), startValue);
 
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit AssetManagerSet(vaultOwner, assetManager, endvalue);
         vault_.setAssetManager(assetManager, endvalue);
+        vm.stopPrank();
         assertEq(vault_.isAssetManager(vaultOwner, assetManager), endvalue);
     }
 

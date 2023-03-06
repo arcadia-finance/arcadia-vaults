@@ -35,6 +35,12 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
 
     address[] public allVaults;
 
+    event VaultUpgraded(address indexed vaultAddress, uint16 oldVersion, uint16 indexed newVersion);
+    event VaultVersionAdded(
+        uint16 indexed version, address indexed registry, address indexed logic, bytes32 versionRoot
+    );
+    event VaultVersionBlocked(uint16 version);
+
     constructor() ERC721("Arcadia Vault", "ARCADIA") { }
 
     /*///////////////////////////////////////////////////////////////
@@ -67,6 +73,8 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
         vaultIndex[vault] = allVaults.length;
 
         _mint(msg.sender, allVaults.length);
+
+        emit VaultUpgraded(vault, 0, vaultVersion);
     }
 
     /**
@@ -111,6 +119,8 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
         IVault(vault).upgradeVault(
             vaultDetails[version].logic, vaultDetails[version].registry, version, vaultDetails[version].data
         );
+
+        emit VaultUpgraded(vault, uint16(currentVersion), version);
     }
 
     /**
@@ -220,6 +230,8 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
         vaultDetails[latestVaultVersion].logic = logic;
         vaultDetails[latestVaultVersion].versionRoot = versionRoot;
         vaultDetails[latestVaultVersion].data = data;
+
+        emit VaultVersionAdded(latestVaultVersion, registry, logic, versionRoot);
     }
 
     /**
@@ -231,6 +243,8 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
     function blockVaultVersion(uint256 version) external onlyOwner {
         require(version > 0 && version <= latestVaultVersion, "FTRY_BVV: Invalid version");
         vaultVersionBlocked[version] = true;
+
+        emit VaultVersionBlocked(uint16(version));
     }
 
     /*///////////////////////////////////////////////////////////////

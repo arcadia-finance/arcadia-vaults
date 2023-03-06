@@ -37,7 +37,7 @@ contract VaultV2Test is DeployArcadiaVaults {
     }
 
     // EVENTS
-    event Transfer(address indexed from, address indexed to, uint256 amount);
+    event VaultUpgraded(address indexed vaultAddress, uint16 oldVersion, uint16 indexed newVersion);
 
     //this is a before
     constructor() DeployArcadiaVaults() {
@@ -131,6 +131,8 @@ contract VaultV2Test is DeployArcadiaVaults {
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit VaultUpgraded(address(proxy), 1, 2);
         factory.upgradeVaultVersion(address(proxy), factory.latestVaultVersion(), proofs);
         vm.stopPrank();
 
