@@ -513,7 +513,7 @@ contract DoActionWithLeverage is EndToEndTest {
 
         vm.startPrank(creatorAddress);
         multiActionMock = new MultiActionMock();
-        action = new ActionMultiCall(address(mainRegistry));
+        action = new ActionMultiCall();
         mainRegistry.setAllowedAction(address(action), true);
         vm.stopPrank();
 

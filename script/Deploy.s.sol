@@ -346,6 +346,8 @@ contract ArcadiaVaultDeployer is Test {
         oracleHub = new OracleHub();
 
         factory = new Factory();
+        liquidator = new Liquidator(address(factory));
+        liquidator.setAuctionCurveParameters(3_600, 14_400);
 
         oracleHub.addOracle(daiToUsdOracleInfo);
         oracleHub.addOracle(ethToUsdOracleInfo);
@@ -395,25 +397,21 @@ contract ArcadiaVaultDeployer is Test {
         vault = new Vault(address(mainRegistry), 1);
         factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1, "");
 
-        actionMultiCall = new ActionMultiCall(address(mainRegistry));
+        actionMultiCall = new ActionMultiCall();
         mainRegistry.setAllowedAction(address(actionMultiCall), true);
 
-        ERC20[] memory assets = new ERC20[](2);
-        assets[0] = usdc;
-        assets[1] = weth;
-
-        pool_weth =
-        new LendingPool(ERC20(address(weth)), 0x12e463251Bc79677FD980aA6c301d5Fb85101cCb, address(factory), address(0));
-        srTranche_weth = new Tranche(address(pool_weth), "Senior", "SR");
-        jrTranche_weth = new Tranche(address(pool_weth), "Junior", "JR");
+        pool_weth = new LendingPool(ERC20(address(weth)), DeployAddresses.treasury, address(factory), address(liquidator));
+        srTranche_weth = new Tranche(address(pool_weth), "Senior", "s");
+        jrTranche_weth = new Tranche(address(pool_weth), "Junior", "j");
 
         pool_weth.setVaultVersion(1, true);
         pool_weth.setOriginationFee(10);
+        pool_weth.setMaxInitiatorFee(66 * 10**18);
         pool_weth.addTranche(address(srTranche_weth), 50, 0);
         pool_weth.addTranche(address(jrTranche_weth), 40, 20);
         pool_weth.setTreasuryInterestWeight(10);
         pool_weth.setTreasuryLiquidationWeight(80);
-        pool_weth.setSupplyCap(5000 * 10 ** 18);
+        pool_weth.setSupplyCap(350 * 10 ** 18);
         pool_weth.setInterestConfig(
             DataTypes.InterestRateConfiguration({
                 baseRatePerYear: 30_000_000_000_000_000,
@@ -423,13 +421,13 @@ contract ArcadiaVaultDeployer is Test {
             })
         );
 
-        pool_usdc =
-        new LendingPool(ERC20(address(usdc)), 0x12e463251Bc79677FD980aA6c301d5Fb85101cCb, address(factory), address(0));
-        srTranche_usdc = new Tranche(address(pool_usdc), "Senior", "SR");
-        jrTranche_usdc = new Tranche(address(pool_usdc), "Junior", "JR");
+        pool_usdc = new LendingPool(ERC20(address(usdc)), DeployAddresses.treasury, address(factory), address(liquidator));
+        srTranche_usdc = new Tranche(address(pool_usdc), "Senior", "s");
+        jrTranche_usdc = new Tranche(address(pool_usdc), "Junior", "j");
 
         pool_usdc.setVaultVersion(1, true);
         pool_usdc.setOriginationFee(10);
+        pool_usdc.setMaxInitiatorFee(100_000 * 10**6);
         pool_usdc.addTranche(address(srTranche_usdc), 50, 0);
         pool_usdc.addTranche(address(jrTranche_usdc), 40, 20);
         pool_usdc.setTreasuryInterestWeight(10);
