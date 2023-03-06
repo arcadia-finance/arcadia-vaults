@@ -14,54 +14,63 @@ import { ILendingPool } from "./interfaces/ILendingPool.sol";
 import { Owned } from "lib/solmate/src/auth/Owned.sol";
 
 /**
- * @title The liquidator holds the execution logic and storage of all things related to liquidating Arcadia Vaults
+ * @title Liquidator
  * @author Arcadia Finance
- * @notice Ensure your total value denomination remains above the liquidation threshold, or risk being liquidated!
- * @dev contact: dev at arcadia.finance
+ * @notice The liquidator holds the execution logic and storage of all things related to liquidating Arcadia Vaults.
+ * Ensure your total value denomination remains above the liquidation threshold, or risk being liquidated!
  */
 contract Liquidator is Owned {
     using SafeTransferLib for ERC20;
 
-    address public immutable factory;
+    /* //////////////////////////////////////////////////////////////
+                                STORAGE
+    ////////////////////////////////////////////////////////////// */
 
-    // Sets the begin price of the auction
-    // Defined as a percentage of opendebt, 2 decimals precision -> 150 = 150%
+    // The contract address of the Factory.
+    address public immutable factory;
+    // Sets the begin price of the auction.
+    // Defined as a percentage of openDebt, 2 decimals precision -> 150 = 150%.
     uint16 public startPriceMultiplier;
     // Sets the minimum price the auction converges to.
-    // Defined as a percentage of opendebt, 2 decimals precision -> 60 = 60%
+    // Defined as a percentage of openDebt, 2 decimals precision -> 60 = 60%.
     uint8 public minPriceMultiplier;
-    // The base of the auction price curve (exponential)
-    // Determines how fast the aution price drops per second, 18 decimals precision
+    // The base of the auction price curve (exponential).
+    // Determines how fast the auction price drops per second, 18 decimals precision.
     uint64 public base;
     // Maximum time that the auction declines, after which price is equal to the minimum price set by minPriceMultiplier.
-    // Time in seconds, with 0 decimals precision
+    // Time in seconds, with 0 decimals precision.
     uint16 public cutoffTime;
-
     // Fee paid to the Liquidation Initiator.
     // Defined as a fraction of the openDebt with 2 decimals precision.
     // Absolute fee can be further capped to a max amount by the creditor.
     uint8 public initiatorRewardWeight;
     // Penalty the Vault owner has to pay to the trusted Creditor on top of the open Debt for being liquidated.
-    // Defined as a fraction of the openDebt with 2 decimals precision
+    // Defined as a fraction of the openDebt with 2 decimals precision.
     uint8 public penaltyWeight;
 
+    // Map vault => auctionInformation.
     mapping(address => AuctionInformation) public auctionInformation;
 
+    // Struct with additional information about the auction of a specific Vault.
     struct AuctionInformation {
-        uint128 openDebt;
-        uint32 startTime;
-        bool inAuction;
-        uint80 maxInitiatorFee;
-        address baseCurrency;
-        uint16 startPriceMultiplier;
-        uint8 minPriceMultiplier;
-        uint8 initiatorRewardWeight;
-        uint8 penaltyWeight;
-        uint16 cutoffTime;
-        address originalOwner;
-        address trustedCreditor;
-        uint64 base;
+        uint128 openDebt; // The open debt, same decimal precision as baseCurrency.
+        uint32 startTime; // The timestamp the auction started.
+        bool inAuction; // Flag indicating if the auction is still ongoing.
+        uint80 maxInitiatorFee; // The max initiation fee, same decimal precision as baseCurrency.
+        address baseCurrency; // The contract address of the baseCurrency.
+        uint16 startPriceMultiplier; // 2 decimals precision.
+        uint8 minPriceMultiplier; // 2 decimals precision.
+        uint8 initiatorRewardWeight; // 2 decimals precision.
+        uint8 penaltyWeight; // 2 decimals precision.
+        uint16 cutoffTime; // Maximum time that the auction declines.
+        address originalOwner; // The original owner of the Vault.
+        address trustedCreditor; // The creditor that issued the debt.
+        uint64 base; // Determines how fast the auction price drops over time.
     }
+
+    /* //////////////////////////////////////////////////////////////
+                                EVENTS
+    ////////////////////////////////////////////////////////////// */
 
     event WeightsSet(uint8 initiatorRewardWeight, uint8 penaltyWeight);
     event AuctionCurveParametersSet(uint64 base, uint16 cutoffTime);
@@ -79,6 +88,10 @@ contract Liquidator is Owned {
         uint128 remainder
     );
 
+    /* //////////////////////////////////////////////////////////////
+                                CONSTRUCTOR
+    ////////////////////////////////////////////////////////////// */
+
     constructor(address factory_) Owned(msg.sender) {
         factory = factory_;
         initiatorRewardWeight = 1;
@@ -94,10 +107,10 @@ contract Liquidator is Owned {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Sets the Claim Ratios.
+     * @notice Sets the liquidation weights.
      * @param initiatorRewardWeight_ Fee paid to the Liquidation Initiator.
      * @param penaltyWeight_ Penalty paid by the Vault owner to the trusted Creditor.
-     * @dev Each weight has 2 decimals precision (50 equals 0,5 or 50%)
+     * @dev Each weight has 2 decimals precision (50 equals 0,5 or 50%).
      */
     function setWeights(uint256 initiatorRewardWeight_, uint256 penaltyWeight_) external onlyOwner {
         require(initiatorRewardWeight_ + penaltyWeight_ <= 11, "LQ_SW: Weights Too High");
@@ -109,34 +122,34 @@ contract Liquidator is Owned {
     }
 
     /**
-     * @notice Sets the parameters (base and cuttOffTime) of the auction price curve (decreasing power function).
-     * @param halfLifeTime The base is not set directly, but it's derived from a more inituative parameter, the halfLifeTime:
+     * @notice Sets the parameters (base and cutOffTime) of the auction price curve (decreasing power function).
+     * @param halfLifeTime The base is not set directly, but it's derived from a more intuitive parameter, the halfLifeTime:
      * The time ΔT_hl (in seconds with 0 decimals) it takes for the power function to halve in value.
      * @dev The relation between the base and the halfLife time (ΔT_hl):
-     * The power function is defined as: N(t) = N(0) * (1/2)^(t/ΔT_hl)
-     * Or simplified: N(t) = N(O) * base^t => base = 1/[2^(1/ΔT_hl)]
+     * The power function is defined as: N(t) = N(0) * (1/2)^(t/ΔT_hl).
+     * Or simplified: N(t) = N(O) * base^t => base = 1/[2^(1/ΔT_hl)].
      * @param cutoffTime_ The Maximum time that the auction declines,
      * after which price is equal to the minimum price set by minPriceMultiplier.
      * @dev Setting a very short cutoffTime can be used by rogue owners to rug the junior tranche!!
      * Therefore the cutoffTime has hardcoded constraints.
-     * @dev All calculations are with 18 decimals precision
+     * @dev All calculations are done with 18 decimals precision.
      */
     function setAuctionCurveParameters(uint16 halfLifeTime, uint16 cutoffTime_) external onlyOwner {
-        //Checks that new parameters are within reasonable boundries
+        //Checks that new parameters are within reasonable boundaries.
         require(halfLifeTime > 120, "LQ_SACP: halfLifeTime too low"); // 2 minutes
         require(halfLifeTime < 28_800, "LQ_SACP: halfLifeTime too high"); // 8 hours
         require(cutoffTime_ > 3600, "LQ_SACP: cutoff too low"); // 1 hour
         require(cutoffTime_ < 64_800, "LQ_SACP: cutoff too high"); // 18 hours
 
-        //Derive base from the halfLifeTime
+        //Derive base from the halfLifeTime.
         uint64 base_ = uint64(1e18 * 1e18 / LogExpMath.pow(2 * 1e18, 1e18 / halfLifeTime));
 
-        //Check that LogExpMath.pow(base, timePassed) does not error at cutoffTime (due to numbers smaller than minimum precision)
+        //Check that LogExpMath.pow(base, timePassed) does not error at cutoffTime (due to numbers smaller than minimum precision).
         //Since LogExpMath.pow is a strictly decreasing function checking the power function at cutoffTime
-        //guarantees that the function does not revert on all timestamps between start of the auction and the cutoffTime
+        //guarantees that the function does not revert on all timestamps between start of the auction and the cutoffTime.
         LogExpMath.pow(base_, uint256(cutoffTime_) * 1e18);
 
-        //Store the new parameters
+        //Store the new parameters.
         base = base_;
         cutoffTime = cutoffTime_;
 
@@ -147,9 +160,9 @@ contract Liquidator is Owned {
      * @notice Sets the start price multiplier for the liquidator.
      * @param startPriceMultiplier_ The new start price multiplier, with 2 decimals precision.
      * @dev The start price multiplier is a multiplier that is used to increase the initial price of the auction.
-     * Since the value of all assets is dicounted with the liquidation factor, and because pricing modules will take a conservative
-     * approach to price assets (eg. floorprices for NFTs), the actual value of the assets being auctioned might be substantially higher
-     * as the open debt. Hence the auction starts at a multiplier of the opendebt, but decreases rapidly (exponential decay).
+     * Since the value of all assets are discounted with the liquidation factor, and because pricing modules will take a conservative
+     * approach to price assets (eg. floor-prices for NFTs), the actual value of the assets being auctioned might be substantially higher
+     * as the open debt. Hence the auction starts at a multiplier of the openDebt, but decreases rapidly (exponential decay).
      */
     function setStartPriceMultiplier(uint16 startPriceMultiplier_) external onlyOwner {
         require(startPriceMultiplier_ > 100, "LQ_SSPM: multiplier too low");
@@ -180,12 +193,12 @@ contract Liquidator is Owned {
      * @param vault The contract address of the Vault to liquidate.
      * @param openDebt The open debt taken by `originalOwner`.
      * @param maxInitiatorFee The upper limit for the fee paid to the Liquidation Initiator, set by the trusted Creditor.
-     * @dev This function is called by the Creditor who is owed the debt against the Vault.
+     * @dev This function is called by the Creditor who is owed the debt issued against the Vault.
      */
     function startAuction(address vault, uint256 openDebt, uint80 maxInitiatorFee) public {
         require(!auctionInformation[vault].inAuction, "LQ_SA: Auction already ongoing");
 
-        //Avoid possible re-entrance with the same vault address
+        //Avoid possible re-entrance with the same vault address.
         auctionInformation[vault].inAuction = true;
 
         //A malicious msg.sender can pass a self created contract as vault (not an actual Arcadia-Vault) that returns true on liquidateVault().
@@ -197,7 +210,7 @@ contract Liquidator is Owned {
         //Finding such a collision requires finding a collision of the keccak256 hash function.
         (address originalOwner, address baseCurrency, address trustedCreditor) = IVault(vault).liquidateVault(openDebt);
 
-        //Check that msg.sender is indeed the Creditor of the Vault
+        //Check that msg.sender is indeed the Creditor of the Vault.
         require(trustedCreditor == msg.sender, "LQ_SA: Unauthorised");
 
         auctionInformation[vault].openDebt = uint128(openDebt);
@@ -222,7 +235,7 @@ contract Liquidator is Owned {
      * @return price the total price for which the vault can be purchased.
      * @return inAuction returns false when the vault is not being auctioned.
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
-     * And immediately ends the auction.
+     * and immediately ends the auction.
      */
     function getPriceOfVault(address vault) public view returns (uint256 price, bool inAuction) {
         inAuction = auctionInformation[vault].inAuction;
@@ -236,33 +249,33 @@ contract Liquidator is Owned {
 
     /**
      * @notice Function returns the current auction price given time passed and the openDebt.
-     * @param auctionInfo The auctioninfo
+     * @param auctionInfo The auction information.
      * @return price The total price for which the vault can be purchased.
-     * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault and immediately ends the auction
-     * @dev Price P(t) decreases exponentially over time: P(t) = openDebt * [(SPM - MPM) * base^t + MPM]
-     * SPM: The startPriceMultiplier defines the initial price: P(0) = openDebt * SPM (2 decimals precision)
-     * MPM: The minPriceMultiplier defines the assymptotic end price for P(∞) = openDebt * MPM (2 decimals precision)
-     * base: defines how fast the exponential curve decreases (18 decimals precision)
-     * t: time passed since start auction (in seconds, 18 decimals precision)
-     * @dev LogExpMath was made in solidity 0.7, where operatoins were unchecked.
+     * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault and immediately ends the auction.
+     * @dev Price P(t) decreases exponentially over time: P(t) = openDebt * [(SPM - MPM) * base^t + MPM]:
+     * SPM: The startPriceMultiplier defines the initial price: P(0) = openDebt * SPM (2 decimals precision).
+     * MPM: The minPriceMultiplier defines the asymptotic end price for P(∞) = openDebt * MPM (2 decimals precision).
+     * base: defines how fast the exponential curve decreases (18 decimals precision).
+     * t: time passed since start auction (in seconds, 18 decimals precision).
+     * @dev LogExpMath was made in solidity 0.7, where operations were unchecked.
      */
     function _calcPriceOfVault(AuctionInformation memory auctionInfo) internal view returns (uint256 price) {
-        //Time passed is a difference of two Uint32 -> can't overflow
+        //Time passed is a difference of two Uint32 -> can't overflow.
         uint256 timePassed;
         unchecked {
-            timePassed = block.timestamp - auctionInfo.startTime; //time duration in seconds
+            timePassed = block.timestamp - auctionInfo.startTime; //time duration in seconds.
 
             if (timePassed > auctionInfo.cutoffTime) {
                 //Cut-off time passed -> return the minimal value defined by minPriceMultiplier (2 decimals precision).
-                //No overflow possible: uint128 * uint8
+                //No overflow possible: uint128 * uint8.
                 price = uint256(auctionInfo.openDebt) * auctionInfo.minPriceMultiplier / 1e2;
             } else {
                 //Bring to 18 decimals precision for LogExpMath.pow()
-                //No overflow possible: uin32 * uint64
+                //No overflow possible: uin32 * uint64.
                 timePassed = timePassed * 1e18;
 
-                //pow(base, timePassed) has 18 decimals and is strictly smaller than 1 (-> smaller as 1e18)
-                //No overflow possible: uint128 * uint64 * uint8
+                //pow(base, timePassed) has 18 decimals and is strictly smaller than 1 (-> smaller as 1e18).
+                //No overflow possible: uint128 * uint64 * uint8.
                 //Multipliers have 2 decimals precision and LogExpMath.pow() has 18 decimals precision,
                 //hence we need to divide the result by 1e20.
                 price = auctionInfo.openDebt
@@ -326,8 +339,8 @@ contract Liquidator is Owned {
      * The junior tranche of the liquidity pool will pay for the bad debt.
      * The protocol will sell/auction the vault in another way to recover the debt.
      * The protocol will later "donate" these proceeds back to the junior tranche and/or other
-     * impacted Tranches, this last step is not enforced by the smart contract.
-     * While this process is not fully trustless, it is only to solve an extreme unhappy flow,
+     * impacted Tranches, this last step is not enforced by the smart contracts.
+     * While this process is not fully trustless, it is the only way to solve an extreme unhappy flow,
      * where an auction did not end within cutoffTime (due to market or technical reasons).
      */
     function endAuction(address vault, address to) external onlyOwner {
@@ -344,7 +357,7 @@ contract Liquidator is Owned {
         auctionInformation[vault].inAuction = false;
 
         (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder) =
-            calcLiquidationSettlementValues(auctionInformation_.openDebt, 0, auctionInformation_.maxInitiatorFee); //priceOfVault is zero
+            calcLiquidationSettlementValues(auctionInformation_.openDebt, 0, auctionInformation_.maxInitiatorFee); //priceOfVault is zero.
 
         ILendingPool(auctionInformation_.trustedCreditor).settleLiquidation(
             vault, auctionInformation_.originalOwner, badDebt, liquidationInitiatorReward, liquidationPenalty, remainder
@@ -373,7 +386,7 @@ contract Liquidator is Owned {
      * @return liquidationInitiatorReward The Reward for the Liquidation Initiator.
      * @return liquidationPenalty The additional penalty the `originalOwner` has to pay to the protocol.
      * @return remainder Any funds remaining after the auction are returned back to the `originalOwner`.
-     * @dev All values are denominated in the baseCurrency of the Vault
+     * @dev All values are denominated in the baseCurrency of the Vault.
      * @dev We use a dutch auction: price constantly decreases and the first bidder buys the vault
      * And immediately ends the auction.
      */
@@ -382,7 +395,7 @@ contract Liquidator is Owned {
         view
         returns (uint256 badDebt, uint256 liquidationInitiatorReward, uint256 liquidationPenalty, uint256 remainder)
     {
-        //openDebt is a uint128 -> all calculations can be unchecked
+        //openDebt is a uint128 -> all calculations can be unchecked.
         unchecked {
             //Liquidation Initiator Reward is always paid out, independent of the final auction price.
             //The reward is calculated as a fixed percentage of open debt, but capped on the upside (maxInitiatorFee).
@@ -398,9 +411,9 @@ contract Liquidator is Owned {
                 liquidationPenalty = openDebt * penaltyWeight / 100;
                 remainder = priceOfVault - openDebt - liquidationInitiatorReward;
 
-                //Check if the remainder can cover the full liquidation penalty
+                //Check if the remainder can cover the full liquidation penalty.
                 if (remainder > liquidationPenalty) {
-                    //If yes, calculate the final remainder
+                    //If yes, calculate the final remainder.
                     remainder -= liquidationPenalty;
                 } else {
                     //If not, there is no remainder for the originalOwner.
