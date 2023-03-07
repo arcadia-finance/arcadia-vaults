@@ -8,7 +8,7 @@ pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import { LendingPool, DebtToken, ERC20, DataTypes } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { LendingPool, DebtToken, ERC20, InterestRateModule } from "../../lib/arcadia-lending/src/LendingPool.sol";
 import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 import { ActionMultiCall } from "../actions/MultiCall.sol";
 import { MultiActionMock } from "../mockups/MultiActionMock.sol";
@@ -33,7 +33,7 @@ abstract contract EndToEndTest is DeployArcadiaVaults {
 
         pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
-        DataTypes.InterestRateConfiguration memory config = DataTypes.InterestRateConfiguration({
+        InterestRateModule.InterestRateConfiguration memory config = InterestRateModule.InterestRateConfiguration({
             baseRatePerYear: Constants.interestRate,
             highSlopePerYear: Constants.interestRate,
             lowSlopePerYear: Constants.interestRate,

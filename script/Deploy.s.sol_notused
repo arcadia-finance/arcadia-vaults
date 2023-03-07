@@ -19,7 +19,6 @@ import { OracleHub } from "../src/OracleHub.sol";
 import { RiskConstants } from "../src/utils/RiskConstants.sol";
 
 import { ActionMultiCall } from "../src/actions/MultiCall.sol";
-import { DataTypes } from "../lib/arcadia-lending/src/libraries/DataTypes.sol";
 
 import { ERC20, DebtToken } from "../lib/arcadia-lending/src/DebtToken.sol";
 import { LendingPool } from "../lib/arcadia-lending/src/LendingPool.sol";
@@ -414,7 +413,7 @@ contract ArcadiaVaultDeployer is Test {
         pool_weth.setTreasuryLiquidationWeight(80);
         pool_weth.setSupplyCap(350 * 10 ** 18);
         pool_weth.setInterestConfig(
-            DataTypes.InterestRateConfiguration({
+            LendingPool.InterestRateConfiguration({
                 baseRatePerYear: 30_000_000_000_000_000,
                 lowSlopePerYear: 85_000_000_000_000_000,
                 highSlopePerYear: 1_250_000_000_000_000_000,
@@ -436,7 +435,7 @@ contract ArcadiaVaultDeployer is Test {
         pool_usdc.setTreasuryLiquidationWeight(80);
         pool_usdc.setSupplyCap(500_000 * 10 ** 6);
         pool_usdc.setInterestConfig(
-            DataTypes.InterestRateConfiguration({
+            LendingPool.InterestRateConfiguration({
                 baseRatePerYear: 25_000_000_000_000_000,
                 lowSlopePerYear: 70_000_000_000_000_000,
                 highSlopePerYear: 1_000_000_000_000_000_000,

@@ -494,7 +494,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency(uint128 fixedLiquidationCost) public {
+    function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency(uint96 fixedLiquidationCost) public {
         assertEq(vault_.baseCurrency(), address(0));
 
         vm.prank(creatorAddress);

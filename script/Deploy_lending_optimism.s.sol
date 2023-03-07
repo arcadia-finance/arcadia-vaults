@@ -12,9 +12,8 @@ import { DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstants } from
 import { Factory } from "../src/Factory.sol";
 import { Liquidator } from "../src/Liquidator.sol";
 
-import { DataTypes } from "../lib/arcadia-lending/src/libraries/DataTypes.sol";
 import { ERC20, DebtToken } from "../lib/arcadia-lending/src/DebtToken.sol";
-import { LendingPool } from "../lib/arcadia-lending/src/LendingPool.sol";
+import { LendingPool, InterestRateModule } from "../lib/arcadia-lending/src/LendingPool.sol";
 import { Tranche } from "../lib/arcadia-lending/src/Tranche.sol";
 import { TrustedCreditor } from "../lib/arcadia-lending/src/TrustedCreditor.sol";
 
@@ -60,7 +59,7 @@ contract ArcadiaLendingDeployerOptimism is Test {
         pool_weth.setSupplyCap(1);
         pool_weth.setBorrowCap(1);
         pool_weth.setInterestConfig(
-            DataTypes.InterestRateConfiguration({
+            InterestRateModule.InterestRateConfiguration({
                 baseRatePerYear: 15_000_000_000_000_000,
                 lowSlopePerYear: 70_000_000_000_000_000,
                 highSlopePerYear: 1_250_000_000_000_000_000,
@@ -83,7 +82,7 @@ contract ArcadiaLendingDeployerOptimism is Test {
         pool_usdc.setSupplyCap(1);
         pool_usdc.setBorrowCap(1);
         pool_usdc.setInterestConfig(
-            DataTypes.InterestRateConfiguration({
+            InterestRateModule.InterestRateConfiguration({
                 baseRatePerYear: 10_000_000_000_000_000,
                 lowSlopePerYear: 55_000_000_000_000_000,
                 highSlopePerYear: 1_000_000_000_000_000_000,
