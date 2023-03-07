@@ -423,7 +423,7 @@ contract ArcadiaVaultDeployer is Test {
         );
 
         pool_usdc =
-            new LendingPool(ERC20(address(usdc)), DeployAddresses.treasury, address(factory), address(liquidator));
+        new LendingPool(ERC20(address(usdc)), DeployAddresses.treasury_mainnet, address(factory), address(liquidator));
         srTranche_usdc = new Tranche(address(pool_usdc), "Senior", "s");
         jrTranche_usdc = new Tranche(address(pool_usdc), "Junior", "j");
 
