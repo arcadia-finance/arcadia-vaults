@@ -53,6 +53,7 @@ contract ArcadiaLendingDeployerOptimism is Test {
 
         pool_weth.setOriginationFee(10);
         pool_weth.setMaxInitiatorFee(33 * 10 ** 18);
+        pool_weth.setFixedLiquidationCost(0.0020*10**18);
         pool_weth.addTranche(address(srTranche_weth), 50, 0);
         pool_weth.addTranche(address(jrTranche_weth), 40, 20);
         pool_weth.setTreasuryInterestWeight(10);
@@ -74,6 +75,7 @@ contract ArcadiaLendingDeployerOptimism is Test {
 
         pool_usdc.setOriginationFee(10);
         pool_usdc.setMaxInitiatorFee(50_000 * 10 ** 6);
+        pool_usdc.setFixedLiquidationCost(2*10**6);
         pool_usdc.addTranche(address(srTranche_usdc), 50, 0);
         pool_usdc.addTranche(address(jrTranche_usdc), 40, 20);
         pool_usdc.setTreasuryInterestWeight(10);
