@@ -401,7 +401,7 @@ contract ArcadiaVaultDeployer is Test {
         mainRegistry.setAllowedAction(address(actionMultiCall), true);
 
         pool_weth =
-            new LendingPool(ERC20(address(weth)), DeployAddresses.treasury_mainnet, address(factory), address(liquidator));
+        new LendingPool(ERC20(address(weth)), DeployAddresses.treasury_mainnet, address(factory), address(liquidator));
         srTranche_weth = new Tranche(address(pool_weth), "Senior", "s");
         jrTranche_weth = new Tranche(address(pool_weth), "Junior", "j");
 
