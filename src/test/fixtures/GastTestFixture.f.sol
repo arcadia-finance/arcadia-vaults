@@ -8,7 +8,7 @@ pragma solidity ^0.8.13;
 
 import "../fixtures/ArcadiaVaultsFixture.f.sol";
 
-import { LendingPool, DebtToken, ERC20, DataTypes } from "../../../lib/arcadia-lending/src/LendingPool.sol";
+import { LendingPool, DebtToken, ERC20 } from "../../../lib/arcadia-lending/src/LendingPool.sol";
 import { Tranche } from "../../../lib/arcadia-lending/src/Tranche.sol";
 
 abstract contract GasTestFixture is DeployArcadiaVaults {

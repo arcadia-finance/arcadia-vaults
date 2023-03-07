@@ -33,6 +33,13 @@ abstract contract MainRegistryGuardian is BaseGuardian {
 
     /*
     //////////////////////////////////////////////////////////////
+                            ERRORS
+    //////////////////////////////////////////////////////////////
+    */
+    error FunctionIsPaused();
+
+    /*
+    //////////////////////////////////////////////////////////////
                             MODIFIERS
     //////////////////////////////////////////////////////////////
     */
@@ -42,7 +49,7 @@ abstract contract MainRegistryGuardian is BaseGuardian {
      * It throws if withdraw is paused.
      */
     modifier whenWithdrawNotPaused() {
-        require(!withdrawPaused, "Guardian: withdraw paused");
+        if (withdrawPaused) revert FunctionIsPaused();
         _;
     }
 
@@ -51,7 +58,7 @@ abstract contract MainRegistryGuardian is BaseGuardian {
      * It throws if deposit assets is paused.
      */
     modifier whenDepositNotPaused() {
-        require(!depositPaused, "Guardian: deposit paused");
+        if (depositPaused) revert FunctionIsPaused();
         _;
     }
 

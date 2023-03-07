@@ -411,6 +411,8 @@ contract PriceModuleManagementTest is MainRegistryTest {
 contract AssetManagementTest is MainRegistryTest {
     using stdStorage for StdStorage;
 
+    error FunctionIsPaused();
+
     function setUp() public override {
         super.setUp();
 
@@ -638,7 +640,7 @@ contract AssetManagementTest is MainRegistryTest {
 
         // Then: batchProcessDeposit should reverted
         vm.prank(proxyAddr);
-        vm.expectRevert("Guardian: deposit paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         mainRegistry.batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
     }
 
@@ -789,7 +791,7 @@ contract AssetManagementTest is MainRegistryTest {
 
         // Then: Withdrawal is reverted due to paused main registry
         vm.startPrank(proxyAddr);
-        vm.expectRevert("Guardian: withdraw paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         mainRegistry.batchProcessWithdrawal(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }

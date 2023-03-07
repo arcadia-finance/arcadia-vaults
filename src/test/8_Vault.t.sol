@@ -1032,7 +1032,7 @@ contract VaultActionTest is vaultTests {
         super.setUp();
         deployFactory();
 
-        action = new ActionMultiCall(address(mainRegistry));
+        action = new ActionMultiCall();
         deal(address(eth), address(action), 1000 * 10 ** 20, false);
 
         vm.startPrank(creatorAddress);

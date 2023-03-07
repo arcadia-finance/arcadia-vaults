@@ -96,10 +96,10 @@ contract Liquidator is Owned {
         factory = factory_;
         initiatorRewardWeight = 1;
         penaltyWeight = 5;
-        startPriceMultiplier = 110;
-        minPriceMultiplier = 50;
+        startPriceMultiplier = 150;
+        minPriceMultiplier = 60;
         cutoffTime = 14_400; //4 hours
-        base = 1e18;
+        base = 999_807_477_651_317_446; //3600s halflife, 14_400 cutoff
     }
 
     /*///////////////////////////////////////////////////////////////
