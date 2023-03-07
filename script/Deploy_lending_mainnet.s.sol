@@ -38,7 +38,7 @@ contract ArcadiaLendingDeployerMainnet is Test {
     }
 
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_DEPLOYER");
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_DEPLOYER_MAINNET");
 
         vm.startBroadcast(deployerPrivateKey);
 
