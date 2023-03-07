@@ -22,16 +22,18 @@ contract TrustedCreditorMock is TrustedCreditor {
         external
         view
         override
-        returns (bool success, address baseCurrency_, address liquidator_)
+        returns (bool success, address baseCurrency_, address liquidator_, uint256 fixedLiquidationCost)
     {
         if (isCallSuccesfull) {
             success = true;
             baseCurrency_ = baseCurrency;
             liquidator_ = liquidator;
+            fixedLiquidationCost = 0;
         } else {
             success = false;
             baseCurrency_ = address(0);
             liquidator_ = address(0);
+            fixedLiquidationCost = 0;
         }
     }
 
