@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 /**
  * @title Proxy
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @dev Implementation based on ERC-1967: Proxy Storage Slots
  * See https://eips.ethereum.org/EIPS/eip-1967
  */

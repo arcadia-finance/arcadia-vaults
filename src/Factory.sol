@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -17,7 +15,7 @@ import { FactoryGuardian } from "./security/FactoryGuardian.sol";
 
 /**
  * @title Factory.
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice The Lending pool has the logic to deploy and upgrade Arcadia Vaults.
  * @dev The Factory is an ERC721 contract that maps each id to an Arcadia Vault.
  */

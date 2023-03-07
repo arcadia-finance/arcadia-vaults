@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -15,7 +13,7 @@ import { IPricingModule } from "../interfaces/IPricingModule.sol";
 
 /**
  * @title Abstract Pricing Module
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice Sub-Registries have the pricing logic and basic information for tokens that can, or could at some point, be deposited in the vaults
  * @dev No end-user should directly interact with Sub-Registries, only the Main Registry, Oracle-Hub or the contract owner
  * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main Registry

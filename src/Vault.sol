@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -19,7 +17,7 @@ import { ERC20, SafeTransferLib } from "../lib/solmate/src/utils/SafeTransferLib
 
 /**
  * @title An Arcadia Vault used to manage all your assets and take margin.
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice Users can use this vault to deposit assets (ERC20, ERC721, ERC1155, ...).
  * The vault will denominate all the pooled assets into one baseCurrency (one unit of account, like usd or eth).
  * An increase of value of one asset will offset a decrease in value of another asset.

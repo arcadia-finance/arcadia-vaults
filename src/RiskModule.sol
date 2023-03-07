@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -10,7 +8,7 @@ import { RiskConstants } from "./utils/RiskConstants.sol";
 
 /**
  * @title Risk Module
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice The Risk Module is responsible for calculating the collateral value and liquidation value of a given combination of assets.
  */
 library RiskModule {
