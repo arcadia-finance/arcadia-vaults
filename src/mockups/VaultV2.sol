@@ -42,9 +42,9 @@ contract VaultV2 {
     bool public isTrustedCreditorSet;
 
     uint16 public vaultVersion;
-    uint128 public fixedLiquidationCost;
 
     address public liquidator;
+    uint96 public fixedLiquidationCost;
     address public owner;
     address public registry;
     address public trustedCreditor;
@@ -250,7 +250,7 @@ contract VaultV2 {
 
         liquidator = liquidator_;
         trustedCreditor = creditor;
-        fixedLiquidationCost = uint128(fixedLiquidationCost_);
+        fixedLiquidationCost = uint96(fixedLiquidationCost_);
         if (baseCurrency != baseCurrency_) {
             _setBaseCurrency(baseCurrency_);
         }
@@ -271,6 +271,7 @@ contract VaultV2 {
         isTrustedCreditorSet = false;
         trustedCreditor = address(0);
         liquidator = address(0);
+        fixedLiquidationCost = 0;
 
         emit TrustedMarginAccountChanged(address(0), address(0));
     }
@@ -286,6 +287,7 @@ contract VaultV2 {
      * @return success Boolean indicating if there is sufficient margin to back a certain amount of Debt.
      * @return trustedCreditor_ The contract address of the trusted creditor.
      * @return vaultVersion_ The vault version.
+     * @dev A Vault is healthy if the Collateral value is bigger than or equal to the Used Margin.
      * @dev Only one of the values can be non-zero, or we check on a certain increase of debt, or we check on a total amount of debt.
      * @dev If both values are zero, we check if the vault is currently healthy.
      */
@@ -294,19 +296,20 @@ contract VaultV2 {
         view
         returns (bool success, address trustedCreditor_, uint256 vaultVersion_)
     {
-        if (totalOpenDebt != 0) {
+        if (totalOpenDebt > 0) {
             //Check if vault is healthy for a given amount of openDebt.
+            //The total Used margin equals the sum of the given amount of openDebt and the gas cost to liquidate.
             success = getCollateralValue() >= totalOpenDebt + fixedLiquidationCost;
         } else {
             //Check if vault is still healthy after an increase of debt.
-            success = getCollateralValue() >= getUsedMargin() + debtIncrease + fixedLiquidationCost;
+            success = getCollateralValue() >= getUsedMargin() + debtIncrease;
         }
 
         return (success, trustedCreditor, vaultVersion);
     }
 
     /**
-     * @notice Returns the total value of the vault in a specific baseCurrency
+     * @notice Returns the total value (mark to market) of the vault in a specific baseCurrency
      * @dev Fetches all stored assets with their amounts on the proxy vault.
      * Using a specified baseCurrency, fetches the value of all assets on the proxy vault in said baseCurrency.
      * @param baseCurrency_ The baseCurrency to return the value in.
@@ -319,7 +322,7 @@ contract VaultV2 {
     }
 
     /**
-     * @notice Calculates the total collateral value of the vault.
+     * @notice Calculates the total collateral value (MTM discounted with a haircut) of the vault.
      * @return collateralValue The collateral value, returned in the decimals of the base currency.
      * @dev Returns the value denominated in the baseCurrency of the Vault.
      * @dev The collateral value of the vault is equal to the spot value of the underlying assets,
@@ -337,15 +340,14 @@ contract VaultV2 {
     }
 
     /**
-     * @notice Calculates the total liquidation value of the vault.
+     * @notice Calculates the total liquidation value (MTM discounted with a factor to account for slippage) of the vault.
      * @return liquidationValue The liquidation value, returned in the decimals of the base currency.
      * @dev Returns the value denominated in the baseCurrency of the Vault.
      * @dev The liquidation value of the vault is equal to the spot value of the underlying assets,
      * discounted by a haircut (the liquidation factor).
      * The liquidation value takes into account that not the full value of the assets can go towards
      * repaying the debt, but only a fraction of it, the remaining value is lost due to:
-     * slippage while liquidating the assets, fees for the auction initiator, gas fees and
-     * a penalty to the protocol.
+     * slippage while liquidating the assets, fees for the auction initiator and a penalty to the protocol.
      */
     function getLiquidationValue() public view returns (uint256 liquidationValue) {
         (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
@@ -357,7 +359,9 @@ contract VaultV2 {
     /**
      * @notice Returns the used margin of the proxy vault.
      * @return usedMargin The used amount of margin a user has taken
-     * @dev The used margin is denominated in the baseCurrency of the proxy vault.
+     * @dev Used Margin is the value of the assets that is currently 'locked' to back the liabilities
+     * against the Vault and a fixed cost to account for gas fees during liquidation.
+     * @dev The used margin is denominated in the baseCurrency.
      * @dev Currently only one trusted application (Arcadia Lending) can open a margin account.
      * The open position is fetched at a contract of the application -> only allow trusted audited creditors!!!
      */
@@ -365,14 +369,14 @@ contract VaultV2 {
         if (!isTrustedCreditorSet) return 0;
 
         //getOpenPosition() is a view function, cannot modify state.
-        usedMargin = ITrustedCreditor(trustedCreditor).getOpenPosition(address(this));
+        usedMargin = ITrustedCreditor(trustedCreditor).getOpenPosition(address(this)) + fixedLiquidationCost;
     }
 
     /**
      * @notice Calculates the remaining margin the owner of the proxy vault can use.
      * @return freeMargin The remaining amount of margin a user can take.
-     * @dev The free margin is denominated in the baseCurrency of the proxy vault,
-     * with an equal number of decimals as the base currency.
+     * @dev Free Margin is the value of the assets that is still free to back additional liabilities.
+     * @dev The free margin is denominated in the baseCurrency.
      */
     function getFreeMargin() public view returns (uint256 freeMargin) {
         uint256 collateralValue = getCollateralValue();
@@ -394,7 +398,7 @@ contract VaultV2 {
      * @return originalOwner The original owner of this vault.
      * @return baseCurrency_ The baseCurrency in which the vault is denominated.
      * @return trustedCreditor_ The account or contract that is owed the debt.
-     * @dev Requires an unhealthy vault (value / debt < liqFactor).
+     * @dev Requires an unhealthy vault.
      * @dev Transfers ownership of the proxy vault to the liquidator!
      */
     function liquidateVault(uint256 openDebt)
@@ -411,11 +415,14 @@ contract VaultV2 {
         trustedCreditor = address(0);
         liquidator = address(0);
 
-        //If getLiquidationValue (total value discounted with liquidation factor) is smaller than openDebt,
-        //the Vault is unhealthy and is succesfully liquidated.
+        //If getLiquidationValue (total value discounted with liquidation factor to account for slippage)
+        //is smaller than the Used Margin: sum of the liabilities of the Vault (openDebt) and the max gas cost to liquidate the vault (fixedLiquidationCost),
+        //the Vault is unhealthy and is successfully liquidated.
         //Liquidations are triggered by the trustedCreditor (via Liquidator), the openDebt is
         //passed to avoid the need of another contract call back to trustedCreditor.
         require(getLiquidationValue() < openDebt + fixedLiquidationCost, "V_LV: Vault is healthy");
+
+        fixedLiquidationCost = 0;
 
         //Transfer ownership of the ERC721 in Factory of the Vault to the Liquidator.
         IFactory(IMainRegistry(registry).factory()).liquidate(msg.sender);
@@ -438,7 +445,7 @@ contract VaultV2 {
      * @param assetManager the address of the Asset Manager
      * @param value A boolean giving permissions to or taking permissions from an Asset manager
      * @dev Only set trusted addresses as Asset manager, Asset managers can potentially steal assets (as long as the vault position remains healthy).
-     * @dev No need to set the Owner as Asset manager, owner will automattically have all permissions of an asset manager.
+     * @dev No need to set the Owner as Asset manager, owner will automatically have all permissions of an asset manager.
      * @dev Potential use-cases of the asset manager might be to:
      * - Automate actions by keeper networks,
      * - Chain interactions with the Trusted Creditor together with vault actions (eg. borrow deposit and trade in one transaction).
@@ -478,10 +485,11 @@ contract VaultV2 {
         // deposit from actionHandler into vault
         _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, actionHandler);
 
+        //If usedMargin is equal to fixedLiquidationCost, the open liabilities are 0 and the Vault is always in a healthy state.
         uint256 usedMargin = getUsedMargin();
-        if (usedMargin > 0) {
-            uint256 collValue = getCollateralValue();
-            require(collValue >= usedMargin + fixedLiquidationCost, "V_VMA: coll. value too low");
+        if (usedMargin > fixedLiquidationCost) {
+            //Vault must be healthy after actions are executed.
+            require(getCollateralValue() >= usedMargin, "V_VMA: coll. value too low");
         }
 
         return (trustedCreditor, vaultVersion);
@@ -538,7 +546,7 @@ contract VaultV2 {
         uint256[] memory assetAmounts,
         address from
     ) internal {
-        //reverts in mainregistry if invalid input
+        //reverts in mainRegistry if invalid input
         uint256[] memory assetTypes =
             IMainRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
@@ -596,8 +604,10 @@ contract VaultV2 {
         _withdraw(assetAddresses, assetIds, assetAmounts, msg.sender);
 
         uint256 usedMargin = getUsedMargin();
-        if (usedMargin > 0) {
-            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
+        //If usedMargin is equal to fixedLiquidationCost, the open liabilities are 0 and all assets can be withdrawn.
+        if (usedMargin > fixedLiquidationCost) {
+            //Vault must be healthy after assets are withdrawn
+            require(getCollateralValue() >= usedMargin, "V_W: coll. value too low!");
         }
     }
 

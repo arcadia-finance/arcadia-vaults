@@ -35,6 +35,10 @@ contract VaultTestExtension is Vault {
         vaultVersion = version;
     }
 
+    function setFixedLiquidationCost(uint96 fixedLiquidationCost_) public {
+        fixedLiquidationCost = fixedLiquidationCost_;
+    }
+
     function setOwner(address newOwner) public {
         owner = newOwner;
     }
@@ -594,11 +598,13 @@ contract MarginRequirementsTest is vaultTests {
     function testSuccess_isVaultHealthy_debtIncrease_InsufficientMargin(
         uint8 depositAmount,
         uint128 marginIncrease,
-        uint128 usedMargin,
+        uint128 openDebt,
+        uint96 fixedLiquidationCost,
         uint8 collFac,
         uint8 liqFac
     ) public {
-        // Given: Risk Factors for basecurrency are set
+        vm.assume(uint256(marginIncrease) + openDebt <= type(uint256).max - fixedLiquidationCost);
+        // Given: Risk Factors for baseCurrency are set
         vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
         vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
@@ -612,7 +618,8 @@ contract MarginRequirementsTest is vaultTests {
         standardERC20PricingModule.setBatchRiskVariables(riskVars_);
 
         // And: Vault has already used margin
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(openDebt);
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
         // And: Eth is deposited in the Vault
         depositEthInVault(depositAmount, vaultOwner);
@@ -620,14 +627,14 @@ contract MarginRequirementsTest is vaultTests {
         // And: There is insufficient Collateral to take more margin
         uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
-        vm.assume(collateralValue < uint256(usedMargin) + marginIncrease);
-        vm.assume(depositAmount > 0); // Devision by 0
+        vm.assume(collateralValue < uint256(openDebt) + marginIncrease + fixedLiquidationCost);
+        vm.assume(depositAmount > 0); // Division by 0
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
         (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(marginIncrease, 0);
 
-        // Then: The action is not succesfull
+        // Then: The action is not successful
         assertTrue(!success);
         assertEq(creditor, address(pool));
         assertEq(version, 1);
@@ -636,11 +643,13 @@ contract MarginRequirementsTest is vaultTests {
     function testSuccess_isVaultHealthy_debtIncrease_SufficientMargin(
         uint8 depositAmount,
         uint128 marginIncrease,
-        uint128 usedMargin,
+        uint128 openDebt,
+        uint96 fixedLiquidationCost,
         uint8 collFac,
         uint8 liqFac
     ) public {
-        // Given: Risk Factors for basecurrency are set
+        vm.assume(uint256(marginIncrease) + openDebt <= type(uint256).max - fixedLiquidationCost);
+        // Given: Risk Factors for baseCurrency are set
         vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
         vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
@@ -654,7 +663,8 @@ contract MarginRequirementsTest is vaultTests {
         standardERC20PricingModule.setBatchRiskVariables(riskVars_);
 
         // And: Vault has already used margin
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(openDebt);
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
         // And: Eth is deposited in the Vault
         depositEthInVault(depositAmount, vaultOwner);
@@ -662,14 +672,14 @@ contract MarginRequirementsTest is vaultTests {
         // And: There is sufficient Collateral to take more margin
         uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
-        vm.assume(collateralValue >= uint256(usedMargin) + marginIncrease);
-        vm.assume(depositAmount > 0); // Devision by 0
+        vm.assume(collateralValue >= uint256(openDebt) + marginIncrease + fixedLiquidationCost);
+        vm.assume(depositAmount > 0); // Division by 0
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
         (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(marginIncrease, 0);
 
-        // Then: The action is succesfull
+        // Then: The action is successful
         assertTrue(success);
         assertEq(creditor, address(pool));
         assertEq(version, 1);
@@ -678,10 +688,11 @@ contract MarginRequirementsTest is vaultTests {
     function testSuccess_isVaultHealthy_totalOpenDebt_InsufficientMargin(
         uint8 depositAmount,
         uint128 totalOpenDebt,
+        uint96 fixedLiquidationCost,
         uint8 collFac,
         uint8 liqFac
     ) public {
-        // Given: Risk Factors for basecurrency are set
+        // Given: Risk Factors for baseCurrency are set
         vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
         vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
@@ -694,20 +705,23 @@ contract MarginRequirementsTest is vaultTests {
         vm.prank(creatorAddress);
         standardERC20PricingModule.setBatchRiskVariables(riskVars_);
 
+        // And: Vault has already used margin
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
+
         // And: Eth is deposited in the Vault
         depositEthInVault(depositAmount, vaultOwner);
 
         // And: There is insufficient Collateral to take more margin
         uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
-        vm.assume(collateralValue < totalOpenDebt);
-        vm.assume(depositAmount > 0); // Devision by 0
+        vm.assume(collateralValue < uint256(totalOpenDebt) + fixedLiquidationCost);
+        vm.assume(depositAmount > 0); // Division by 0
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
         (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(0, totalOpenDebt);
 
-        // Then: The action is not succesfull
+        // Then: The action is not successful
         assertTrue(!success);
         assertEq(creditor, address(pool));
         assertEq(version, 1);
@@ -716,10 +730,11 @@ contract MarginRequirementsTest is vaultTests {
     function testSuccess_isVaultHealthy_totalOpenDebt_SufficientMargin(
         uint8 depositAmount,
         uint128 totalOpenDebt,
+        uint96 fixedLiquidationCost,
         uint8 collFac,
         uint8 liqFac
     ) public {
-        // Given: Risk Factors for basecurrency are set
+        // Given: Risk Factors for baseCurrency are set
         vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
         vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
@@ -732,20 +747,23 @@ contract MarginRequirementsTest is vaultTests {
         vm.prank(creatorAddress);
         standardERC20PricingModule.setBatchRiskVariables(riskVars_);
 
+        // And: Vault has already used margin
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
+
         // And: Eth is deposited in the Vault
         depositEthInVault(depositAmount, vaultOwner);
 
         // And: There is sufficient Collateral to take more margin
         uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
-        vm.assume(collateralValue >= totalOpenDebt);
-        vm.assume(depositAmount > 0); // Devision by 0
+        vm.assume(collateralValue >= uint256(totalOpenDebt) + fixedLiquidationCost);
+        vm.assume(depositAmount > 0); // Division by 0
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
         (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(0, totalOpenDebt);
 
-        // Then: The action is succesfull
+        // Then: The action is successful
         assertTrue(success);
         assertEq(creditor, address(pool));
         assertEq(version, 1);
@@ -799,10 +817,12 @@ contract MarginRequirementsTest is vaultTests {
         assertEq(expectedValue, actualValue);
     }
 
-    function testSuccess_getUsedMargin(uint256 usedMargin) public {
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+    function testSuccess_getUsedMargin(uint256 openDebt, uint96 fixedLiquidationCost) public {
+        vm.assume(openDebt <= type(uint256).max - fixedLiquidationCost);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(openDebt);
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
-        assertEq(usedMargin, vault_.getUsedMargin());
+        assertEq(openDebt + fixedLiquidationCost, vault_.getUsedMargin());
     }
 
     function testSuccess_getFreeMargin_ZeroInitially() public {
@@ -851,20 +871,25 @@ contract MarginRequirementsTest is vaultTests {
         );
     }
 
-    function testSuccess_getFreeMargin_AfterTakingCredit(uint8 amountEth, uint128 amountCredit) public {
+    function testSuccess_getFreeMargin_AfterTakingCredit(
+        uint8 amountEth,
+        uint128 amountCredit,
+        uint16 fixedLiquidationCost
+    ) public {
         uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth
             / 10 ** (18 - Constants.daiDecimals);
 
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        vm.assume((depositValue * collFactor_) / 100 > amountCredit);
+        vm.assume((depositValue * collFactor_) / 100 > uint256(amountCredit) + fixedLiquidationCost);
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
         depositEthInVault(amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
         pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         uint256 actualRemainingCredit = vault_.getFreeMargin();
-        uint256 expectedRemainingCredit = (depositValue * collFactor_) / 100 - amountCredit;
+        uint256 expectedRemainingCredit = (depositValue * collFactor_) / 100 - amountCredit - fixedLiquidationCost;
 
         assertEq(expectedRemainingCredit, actualRemainingCredit);
     }
@@ -928,8 +953,23 @@ contract LiquidationLogicTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testSuccess_liquidateVault(uint128 openDebt) public {
+    function testSuccess_liquidateVault(uint8 amountEth, uint128 openDebt, uint16 fixedLiquidationCost) public {
         vm.assume(openDebt > 0);
+
+        uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth
+            / 10 ** (18 - Constants.daiDecimals);
+
+        uint16 liqFactor_ = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
+
+        vm.assume((depositValue * liqFactor_) / 100 < uint256(openDebt) + fixedLiquidationCost);
+        depositEthInVault(amountEth, vaultOwner);
+
+        bytes32 addDebt = bytes32(abi.encode(openDebt));
+        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(addDebt);
+        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(addDebt);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(addDebt);
+
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
         vm.startPrank(address(liquidator));
         vm.expectEmit(true, true, true, true);
@@ -944,6 +984,7 @@ contract LiquidationLogicTest is vaultTests {
         assertEq(vault_.owner(), address(liquidator));
         assertEq(vault_.isTrustedCreditorSet(), false);
         assertEq(vault_.trustedCreditor(), address(0));
+        assertEq(vault_.fixedLiquidationCost(), 0);
 
         uint256 index = factory.vaultIndex(address(vault_));
         assertEq(factory.ownerOf(index), address(liquidator));
@@ -1125,8 +1166,10 @@ contract VaultActionTest is vaultTests {
         proxy_.vaultManagementAction(address(action), callData);
     }
 
-    function testSuccess_vaultManagementAction_Owner(uint128 debtAmount) public {
+    function testSuccess_vaultManagementAction_Owner(uint128 debtAmount, uint32 fixedLiquidationCost) public {
         multiActionMock = new MultiActionMock();
+
+        proxy_.setFixedLiquidationCost(fixedLiquidationCost);
 
         vm.prank(vaultOwner);
         proxy_.setBaseCurrency(address(eth));
@@ -1139,7 +1182,7 @@ contract VaultActionTest is vaultTests {
         (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
 
         uint256 ethToLinkRatio = ethRate / linkRate;
-        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+        vm.assume(1000 * 10 ** 18 + ((uint256(debtAmount) + fixedLiquidationCost) * ethToLinkRatio) < type(uint256).max);
 
         bytes[] memory data = new bytes[](3);
         address[] memory to = new address[](3);
@@ -1200,9 +1243,15 @@ contract VaultActionTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testSuccess_vaultManagementAction_Assetmanager(uint128 debtAmount, address assetManager) public {
+    function testSuccess_vaultManagementAction_AssetManager(
+        uint128 debtAmount,
+        uint32 fixedLiquidationCost,
+        address assetManager
+    ) public {
         vm.assume(vaultOwner != assetManager);
         multiActionMock = new MultiActionMock();
+
+        proxy_.setFixedLiquidationCost(fixedLiquidationCost);
 
         vm.prank(vaultOwner);
         proxy_.setBaseCurrency(address(eth));
@@ -1218,7 +1267,7 @@ contract VaultActionTest is vaultTests {
         (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
 
         uint256 ethToLinkRatio = ethRate / linkRate;
-        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+        vm.assume(1000 * 10 ** 18 + ((uint256(debtAmount) + fixedLiquidationCost) * ethToLinkRatio) < type(uint256).max);
 
         bytes[] memory data = new bytes[](3);
         address[] memory to = new address[](3);
@@ -1279,8 +1328,12 @@ contract VaultActionTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testRevert_vaultManagementAction_InsufficientReturned(uint128 debtAmount) public {
+    function testRevert_vaultManagementAction_InsufficientReturned(uint128 debtAmount, uint32 fixedLiquidationCost)
+        public
+    {
         vm.assume(debtAmount > 0);
+
+        proxy_.setFixedLiquidationCost(fixedLiquidationCost);
 
         multiActionMock = new MultiActionMock();
 
@@ -1295,7 +1348,7 @@ contract VaultActionTest is vaultTests {
         (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
 
         uint256 ethToLinkRatio = ethRate / linkRate;
-        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+        vm.assume(1000 * 10 ** 18 + ((uint256(debtAmount) + fixedLiquidationCost) * ethToLinkRatio) < type(uint256).max);
 
         bytes[] memory data = new bytes[](3);
         address[] memory to = new address[](3);
@@ -1872,6 +1925,7 @@ contract AssetManagementTest is vaultTests {
     function testRevert_withdraw_ERC20UnsufficientCollateral(
         uint8 baseAmountDeposit,
         uint24 baseAmountCredit,
+        uint32 fixedLiquidationCost,
         uint8 baseAmountWithdraw
     ) public {
         vm.assume(baseAmountCredit > 0);
@@ -1887,10 +1941,12 @@ contract AssetManagementTest is vaultTests {
 
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        vm.assume(amountCredit <= (valueDeposit * collFactor_) / 100);
-        vm.assume(amountCredit > ((valueDeposit - ValueWithdraw) * collFactor_) / 100);
+        vm.assume(amountCredit + fixedLiquidationCost <= (valueDeposit * collFactor_) / 100);
+        vm.assume(amountCredit + fixedLiquidationCost > ((valueDeposit - ValueWithdraw) * collFactor_) / 100);
 
         Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
+
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
         vm.startPrank(vaultOwner);
         pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
@@ -1932,7 +1988,7 @@ contract AssetManagementTest is vaultTests {
         vault_.withdraw(withdrawalAddresses, withdrawalIds, withdrawalAmounts);
     }
 
-    function testSuccess_withdraw_ERC20NoDebt(uint8 baseAmountDeposit) public {
+    function testSuccess_withdraw_ERC20NoDebt(uint8 baseAmountDeposit, uint32 fixedLiquidationCost) public {
         vm.assume(baseAmountDeposit > 0);
         uint256 valueAmount = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * baseAmountDeposit / 10 ** (18 - Constants.daiDecimals);
@@ -1942,6 +1998,8 @@ contract AssetManagementTest is vaultTests {
         uint256 vaultValue = vault_.getVaultValue(address(dai));
 
         assertEq(vaultValue, valueAmount);
+
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
         vm.startPrank(vaultOwner);
         vm.expectEmit(true, true, false, true);
@@ -1958,9 +2016,10 @@ contract AssetManagementTest is vaultTests {
         assertEq(assetAmounts.length, 0);
     }
 
-    function testSuccess_withdraw_ERC20fterTakingCredit(
+    function testSuccess_withdraw_ERC20AfterTakingCredit(
         uint8 baseAmountDeposit,
         uint32 baseAmountCredit,
+        uint32 fixedLiquidationCost,
         uint8 baseAmountWithdraw
     ) public {
         uint256 valueDeposit = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
@@ -1973,7 +2032,9 @@ contract AssetManagementTest is vaultTests {
 
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        vm.assume(amountCredit < ((valueDeposit - valueWithdraw) * collFactor_) / 100);
+        vm.assume(amountCredit + fixedLiquidationCost <= ((valueDeposit - valueWithdraw) * collFactor_) / 100);
+
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
         Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
         vm.startPrank(vaultOwner);
