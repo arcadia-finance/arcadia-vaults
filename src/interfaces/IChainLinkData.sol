@@ -19,12 +19,12 @@ interface IChainLinkData {
         view
         returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 
-    // @notice Returns the aggregator, added by arcadia
+    // @notice Returns the aggregator, added by arcadia.
     function aggregator() external view returns (address);
 
-    // @notice Returns the minimum answer, added by arcadia
+    // @notice Returns the minimum answer, added by arcadia.
     function minAnswer() external view returns (int192);
 
-    // @notice Returns the minimum answer, added by arcadia
+    // @notice Returns the minimum answer, added by arcadia.
     function maxAnswer() external view returns (int192);
 }
