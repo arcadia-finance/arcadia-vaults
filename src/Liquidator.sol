@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -15,7 +13,7 @@ import { Owned } from "lib/solmate/src/auth/Owned.sol";
 
 /**
  * @title Liquidator
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice The liquidator holds the execution logic and storage of all things related to liquidating Arcadia Vaults.
  * Ensure your total value denomination remains above the liquidation threshold, or risk being liquidated!
  */

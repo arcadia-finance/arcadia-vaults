@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,24 +8,23 @@ pragma solidity ^0.8.13;
 import { BaseGuardian } from "./BaseGuardian.sol";
 
 /**
- * @title Main Registry Guardian
- * @dev This module provides a mechanism that allows authorized accounts to trigger an emergency stop
- *
+ * @title Registry Guardian
+ * @author Pragma Labs
+ * @notice This module provides the logic for the MainRegistry that allows authorized accounts to trigger an emergency stop.
  */
 abstract contract MainRegistryGuardian is BaseGuardian {
-    /*
-    //////////////////////////////////////////////////////////////
-                            STORAGE
-    //////////////////////////////////////////////////////////////
-    */
+    /* //////////////////////////////////////////////////////////////
+                                STORAGE
+    ////////////////////////////////////////////////////////////// */
+
+    // Flag indicating if the withdraw() function is paused.
     bool public withdrawPaused;
+    // Flag indicating if the deposit() function is paused.
     bool public depositPaused;
 
-    /*
-    //////////////////////////////////////////////////////////////
-                            EVENTS
-    //////////////////////////////////////////////////////////////
-    */
+    /* //////////////////////////////////////////////////////////////
+                                EVENTS
+    ////////////////////////////////////////////////////////////// */
 
     event PauseUpdate(bool withdrawPauseUpdate, bool depositPauseUpdate);
 
@@ -62,7 +59,15 @@ abstract contract MainRegistryGuardian is BaseGuardian {
         _;
     }
 
+    /* //////////////////////////////////////////////////////////////
+                                CONSTRUCTOR
+    ////////////////////////////////////////////////////////////// */
+
     constructor() { }
+
+    /* //////////////////////////////////////////////////////////////
+                            PAUSING LOGIC
+    ////////////////////////////////////////////////////////////// */
 
     /**
      * @inheritdoc BaseGuardian
@@ -77,12 +82,12 @@ abstract contract MainRegistryGuardian is BaseGuardian {
     }
 
     /**
-     * @notice This function is used to unpause the contract.
-     * @param withdrawPaused_ Whether withdraw functionality should be paused.
-     * @param depositPaused_ Whether deposit functionality should be paused.
-     *      This function can unPause variables individually.
-     *      Only owner can call this function. It updates the variables if incoming variable is false.
-     *  If variable is false and incoming variable is true, then it does not update the variable.
+     * @notice This function is used to unpause one or more flags.
+     * @param withdrawPaused_ false when withdraw functionality should be unPaused.
+     * @param depositPaused_ false when deposit functionality should be unPaused.
+     * @dev This function can unPause repay, withdraw, borrow, and deposit individually.
+     * @dev Can only update flags from paused (true) to unPaused (false), cannot be used the other way around
+     * (to set unPaused flags to paused).
      */
     function unPause(bool withdrawPaused_, bool depositPaused_) external onlyOwner {
         withdrawPaused = withdrawPaused && withdrawPaused_;

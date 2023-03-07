@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -14,7 +12,7 @@ import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
 import { IStandardERC20PricingModule } from "./interfaces/IStandardERC20PricingModule.sol";
 /**
  * @title Sub-registry for Standard ERC20 tokens
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice The StandardERC20PricingModule stores pricing logic and basic information for ERC20 tokens for which a direct price feed exists
  * @dev No end-user should directly interact with the StandardERC20PricingModule, only the Main-registry, Oracle-Hub or the contract owner
  */

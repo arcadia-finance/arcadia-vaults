@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -1094,6 +1092,7 @@ contract VaultActionTest is vaultTests {
     }
 
     function testRevert_vaultManagementAction_OwnerChanged(address assetManager) public {
+        vm.assume(assetManager != address(0));
         address newOwner = address(60); //Annoying to fuzz since it often fuzzes to existing contracts without an onERC721Received
 
         vm.prank(vaultOwner);

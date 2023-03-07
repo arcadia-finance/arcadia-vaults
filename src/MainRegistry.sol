@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -16,7 +14,7 @@ import { MainRegistryGuardian } from "./security/MainRegistryGuardian.sol";
 
 /**
  * @title Main Asset registry
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice The Main Registry stores basic information for each token that can, or could at some point, be deposited in the vaults
  * @dev No end-user should directly interact with the Main Registry, only vaults, Pricing Modules or the contract owner
  */

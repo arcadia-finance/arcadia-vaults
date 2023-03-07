@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -14,7 +12,7 @@ import { PRBMath } from "../utils/PRBMath.sol";
 
 /**
  * @title Pricing-Module for Uniswap V2 LP tokens
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice The UniswapV2PricingModule stores pricing logic and basic information for Uniswap V2 LP tokens
  * @dev No end-user should directly interact with the UniswapV2PricingModule, only the Main-registry, Oracle-Hub or the contract owner
  * @dev Most logic in this contract is a modifications of

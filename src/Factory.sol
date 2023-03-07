@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -16,8 +14,8 @@ import { MerkleProofLib } from "./utils/MerkleProofLib.sol";
 import { FactoryGuardian } from "./security/FactoryGuardian.sol";
 
 /**
- * @title Factory
- * @author Arcadia Finance
+ * @title Factory.
+ * @author Pragma Labs
  * @notice The Lending pool has the logic to deploy and upgrade Arcadia Vaults.
  * @dev The Factory is an ERC721 contract that maps each id to an Arcadia Vault.
  */
@@ -35,11 +33,11 @@ contract Factory is IFactory, ERC721, FactoryGuardian {
     // Array of all Arcadia Vault contract addresses.
     address[] public allVaults;
 
-    // Map vaultVersion => flag
+    // Map vaultVersion => flag.
     mapping(uint256 => bool) public vaultVersionBlocked;
-    // Map vaultAddress => vaultIndex
+    // Map vaultAddress => vaultIndex.
     mapping(address => uint256) public vaultIndex;
-    // Map vaultVersion => versionInfo
+    // Map vaultVersion => versionInfo.
     mapping(uint256 => VaultVersionInfo) public vaultDetails;
 
     // Struct with additional information for a specific Vault version.

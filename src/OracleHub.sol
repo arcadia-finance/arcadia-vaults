@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -14,7 +12,7 @@ import { Owned } from "lib/solmate/src/auth/Owned.sol";
 
 /**
  * @title Oracle Hub
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice The Oracle Hub stores the addresses and other necessary information of the Price Oracles and returns rates of assets
  * @dev No end-user should directly interact with the Oracle-Hub, only the Main Registry, Sub-Registries or the contract owner.
  * @dev Terminology:

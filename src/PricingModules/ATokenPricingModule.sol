@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -14,7 +12,7 @@ import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 /**
  * @title Pricing Module for Aave Yield Bearing ERC20 tokens
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice The ATokenPricingModule stores pricing logic and basic information for yield bearing Aave ERC20 tokens for which a direct price feed exists
  * @dev No end-user should directly interact with the ATokenPricingModule, only the Main-registry, Oracle-Hub or the contract owner
  */

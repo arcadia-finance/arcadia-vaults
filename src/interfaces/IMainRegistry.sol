@@ -1,15 +1,13 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
- * SPDX-License-Identifier: AGPL-3.0-or-later
+ * Created by Pragma Labs
+ * SPDX-License-Identifier: MIT
  */
 pragma solidity ^0.8.13;
 
 interface IMainRegistry {
     /**
-     * @notice Returns number of basecurrencies.
-     * @return counter the number of basecurrencies.
+     * @notice Returns number of baseCurrencies.
+     * @return counter the number of baseCurrencies.
      */
     function baseCurrencyCounter() external view returns (uint256);
 
@@ -20,14 +18,14 @@ interface IMainRegistry {
     function factory() external view returns (address);
 
     /**
-     * @notice Returns the contract of a basecurrency.
+     * @notice Returns the contract of a baseCurrency.
      * @param index The index of the baseCurrency in the array baseCurrencies.
      * @return baseCurrency The baseCurrency address.
      */
     function baseCurrencies(uint256 index) external view returns (address);
 
     /**
-     * @notice Checks if a contract is a basecurrency.
+     * @notice Checks if a contract is a baseCurrency.
      * @param baseCurrency The baseCurrency address.
      * @return boolean.
      */
@@ -41,10 +39,10 @@ interface IMainRegistry {
     function isActionAllowed(address action) external view returns (bool);
 
     /**
-     * @notice Batch deposit multiple assets
-     * @param assetAddresses An array of addresses of the assets
-     * @param assetIds An array of asset ids
-     * @param amounts An array of amounts to be deposited
+     * @notice Batch deposit multiple assets.
+     * @param assetAddresses An array of addresses of the assets.
+     * @param assetIds An array of asset ids.
+     * @param amounts An array of amounts to be deposited.
      * @return assetTypes The identifiers of the types of the assets deposited.
      * 0 = ERC20
      * 1 = ERC721
@@ -57,9 +55,9 @@ interface IMainRegistry {
     ) external returns (uint256[] memory);
 
     /**
-     * @notice Batch withdrawal multiple assets
-     * @param assetAddresses An array of addresses of the assets
-     * @param amounts An array of amounts to be withdrawn
+     * @notice Batch withdrawal multiple assets.
+     * @param assetAddresses An array of addresses of the assets.
+     * @param amounts An array of amounts to be withdrawn.
      * @return assetTypes The identifiers of the types of the assets withdrawn.
      * 0 = ERC20
      * 1 = ERC721
@@ -72,12 +70,12 @@ interface IMainRegistry {
     ) external returns (uint256[] memory);
 
     /**
-     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency
-     * @param assetAddresses The List of token addresses of the assets
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency The contract address of the BaseCurrency
-     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency
+     * @notice Calculate the total value of a list of assets denominated in a given BaseCurrency.
+     * @param assetAddresses The List of token addresses of the assets.
+     * @param assetIds The list of corresponding token Ids that needs to be checked.
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination.
+     * @param baseCurrency The contract address of the BaseCurrency.
+     * @return valueInBaseCurrency The total value of the list of assets denominated in BaseCurrency.
      */
     function getTotalValue(
         address[] calldata assetAddresses,
@@ -87,11 +85,11 @@ interface IMainRegistry {
     ) external view returns (uint256);
 
     /**
-     * @notice Calculate the collateralValue given the asset details in given baseCurrency
-     * @param assetAddresses The List of token addresses of the assets
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An address of the BaseCurrency contract
+     * @notice Calculate the collateralValue given the asset details in given baseCurrency.
+     * @param assetAddresses The List of token addresses of the assets.
+     * @param assetIds The list of corresponding token Ids that needs to be checked.
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination.
+     * @param baseCurrency An address of the BaseCurrency contract.
      * @return collateralValue Collateral value of the given assets denominated in BaseCurrency.
      */
     function getCollateralValue(
@@ -102,11 +100,11 @@ interface IMainRegistry {
     ) external view returns (uint256);
 
     /**
-     * @notice Calculate the getLiquidationValue given the asset details in given baseCurrency
-     * @param assetAddresses The List of token addresses of the assets
-     * @param assetIds The list of corresponding token Ids that needs to be checked
-     * @param assetAmounts The list of corresponding amounts of each Token-Id combination
-     * @param baseCurrency An address of the BaseCurrency contract
+     * @notice Calculate the getLiquidationValue given the asset details in given baseCurrency.
+     * @param assetAddresses The List of token addresses of the assets.
+     * @param assetIds The list of corresponding token Ids that needs to be checked.
+     * @param assetAmounts The list of corresponding amounts of each Token-Id combination.
+     * @param baseCurrency An address of the BaseCurrency contract.
      * @return liquidationValue Liquidation value of the given assets denominated in BaseCurrency.
      */
     function getLiquidationValue(

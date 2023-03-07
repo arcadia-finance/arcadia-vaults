@@ -1,8 +1,6 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
- * SPDX-License-Identifier: AGPL-3.0-or-later
+ * Created by Pragma Labs
+ * SPDX-License-Identifier: MIT
  */
 
 pragma solidity ^0.8.13;

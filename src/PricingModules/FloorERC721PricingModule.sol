@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -10,7 +8,7 @@ import { PricingModule, IMainRegistry, IOraclesHub } from "./AbstractPricingModu
 
 /**
  * @title Pricing Module for ERC721 tokens for which a oracle exists for the floor price of the collection
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice The FloorERC721PricingModule stores pricing logic and basic information for ERC721 tokens for which a direct price feeds exists
  * for the floor price of the collection
  * @dev No end-user should directly interact with the FloorERC721PricingModule, only the Main-registry, Oracle-Hub or the contract owner

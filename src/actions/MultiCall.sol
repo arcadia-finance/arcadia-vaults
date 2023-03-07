@@ -1,7 +1,5 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
@@ -12,7 +10,7 @@ import { IERC1155 } from "../interfaces/IERC1155.sol";
 
 /**
  * @title Generic multicall action
- * @author Arcadia Finance
+ * @author Pragma Labs
  * @notice Call any external contract with arbitrary data. Return the balances of assets that need to be deposited within a vault.
  * @dev Only calls are used, no delegatecalls
  * This address will approve random addresses. Do not store any funds on this address!
