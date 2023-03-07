@@ -48,11 +48,11 @@ contract ArcadiaLendingDeployerOptimism is Test {
 
         pool_weth =
             new LendingPool(ERC20(address(weth)), DeployAddresses.treasury, address(factory), address(liquidator));
-        srTranche_weth = new Tranche(address(pool_weth), "Senior", "s");
-        jrTranche_weth = new Tranche(address(pool_weth), "Junior", "j");
+        srTranche_weth = new Tranche(address(pool_weth), "Senior", "sr");
+        jrTranche_weth = new Tranche(address(pool_weth), "Junior", "jr");
 
         pool_weth.setOriginationFee(10);
-        pool_weth.setMaxInitiatorFee(66 * 10 ** 18);
+        pool_weth.setMaxInitiatorFee(33 * 10 ** 18);
         pool_weth.addTranche(address(srTranche_weth), 50, 0);
         pool_weth.addTranche(address(jrTranche_weth), 40, 20);
         pool_weth.setTreasuryInterestWeight(10);
@@ -60,20 +60,20 @@ contract ArcadiaLendingDeployerOptimism is Test {
         pool_weth.setSupplyCap(1);
         pool_weth.setInterestConfig(
             DataTypes.InterestRateConfiguration({
-                baseRatePerYear: 25_000_000_000_000_000,
-                lowSlopePerYear: 80_000_000_000_000_000,
+                baseRatePerYear: 15_000_000_000_000_000,
+                lowSlopePerYear: 70_000_000_000_000_000,
                 highSlopePerYear: 1_250_000_000_000_000_000,
-                utilisationThreshold: 80_000
+                utilisationThreshold: 75_000
             })
         );
 
         pool_usdc =
             new LendingPool(ERC20(address(usdc)), DeployAddresses.treasury, address(factory), address(liquidator));
-        srTranche_usdc = new Tranche(address(pool_usdc), "Senior", "s");
-        jrTranche_usdc = new Tranche(address(pool_usdc), "Junior", "j");
+        srTranche_usdc = new Tranche(address(pool_usdc), "Senior", "sr");
+        jrTranche_usdc = new Tranche(address(pool_usdc), "Junior", "jr");
 
         pool_usdc.setOriginationFee(10);
-        pool_usdc.setMaxInitiatorFee(100_000 * 10 ** 6);
+        pool_usdc.setMaxInitiatorFee(50_000 * 10 ** 6);
         pool_usdc.addTranche(address(srTranche_usdc), 50, 0);
         pool_usdc.addTranche(address(jrTranche_usdc), 40, 20);
         pool_usdc.setTreasuryInterestWeight(10);
@@ -81,8 +81,8 @@ contract ArcadiaLendingDeployerOptimism is Test {
         pool_usdc.setSupplyCap(1);
         pool_usdc.setInterestConfig(
             DataTypes.InterestRateConfiguration({
-                baseRatePerYear: 15_000_000_000_000_000,
-                lowSlopePerYear: 65_000_000_000_000_000,
+                baseRatePerYear: 10_000_000_000_000_000,
+                lowSlopePerYear: 55_000_000_000_000_000,
                 highSlopePerYear: 1_000_000_000_000_000_000,
                 utilisationThreshold: 80_000
             })
