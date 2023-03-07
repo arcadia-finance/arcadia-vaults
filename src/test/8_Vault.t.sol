@@ -35,7 +35,7 @@ contract VaultTestExtension is Vault {
         vaultVersion = version;
     }
 
-    function setFixedLiquidationCost(uint128 fixedLiquidationCost_) public {
+    function setFixedLiquidationCost(uint96 fixedLiquidationCost_) public {
         fixedLiquidationCost = fixedLiquidationCost_;
     }
 
@@ -498,7 +498,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency(uint128 fixedLiquidationCost) public {
+    function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency(uint96 fixedLiquidationCost) public {
         assertEq(vault_.baseCurrency(), address(0));
 
         vm.prank(creatorAddress);
@@ -599,7 +599,7 @@ contract MarginRequirementsTest is vaultTests {
         uint8 depositAmount,
         uint128 marginIncrease,
         uint128 openDebt,
-        uint128 fixedLiquidationCost,
+        uint96 fixedLiquidationCost,
         uint8 collFac,
         uint8 liqFac
     ) public {
@@ -644,7 +644,7 @@ contract MarginRequirementsTest is vaultTests {
         uint8 depositAmount,
         uint128 marginIncrease,
         uint128 openDebt,
-        uint128 fixedLiquidationCost,
+        uint96 fixedLiquidationCost,
         uint8 collFac,
         uint8 liqFac
     ) public {
@@ -688,7 +688,7 @@ contract MarginRequirementsTest is vaultTests {
     function testSuccess_isVaultHealthy_totalOpenDebt_InsufficientMargin(
         uint8 depositAmount,
         uint128 totalOpenDebt,
-        uint128 fixedLiquidationCost,
+        uint96 fixedLiquidationCost,
         uint8 collFac,
         uint8 liqFac
     ) public {
@@ -730,7 +730,7 @@ contract MarginRequirementsTest is vaultTests {
     function testSuccess_isVaultHealthy_totalOpenDebt_SufficientMargin(
         uint8 depositAmount,
         uint128 totalOpenDebt,
-        uint128 fixedLiquidationCost,
+        uint96 fixedLiquidationCost,
         uint8 collFac,
         uint8 liqFac
     ) public {
@@ -817,7 +817,7 @@ contract MarginRequirementsTest is vaultTests {
         assertEq(expectedValue, actualValue);
     }
 
-    function testSuccess_getUsedMargin(uint256 openDebt, uint128 fixedLiquidationCost) public {
+    function testSuccess_getUsedMargin(uint256 openDebt, uint96 fixedLiquidationCost) public {
         vm.assume(openDebt <= type(uint256).max - fixedLiquidationCost);
         stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(openDebt);
         vault_.setFixedLiquidationCost(fixedLiquidationCost);

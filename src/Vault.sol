@@ -40,9 +40,9 @@ contract Vault is IVault {
     bool public isTrustedCreditorSet;
 
     uint16 public vaultVersion;
-    uint128 public fixedLiquidationCost;
 
     address public liquidator;
+    uint96 public fixedLiquidationCost;
     address public owner;
     address public registry;
     address public trustedCreditor;
@@ -260,7 +260,7 @@ contract Vault is IVault {
 
         liquidator = liquidator_;
         trustedCreditor = creditor;
-        fixedLiquidationCost = uint128(fixedLiquidationCost_);
+        fixedLiquidationCost = uint96(fixedLiquidationCost_);
         if (baseCurrency != baseCurrency_) {
             _setBaseCurrency(baseCurrency_);
         }
