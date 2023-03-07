@@ -98,6 +98,8 @@ contract BaseGuardianUnitTest is Test {
 
     event GuardianChanged(address indexed oldGuardian, address indexed newGuardian);
 
+    error FunctionIsPaused();
+
     constructor() {
         vm.startPrank(owner);
         baseGuardian = new BaseGuardianPossibleExtension();
@@ -297,6 +299,8 @@ contract MainRegistryGuardianUnitTest is Test {
 
     event PauseUpdate(bool withdrawPauseUpdate, bool depositPauseUpdate);
 
+    error FunctionIsPaused();
+
     constructor() {
         vm.startPrank(owner);
         mainRegistry = new MainRegistryMockup();
@@ -385,7 +389,7 @@ contract MainRegistryGuardianUnitTest is Test {
         vm.stopPrank();
 
         // When Then: a user tries to deposit, it is reverted as paused
-        vm.expectRevert("Guardian: deposit paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         vm.startPrank(user);
         mainRegistry.depositGuarded(100);
         vm.stopPrank();
@@ -450,7 +454,7 @@ contract MainRegistryGuardianUnitTest is Test {
         assertEq(mainRegistry.storedIncrement(), 1);
 
         // When: user tries to borrow, which is paused
-        vm.expectRevert("Guardian: withdraw paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         vm.startPrank(user);
         mainRegistry.withdrawGuarded(100);
         vm.stopPrank();
@@ -487,6 +491,8 @@ contract FactoryGuardianUnitTest is Test {
     address owner = address(2);
 
     event PauseUpdate(bool createPauseUpdate, bool liquidatePauseUpdate);
+
+    error FunctionIsPaused();
 
     constructor() {
         vm.startPrank(owner);
@@ -577,7 +583,7 @@ contract FactoryGuardianUnitTest is Test {
         vm.stopPrank();
 
         // When Then: a user tries to create, it is reverted as paused
-        vm.expectRevert("Guardian: create paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         vm.startPrank(user);
         factory.createGuarded(1);
         vm.stopPrank();
@@ -642,7 +648,7 @@ contract FactoryGuardianUnitTest is Test {
         assertEq(factory.storedIncrement(), 1);
 
         // When: user tries to create, which is paused
-        vm.expectRevert("Guardian: create paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         vm.startPrank(user);
         factory.createGuarded(100);
         vm.stopPrank();

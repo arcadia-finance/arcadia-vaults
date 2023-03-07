@@ -142,7 +142,7 @@ contract LiquidatorTest is DeployArcadiaVaults {
         assertEq(liquidator_.factory(), address(factory));
         assertEq(liquidator_.penaltyWeight(), 5);
         assertEq(liquidator_.initiatorRewardWeight(), 1);
-        assertEq(liquidator_.startPriceMultiplier(), 110);
+        assertEq(liquidator_.startPriceMultiplier(), 150);
     }
 
     /*///////////////////////////////////////////////////////////////

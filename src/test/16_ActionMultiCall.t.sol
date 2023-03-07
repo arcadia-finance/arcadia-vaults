@@ -19,7 +19,7 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
     uint256 public numberStored;
 
     function setUp() public {
-        action = new ActionMultiCall(address(0));
+        action = new ActionMultiCall();
     }
 
     function testSuccess_executeAction_storeNumber(uint256 number) public {

@@ -19,6 +19,8 @@ contract FactoryTest is DeployArcadiaVaults {
     );
     event VaultVersionBlocked(uint16 version);
 
+    error FunctionIsPaused();
+
     //this is a before
     constructor() DeployArcadiaVaults() { }
 
@@ -177,7 +179,7 @@ contract FactoryTest is DeployArcadiaVaults {
 
         // Then: Reverted
         vm.prank(sender);
-        vm.expectRevert("Guardian: create paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         factory.createVault(salt, 0, address(0));
     }
 
@@ -698,7 +700,7 @@ contract FactoryTest is DeployArcadiaVaults {
 
         // When: Vault liquidates itself
         // Then: liquidate reverts
-        vm.expectRevert("Guardian: liquidate paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         vm.prank(address(proxy));
         factory.liquidate(liquidator_);
     }

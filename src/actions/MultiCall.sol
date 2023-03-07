@@ -17,7 +17,7 @@ import { IERC1155 } from "../interfaces/IERC1155.sol";
  */
 
 contract ActionMultiCall is ActionBase {
-    constructor(address mainRegistry_) ActionBase(mainRegistry_) { }
+    constructor() { }
 
     /**
      * @notice Calls a series of addresses with arbitrrary calldata

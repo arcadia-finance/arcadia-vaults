@@ -19,7 +19,7 @@ contract ArcadiaMultiCallDeployer is Test {
         vm.startBroadcast(deployerPrivateKey);
 
         mainRegistry = MainRegistry(0x6403fCb38C5879422ECc77933d4bC8fDcECe79Ec);
-        actionMultiCall = new ActionMultiCall(address(mainRegistry));
+        actionMultiCall = new ActionMultiCall();
         mainRegistry.setAllowedAction(address(actionMultiCall), true);
 
         vm.stopBroadcast();
