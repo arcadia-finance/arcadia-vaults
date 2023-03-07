@@ -495,9 +495,10 @@ contract Vault is IVault {
         // deposit from actionHandler into vault
         _deposit(incoming.assets, incoming.assetIds, incoming.assetAmounts, actionHandler);
 
-        //If usedMargin is equal to or smaller than fixedLiquidationCost, the open liabilities are 0 and the Vault is always in a healthy state.
+        //If usedMargin is equal to fixedLiquidationCost, the open liabilities are 0 and the Vault is always in a healthy state.
         uint256 usedMargin = getUsedMargin();
         if (usedMargin > fixedLiquidationCost) {
+            //Vault must be healthy after actions are executed.
             require(getCollateralValue() >= usedMargin, "V_VMA: coll. value too low");
         }
 
@@ -555,7 +556,7 @@ contract Vault is IVault {
         uint256[] memory assetAmounts,
         address from
     ) internal {
-        //reverts in mainregistry if invalid input
+        //reverts in mainRegistry if invalid input
         uint256[] memory assetTypes =
             IMainRegistry(registry).batchProcessDeposit(assetAddresses, assetIds, assetAmounts);
 
@@ -613,9 +614,10 @@ contract Vault is IVault {
         _withdraw(assetAddresses, assetIds, assetAmounts, msg.sender);
 
         uint256 usedMargin = getUsedMargin();
-        //If usedMargin is equal to or smaller than fixedLiquidationCost, the open liabilities are 0 and all assets can be withdrawn.
+        //If usedMargin is equal to fixedLiquidationCost, the open liabilities are 0 and all assets can be withdrawn.
         if (usedMargin > fixedLiquidationCost) {
-            require(getCollateralValue() > usedMargin, "V_W: coll. value too low!");
+            //Vault must be healthy after assets are withdrawn
+            require(getCollateralValue() >= usedMargin, "V_W: coll. value too low!");
         }
     }
 
