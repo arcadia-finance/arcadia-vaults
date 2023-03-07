@@ -99,7 +99,7 @@ contract Liquidator is Owned {
         startPriceMultiplier = 150;
         minPriceMultiplier = 60;
         cutoffTime = 14_400; //4 hours
-        base = 1e18;
+        base = 999807477651317446; //3600s halflife, 14_400 cutoff
     }
 
     /*///////////////////////////////////////////////////////////////

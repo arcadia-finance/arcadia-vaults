@@ -38,7 +38,8 @@ library DeployAddresses {
     address public constant oracleUsdcToUsd_mainnet = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
     address public constant oracleBtcToEth_mainnet = 0xdeb288F737066589598e9214E782fa5A8eD689e8;
 
-    address public constant treasury = 0x12e463251Bc79677FD980aA6c301d5Fb85101cCb;
+    address public constant treasury_optimism = 0xBEB56fbEf3387af554A554E7DB25830eB7b92e32; // gnosis safe
+    address public constant treasury_mainnet = 0xBEB56fbEf3387af554A554E7DB25830eB7b92e32; // gnosis safe
 }
 
 library DeployNumbers {
