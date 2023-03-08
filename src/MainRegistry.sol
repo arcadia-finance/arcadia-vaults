@@ -275,9 +275,9 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
      * @param assetIds Array of the IDs of the assets.
      * @param amounts Array with the amounts of the assets.
      * @return assetTypes Array with the types of the assets.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
+     * 0 = ERC20.
+     * 1 = ERC721.
+     * 2 = ERC1155.
      * @dev processDeposit in the pricing module checks whether it's allowlisted and updates the exposure.
      */
     function batchProcessDeposit(
@@ -310,9 +310,9 @@ contract MainRegistry is IMainRegistry, MainRegistryGuardian {
      * @param assetIds Array of the IDs of the assets.
      * @param amounts Array with the amounts of the assets.
      * @return assetTypes Array with the types of the assets.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
+     * 0 = ERC20.
+     * 1 = ERC721.
+     * 2 = ERC1155.
      * @dev batchProcessWithdrawal in the pricing module updates the exposure.
      */
     function batchProcessWithdrawal(

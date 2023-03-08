@@ -136,7 +136,7 @@ contract Vault is IVault {
     /////////////////////////////////////////////////////////////// */
 
     /**
-     * @notice Initiates the variables of the vault
+     * @notice Initiates the variables of the vault.
      * @dev A proxy will be used to interact with the vault logic.
      * Therefore everything is initialised through an init function.
      * This function will only be called (once) in the same transaction as the proxy vault creation through the factory.
@@ -159,8 +159,8 @@ contract Vault is IVault {
     /**
      * @notice Updates the vault version and stores a new address in the EIP1967 implementation slot.
      * @param newImplementation The contract with the new vault logic.
-     * @param newRegistry The MainRegistry for this specific implementation (might be identical as the old registry)
-     * @param data Arbitrary data, can contain instructions to execute when updating Vault to new logic
+     * @param newRegistry The MainRegistry for this specific implementation (might be identical as the old registry).
+     * @param data Arbitrary data, can contain instructions to execute when updating Vault to new logic.
      * @param newVersion The new version of the vault logic.
      */
     function upgradeVault(address newImplementation, address newRegistry, uint16 newVersion, bytes calldata data)

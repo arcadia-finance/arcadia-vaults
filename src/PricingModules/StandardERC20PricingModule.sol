@@ -144,7 +144,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
      * - asset: The contract address of the asset.
      * - assetId: Since ERC20 tokens have no Id, the Id should be set to 0.
      * - assetAmount: The amount of assets.
-     * - baseCurrency: The BaseCurrency in which the value is ideally expressed.
+     * - baseCurrency: The BaseCurrency in which the value is ideally denominated.
      * @return valueInUsd The value of the asset denominated in USD, with 18 Decimals precision.
      * @return valueInBaseCurrency The value of the asset denominated in a BaseCurrency different from USD, with 18 Decimals precision.
      * @return collateralFactor The collateral factor of the asset for a given baseCurrency, with 2 decimals precision.
