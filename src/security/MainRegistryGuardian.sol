@@ -51,7 +51,7 @@ abstract contract MainRegistryGuardian is BaseGuardian {
     }
 
     /**
-     * @dev This modifier is used to restrict access to certain functions when the contract is paused for deposit assets
+     * @dev This modifier is used to restrict access to certain functions when the contract is paused for deposit assets.
      * It throws if deposit assets is paused.
      */
     modifier whenDepositNotPaused() {
