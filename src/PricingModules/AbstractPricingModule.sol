@@ -14,44 +14,67 @@ import { IPricingModule } from "../interfaces/IPricingModule.sol";
 /**
  * @title Abstract Pricing Module
  * @author Pragma Labs
- * @notice Sub-Registries have the pricing logic and basic information for tokens that can, or could at some point, be deposited in the vaults
- * @dev No end-user should directly interact with Sub-Registries, only the Main Registry, Oracle-Hub or the contract owner
- * @dev This abstract contract contains the minimal functions that each Pricing Module should have to properly work with the Main Registry
+ * @notice Abstract contract with the minimum implementation of a Pricing Module.
+ * @dev No end-user should directly interact with Pricing Module, only the Main Registry, Oracle-Hub
+ * or the contract owner.
  */
 abstract contract PricingModule is Owned, IPricingModule {
+    /* //////////////////////////////////////////////////////////////
+                                STORAGE
+    ////////////////////////////////////////////////////////////// */
+
+    // The contract address of the MainRegistry.
     address public immutable mainRegistry;
+    // The contract address of the OracleHub.
     address public immutable oracleHub;
+    // Identifier for the token standard of the asset.
     uint256 public immutable assetType;
+    // The address of the riskManager.
     address public riskManager;
 
+    // Array with all the contract addresses of assets added to the Pricing Module.
     address[] public assetsInPricingModule;
 
+    // Map asset => flag.
     mapping(address => bool) public inPricingModule;
+    // Map asset => exposureInformation.
     mapping(address => Exposure) public exposure;
+    // Map asset => baseCurrencyIdentifier => riskVariables.
     mapping(address => mapping(uint256 => RiskVars)) public assetRiskVars;
 
+    // Struct with information about the exposure of a specific asset.
     struct Exposure {
-        uint128 maxExposure;
-        uint128 exposure;
+        uint128 maxExposure; // The maximum protocol wide exposure to an asset.
+        uint128 exposure; // The actual protocol wide exposure to an asset.
     }
 
+    // Struct with the risk variables of a specific asset for a specific baseCurrency.
     struct RiskVars {
-        uint16 collateralFactor;
-        uint16 liquidationFactor;
+        uint16 collateralFactor; // The collateral factor, 2 decimals precision.
+        uint16 liquidationFactor; // The liquidation factor, 2 decimals precision.
     }
 
+    // Struct with the input variables for the function setBatchRiskVariables().
     struct RiskVarInput {
-        address asset;
-        uint8 baseCurrency;
-        uint16 collateralFactor;
-        uint16 liquidationFactor;
+        address asset; // The contract address of an asset.
+        uint8 baseCurrency; // An identifier (uint256) of a BaseCurrency.
+        uint16 collateralFactor; // The collateral factor, 2 decimals precision.
+        uint16 liquidationFactor; // The liquidation factor, 2 decimals precision.
     }
+
+    /* //////////////////////////////////////////////////////////////
+                                EVENTS
+    ////////////////////////////////////////////////////////////// */
 
     event RiskManagerUpdated(address riskManager);
     event RiskVariablesSet(
         address indexed asset, uint8 indexed baseCurrencyId, uint16 collateralFactor, uint16 liquidationFactor
     );
     event MaxExposureSet(address indexed asset, uint128 maxExposure);
+
+    /* //////////////////////////////////////////////////////////////
+                                MODIFIERS
+    ////////////////////////////////////////////////////////////// */
 
     modifier onlyRiskManager() {
         require(msg.sender == riskManager, "APM: ONLY_RISK_MANAGER");
@@ -63,15 +86,18 @@ abstract contract PricingModule is Owned, IPricingModule {
         _;
     }
 
+    /* //////////////////////////////////////////////////////////////
+                                CONSTRUCTOR
+    ////////////////////////////////////////////////////////////// */
+
     /**
-     * @notice A Pricing Module must always be initialised with the address of the Main Registry and the Oracle-Hub
-     * @param mainRegistry_ The address of the Main Registry
-     * @param oracleHub_ The address of the Oracle-Hub
-     * @param assetType_ Identifier for the type of asset, necessary for the deposit and withdraw logic in the vaults.
-     * 0 = ERC20
-     * 1 = ERC721
-     * 2 = ERC1155
-     * @param riskManager_ The address of the Risk Manager
+     * @param mainRegistry_ The contract address of the MainRegistry.
+     * @param oracleHub_ The contract address of the OracleHub.
+     * @param assetType_ Identifier for the token standard of the asset.
+     * 0 = ERC20.
+     * 1 = ERC721.
+     * 2 = ERC1155.
+     * @param riskManager_ The address of the Risk Manager.
      */
     constructor(address mainRegistry_, address oracleHub_, uint256 assetType_, address riskManager_)
         Owned(msg.sender)
@@ -88,8 +114,8 @@ abstract contract PricingModule is Owned, IPricingModule {
                     RISK MANAGER MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
     /**
-     * @notice Sets a new Risk Manager
-     * @param riskManager_ The address of the new Risk Manager
+     * @notice Sets a new Risk Manager.
+     * @param riskManager_ The address of the new Risk Manager.
      */
     function setRiskManager(address riskManager_) external onlyOwner {
         riskManager = riskManager_;
@@ -102,10 +128,11 @@ abstract contract PricingModule is Owned, IPricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Checks for a token address and the corresponding Id if it is white-listed
-     * @param asset The address of the asset
-     * @dev For assets without Id (ERC20, ERC4626...), the Id should be set to 0
-     * @return A boolean, indicating if the asset passed as input is whitelisted
+     * @notice Checks for a token address and the corresponding Id if it is white-listed.
+     * @param asset The contract address of the asset.
+     * param assetId The Id of the asset.
+     * @return A boolean, indicating if the asset is whitelisted.
+     * @dev For assets without Id (ERC20, ERC4626...), the Id should be set to 0.
      */
     function isAllowListed(address asset, uint256) public view virtual returns (bool) {
         return exposure[asset].maxExposure != 0;
@@ -116,14 +143,13 @@ abstract contract PricingModule is Owned, IPricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency
+     * @notice Returns the value of a certain asset, denominated in USD or in another BaseCurrency.
      * @dev The value of the asset can be denominated in:
      * - USD.
      * - A given BaseCurrency, different from USD.
      * - A combination of USD and a given BaseCurrency, different from USD (will be very exceptional,
-     * but theoratically possible for eg. a UNI V2 LP position of two underlying assets,
-     * one denominated in USD and the other one in the different BaseCurrency).
-     * @dev All price feeds should be fetched in the Oracle-Hub
+     * but theoretically possible for eg. a UNI V2 LP position of two underlying assets,
+     * one denominated in USD and the other one in the BaseCurrency different from USD).
      */
     function getValue(GetValueInput memory) public view virtual returns (uint256, uint256, uint256, uint256) { }
 
@@ -132,11 +158,11 @@ abstract contract PricingModule is Owned, IPricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Returns the risk variables of an asset
-     * @param asset The address of the asset
-     * @param baseCurrency An identifier (uint256) of the BaseCurrency
-     * @return assetCollateralFactors The collateral factor for the asset for a given baseCurrency
-     * @return assetLiquidationFactors The liquidation factor for the asset for a given baseCurrency
+     * @notice Returns the risk variables of an asset.
+     * @param asset The contract address of the asset.
+     * @param baseCurrency An identifier (uint256) of the BaseCurrency.
+     * @return collateralFactor The collateral factor of the asset for a given baseCurrency, 2 decimals precision.
+     * @return liquidationFactor The liquidation factor of the asset for a given baseCurrency, 2 decimals precision.
      */
     function getRiskVariables(address asset, uint256 baseCurrency) public view virtual returns (uint16, uint16) {
         return
@@ -144,10 +170,10 @@ abstract contract PricingModule is Owned, IPricingModule {
     }
 
     /**
-     * @notice Sets the risk variables for a batch of assets.
-     * @param riskVarInputs An array of risk variable inputs for the assets.
-     * @dev Risk variable are variables with 2 decimals precision
-     * @dev Can only be called by the Risk Manager
+     * @notice Sets a batch of risk variables for a batch of assets.
+     * @param riskVarInputs An array of RiskVarInput structs.
+     * @dev Risk variables have 2 decimals precision.
+     * @dev Can only be called by the Risk Manager, which can be different from the owner.
      */
     function setBatchRiskVariables(RiskVarInput[] memory riskVarInputs) public virtual onlyRiskManager {
         uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
@@ -172,9 +198,11 @@ abstract contract PricingModule is Owned, IPricingModule {
     }
 
     /**
-     * @dev Sets risk variables for the asset specified
-     * @param asset The address of the asset
-     * @param riskVarInputs Array of RiskVarInput structs with all the required risk variables
+     * @notice Sets a batch of risk variables for a specific asset.
+     * @param asset The contract address of the asset.
+     * @param riskVarInputs An array of RiskVarInput structs.
+     * @dev Risk variables have 2 decimals precision.
+     * @dev The asset slot in the RiskVarInput struct is ignored for this function.
      */
     function _setRiskVariablesForAsset(address asset, RiskVarInput[] memory riskVarInputs) internal virtual {
         uint256 baseCurrencyCounter = IMainRegistry(mainRegistry).baseCurrencyCounter();
@@ -197,6 +225,13 @@ abstract contract PricingModule is Owned, IPricingModule {
         }
     }
 
+    /**
+     * @notice Sets a single pair of risk variables.
+     * @param asset The contract address of the asset.
+     * @param baseCurrency An identifier (uint256) of the BaseCurrency.
+     * @param riskVars A struct with the risk variables.
+     * @dev Risk variables have 2 decimals precision.
+     */
     function _setRiskVariables(address asset, uint256 baseCurrency, RiskVars memory riskVars) internal virtual {
         require(riskVars.collateralFactor <= RiskConstants.MAX_COLLATERAL_FACTOR, "APM_SRV: Coll.Fact not in limits");
         require(riskVars.liquidationFactor <= RiskConstants.MAX_LIQUIDATION_FACTOR, "APM_SRV: Liq.Fact not in limits");
@@ -207,10 +242,10 @@ abstract contract PricingModule is Owned, IPricingModule {
     }
 
     /**
-     * @notice Set the maximum exposure for an asset
-     * @param asset The address of the asset
-     * @param maxExposure The maximum exposure for the asset
-     * @dev This function can only be called by the risk manager. It sets the maximum exposure for the given asset in the exposure mapping.
+     * @notice Sets the maximum exposure for an asset.
+     * @param asset The contract address of the asset.
+     * @param maxExposure The maximum protocol wide exposure to the asset.
+     * @dev Can only be called by the Risk Manager, which can be different from the owner.
      */
     function setExposureOfAsset(address asset, uint256 maxExposure) public virtual onlyRiskManager {
         require(maxExposure <= type(uint128).max, "APM_SEA: Max Exp. not in limits");
@@ -220,12 +255,12 @@ abstract contract PricingModule is Owned, IPricingModule {
     }
 
     /**
-     * @notice Processes the deposit of tokens if it is white-listed
-     * param vault The address of the vault asset is deposited in, where applicable
-     * @param asset The address of the asset
-     * param assetId The Id of the asset, where applicable
-     * @param amount The amount of tokens
-     * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens can be deposited
+     * @notice Processes the deposit of an asset.
+     * param vault The contract address of the Vault where the asset is transferred to.
+     * @param asset The contract address of the asset.
+     * param assetId The Id of the asset.
+     * @param amount The amount of tokens.
+     * @dev Unsafe cast to uint128, it is assumed no more than 10**(20+decimals) tokens can be deposited.
      */
     function processDeposit(address, address asset, uint256, uint256 amount) external virtual onlyMainReg {
         require(
@@ -235,12 +270,12 @@ abstract contract PricingModule is Owned, IPricingModule {
     }
 
     /**
-     * @notice Processes the withdrawal of tokens to increase the maxExposure
-     * param vault The address of the vault asset is withdrawn from
-     * @param asset The address of the asset
-     * param assetId The Id of the asset, where applicable
-     * @param amount the amount of tokens
-     * @dev Unsafe cast to uint128, meaning it is assumed no more than 10**(20+decimals) tokens will ever be deposited
+     * @notice Processes the withdrawal an asset.
+     * param vault The address of the vault where the asset is withdrawn from
+     * @param asset The contract address of the asset.
+     * param assetId The Id of the asset.
+     * @param amount The amount of tokens.
+     * @dev Unsafe cast to uint128, it is assumed no more than 10**(20+decimals) tokens will ever be deposited.
      */
     function processWithdrawal(address, address asset, uint256, uint256 amount) external virtual onlyMainReg {
         exposure[asset].exposure -= uint128(amount);

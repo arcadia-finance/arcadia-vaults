@@ -174,7 +174,7 @@ contract OracleHub is Owned, IOraclesHub {
      * @notice Returns the rate of a certain asset, denominated in USD or in another BaseCurrency.
      * @param oracles Array of contract addresses of oracles.
      * @param baseCurrency The BaseCurrency in which the rate is ideally expressed.
-     * @return rateInUsd The rate of the asset denominated in USD, with 18 Decimals precision
+     * @return rateInUsd The rate of the asset denominated in USD, with 18 Decimals precision.
      * @return rateInBaseCurrency The rate of the asset denominated in a BaseCurrency different from USD, with 18 Decimals precision.
      * @dev The Function will loop over all oracles-addresses and find the total rate of the asset by
      * multiplying the intermediate exchange-rates (max 3) with each other. Oracles can have any Decimals precision smaller than 18.
