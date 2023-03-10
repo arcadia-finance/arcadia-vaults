@@ -104,7 +104,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
         onlyOwner
     {
         // If asset is not added to the Pricing Module, oldOracles will have length 0,
-        // nn this case the for loop will be skipped and the function will revert.
+        // in this case the for loop will be skipped and the function will revert.
         address[] memory oldOracles = assetToInformation[asset].oracles;
         uint256 oraclesLength = oldOracles.length;
         for (uint256 i; i < oraclesLength;) {
