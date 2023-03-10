@@ -148,7 +148,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
      * @return valueInUsd The value of the asset denominated in USD, with 18 Decimals precision.
      * @return valueInBaseCurrency The value of the asset denominated in a BaseCurrency different from USD, with 18 Decimals precision.
      * @return collateralFactor The collateral factor of the asset for a given baseCurrency, with 2 decimals precision.
-     * @return liquidationFactor liquidationFactor The liquidation factor of the asset for a given baseCurrency, with 2 decimals precision.
+     * @return liquidationFactor The liquidation factor of the asset for a given baseCurrency, with 2 decimals precision.
      * @dev If the OracleHub returns the rate in a baseCurrency different from USD, the StandardERC20PricingModule will return
      * the value of the asset in the same BaseCurrency. If the Oracle-Hub returns the rate in USD, the StandardERC20PricingModule
      * will return the value of the asset in USD.
