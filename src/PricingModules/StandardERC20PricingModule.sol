@@ -156,7 +156,7 @@ contract StandardERC20PricingModule is PricingModule, IStandardERC20PricingModul
      * @dev Function will overflow when assetAmount * Rate * 10**(18 - rateDecimals) > MAXUINT256
      * @dev If the asset is not added to PricingModule, this function will return value 0 without throwing an error.
      * However no check in StandardERC20PricingModule is necessary, since the check if the asset is allow listed (and hence added to PricingModule)
-     * is already done in the Main$Registry.
+     * is already done in the MainRegistry.
      */
     function getValue(IPricingModule.GetValueInput memory getValueInput)
         public
