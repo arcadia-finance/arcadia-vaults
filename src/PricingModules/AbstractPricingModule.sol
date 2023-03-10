@@ -14,7 +14,7 @@ import { IPricingModule } from "../interfaces/IPricingModule.sol";
 /**
  * @title Abstract Pricing Module
  * @author Pragma Labs
- * @notice Abstract contract with the minimum implementation of a Pricing Module.
+ * @notice Abstract contract with the minimal implementation of a Pricing Module.
  * @dev No end-user should directly interact with Pricing Module, only the Main Registry, Oracle-Hub
  * or the contract owner.
  */
