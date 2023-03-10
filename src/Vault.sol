@@ -389,7 +389,7 @@ contract Vault is IVault {
      * @dev The liquidation value of the vault is equal to the spot value of the underlying assets,
      * discounted by a haircut (the liquidation factor).
      * The liquidation value takes into account that not the full value of the assets can go towards
-     * repaying the debt, A fraction of the value is lost due to:
+     * repaying the debt: a fraction of the value is lost due to:
      * slippage while liquidating the assets, fees for the auction initiator and a penalty to the protocol.
      */
     function getLiquidationValue() public view returns (uint256 liquidationValue) {
