@@ -5,7 +5,9 @@
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import { DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstantsOptimism } from "./Constants/DeployConstants.sol";
+import {
+    DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstantsOptimism
+} from "./Constants/DeployConstants.sol";
 
 import { Factory } from "../src/Factory.sol";
 import { Proxy } from "../src/Proxy.sol";
@@ -394,7 +396,7 @@ contract ArcadiaVaultDeployerOptimism is Test {
             address(oracleHub),
             0
         );
-        
+
         vault = new Vault();
         actionMultiCall = new ActionMultiCall();
 

@@ -5,7 +5,9 @@
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import { DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstantsMainnet } from "./Constants/DeployConstants.sol";
+import {
+    DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstantsMainnet
+} from "./Constants/DeployConstants.sol";
 
 import { Factory } from "../src/Factory.sol";
 import { Proxy } from "../src/Proxy.sol";

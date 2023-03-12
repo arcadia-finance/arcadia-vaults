@@ -181,7 +181,6 @@ library DeployRiskConstantsMainnet {
 }
 
 library DeployRiskConstantsOptimism {
-
     uint16 public constant dai_collFact_1 = 91; //eth
     uint16 public constant dai_collFact_2 = 91; //usdc
     uint16 public constant dai_liqFact_1 = 96; //eth
