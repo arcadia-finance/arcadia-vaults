@@ -20,7 +20,7 @@ import { ActionMultiCall } from "../src/actions/MultiCall.sol";
 
 import { ERC20 } from "../lib/arcadia-lending/src/DebtToken.sol";
 
-contract ArcadiaVaultDeployerMainnet is Test {
+contract ArcadiaVaultDeployerOptimism is Test {
     Factory public factory;
     Vault public vault;
 
@@ -381,7 +381,7 @@ contract ArcadiaVaultDeployerMainnet is Test {
     }
 
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_DEPLOYER_optimism");
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_DEPLOYER_OPTIMISM");
 
         vm.startBroadcast(deployerPrivateKey);
         factory = Factory(0x00CB53780Ea58503D3059FC02dDd596D0Be926cB);
