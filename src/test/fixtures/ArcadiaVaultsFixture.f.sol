@@ -357,7 +357,7 @@ contract DeployArcadiaVaults is Test {
             address(interleave), 1, oracleInterleaveToEthEthToUsd, riskVars_, type(uint128).max
         );
 
-        vault = new Vault(address(mainRegistry), 1);
+        vault = new Vault();
         factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2, "");
         vm.stopPrank();
     }

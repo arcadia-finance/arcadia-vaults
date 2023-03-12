@@ -13,18 +13,18 @@ interface IVault {
 
     /**
      * @notice Initiates the variables of the vault.
-     * @param owner The tx.origin: the sender of the 'createVault' on the factory.
-     * @param registry The 'beacon' contract to which should be looked at for external logic.
+     * @param owner The sender of the 'createVault' on the factory
+     * @param registry The 'beacon' contract with the external logic.
      * @param vaultVersion The version of the vault logic.
      * @param baseCurrency The Base-currency in which the vault is denominated.
      */
     function initialize(address owner, address registry, uint16 vaultVersion, address baseCurrency) external;
 
     /**
-     * @notice Stores a new address in the EIP1967 implementation slot & updates the vault version.
+     * @notice Updates the vault version and stores a new address in the EIP1967 implementation slot.
      * @param newImplementation The contract with the new vault logic.
-     * @param newRegistry The MainRegistry for this specific implementation (might be identical as the old registry)
-     * @param data Arbitrary data, can contain instructions to execute when updating Vault to new logic
+     * @param newRegistry The MainRegistry for this specific implementation (might be identical as the old registry).
+     * @param data Arbitrary data, can contain instructions to execute when updating Vault to new logic.
      * @param newVersion The new version of the vault logic.
      */
     function upgradeVault(address newImplementation, address newRegistry, uint16 newVersion, bytes calldata data)
@@ -38,7 +38,7 @@ interface IVault {
 
     /**
      * @notice Function called by Liquidator to start liquidation of the Vault.
-     * @param openDebt The open debt taken by `originalOwner` at moment of liquidation at trustedCreditor.
+     * @param openDebt The open debt taken by `originalOwner` at moment of liquidation at trustedCreditor
      * @return originalOwner The original owner of this vault.
      * @return baseCurrency The baseCurrency in which the vault is denominated.
      * @return trustedCreditor The account or contract that is owed the debt.
