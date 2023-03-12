@@ -7,7 +7,7 @@
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import { DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstants } from "./Constants/DeployConstants.sol";
+import { DeployAddresses, DeployNumbers, DeployBytes } from "./Constants/DeployConstants.sol";
 
 import { Factory } from "../src/Factory.sol";
 import { Liquidator } from "../src/Liquidator.sol";
