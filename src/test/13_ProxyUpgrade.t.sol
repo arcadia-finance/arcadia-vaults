@@ -85,7 +85,7 @@ contract VaultV2Test is DeployArcadiaVaults {
         safemoon.approve(address(proxy), type(uint256).max);
         dai.approve(address(liquidator), type(uint256).max);
 
-        vaultV2 = new VaultV2(address(mainRegistry), 2);
+        vaultV2 = new VaultV2();
         vm.stopPrank();
     }
 

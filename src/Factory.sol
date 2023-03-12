@@ -16,7 +16,7 @@ import { FactoryGuardian } from "./security/FactoryGuardian.sol";
 /**
  * @title Factory.
  * @author Pragma Labs
- * @notice The Lending pool has the logic to deploy and upgrade Arcadia Vaults.
+ * @notice The Factory has the logic to deploy and upgrade Arcadia Vaults.
  * @dev The Factory is an ERC721 contract that maps each id to an Arcadia Vault.
  */
 contract Factory is IFactory, ERC721, FactoryGuardian {

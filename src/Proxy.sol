@@ -8,18 +8,32 @@ pragma solidity ^0.8.13;
  * See https://eips.ethereum.org/EIPS/eip-1967
  */
 contract Proxy {
-    /**
-     * @dev Storage slot with the address of the current implementation.
-     * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
-     */
+    /* //////////////////////////////////////////////////////////////
+                                STORAGE
+    ////////////////////////////////////////////////////////////// */
+
+    // Storage slot with the address of the current implementation.
+    // This is the hardcoded keccak-256 hash of: "eip1967.proxy.implementation" subtracted by 1.
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
+    // Storage slot for the Vault logic, a struct to avoid storage conflict when dealing with upgradeable contracts.
     struct AddressSlot {
         address value;
     }
 
+    /* //////////////////////////////////////////////////////////////
+                                EVENTS
+    ////////////////////////////////////////////////////////////// */
+
     event Upgraded(address indexed implementation);
 
+    /* //////////////////////////////////////////////////////////////
+                            CONSTRUCTOR
+    ////////////////////////////////////////////////////////////// */
+
+    /**
+     * @param logic The contract address of the Vault logic.
+     */
     constructor(address logic) payable {
         _getAddressSlot(_IMPLEMENTATION_SLOT).value = logic;
         emit Upgraded(logic);
@@ -46,7 +60,9 @@ contract Proxy {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @dev Returns an `AddressSlot` with member `value` located at `slot`.
+     * @notice Returns an `AddressSlot` with member `value` located at `slot`.
+     * @param slot The slot where the address of the Logic contract is stored.
+     * @return r The address stored in slot.
      */
     function _getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
         assembly {
@@ -59,6 +75,7 @@ contract Proxy {
     ///////////////////////////////////////////////////////////////*/
 
     /**
+     * @param implementation The contract address of the logic.
      * @dev Delegates the current call to `implementation`.
      * This function does not return to its internal call site, it will return directly to the external caller.
      */

@@ -4,10 +4,11 @@
  */
 pragma solidity ^0.8.13;
 
+// Struct with information to pass to and from actionHandlers.
 struct ActionData {
-    address[] assets; // Assets addresses
-    uint256[] assetIds; // Asset Ids for non-funbale assets
-    uint256[] assetAmounts; // Action asset amounts
-    uint256[] assetTypes; // Asset types (0 = erc20 ...)
-    uint256[] actionBalances; // Account asset balances
+    address[] assets; // Array of the contract addresses of the assets.
+    uint256[] assetIds; // Array of the IDs of the assets.
+    uint256[] assetAmounts; // Array with the amounts of the assets.
+    uint256[] assetTypes; // Array with the types of the assets.
+    uint256[] actionBalances; // Array with the balances of the actionHandler.
 }

@@ -15,7 +15,10 @@ import "../actions/utils/ActionData.sol";
 import { MultiActionMock } from "../mockups/MultiActionMock.sol";
 
 contract VaultTestExtension is Vault {
-    constructor(address mainReg_, uint16 vaultVersion_) Vault(mainReg_, vaultVersion_) { }
+    constructor(address mainReg_, uint16 vaultVersion_) Vault() {
+        registry = mainReg_;
+        vaultVersion = vaultVersion_;
+    }
 
     function getLengths() external view returns (uint256, uint256, uint256, uint256) {
         return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);

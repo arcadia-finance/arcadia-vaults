@@ -183,28 +183,36 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         assertEq(2, mainRegistry.baseCurrencyCounter());
     }
 
-    function testRevert_setOracle_NonOwner(uint256 baseCurrency, address newOracle, address unprivilegedAddress_)
-        public
-    {
+    function testRevert_setOracle_NonOwner(
+        uint256 baseCurrency,
+        address newOracle,
+        uint64 baseCurrencyToUsdOracleUnit,
+        address unprivilegedAddress_
+    ) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
         vm.expectRevert("UNAUTHORIZED");
-        mainRegistry.setOracle(baseCurrency, newOracle);
+        mainRegistry.setOracle(baseCurrency, newOracle, baseCurrencyToUsdOracleUnit);
         vm.stopPrank();
     }
 
-    function testRevert_setOracle_NonBaseCurrency(uint256 baseCurrency, address newOracle) public {
+    function testRevert_setOracle_NonBaseCurrency(
+        uint256 baseCurrency,
+        address newOracle,
+        uint64 baseCurrencyToUsdOracleUnit
+    ) public {
         vm.assume(baseCurrency >= mainRegistry.baseCurrencyCounter());
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("MR_SO: UNKNOWN_BASECURRENCY");
-        mainRegistry.setOracle(baseCurrency, newOracle);
+        mainRegistry.setOracle(baseCurrency, newOracle, baseCurrencyToUsdOracleUnit);
         vm.stopPrank();
     }
 
     function testRevert_setOracle_HealthyOracle(
         address newOracle,
+        uint64 baseCurrencyToUsdOracleUnit,
         int192 minAnswer,
         int192 maxAnswer,
         int256 price,
@@ -237,11 +245,11 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("MR_SO: ORACLE_HEALTHY");
-        mainRegistry.setOracle(1, newOracle);
+        mainRegistry.setOracle(1, newOracle, baseCurrencyToUsdOracleUnit);
         vm.stopPrank();
     }
 
-    function testSuccess_setOracle_RevertingOracle(address newOracle) public {
+    function testSuccess_setOracle_RevertingOracle(address newOracle, uint64 baseCurrencyToUsdOracleUnit) public {
         RevertingOracle revertingOracle = new RevertingOracle();
 
         vm.prank(creatorAddress);
@@ -256,13 +264,19 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         );
 
         vm.prank(creatorAddress);
-        mainRegistry.setOracle(1, newOracle);
+        mainRegistry.setOracle(1, newOracle, baseCurrencyToUsdOracleUnit);
 
-        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        (,, uint64 baseCurrencyToUsdOracleUnit_, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
         assertEq(oracle, newOracle);
+        assertEq(baseCurrencyToUsdOracleUnit_, baseCurrencyToUsdOracleUnit);
     }
 
-    function testSuccess_setOracle_MinAnswer(address newOracle, int192 minAnswer, int192 price) public {
+    function testSuccess_setOracle_MinAnswer(
+        address newOracle,
+        uint64 baseCurrencyToUsdOracleUnit,
+        int192 minAnswer,
+        int192 price
+    ) public {
         vm.assume(minAnswer >= 0);
         vm.assume(price <= minAnswer);
 
@@ -283,13 +297,19 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         oracleDaiToUsd.setMaxAnswer(type(int192).max);
 
         vm.prank(creatorAddress);
-        mainRegistry.setOracle(1, newOracle);
+        mainRegistry.setOracle(1, newOracle, baseCurrencyToUsdOracleUnit);
 
-        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        (,, uint64 baseCurrencyToUsdOracleUnit_, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
         assertEq(oracle, newOracle);
+        assertEq(baseCurrencyToUsdOracleUnit_, baseCurrencyToUsdOracleUnit);
     }
 
-    function testSuccess_setOracle_MaxAnswer(address newOracle, int192 maxAnswer, int256 price) public {
+    function testSuccess_setOracle_MaxAnswer(
+        address newOracle,
+        uint64 baseCurrencyToUsdOracleUnit,
+        int192 maxAnswer,
+        int256 price
+    ) public {
         vm.assume(maxAnswer >= 0);
         vm.assume(price >= maxAnswer);
 
@@ -310,14 +330,16 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         oracleDaiToUsd.setMaxAnswer(maxAnswer);
 
         vm.prank(creatorAddress);
-        mainRegistry.setOracle(1, newOracle);
+        mainRegistry.setOracle(1, newOracle, baseCurrencyToUsdOracleUnit);
 
-        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        (,, uint64 baseCurrencyToUsdOracleUnit_, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
         assertEq(oracle, newOracle);
+        assertEq(baseCurrencyToUsdOracleUnit_, baseCurrencyToUsdOracleUnit);
     }
 
     function testSuccess_setOracle_UpdateTooOld(
         address newOracle,
+        uint64 baseCurrencyToUsdOracleUnit,
         int192 minAnswer,
         int192 maxAnswer,
         int256 price,
@@ -349,10 +371,11 @@ contract BaseCurrencyManagementTest is MainRegistryTest {
         vm.warp(block.timestamp + timePassed);
 
         vm.prank(creatorAddress);
-        mainRegistry.setOracle(1, newOracle);
+        mainRegistry.setOracle(1, newOracle, baseCurrencyToUsdOracleUnit);
 
-        (,,, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
+        (,, uint64 baseCurrencyToUsdOracleUnit_, address oracle,) = mainRegistry.baseCurrencyToInformation(1);
         assertEq(oracle, newOracle);
+        assertEq(baseCurrencyToUsdOracleUnit_, baseCurrencyToUsdOracleUnit);
     }
 }
 
