@@ -500,10 +500,19 @@ contract ArcadiaVaultDeployerMainnet is Test {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_DEPLOYER_MAINNET");
 
         vm.startBroadcast(deployerPrivateKey);
-        oracleHub = new OracleHub();
-
         factory = Factory(0x00CB53780Ea58503D3059FC02dDd596D0Be926cB);
         liquidator = Liquidator(0xD2A34731586bD10B645f870f4C9DcAF4F9e3823C);
+
+        mainRegistry = new MainRegistry(address(factory));
+        oracleHub = new OracleHub();
+        standardERC20PricingModule = new StandardERC20PricingModule(
+            address(mainRegistry),
+            address(oracleHub),
+            0
+        );
+
+        vault = new Vault();
+        actionMultiCall = new ActionMultiCall();
 
         oracleHub.addOracle(crvToUsdOracleInfo);
         oracleHub.addOracle(daiToUsdOracleInfo);
@@ -519,15 +528,8 @@ contract ArcadiaVaultDeployerMainnet is Test {
         oracleHub.addOracle(ethToUsdOracleInfo);
         oracleHub.addOracle(cbethToEthOracleInfo);
 
-        mainRegistry = new MainRegistry(address(factory));
         mainRegistry.addBaseCurrency(ethBaseCurrencyInfo);
         mainRegistry.addBaseCurrency(usdcBaseCurrencyInfo);
-
-        standardERC20PricingModule = new StandardERC20PricingModule(
-            address(mainRegistry),
-            address(oracleHub),
-            0
-        );
 
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
 
@@ -581,10 +583,8 @@ contract ArcadiaVaultDeployerMainnet is Test {
             DeployAddresses.cbeth_mainnet, oracleCbethToEthToUsdArr, riskVarsCbeth_, type(uint128).max
         );
 
-        vault = new Vault();
         factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1, "");
 
-        actionMultiCall = new ActionMultiCall();
         mainRegistry.setAllowedAction(address(actionMultiCall), true);
 
         vm.stopBroadcast();

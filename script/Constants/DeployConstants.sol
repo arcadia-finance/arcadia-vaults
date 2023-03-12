@@ -20,7 +20,6 @@ library DeployAddresses {
     // address public constant oracleBtcToEth = 0x779877A7B0D9E8603169DdbD7836e478b4624789;
 
     address public constant eth_optimism = 0x4200000000000000000000000000000000000006;
-    address public constant usdc_optimism = 0x7F5c764cBc14f9669B88837ca1490cCa17c31607;
 
     // MAINNET
     address public constant crv_mainnet = 0xD533a949740bb3306d119CC777fa900bA034cd52;
@@ -51,6 +50,28 @@ library DeployAddresses {
     address public constant oracleCbethToEth_mainnet = 0xF017fcB346A1885194689bA23Eff2fE6fA5C483b;
     //
 
+    // Optimism
+    address public constant dai_optimism = 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1;
+    address public constant frax_optimism = 0x2E3D870790dC77A83DD1d18184Acc7439A53f475;
+    address public constant snx_optimism = 0x8700dAec35aF8Ff88c16BdF0418774CB3D7599B4;
+    address public constant usdc_optimism = 0x7F5c764cBc14f9669B88837ca1490cCa17c31607;
+    address public constant usdt_optimism = 0x94b008aA00579c1307B0EF2c499aD98a8ce58e58;
+    address public constant wbtc_optimism = 0x68f180fcCe6836688e9084f035309E29Bf0A2095;
+    address public constant weth_optimism = 0x4200000000000000000000000000000000000006;
+    address public constant wsteth_optimism = 0x1F32b1c2345538c0c6f582fCB022739c4A194Ebb;
+    address public constant op_optimism = 0x4200000000000000000000000000000000000042;
+
+    address public constant oracleDaiToUsd_optimism = 0x8dBa75e83DA73cc766A7e5a0ee71F656BAb470d6;
+    address public constant oracleFraxToUsd_optimism = 0xc7D132BeCAbE7Dcc4204841F33bae45841e41D9C;
+    address public constant oracleSnxToUsd_optimism = 0x2FCF37343e916eAEd1f1DdaaF84458a359b53877;
+    address public constant oracleUsdcToUsd_optimism = 0x16a9FA2FDa030272Ce99B29CF780dFA30361E0f3;
+    address public constant oracleUsdtToUsd_optimism = 0xECef79E109e997bCA29c1c0897ec9d7b03647F5E;
+    address public constant oracleWbtcToUsd_optimism = 0x718A5788b89454aAE3A028AE9c111A29Be6c2a6F;
+    address public constant oracleEthToUsd_optimism = 0x13e3Ee699D1909E989722E753853AE30b17e08c5;
+    address public constant oracleWstethToUsd_optimism = 0x698B585CbC4407e2D54aa898B2600B53C68958f7;
+    address public constant oracleOpToUsd_optimism = 0x0D276FC14719f9292D5C1eA2198673d1f4269246;
+    //
+
     address public constant treasury_optimism = 0xBEB56fbEf3387af554A554E7DB25830eB7b92e32; // gnosis safe
     address public constant treasury_mainnet = 0x41b8da0c04FbcD7457d9090986f5b4745cF0B771; // gnosis safe
 }
@@ -67,8 +88,11 @@ library DeployNumbers {
     uint256 public constant oracleUsdtToUsdUnit = 1e8;
     uint256 public constant oracleWbtcToBtcUnit = 1e8;
     uint256 public constant oracleBtcToUsdUnit = 1e8;
+    uint256 public constant oracleWbtcToUsdUnit = 1e8;
     uint256 public constant oracleEthToUsdUnit = 1e8;
     uint256 public constant oracleCbethToEthUnit = 1e18;
+    uint256 public constant oracleWstethToUsdUnit = 1e8;
+    uint256 public constant oracleOpToUsdUnit = 1e8;
 
     uint256 public constant crvDecimals = 18;
     uint256 public constant daiDecimals = 18;
@@ -82,6 +106,7 @@ library DeployNumbers {
     uint256 public constant wbtcDecimals = 8;
     uint256 public constant wethDecimals = 18;
     uint256 public constant cbethDecimals = 18;
+    uint256 public constant wstethDecimals = 18;
     uint256 public constant usdDecimals = 18;
 
     uint256 public constant UsdBaseCurrency = 0;
@@ -153,4 +178,52 @@ library DeployRiskConstantsMainnet {
     uint16 public constant cbeth_collFact_2 = 80; //usdc
     uint16 public constant cbeth_liqFact_1 = 90; //eth
     uint16 public constant cbeth_liqFact_2 = 87; //usdc
+}
+
+library DeployRiskConstantsOptimism {
+
+    uint16 public constant dai_collFact_1 = 91; //eth
+    uint16 public constant dai_collFact_2 = 91; //usdc
+    uint16 public constant dai_liqFact_1 = 96; //eth
+    uint16 public constant dai_liqFact_2 = 96; //usdc
+
+    uint16 public constant frax_collFact_1 = 76; //eth
+    uint16 public constant frax_collFact_2 = 86; //usdc
+    uint16 public constant frax_liqFact_1 = 84; //eth
+    uint16 public constant frax_liqFact_2 = 94; //usdc
+
+    uint16 public constant snx_collFact_1 = 52; //eth
+    uint16 public constant snx_collFact_2 = 49; //usdc
+    uint16 public constant snx_liqFact_1 = 60; //eth
+    uint16 public constant snx_liqFact_2 = 59; //usdc
+
+    uint16 public constant usdc_collFact_1 = 85; //eth
+    uint16 public constant usdc_collFact_2 = 91; //usdc
+    uint16 public constant usdc_liqFact_1 = 90; //eth
+    uint16 public constant usdc_liqFact_2 = 96; //usdc
+
+    uint16 public constant usdt_collFact_1 = 84; //eth
+    uint16 public constant usdt_collFact_2 = 91; //usdc
+    uint16 public constant usdt_liqFact_1 = 90; //eth
+    uint16 public constant usdt_liqFact_2 = 94; //usdc
+
+    uint16 public constant wbtc_collFact_1 = 86; //eth
+    uint16 public constant wbtc_collFact_2 = 86; //usdc
+    uint16 public constant wbtc_liqFact_1 = 92; //eth
+    uint16 public constant wbtc_liqFact_2 = 92; //usdc
+
+    uint16 public constant weth_collFact_1 = 85; //eth
+    uint16 public constant weth_collFact_2 = 85; //usdc
+    uint16 public constant weth_liqFact_1 = 92; //eth
+    uint16 public constant weth_liqFact_2 = 90; //usdc
+
+    uint16 public constant wsteth_collFact_1 = 80; //eth
+    uint16 public constant wsteth_collFact_2 = 80; //usdc
+    uint16 public constant wsteth_liqFact_1 = 87; //eth
+    uint16 public constant wsteth_liqFact_2 = 85; //usdc
+
+    uint16 public constant op_collFact_1 = 55; //eth
+    uint16 public constant op_collFact_2 = 50; //usdc
+    uint16 public constant op_liqFact_1 = 65; //eth
+    uint16 public constant op_liqFact_2 = 60; //usdc
 }
