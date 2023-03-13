@@ -21,6 +21,7 @@ import { RiskConstants } from "../src/utils/RiskConstants.sol";
 import { ActionMultiCall } from "../src/actions/MultiCall.sol";
 
 import { ERC20 } from "../lib/arcadia-lending/src/DebtToken.sol";
+import { LendingPool } from "../lib/arcadia-lending/src/LendingPool.sol";
 
 contract ArcadiaVaultDeployerOptimism is Test {
     Factory public factory;
@@ -41,6 +42,9 @@ contract ArcadiaVaultDeployerOptimism is Test {
     StandardERC20PricingModule public standardERC20PricingModule;
     Liquidator public liquidator;
     ActionMultiCall public actionMultiCall;
+
+    LendingPool public wethLendingPool = LendingPool(0xD417c28aF20884088F600e724441a3baB38b22cc);
+    LendingPool public usdcLendingPool = LendingPool(0x9aa024D3fd962701ED17F76c17CaB22d3dc9D92d);
 
     address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleFraxToUsdArr = new address[](1);
@@ -456,6 +460,12 @@ contract ArcadiaVaultDeployerOptimism is Test {
         factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1, "");
 
         mainRegistry.setAllowedAction(address(actionMultiCall), true);
+
+        wethLendingPool.setVaultVersion(1, true);
+        usdcLendingPool.setVaultVersion(1, true);
+
+        wethLendingPool.setBorrowCap(50 * 10**18);
+        usdcLendingPool.setBorrowCap(75000 * 10**6);
 
         vm.stopBroadcast();
     }
