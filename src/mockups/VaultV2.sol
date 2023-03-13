@@ -452,7 +452,7 @@ contract VaultV2 {
         //then the Vault is unhealthy and is successfully liquidated.
         //Liquidations are triggered by the trustedCreditor (via Liquidator), the openDebt is
         //passed as input to avoid the need of another contract call back to trustedCreditor.
-        require(getLiquidationValue() < openDebt + fixedLiquidationCost, "V_LV: Vault is healthy");
+        require(getLiquidationValue() < openDebt + fixedLiquidationCost, "V_LV: liqValue above usedMargin");
 
         //Set fixedLiquidationCost to 0 since margin account is closed.
         fixedLiquidationCost = 0;
@@ -522,7 +522,7 @@ contract VaultV2 {
         uint256 usedMargin = getUsedMargin();
         if (usedMargin > fixedLiquidationCost) {
             //Vault must be healthy after actions are executed.
-            require(getCollateralValue() >= usedMargin, "V_VMA: coll. value too low");
+            require(getCollateralValue() >= usedMargin, "V_VMA: Vault Unhealthy");
         }
 
         return (trustedCreditor, vaultVersion);
@@ -627,7 +627,7 @@ contract VaultV2 {
         //If usedMargin is equal to fixedLiquidationCost, the open liabilities are 0 and all assets can be withdrawn.
         if (usedMargin > fixedLiquidationCost) {
             //Vault must be healthy after assets are withdrawn.
-            require(getCollateralValue() >= usedMargin, "V_W: coll. value too low!");
+            require(getCollateralValue() >= usedMargin, "V_W: Vault Unhealthy");
         }
     }
 
