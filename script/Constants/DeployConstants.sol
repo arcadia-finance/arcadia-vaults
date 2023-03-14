@@ -71,7 +71,8 @@ library DeployAddresses {
     address public constant oracleWstethToUsd_optimism = 0x698B585CbC4407e2D54aa898B2600B53C68958f7;
     address public constant oracleOpToUsd_optimism = 0x0D276FC14719f9292D5C1eA2198673d1f4269246;
     //
-    address public constant treasury_optimism = 0xBEB56fbEf3387af554A554E7DB25830eB7b92e32; // gnosis safe
+    address public constant treasury_optimism = 0xBEB56fbEf3387af554A554E7DB25830eB7b92e32;
+    // gnosis safe
     address public constant treasury_mainnet = 0x41b8da0c04FbcD7457d9090986f5b4745cF0B771; // gnosis safe
 }
 
