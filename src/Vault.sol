@@ -352,6 +352,19 @@ contract Vault is IVault {
     }
 
     /**
+     * @notice Checks if the Vault can be liquidated.
+     * @return success Boolean indicating if the Vault can be liquidated.
+     */
+    function isVaultLiquidatable() external view returns (bool success) {
+        //If usedMargin is equal to fixedLiquidationCost, the open liabilities are 0 and the Vault is never liquidatable.
+        uint256 usedMargin = getUsedMargin();
+        if (usedMargin > fixedLiquidationCost) {
+            //A Vault can be liquidated if the Liquidation value is smaller than the Used Margin.
+            success = getLiquidationValue() < usedMargin;
+        }
+    }
+
+    /**
      * @notice Returns the total value (mark to market) of the vault in a specific baseCurrency
      * @param baseCurrency_ The baseCurrency to return the value in.
      * @return vaultValue Total value stored in the vault, denominated in baseCurrency.
@@ -442,7 +455,7 @@ contract Vault is IVault {
      * @return originalOwner The original owner of this vault.
      * @return baseCurrency_ The baseCurrency in which the vault is denominated.
      * @return trustedCreditor_ The account or contract that is owed the debt.
-     * @dev Requires an unhealthy vault.
+     * @dev Requires a liquidation value below Used margin.
      * @dev Transfers ownership of the Vault to the liquidator!
      */
     function liquidateVault(uint256 openDebt)
@@ -462,10 +475,10 @@ contract Vault is IVault {
         //If getLiquidationValue (total value discounted with liquidation factor to account for slippage)
         //is smaller than the Used Margin: sum of the liabilities of the Vault (openDebt)
         //and the max gas cost to liquidate the vault (fixedLiquidationCost),
-        //then the Vault is unhealthy and is successfully liquidated.
+        //then the Vault can be successfully liquidated.
         //Liquidations are triggered by the trustedCreditor (via Liquidator), the openDebt is
         //passed as input to avoid the need of another contract call back to trustedCreditor.
-        require(getLiquidationValue() < openDebt + fixedLiquidationCost, "V_LV: Vault is healthy");
+        require(getLiquidationValue() < openDebt + fixedLiquidationCost, "V_LV: liqValue above usedMargin");
 
         //Set fixedLiquidationCost to 0 since margin account is closed.
         fixedLiquidationCost = 0;
@@ -535,7 +548,7 @@ contract Vault is IVault {
         uint256 usedMargin = getUsedMargin();
         if (usedMargin > fixedLiquidationCost) {
             //Vault must be healthy after actions are executed.
-            require(getCollateralValue() >= usedMargin, "V_VMA: coll. value too low");
+            require(getCollateralValue() >= usedMargin, "V_VMA: Vault Unhealthy");
         }
 
         return (trustedCreditor, vaultVersion);
@@ -640,7 +653,7 @@ contract Vault is IVault {
         //If usedMargin is equal to fixedLiquidationCost, the open liabilities are 0 and all assets can be withdrawn.
         if (usedMargin > fixedLiquidationCost) {
             //Vault must be healthy after assets are withdrawn.
-            require(getCollateralValue() >= usedMargin, "V_W: coll. value too low!");
+            require(getCollateralValue() >= usedMargin, "V_W: Vault Unhealthy");
         }
     }
 
