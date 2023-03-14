@@ -295,7 +295,7 @@ contract BorrowAndRepay is EndToEndTest {
 
         assetAmounts[0] = amountEthWithdrawal;
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_W: coll. value too low!");
+        vm.expectRevert("V_W: Vault Unhealthy");
         proxy.withdraw(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
@@ -769,7 +769,7 @@ contract DoActionWithLeverage is EndToEndTest {
 
         //Do swap on leverage
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_VMA: coll. value too low");
+        vm.expectRevert("V_VMA: Vault Unhealthy");
         pool.doActionWithLeverage(daiMargin, address(proxy), address(action), callData, emptyBytes3);
         vm.stopPrank();
     }

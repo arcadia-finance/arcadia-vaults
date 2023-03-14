@@ -949,7 +949,7 @@ contract LiquidationLogicTest is vaultTests {
 
     function testRevert_liquidateVault_VaultIsHealthy() public {
         vm.startPrank(address(liquidator));
-        vm.expectRevert("V_LV: Vault is healthy");
+        vm.expectRevert("V_LV: liqValue above usedMargin");
         vault_.liquidateVault(0);
         vm.stopPrank();
     }
@@ -1404,7 +1404,7 @@ contract VaultActionTest is vaultTests {
         bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_VMA: coll. value too low");
+        vm.expectRevert("V_VMA: Vault Unhealthy");
         proxy_.vaultManagementAction(address(action), callData);
         vm.stopPrank();
     }
@@ -1954,7 +1954,7 @@ contract AssetManagementTest is vaultTests {
         pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         assetInfo.assetAmounts[0] = amountWithdraw;
-        vm.expectRevert("V_W: coll. value too low!");
+        vm.expectRevert("V_W: Vault Unhealthy");
         vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts);
         vm.stopPrank();
     }
@@ -1986,7 +1986,7 @@ contract AssetManagementTest is vaultTests {
             withdrawalAmounts[i] = 1;
         }
 
-        vm.expectRevert("V_W: coll. value too low!");
+        vm.expectRevert("V_W: Vault Unhealthy");
         vault_.withdraw(withdrawalAddresses, withdrawalIds, withdrawalAmounts);
     }
 
