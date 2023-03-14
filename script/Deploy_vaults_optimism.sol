@@ -464,8 +464,10 @@ contract ArcadiaVaultDeployerOptimism is Test {
         wethLendingPool.setVaultVersion(1, true);
         usdcLendingPool.setVaultVersion(1, true);
 
-        wethLendingPool.setBorrowCap(50 * 10**18);
-        usdcLendingPool.setBorrowCap(75000 * 10**6);
+        // wethLendingPool.setBorrowCap(50 * 10**18);
+        // usdcLendingPool.setBorrowCap(75000 * 10**6);
+        wethLendingPool.setBorrowCap(0);
+        usdcLendingPool.setBorrowCap(0);
 
         vm.stopBroadcast();
     }
