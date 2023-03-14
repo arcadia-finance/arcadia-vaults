@@ -235,7 +235,7 @@ contract ArcadiaVaultDeployerMainnet is Test {
 
         wbtcToBtcOracleInfo = OracleHub.OracleInformation({
             oracleUnit: uint64(DeployNumbers.oracleWbtcToBtcUnit),
-            quoteAssetBaseCurrency: uint8(DeployNumbers.UsdBaseCurrency),
+            quoteAssetBaseCurrency: uint8(0),
             baseAsset: "wBTC",
             quoteAsset: "BTC",
             oracle: DeployAddresses.oracleWbtcToBtc_mainnet,
@@ -268,7 +268,7 @@ contract ArcadiaVaultDeployerMainnet is Test {
 
         cbethToEthOracleInfo = OracleHub.OracleInformation({
             oracleUnit: uint64(DeployNumbers.oracleCbethToEthUnit),
-            quoteAssetBaseCurrency: uint8(DeployNumbers.UsdBaseCurrency),
+            quoteAssetBaseCurrency: uint8(DeployNumbers.EthBaseCurrency),
             baseAsset: "cbETH",
             quoteAsset: "wETH",
             oracle: DeployAddresses.oracleCbethToEth_mainnet,
@@ -592,7 +592,7 @@ contract ArcadiaVaultDeployerMainnet is Test {
         factory.setNewVaultInfo(address(mainRegistry), address(vault), DeployBytes.upgradeRoot1To1, "");
 
         mainRegistry.setAllowedAction(address(actionMultiCall), true);
-        
+
         wethLendingPool.setVaultVersion(1, true);
         usdcLendingPool.setVaultVersion(1, true);
 
