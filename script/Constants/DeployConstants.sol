@@ -108,6 +108,7 @@ library DeployNumbers {
     uint256 public constant cbethDecimals = 18;
     uint256 public constant wstethDecimals = 18;
     uint256 public constant usdDecimals = 18;
+    uint256 public constant opDecimals = 18;
 
     uint256 public constant UsdBaseCurrency = 0;
     uint256 public constant EthBaseCurrency = 1;
