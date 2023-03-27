@@ -8,7 +8,10 @@ import "./fixtures/ArcadiaVaultsFixture.f.sol";
 import { MultiActionMock } from "../mockups/MultiActionMock.sol";
 
 import { ActionMultiCall } from "../actions/MultiCall.sol";
+import { ActionMultiCallV2 } from "../actions/MultiCallV2.sol";
 import "../actions/utils/ActionData.sol";
+
+import { ERC20Mock } from "../mockups/ERC20SolmateMock.sol";
 
 contract ActionMultiCallTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
@@ -68,6 +71,25 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
 
         vm.expectRevert("EA: Length mismatch");
         action.executeAction(callData);
+    }
+
+    function testRevert_checkSlippage(uint256 amount) public {
+        vm.assume(amount > 0);
+
+        ActionMultiCallV2 actionV2 = new ActionMultiCallV2();
+        ERC20Mock erc20 = new ERC20Mock("ERC20", "ERC20", 18);
+
+        vm.expectRevert("CS: Not enough out");
+        actionV2.checkSlippage(address(erc20), amount);
+    }
+
+    function testSuccess_checkSlippage(uint256 amount, uint256 balance) public {
+        vm.assume(balance >= amount);
+        ActionMultiCallV2 actionV2 = new ActionMultiCallV2();
+        ERC20Mock erc20 = new ERC20Mock("ERC20", "ERC20", 18);
+        erc20.mint(address(actionV2), balance);
+
+        actionV2.checkSlippage(address(erc20), amount);
     }
 
     function setNumberStored(uint256 number) public {
