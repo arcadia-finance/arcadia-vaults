@@ -7,7 +7,7 @@
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import { DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstants } from "./Constants/DeployConstants.sol";
+import { DeployAddresses, DeployNumbers, DeployBytes } from "./Constants/DeployConstants.sol";
 
 import { Factory } from "../src/Factory.sol";
 import { Liquidator } from "../src/Liquidator.sol";
@@ -76,7 +76,7 @@ contract ArcadiaLendingDeployerOptimism is Test {
         pool_usdc.setMaxInitiatorFee(5000 * 10 ** 6);
         pool_usdc.setFixedLiquidationCost(2 * 10 ** 6);
         pool_usdc.addTranche(address(srTranche_usdc), 50, 0);
-        pool_usdc.addTranche(address(jrTranche_usdc), 40, 20);
+        pool_usdc.addTranche(address(jrTranche_usdc), 40, 50);
         pool_usdc.setTreasuryInterestWeight(10);
         pool_usdc.setTreasuryLiquidationWeight(50);
         pool_usdc.setSupplyCap(1);

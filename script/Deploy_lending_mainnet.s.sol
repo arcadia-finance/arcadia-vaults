@@ -7,7 +7,7 @@
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import { DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstants } from "./Constants/DeployConstants.sol";
+import { DeployAddresses, DeployNumbers, DeployBytes } from "./Constants/DeployConstants.sol";
 
 import { Factory } from "../src/Factory.sol";
 import { Liquidator } from "../src/Liquidator.sol";
@@ -32,7 +32,7 @@ contract ArcadiaLendingDeployerMainnet is Test {
     Tranche public jrTranche_usdc;
 
     constructor() {
-        weth = ERC20(DeployAddresses.eth_mainnet);
+        weth = ERC20(DeployAddresses.weth_mainnet);
         usdc = ERC20(DeployAddresses.usdc_mainnet);
     }
 
