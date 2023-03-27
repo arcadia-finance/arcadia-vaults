@@ -90,10 +90,10 @@ contract ActionMultiCallV2 is ActionBase {
     /**
      * @notice Checks the current balance of an asset and ensures it's larger than a required amount.
      * @param asset The token contract address of the asset that is being checked.
-     * @param amount The amount of tokens this contract needs to hold at least.
+     * @param minAmountOut The amount of tokens this contract needs to hold at least to succeed.
      * @dev Can be called as one of the calls in executeAction.
      */
-    function checkSlippage(address asset, uint256 amount) external view {
-        require(IERC20(asset).balanceOf(address(this)) >= amount, "CS: Not enough out");
+    function checkAmountOut(address asset, uint256 minAmountOut) external view {
+        require(IERC20(asset).balanceOf(address(this)) >= minAmountOut, "CS: amountOut too low");
     }
 }

@@ -73,23 +73,23 @@ contract ActionMultiCallTest is DeployArcadiaVaults {
         action.executeAction(callData);
     }
 
-    function testRevert_checkSlippage(uint256 amount) public {
+    function testRevert_checkAmountOut(uint256 amount) public {
         vm.assume(amount > 0);
 
         ActionMultiCallV2 actionV2 = new ActionMultiCallV2();
         ERC20Mock erc20 = new ERC20Mock("ERC20", "ERC20", 18);
 
-        vm.expectRevert("CS: Not enough out");
-        actionV2.checkSlippage(address(erc20), amount);
+        vm.expectRevert("CS: amountOut too low");
+        actionV2.checkAmountOut(address(erc20), amount);
     }
 
-    function testSuccess_checkSlippage(uint256 amount, uint256 balance) public {
+    function testSuccess_checkAmountOut(uint256 amount, uint256 balance) public {
         vm.assume(balance >= amount);
         ActionMultiCallV2 actionV2 = new ActionMultiCallV2();
         ERC20Mock erc20 = new ERC20Mock("ERC20", "ERC20", 18);
         erc20.mint(address(actionV2), balance);
 
-        actionV2.checkSlippage(address(erc20), amount);
+        actionV2.checkAmountOut(address(erc20), amount);
     }
 
     function setNumberStored(uint256 number) public {
