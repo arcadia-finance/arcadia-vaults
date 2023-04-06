@@ -9,16 +9,13 @@ import {
     DeployAddresses, DeployNumbers, DeployBytes, DeployRiskConstantsMainnet
 } from "./Constants/DeployConstants.sol";
 
-
 import { PricingModule, StandardERC20PricingModule } from "../src/PricingModules/StandardERC20PricingModule.sol";
 import { OracleHub } from "../src/OracleHub.sol";
 import { RiskConstants } from "../src/utils/RiskConstants.sol";
 
-
 import { ERC20 } from "../lib/arcadia-lending/src/DebtToken.sol";
 
 contract AddSingleAssetMainnet is Test {
-
     ERC20 public reth;
 
     OracleHub public oracleHub;
@@ -79,7 +76,6 @@ contract AddSingleAssetMainnet is Test {
                 liquidationFactor: DeployRiskConstantsMainnet.reth_liqFact_2
             })
         );
-
     }
 
     function run() public {
@@ -95,9 +91,11 @@ contract AddSingleAssetMainnet is Test {
         PricingModule.RiskVarInput[] memory riskVarsReth_ = riskVarsReth;
 
         standardERC20PricingModule.addAsset(
-            DeployAddresses.reth_mainnet, oracleRethToEthToUsdArr, riskVarsReth_, uint128(35_000 * 10 ** DeployNumbers.rethDecimals)
+            DeployAddresses.reth_mainnet,
+            oracleRethToEthToUsdArr,
+            riskVarsReth_,
+            uint128(35_000 * 10 ** DeployNumbers.rethDecimals)
         );
-
 
         vm.stopBroadcast();
     }
