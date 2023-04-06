@@ -20,6 +20,7 @@ library DeployAddresses {
     address public constant wbtc_mainnet = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
     address public constant weth_mainnet = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant cbeth_mainnet = 0xBe9895146f7AF43049ca1c1AE358B0541Ea49704;
+    address public constant reth_mainnet = 0xae78736Cd615f374D3085123A210448E74Fc6393;
 
     address public constant oracleCrvToUsd_mainnet = 0xCd627aA160A6fA45Eb793D19Ef54f5062F20f33f;
     address public constant oracleDaiToUsd_mainnet = 0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9;
@@ -34,6 +35,7 @@ library DeployAddresses {
     address public constant oracleBtcToUsd_mainnet = 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c;
     address public constant oracleEthToUsd_mainnet = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address public constant oracleCbethToEth_mainnet = 0xF017fcB346A1885194689bA23Eff2fE6fA5C483b;
+    address public constant oracleRethToEth_mainnet = 0x536218f9E9Eb48863970252233c8F271f554C2d0;
     //
 
     // Optimism
@@ -77,6 +79,7 @@ library DeployNumbers {
     uint256 public constant oracleWbtcToUsdUnit = 1e8;
     uint256 public constant oracleEthToUsdUnit = 1e8;
     uint256 public constant oracleCbethToEthUnit = 1e18;
+    uint256 public constant oracleRethToEthUnit = 1e18;
     uint256 public constant oracleWstethToUsdUnit = 1e8;
     uint256 public constant oracleOpToUsdUnit = 1e8;
 
@@ -92,6 +95,7 @@ library DeployNumbers {
     uint256 public constant wbtcDecimals = 8;
     uint256 public constant wethDecimals = 18;
     uint256 public constant cbethDecimals = 18;
+    uint256 public constant rethDecimals = 18;
     uint256 public constant wstethDecimals = 18;
     uint256 public constant usdDecimals = 18;
     uint256 public constant opDecimals = 18;
@@ -165,6 +169,11 @@ library DeployRiskConstantsMainnet {
     uint16 public constant cbeth_collFact_2 = 80; //usdc
     uint16 public constant cbeth_liqFact_1 = 90; //eth
     uint16 public constant cbeth_liqFact_2 = 87; //usdc
+
+    uint16 public constant reth_collFact_1 = 85; //eth
+    uint16 public constant reth_collFact_2 = 80; //usdc
+    uint16 public constant reth_liqFact_1 = 90; //eth
+    uint16 public constant reth_liqFact_2 = 87; //usdc
 }
 
 library DeployRiskConstantsOptimism {
