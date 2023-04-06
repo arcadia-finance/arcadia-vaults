@@ -509,42 +509,35 @@ contract ArcadiaVaultDeployerMainnet is Test {
         factory = Factory(0x00CB53780Ea58503D3059FC02dDd596D0Be926cB);
         liquidator = Liquidator(0xD2A34731586bD10B645f870f4C9DcAF4F9e3823C);
 
-        // mainRegistry = new MainRegistry(address(factory));
-        // oracleHub = new OracleHub();
-        // standardERC20PricingModule = new StandardERC20PricingModule(
-        //     address(mainRegistry),
-        //     address(oracleHub),
-        //     0
-        // );
+        mainRegistry = new MainRegistry(address(factory));
+        oracleHub = new OracleHub();
+        standardERC20PricingModule = new StandardERC20PricingModule(
+            address(mainRegistry),
+            address(oracleHub),
+            0
+        );
 
-        // vault = new Vault();
-        // actionMultiCall = new ActionMultiCall();
+        vault = new Vault();
+        actionMultiCall = new ActionMultiCall();
 
-        mainRegistry = MainRegistry(0x046fc9f35EB7Cb165a5e07915d37bF4022b8dE33);
-        oracleHub = OracleHub(0x950A8833b9533A19Fb4D1B2EFC823Ea6835f6d95);
-        standardERC20PricingModule = StandardERC20PricingModule(0xC000d75D4221Ba9D7A788C81DCc0A4714B4aE9e5);
+        oracleHub.addOracle(crvToUsdOracleInfo);
+        oracleHub.addOracle(daiToUsdOracleInfo);
+        oracleHub.addOracle(fraxToUsdOracleInfo);
+        oracleHub.addOracle(fxsToUsdOracleInfo);
+        oracleHub.addOracle(linkToUsdOracleInfo);
+        oracleHub.addOracle(snxToUsdOracleInfo);
+        oracleHub.addOracle(uniToUsdOracleInfo);
+        oracleHub.addOracle(usdcToUsdOracleInfo);
+        oracleHub.addOracle(usdtToUsdOracleInfo);
+        oracleHub.addOracle(wbtcToBtcOracleInfo);
+        oracleHub.addOracle(btcToUsdOracleInfo);
+        oracleHub.addOracle(ethToUsdOracleInfo);
+        oracleHub.addOracle(cbethToEthOracleInfo);
 
-        vault = Vault(0x3Ae354d7E49039CcD582f1F3c9e65034fFd17baD);
-        actionMultiCall = ActionMultiCall(0x2dE7BbAAaB48EAc228449584f94636bb20d63E65);
+        mainRegistry.addBaseCurrency(ethBaseCurrencyInfo);
+        mainRegistry.addBaseCurrency(usdcBaseCurrencyInfo);
 
-        // oracleHub.addOracle(crvToUsdOracleInfo);
-        // oracleHub.addOracle(daiToUsdOracleInfo);
-        // oracleHub.addOracle(fraxToUsdOracleInfo);
-        // oracleHub.addOracle(fxsToUsdOracleInfo);
-        // oracleHub.addOracle(linkToUsdOracleInfo);
-        // oracleHub.addOracle(snxToUsdOracleInfo);
-        // oracleHub.addOracle(uniToUsdOracleInfo);
-        // oracleHub.addOracle(usdcToUsdOracleInfo);
-        // oracleHub.addOracle(usdtToUsdOracleInfo);
-        // oracleHub.addOracle(wbtcToBtcOracleInfo);
-        // oracleHub.addOracle(btcToUsdOracleInfo);
-        // oracleHub.addOracle(ethToUsdOracleInfo);
-        // oracleHub.addOracle(cbethToEthOracleInfo);
-
-        // mainRegistry.addBaseCurrency(ethBaseCurrencyInfo);
-        // mainRegistry.addBaseCurrency(usdcBaseCurrencyInfo);
-
-        // mainRegistry.addPricingModule(address(standardERC20PricingModule));
+        mainRegistry.addPricingModule(address(standardERC20PricingModule));
 
         PricingModule.RiskVarInput[] memory riskVarsCrv_ = riskVarsCrv;
         PricingModule.RiskVarInput[] memory riskVarsDai_ = riskVarsDai;
@@ -559,36 +552,36 @@ contract ArcadiaVaultDeployerMainnet is Test {
         PricingModule.RiskVarInput[] memory riskVarsWeth_ = riskVarsWeth;
         PricingModule.RiskVarInput[] memory riskVarsCbeth_ = riskVarsCbeth;
 
-        // standardERC20PricingModule.addAsset(
-        //     DeployAddresses.crv_mainnet, oracleCrvToUsdArr, riskVarsCrv_, type(uint128).max
-        // );
-        // standardERC20PricingModule.addAsset(
-        //     DeployAddresses.dai_mainnet, oracleDaiToUsdArr, riskVarsDai_, type(uint128).max
-        // );
-        // standardERC20PricingModule.addAsset(
-        //     DeployAddresses.frax_mainnet, oracleFraxToUsdArr, riskVarsFrax_, type(uint128).max
-        // );
-        // standardERC20PricingModule.addAsset(
-        //     DeployAddresses.fxs_mainnet, oracleFxsToUsdArr, riskVarsFxs_, type(uint128).max
-        // );
-        // standardERC20PricingModule.addAsset(
-        //     DeployAddresses.link_mainnet, oracleLinkToUsdArr, riskVarsLink_, type(uint128).max
-        // );
-        // standardERC20PricingModule.addAsset(
-        //     DeployAddresses.snx_mainnet, oracleSnxToUsdArr, riskVarsSnx_, type(uint128).max
-        // );
-        // standardERC20PricingModule.addAsset(
-        //     DeployAddresses.uni_mainnet, oracleUniToUsdArr, riskVarsUni_, type(uint128).max
-        // );
-        // standardERC20PricingModule.addAsset(
-        //     DeployAddresses.usdc_mainnet, oracleUsdcToUsdArr, riskVarsUsdc_, type(uint128).max
-        // );
-        // standardERC20PricingModule.addAsset(
-        //     DeployAddresses.usdt_mainnet, oracleUsdtToUsdArr, riskVarsUsdt_, type(uint128).max
-        // );
-        // standardERC20PricingModule.addAsset(
-        //     DeployAddresses.wbtc_mainnet, oracleWbtcToBtcToUsdArr, riskVarsWbtc_, type(uint128).max
-        // );
+        standardERC20PricingModule.addAsset(
+            DeployAddresses.crv_mainnet, oracleCrvToUsdArr, riskVarsCrv_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            DeployAddresses.dai_mainnet, oracleDaiToUsdArr, riskVarsDai_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            DeployAddresses.frax_mainnet, oracleFraxToUsdArr, riskVarsFrax_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            DeployAddresses.fxs_mainnet, oracleFxsToUsdArr, riskVarsFxs_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            DeployAddresses.link_mainnet, oracleLinkToUsdArr, riskVarsLink_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            DeployAddresses.snx_mainnet, oracleSnxToUsdArr, riskVarsSnx_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            DeployAddresses.uni_mainnet, oracleUniToUsdArr, riskVarsUni_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            DeployAddresses.usdc_mainnet, oracleUsdcToUsdArr, riskVarsUsdc_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            DeployAddresses.usdt_mainnet, oracleUsdtToUsdArr, riskVarsUsdt_, type(uint128).max
+        );
+        standardERC20PricingModule.addAsset(
+            DeployAddresses.wbtc_mainnet, oracleWbtcToBtcToUsdArr, riskVarsWbtc_, type(uint128).max
+        );
         standardERC20PricingModule.addAsset(
             DeployAddresses.weth_mainnet, oracleEthToUsdArr, riskVarsWeth_, type(uint128).max
         );
