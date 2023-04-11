@@ -1,18 +1,18 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "../fixtures/GastTestFixture.f.sol";
 
 contract gasBuyVault_2ERC20 is GasTestFixture {
     using stdStorage for StdStorage;
 
+    bytes3 public emptyBytes3;
+
     //this is a before
-    constructor() GasTestFixture() {}
+    constructor() GasTestFixture() { }
 
     //this is a before each
     function setUp() public override {
@@ -31,11 +31,7 @@ contract gasBuyVault_2ERC20 is GasTestFixture {
         s_assetAmounts[0] = 10 ** Constants.ethDecimals;
         s_assetAmounts[1] = 10 ** Constants.linkDecimals;
 
-        s_assetTypes = new uint256[](2);
-        s_assetTypes[0] = 0;
-        s_assetTypes[1] = 0;
-
-        proxy.deposit(s_assetAddresses, s_assetIds, s_assetAmounts, s_assetTypes);
+        proxy.deposit(s_assetAddresses, s_assetIds, s_assetAmounts);
 
         uint256 valueEth = (((10 ** 18 * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * s_assetAmounts[0])
             / 10 ** Constants.ethDecimals;
@@ -44,7 +40,8 @@ contract gasBuyVault_2ERC20 is GasTestFixture {
         pool.borrow(
             uint128(((valueEth + valueLink) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100),
             address(proxy),
-            vaultOwner
+            vaultOwner,
+            emptyBytes3
         );
         vm.stopPrank();
 
@@ -54,7 +51,7 @@ contract gasBuyVault_2ERC20 is GasTestFixture {
         oracleLinkToUsd.transmit(int256(rateLinkToUsd) / 2);
 
         vm.prank(liquidatorBot);
-        factory.liquidate(address(proxy));
+        pool.liquidateVault(address(proxy));
 
         vm.prank(liquidityProvider);
         dai.transfer(vaultBuyer, 10 ** 10 * 10 ** 18);
@@ -63,36 +60,36 @@ contract gasBuyVault_2ERC20 is GasTestFixture {
     function testBuyVaultStart() public {
         vm.roll(1); //compile warning to make it a view
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl100() public {
         vm.roll(100);
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl500() public {
         vm.roll(500);
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl1000() public {
         vm.roll(1000);
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl1500() public {
         vm.roll(1500);
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 
     function testBuyVaultBl2000() public {
         vm.roll(2000);
         vm.prank(vaultBuyer);
-        liquidator.buyVault(address(proxy), 0);
+        liquidator.buyVault(address(proxy));
     }
 }

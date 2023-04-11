@@ -1,22 +1,25 @@
-// SPDX-License-Identifier: MIT
-pragma solidity >=0.4.22 <0.9.0;
+/**
+ * Created by Pragma Labs
+ * SPDX-License-Identifier: MIT
+ */
+pragma solidity ^0.8.13;
 
 interface ILendingPool {
-    function syncInterests() external;
-
-    function borrow(uint256 amount, address vault, address to) external;
-
-    function repay(uint256 amount, address vault) external;
-
-    function debtToken() external returns (address);
-
-    function interestRate() external returns (uint64 interestRate);
-
-    function updateInterestRate(uint64 interestRate) external;
-
-    function asset() external returns (address);
-
-    function liquidateVault(address vault, uint256 debt) external;
-
-    function settleLiquidation(uint256 default_, uint256 deficit) external;
+    /**
+     * @notice Settles the liquidation after the auction is finished and pays out Creditor, Original owner and Service providers.
+     * @param vault The contract address of the vault.
+     * @param originalOwner The original owner of the vault before the auction.
+     * @param badDebt The amount of liabilities that was not recouped by the auction.
+     * @param liquidationInitiatorReward The Reward for the Liquidation Initiator.
+     * @param liquidationFee The additional fee the `originalOwner` has to pay to the protocol.
+     * @param remainder Any funds remaining after the auction are returned back to the `originalOwner`.
+     */
+    function settleLiquidation(
+        address vault,
+        address originalOwner,
+        uint256 badDebt,
+        uint256 liquidationInitiatorReward,
+        uint256 liquidationFee,
+        uint256 remainder
+    ) external;
 }

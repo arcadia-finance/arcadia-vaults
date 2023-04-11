@@ -1,10 +1,8 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
@@ -14,40 +12,38 @@ contract FactoryTest is DeployArcadiaVaults {
     MainRegistry internal mainRegistry2;
 
     //events
-    event VaultCreated(address indexed vaultAddress, address indexed owner, uint256 length);
+    event Transfer(address indexed from, address indexed to, uint256 indexed id);
+    event VaultUpgraded(address indexed vaultAddress, uint16 oldVersion, uint16 indexed newVersion);
+    event VaultVersionAdded(
+        uint16 indexed version, address indexed registry, address indexed logic, bytes32 versionRoot
+    );
+    event VaultVersionBlocked(uint16 version);
+
+    error FunctionIsPaused();
 
     //this is a before
-    constructor() DeployArcadiaVaults() {}
+    constructor() DeployArcadiaVaults() { }
 
     //this is a before each
     function setUp() public {
         vm.startPrank(creatorAddress);
-        factory = new Factory();
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        factory = new FactoryExtension();
+        mainRegistry = new mainRegistryExtension(address(factory));
+        liquidator = new Liquidator(address(factory));
 
-        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
-        factory.confirmNewVaultInfo();
-        mainRegistry.setFactory(address(factory));
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                           CONTRACT OWNERSHIP
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testSuccess_transferOwnership(address owner, address to) public {
         vm.assume(to != address(0));
 
         vm.prank(owner);
-        Factory factoryContr_m = new Factory();
+        Factory factoryContr_m = new FactoryExtension();
         assertEq(owner, factoryContr_m.owner());
 
         vm.prank(owner);
@@ -59,25 +55,29 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != owner);
 
         vm.prank(owner);
-        Factory factoryContr_m = new Factory();
+        Factory factoryContr_m = new FactoryExtension();
         assertEq(owner, factoryContr_m.owner());
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         factoryContr_m.transferOwnership(to);
         vm.stopPrank();
 
         assertEq(owner, factoryContr_m.owner());
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testSuccess_createVault_DeployVaultContractMappings(uint256 salt) public {
         uint256 amountBefore = factory.allVaultsLength();
 
-        address actualDeployed = factory.createVault(salt, 0);
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(0), address(this), 1);
+        vm.expectEmit(false, true, true, true);
+        emit VaultUpgraded(address(0), 0, 1);
+        address actualDeployed = factory.createVault(salt, 0, address(0));
         assertEq(amountBefore + 1, factory.allVaultsLength());
         assertEq(actualDeployed, factory.allVaults(factory.allVaultsLength() - 1));
         assertEq(factory.vaultIndex(actualDeployed), (factory.allVaultsLength()));
@@ -86,30 +86,47 @@ contract FactoryTest is DeployArcadiaVaults {
     function testSuccess_createVault_DeployNewProxyWithLogic(uint256 salt) public {
         uint256 amountBefore = factory.allVaultsLength();
 
-        address actualDeployed = factory.createVault(salt, 0);
+        address actualDeployed = factory.createVault(salt, 0, address(0));
         assertEq(amountBefore + 1, factory.allVaultsLength());
-        assertEq(Vault(actualDeployed).life(), 0);
-
         assertEq(Vault(actualDeployed).owner(), address(this));
     }
 
     function testSuccess_createVault_DeployNewProxyWithLogicOwner(uint256 salt, address sender) public {
+        vm.assume(sender != address(0));
         uint256 amountBefore = factory.allVaultsLength();
         vm.prank(sender);
-        vm.assume(sender != address(0));
-        address actualDeployed = factory.createVault(salt, 0);
+        address actualDeployed = factory.createVault(salt, 0, address(0));
         assertEq(amountBefore + 1, factory.allVaultsLength());
-        assertEq(Vault(actualDeployed).life(), 0);
-
         assertEq(Vault(actualDeployed).owner(), address(sender));
     }
 
-    function testRevert_createVault_CreateNonExistingVaultVersion(uint256 vaultVersion) public {
+    function testSuccess_createVault_CreationCannotBeFrontRunnedWithIdenticalSalt(
+        uint256 salt,
+        address sender0,
+        address sender1
+    ) public {
+        vm.assume(sender0 != sender1);
+        vm.assume(sender0 != address(0));
+        vm.assume(sender1 != address(0));
+
+        //Broadcast changes the tx.origin, prank only changes the msg.sender, not tx.origin
+        vm.broadcast(sender0);
+        address proxy0 = factory.createVault(salt, 0, address(0));
+
+        vm.broadcast(sender1);
+        address proxy1 = factory.createVault(salt, 0, address(0));
+
+        assertTrue(proxy0 != proxy1);
+    }
+
+    function testRevert_createVault_CreateNonExistingVaultVersion(uint16 vaultVersion) public {
         uint256 currentVersion = factory.latestVaultVersion();
         vm.assume(vaultVersion > currentVersion);
 
         vm.expectRevert("FTRY_CV: Unknown vault version");
-        factory.createVault(uint256(keccak256(abi.encodePacked(vaultVersion, block.timestamp))), vaultVersion);
+        factory.createVault(
+            uint256(keccak256(abi.encodePacked(vaultVersion, block.timestamp))), vaultVersion, address(0)
+        );
     }
 
     function testRevert_createVault_FromBlockedVersion(
@@ -122,7 +139,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(vaultVersion <= versionsToMake + 1);
         for (uint256 i; i < versionsToMake; ++i) {
             vm.prank(creatorAddress);
-            factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
+            factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeRoot1To2, "");
         }
 
         for (uint256 y; y < versionsToBlock.length; ++y) {
@@ -137,15 +154,37 @@ contract FactoryTest is DeployArcadiaVaults {
             if (versionsToBlock[z] == 0 || versionsToBlock[z] > factory.latestVaultVersion()) {
                 continue;
             }
-            vm.expectRevert("FTRY_CV: This vault version cannot be created");
+            vm.expectRevert("FTRY_CV: Vault version blocked");
             factory.createVault(
-                uint256(keccak256(abi.encodePacked(versionsToBlock[z], block.timestamp))), versionsToBlock[z]
+                uint256(keccak256(abi.encodePacked(versionsToBlock[z], block.timestamp))),
+                versionsToBlock[z],
+                address(0)
             );
         }
     }
 
+    function testRevert_createVault_Paused(uint256 salt, address sender, address guardian) public {
+        vm.assume(sender != address(0));
+        vm.assume(guardian != address(0));
+        vm.assume(sender != guardian);
+
+        // Given: variables and initialization
+        vm.prank(creatorAddress);
+        factory.changeGuardian(guardian);
+        vm.warp(35 days);
+
+        // When: guardian pauses the contract
+        vm.prank(guardian);
+        factory.pause();
+
+        // Then: Reverted
+        vm.prank(sender);
+        vm.expectRevert(FunctionIsPaused.selector);
+        factory.createVault(salt, 0, address(0));
+    }
+
     function testSuccess_isVault_positive() public {
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         bool expectedReturn = factory.isVault(address(proxyAddr));
         bool actualReturn = true;
@@ -160,20 +199,94 @@ contract FactoryTest is DeployArcadiaVaults {
         assertEq(expectedReturn, actualReturn);
     }
 
+    function testSuccess_ownerOfVault_NonVault(address nonVault) public {
+        assertEq(factory.ownerOfVault(nonVault), address(0));
+    }
+
+    function testSuccess_ownerOfVault_ExistingVault(address owner) public {
+        vm.assume(owner != address(0));
+        vm.prank(owner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+
+        assertEq(factory.ownerOfVault(proxyAddr), owner);
+    }
+
     //For tests upgradeVaultVersion, see 13_ProxyUpgrade.t.sol
+
+    function testSuccess_safeTransferFrom_OnVaultAddress(address owner) public {
+        vm.assume(owner != address(0));
+        address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
+
+        vm.startPrank(owner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+
+        //Make sure index in erc721 == vaultIndex
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
+
+        //Make sure vault itself is owned by owner
+        assertEq(Vault(proxyAddr).owner(), owner);
+
+        //Make sure erc721 is owned by owner
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
+
+        //Transfer vault to another address
+        factory.safeTransferFrom(owner, receiver, proxyAddr);
+
+        //Make sure vault itself is owned by receiver
+        assertEq(Vault(proxyAddr).owner(), receiver);
+
+        //Make sure erc721 is owned by receiver
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), receiver);
+        vm.stopPrank();
+    }
+
+    function testRevert_safeTransferFrom_OnVaultAddress_NonOwner(
+        address owner,
+        address receiver,
+        address unprivilegedAddress_
+    ) public {
+        vm.assume(owner != unprivilegedAddress_);
+        vm.assume(owner != address(0));
+        vm.assume(receiver != address(0));
+        vm.assume(unprivilegedAddress_ != address(0));
+
+        vm.prank(owner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+
+        //Make sure index in erc721 == vaultIndex
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
+
+        //Make sure vault itself is owned by owner
+        assertEq(Vault(proxyAddr).owner(), owner);
+
+        //Make sure erc721 is owned by owner
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
+
+        //Transfer vault to another address by not owner
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("NOT_AUTHORIZED");
+        factory.safeTransferFrom(owner, receiver, proxyAddr);
+        vm.stopPrank();
+
+        //Make sure vault itself is still owned by owner
+        assertEq(Vault(proxyAddr).owner(), owner);
+
+        //Make sure erc721 is still owned by owner
+        assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
+    }
 
     function testSuccess_safeTransferFrom(address owner) public {
         vm.assume(owner != address(0));
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
 
         vm.startPrank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -182,7 +295,7 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.safeTransferFrom(owner, receiver, factory.vaultIndex(proxyAddr));
 
         //Make sure vault itself is owned by receiver
-        assertEq(IVault(proxyAddr).owner(), receiver);
+        assertEq(Vault(proxyAddr).owner(), receiver);
 
         //Make sure erc721 is owned by receiver
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), receiver);
@@ -198,13 +311,13 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != address(0));
 
         vm.prank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -217,7 +330,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         //Make sure vault itself is still owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is still owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -228,13 +341,13 @@ contract FactoryTest is DeployArcadiaVaults {
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
 
         vm.startPrank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -243,7 +356,7 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.safeTransferFrom(owner, receiver, factory.vaultIndex(proxyAddr), data);
 
         //Make sure vault itself is owned by receiver
-        assertEq(IVault(proxyAddr).owner(), receiver);
+        assertEq(Vault(proxyAddr).owner(), receiver);
 
         //Make sure erc721 is owned by receiver
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), receiver);
@@ -262,13 +375,13 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != address(0));
 
         vm.prank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -281,7 +394,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         //Make sure vault itself is still owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is still owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -292,13 +405,13 @@ contract FactoryTest is DeployArcadiaVaults {
         address receiver = address(69); //Cannot be fuzzed, since fuzzer picks often existing deployed contracts, that haven't implemented an onERC721Received
 
         vm.startPrank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -307,7 +420,7 @@ contract FactoryTest is DeployArcadiaVaults {
         factory.transferFrom(owner, receiver, factory.vaultIndex(proxyAddr));
 
         //Make sure vault itself is owned by receiver
-        assertEq(IVault(proxyAddr).owner(), receiver);
+        assertEq(Vault(proxyAddr).owner(), receiver);
 
         //Make sure erc721 is owned by receiver
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), receiver);
@@ -321,13 +434,13 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(unprivilegedAddress_ != address(0));
 
         vm.prank(owner);
-        proxyAddr = factory.createVault(0, 0);
+        proxyAddr = factory.createVault(0, 0, address(0));
 
         //Make sure index in erc721 == vaultIndex
-        assertEq(IVault(proxyAddr).owner(), factory.ownerOf(1));
+        assertEq(Vault(proxyAddr).owner(), factory.ownerOf(1));
 
         //Make sure vault itself is owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
@@ -340,29 +453,29 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.stopPrank();
 
         //Make sure vault itself is still owned by owner
-        assertEq(IVault(proxyAddr).owner(), owner);
+        assertEq(Vault(proxyAddr).owner(), owner);
 
         //Make sure erc721 is still owned by owner
         assertEq(factory.ownerOf(factory.vaultIndex(proxyAddr)), owner);
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                     VAULT VERSION MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testRevert_setNewVaultInfo_NonOwner(address unprivilegedAddress_) public {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
-        factory.setNewVaultInfo(address(mainRegistry), address(proxyAddr), Constants.upgradeProof1To2);
+        vm.expectRevert("UNAUTHORIZED");
+        factory.setNewVaultInfo(address(mainRegistry), address(proxyAddr), Constants.upgradeRoot1To2, "");
         vm.stopPrank();
     }
 
     function testRevert_setNewVaultInfo_VersionRootIsZero(address mainRegistry_, address logic) public {
         vm.startPrank(creatorAddress);
         vm.expectRevert("FTRY_SNVI: version root is zero");
-        factory.setNewVaultInfo(mainRegistry_, logic, bytes32(0));
+        factory.setNewVaultInfo(mainRegistry_, logic, bytes32(0), "");
         vm.stopPrank();
     }
 
@@ -371,7 +484,7 @@ contract FactoryTest is DeployArcadiaVaults {
 
         vm.startPrank(creatorAddress);
         vm.expectRevert("FTRY_SNVI: logic address is zero");
-        factory.setNewVaultInfo(mainRegistry_, address(0), versionRoot);
+        factory.setNewVaultInfo(mainRegistry_, address(0), versionRoot, "");
         vm.stopPrank();
     }
 
@@ -381,7 +494,6 @@ contract FactoryTest is DeployArcadiaVaults {
     ) public {
         vm.assume(logic != address(0));
         vm.assume(newAssetAddress != address(0));
-        assertEq(false, factory.newVaultInfoSet());
 
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -394,20 +506,10 @@ contract FactoryTest is DeployArcadiaVaults {
             })
         );
 
-        mainRegistry2 = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
-        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
-        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
+        mainRegistry2 = new mainRegistryExtension(address(factory));
+        vm.expectRevert("FTRY_SNVI: counter mismatch");
+        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2, "");
         vm.stopPrank();
-
-        assertEq(false, factory.newVaultInfoSet());
     }
 
     function testRevert_setNewVaultInfo_OwnerSetsNewVaultInfoWithDifferentBaseCurrencyInMainRegistry(
@@ -416,68 +518,69 @@ contract FactoryTest is DeployArcadiaVaults {
     ) public {
         vm.assume(logic != address(0));
         vm.assume(randomAssetAddress != address(0));
-        assertEq(false, factory.newVaultInfoSet());
+        vm.assume(randomAssetAddress != address(eth));
 
         vm.startPrank(creatorAddress);
-        mainRegistry2 = new MainRegistry(
+        //Add eth as second basecurrency
+        mainRegistry.addBaseCurrency(
+            MainRegistry.BaseCurrencyInformation({
+                baseCurrencyToUsdOracleUnit: 0,
+                assetAddress: address(eth),
+                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
+                baseCurrencyLabel: "ETH",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
+            })
+        );
+
+        mainRegistry2 = new mainRegistryExtension(address(factory));
+        //Add randomAssetAddress as second basecurrency
+        mainRegistry2.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
                 assetAddress: randomAssetAddress,
                 baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
+                baseCurrencyLabel: "RANDOM",
+                baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             })
         );
-        vm.expectRevert("FTRY_SNVI:No match baseCurrencies MR");
-        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
+        vm.expectRevert("FTRY_SNVI: no baseCurrency match");
+        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2, "");
+        vm.stopPrank();
+    }
+
+    function testSuccess_setNewVaultInfo(address mainRegistry_, address logic, bytes calldata data) public {
+        vm.assume(logic != address(0));
+
+        vm.prank(creatorAddress);
+        factory = new FactoryExtension();
+        assertTrue(factory.getVaultVersionRoot() == bytes32(0));
+
+        uint256 latestVaultVersionPre = factory.latestVaultVersion();
+
+        vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit VaultVersionAdded(uint16(latestVaultVersionPre + 1), mainRegistry_, logic, Constants.upgradeRoot1To2);
+        factory.setNewVaultInfo(mainRegistry_, logic, Constants.upgradeRoot1To2, data);
         vm.stopPrank();
 
-        assertEq(false, factory.newVaultInfoSet());
-    }
-
-    function testSuccess_setNewVaultInfo_OwnerSetsVaultInfoForFirstTime(address mainRegistry_, address logic) public {
-        vm.assume(logic != address(0));
-
-        vm.prank(creatorAddress);
-        factory = new Factory();
-        assertTrue(factory.getVaultVersionRoot() == bytes32(0));
-        assertTrue(!factory.newVaultInfoSet());
-
-        vm.prank(creatorAddress);
-        factory.setNewVaultInfo(mainRegistry_, logic, Constants.upgradeProof1To2);
-        assertTrue(factory.getVaultVersionRoot() == bytes32(0));
-        assertTrue(factory.newVaultInfoSet());
-    }
-
-    function testSuccess_setNewVaultInfo_OwnerSetsNewVaultInfoWithIdenticalMainRegistry(address logic) public {
-        vm.assume(logic != address(0));
-
-        assertTrue(!factory.newVaultInfoSet());
-        vm.prank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), logic, Constants.upgradeProof1To2);
-        assertTrue(factory.newVaultInfoSet());
-    }
-
-    function testSuccess_setNewVaultInfo_OwnerSetsNewVaultInfoSecondTimeWithIdenticalMainRegistry(address logic)
-        public
-    {
-        vm.assume(logic != address(0));
-
-        assertTrue(!factory.newVaultInfoSet());
-        vm.prank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), logic, Constants.upgradeProof1To2);
-        assertTrue(factory.newVaultInfoSet());
-        vm.prank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), logic, Constants.upgradeProof1To2);
-        assertTrue(factory.newVaultInfoSet());
+        (address registry_, address addresslogic_, bytes32 root, bytes memory data_) =
+            factory.vaultDetails(latestVaultVersionPre + 1);
+        assertEq(registry_, mainRegistry_);
+        assertEq(addresslogic_, logic);
+        assertEq(root, Constants.upgradeRoot1To2);
+        assertEq(data_, data);
+        assertEq(factory.latestVaultVersion(), latestVaultVersionPre + 1);
     }
 
     function testSuccess_setNewVaultInfo_OwnerSetsNewVaultWithIdenticalBaseCurrenciesInMainRegistry(
         address newAssetAddress,
-        address logic
+        address logic,
+        bytes calldata data
     ) public {
         vm.assume(logic != address(0));
-        assertEq(false, factory.newVaultInfoSet());
+        vm.assume(newAssetAddress != address(0));
+
+        uint256 latestVaultVersionPre = factory.latestVaultVersion();
 
         vm.startPrank(creatorAddress);
         mainRegistry.addBaseCurrency(
@@ -490,15 +593,7 @@ contract FactoryTest is DeployArcadiaVaults {
             })
         );
 
-        mainRegistry2 = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        mainRegistry2 = new mainRegistryExtension(address(factory));
         mainRegistry2.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
@@ -508,29 +603,24 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             })
         );
-        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2, data);
         vm.stopPrank();
 
-        assertEq(true, factory.newVaultInfoSet());
+        assertEq(factory.latestVaultVersion(), ++latestVaultVersionPre);
     }
 
     function testSuccess_setNewVaultInfo_OwnerSetsNewVaultWithMoreBaseCurrenciesInMainRegistry(
         address newAssetAddress,
-        address logic
+        address logic,
+        bytes calldata data
     ) public {
         vm.assume(logic != address(0));
-        assertEq(false, factory.newVaultInfoSet());
+        vm.assume(newAssetAddress != address(0));
+
+        uint256 latestVaultVersionPre = factory.latestVaultVersion();
 
         vm.startPrank(creatorAddress);
-        mainRegistry2 = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        mainRegistry2 = new mainRegistryExtension(address(factory));
         mainRegistry2.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: 0,
@@ -540,67 +630,10 @@ contract FactoryTest is DeployArcadiaVaults {
                 baseCurrencyUnitCorrection: uint64(10 ** (18 - Constants.ethDecimals))
             })
         );
-        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2);
+        factory.setNewVaultInfo(address(mainRegistry2), logic, Constants.upgradeProof1To2, data);
         vm.stopPrank();
 
-        assertEq(true, factory.newVaultInfoSet());
-    }
-
-    function testRevert_confirmNewVaultInfo_NonOwner(address unprivilegedAddress_) public {
-        vm.assume(unprivilegedAddress_ != creatorAddress);
-
-        vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
-        factory.confirmNewVaultInfo();
-        vm.stopPrank();
-    }
-
-    function testSuccess_confirmNewVaultInfo_OwnerConfirmsVaultInfoForFirstTime(address mainRegistry_, address logic)
-        public
-    {
-        vm.assume(logic != address(0));
-
-        vm.prank(creatorAddress);
-        factory = new Factory();
-        assertTrue(factory.getVaultVersionRoot() == bytes32(0));
-        assertEq(0, factory.latestVaultVersion());
-
-        vm.prank(creatorAddress);
-        factory.setNewVaultInfo(mainRegistry_, logic, Constants.upgradeProof1To2);
-        assertTrue(factory.newVaultInfoSet());
-
-        vm.prank(creatorAddress);
-        factory.confirmNewVaultInfo();
-        assertTrue(factory.getVaultVersionRoot() == Constants.upgradeProof1To2);
-        assertTrue(!factory.newVaultInfoSet());
-        assertEq(1, factory.latestVaultVersion());
-    }
-
-    function testSuccess_confirmNewVaultInfo_OwnerConfirmsNewVaultInfoWithIdenticalMainRegistry(address logic) public {
-        vm.assume(logic != address(0));
-
-        assertTrue(!factory.newVaultInfoSet());
-        assertEq(1, factory.latestVaultVersion());
-
-        vm.prank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), logic, Constants.upgradeProof1To2);
-        assertTrue(factory.newVaultInfoSet());
-        assertEq(1, factory.latestVaultVersion());
-
-        vm.prank(creatorAddress);
-        factory.confirmNewVaultInfo();
-        assertTrue(!factory.newVaultInfoSet());
-        assertEq(2, factory.latestVaultVersion());
-    }
-
-    function testSuccess_confirmNewVaultInfo_OwnerConfirmsVaultInfoWithoutNewVaultInfoSet() public {
-        assertTrue(!factory.newVaultInfoSet());
-        assertEq(1, factory.latestVaultVersion());
-
-        vm.prank(creatorAddress);
-        factory.confirmNewVaultInfo();
-        assertTrue(!factory.newVaultInfoSet());
-        assertEq(1, factory.latestVaultVersion());
+        assertEq(factory.latestVaultVersion(), ++latestVaultVersionPre);
     }
 
     function testRevert_blockVaultVersion_NonOwner(uint16 vaultVersion, address unprivilegedAddress_) public {
@@ -611,7 +644,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(vaultVersion != 0);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         factory.blockVaultVersion(vaultVersion);
         vm.stopPrank();
     }
@@ -631,34 +664,75 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(vaultVersion <= currentVersion);
         vm.assume(vaultVersion != 0);
 
-        vm.prank(creatorAddress);
+        vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit VaultVersionBlocked(vaultVersion);
         factory.blockVaultVersion(vaultVersion);
+        vm.stopPrank();
 
         assertTrue(factory.vaultVersionBlocked(vaultVersion));
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                     VAULT LIQUIDATION LOGIC
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
-    /*///////////////////////////////////////////////////////////////
+    function testRevert_liquidate_NonVault(address liquidator_, address nonVault) public {
+        vm.startPrank(nonVault);
+        vm.expectRevert("FTRY: Not a vault");
+        factory.liquidate(liquidator_);
+        vm.stopPrank();
+    }
+
+    function testRevert_liquidate_Paused(address liquidator_, address guardian) public {
+        // Given: guardian is the guardian of factory
+        vm.prank(creatorAddress);
+        factory.changeGuardian(guardian);
+        vm.warp(35 days);
+
+        vm.prank(vaultOwner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+        proxy = Vault(proxyAddr);
+
+        // And: factory is paused
+        vm.prank(guardian);
+        factory.pause();
+
+        // When: Vault liquidates itself
+        // Then: liquidate reverts
+        vm.expectRevert(FunctionIsPaused.selector);
+        vm.prank(address(proxy));
+        factory.liquidate(liquidator_);
+    }
+
+    function testSuccess_liquidate(address liquidator_) public {
+        vm.assume(liquidator_ != vaultOwner);
+        vm.assume(liquidator_ != address(0));
+
+        vm.prank(vaultOwner);
+        proxyAddr = factory.createVault(0, 0, address(0));
+        proxy = Vault(proxyAddr);
+
+        vm.prank(address(proxy));
+        factory.liquidate(liquidator_);
+
+        assertEq(factory.balanceOf(vaultOwner), 0);
+        assertEq(factory.balanceOf(liquidator_), 1);
+        uint256 index = factory.vaultIndex(address(proxy));
+        assertEq(factory.ownerOf(index), liquidator_);
+    }
+
+    /* ///////////////////////////////////////////////////////////////
                         HELPER FUNCTIONS
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testSuccess_allVaultsLength_VaultIdStartFromZero() public {
         assertEq(factory.allVaultsLength(), 0);
     }
 
-    function testSuccess_getCurrentRegistry() public {
-        address expectedRegistry = factory.getCurrentRegistry();
-        address actualRegistry = address(mainRegistry);
-
-        assertEq(expectedRegistry, actualRegistry);
-    }
-
-    /*///////////////////////////////////////////////////////////////
+    /* ///////////////////////////////////////////////////////////////
                         ERC-721 LOGIC
-    ///////////////////////////////////////////////////////////////*/
+    /////////////////////////////////////////////////////////////// */
 
     function testSuccess_setBaseURI(string calldata uri) public {
         vm.prank(creatorAddress);
@@ -673,7 +747,7 @@ contract FactoryTest is DeployArcadiaVaults {
         vm.assume(address(unprivilegedAddress_) != creatorAddress);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         factory.setBaseURI(uri);
         vm.stopPrank();
     }

@@ -1,20 +1,20 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "../fixtures/GastTestFixture.f.sol";
 
 contract gasRepay_2ERC20 is GasTestFixture {
     using stdStorage for StdStorage;
 
+    bytes3 public emptyBytes3;
+
     uint128 maxCredit;
 
     //this is a before
-    constructor() GasTestFixture() {}
+    constructor() GasTestFixture() { }
 
     //this is a before each
     function setUp() public override {
@@ -33,18 +33,14 @@ contract gasRepay_2ERC20 is GasTestFixture {
         s_assetAmounts[0] = 10 ** Constants.ethDecimals;
         s_assetAmounts[1] = 10 ** Constants.linkDecimals;
 
-        s_assetTypes = new uint256[](2);
-        s_assetTypes[0] = 0;
-        s_assetTypes[1] = 0;
-
-        proxy.deposit(s_assetAddresses, s_assetIds, s_assetAmounts, s_assetTypes);
+        proxy.deposit(s_assetAddresses, s_assetIds, s_assetAmounts);
 
         uint256 valueEth = (((10 ** 18 * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * s_assetAmounts[0])
             / 10 ** Constants.ethDecimals;
         uint256 valueLink = (((10 ** 18 * rateLinkToUsd) / 10 ** Constants.oracleLinkToUsdDecimals) * s_assetAmounts[1])
             / 10 ** Constants.linkDecimals;
         maxCredit = uint128(((valueEth + valueLink) / 10 ** (18 - Constants.daiDecimals) * collateralFactor) / 100);
-        pool.borrow(maxCredit, address(proxy), vaultOwner);
+        pool.borrow(maxCredit, address(proxy), vaultOwner, emptyBytes3);
         vm.stopPrank();
     }
 

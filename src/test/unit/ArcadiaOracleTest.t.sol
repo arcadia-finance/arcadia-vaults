@@ -1,10 +1,8 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
 import "../../../lib/forge-std/src/Test.sol";
 
@@ -75,7 +73,7 @@ contract ArcadiaOracleTest is Test {
         vm.startPrank(nonCreator);
 
         // then: should not be able to add new transmitter
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         oracle.setOffchainTransmitter(nonTransmitter);
         vm.stopPrank();
     }

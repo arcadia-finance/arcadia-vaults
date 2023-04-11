@@ -1,40 +1,36 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
-import "./utils/FixedPointMathLib.sol";
-import {RiskConstants} from "./utils/RiskConstants.sol";
+import { RiskConstants } from "./utils/RiskConstants.sol";
 
 /**
  * @title Risk Module
- * @author Arcadia Finance
- * @notice The Risk Module manages the supported asset related risks, collateral factor, liquidity threshold
- * @dev No end-user should directly interact with the Risk Module
+ * @author Pragma Labs
+ * @notice The Risk Module is responsible for calculating the risk weighted values of combinations of assets.
  */
 library RiskModule {
-    using FixedPointMathLib for uint256;
-
+    // Struct with risk related information for a certain asset.
     struct AssetValueAndRiskVariables {
-        uint256 valueInBaseCurrency;
-        uint256 collateralFactor;
-        uint256 liquidationFactor;
+        uint256 valueInBaseCurrency; // The value of the asset, denominated in a certain baseCurrency.
+        uint256 collateralFactor; // The collateral factor of the asset for the given baseCurrency.
+        uint256 liquidationFactor; // The liquidation factor of the asset for the given baseCurrency.
     }
 
     /**
-     * @notice Calculate the weighted collateral value given a combination of asset values and corresponding collateral factors.
-     * @param valuesAndRiskVarPerAsset List of asset values and corresponding collateral factors.
-     * @return collateralValue The collateral value of the given assets
+     * @notice Calculates the weighted collateral value given a combination of asset values and corresponding collateral factors.
+     * @param valuesAndRiskVarPerAsset Array of asset values and corresponding collateral factors.
+     * @return collateralValue The collateral value of the given assets.
      */
     function calculateCollateralValue(AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset)
         public
         pure
         returns (uint256 collateralValue)
     {
-        for (uint256 i; i < valuesAndRiskVarPerAsset.length;) {
+        uint256 valuesAndRiskVarPerAssetLength = valuesAndRiskVarPerAsset.length;
+        for (uint256 i; i < valuesAndRiskVarPerAssetLength;) {
             collateralValue +=
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].collateralFactor;
             unchecked {
@@ -45,16 +41,17 @@ library RiskModule {
     }
 
     /**
-     * @notice Calculate the weighted liquidation value given a combination of asset values and corresponding collateral factors.
-     * @param valuesAndRiskVarPerAsset List of asset values and corresponding collateral factors.
-     * @return liquidationValue The value of a combination of assets, each discounted with a liquidation factor
+     * @notice Calculates the weighted liquidation value given a combination of asset values and corresponding liquidation factors.
+     * @param valuesAndRiskVarPerAsset List of asset values and corresponding liquidation factors.
+     * @return liquidationValue The liquidation value of the given assets.
      */
     function calculateLiquidationValue(AssetValueAndRiskVariables[] memory valuesAndRiskVarPerAsset)
         public
         pure
         returns (uint256 liquidationValue)
     {
-        for (uint256 i; i < valuesAndRiskVarPerAsset.length;) {
+        uint256 valuesAndRiskVarPerAssetLength = valuesAndRiskVarPerAsset.length;
+        for (uint256 i; i < valuesAndRiskVarPerAssetLength;) {
             liquidationValue +=
                 valuesAndRiskVarPerAsset[i].valueInBaseCurrency * valuesAndRiskVarPerAsset[i].liquidationFactor;
             unchecked {

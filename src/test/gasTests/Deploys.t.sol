@@ -1,10 +1,8 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "../fixtures/GastTestFixture.f.sol";
 
@@ -12,7 +10,7 @@ contract gasDeploys is GasTestFixture {
     using stdStorage for StdStorage;
 
     //this is a before
-    constructor() GasTestFixture() {}
+    constructor() GasTestFixture() { }
 
     //this is a before each
     function setUp() public override {
@@ -20,7 +18,7 @@ contract gasDeploys is GasTestFixture {
     }
 
     function testDeployFactory() public {
-        new Factory();
+        new FactoryExtension();
     }
 
     function testDeployVaultLogic() public {
@@ -28,27 +26,19 @@ contract gasDeploys is GasTestFixture {
     }
 
     function testDeployMainRegistry() public {
-        new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        new mainRegistryExtension(address(factory));
     }
 
     function testDeployPricingModuleERC20() public {
-        new StandardERC20PricingModule(address(mainRegistry), address(oracleHub));
+        new StandardERC20PricingModule(address(mainRegistry), address(oracleHub), 0);
     }
 
     function testDeployPricingModuleERC721() public {
-        new FloorERC721PricingModule(address(mainRegistry), address(oracleHub));
+        new FloorERC721PricingModule(address(mainRegistry), address(oracleHub), 1);
     }
 
     function testDeployPricingModuleERC1155() public {
-        new FloorERC1155PricingModule(address(mainRegistry), address(oracleHub));
+        new FloorERC1155PricingModule(address(mainRegistry), address(oracleHub), 2);
     }
 
     function testDeployOracleHub() public {

@@ -6,6 +6,7 @@ on:
       - main*
       - refactor/arcadia-vault
       - dev
+      - fix/fixes
 
 name: Foundry Tests
 
@@ -27,7 +28,11 @@ jobs:
         run: forge fmt --check
 
       - name: Run tests
-        run: forge test -vvv
+        run: FOUNDRY_PROFILE=gh forge test -vvv
 
       - name: Run snapshot
         run: forge snapshot --match-contract gas
+
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true

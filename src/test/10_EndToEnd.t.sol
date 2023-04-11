@@ -1,22 +1,25 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {LendingPool, DebtToken, ERC20, DataTypes} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import { LendingPool, DebtToken, ERC20, InterestRateModule } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
+import { ActionMultiCall } from "../actions/MultiCall.sol";
+import { MultiActionMock } from "../mockups/MultiActionMock.sol";
+import { FixedPointMathLib } from "../../lib/solmate/src/utils/FixedPointMathLib.sol";
 
-contract EndToEndTest is DeployArcadiaVaults {
+abstract contract EndToEndTest is DeployArcadiaVaults {
     using stdStorage for StdStorage;
 
     LendingPool pool;
     Tranche tranche;
     DebtToken debt;
+
+    bytes3 public emptyBytes3;
 
     // EVENTS
     event Transfer(address indexed from, address indexed to, uint256 amount);
@@ -24,16 +27,11 @@ contract EndToEndTest is DeployArcadiaVaults {
     //this is a before
     constructor() DeployArcadiaVaults() {
         vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
-        liquidator.setFactory(address(factory));
+        liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
-        DataTypes.InterestRateConfiguration memory config = DataTypes.InterestRateConfiguration({
+        InterestRateModule.InterestRateConfiguration memory config = InterestRateModule.InterestRateConfiguration({
             baseRatePerYear: Constants.interestRate,
             highSlopePerYear: Constants.interestRate,
             lowSlopePerYear: Constants.interestRate,
@@ -44,7 +42,7 @@ contract EndToEndTest is DeployArcadiaVaults {
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
-        pool.addTranche(address(tranche), 50);
+        pool.addTranche(address(tranche), 50, 0);
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
@@ -55,7 +53,7 @@ contract EndToEndTest is DeployArcadiaVaults {
     }
 
     //this is a before each
-    function setUp() public {
+    function setUp() public virtual {
         vm.prank(vaultOwner);
         proxyAddr = factory.createVault(
             uint256(
@@ -65,23 +63,50 @@ contract EndToEndTest is DeployArcadiaVaults {
                     )
                 )
             ),
-            0
+            0,
+            address(0)
         );
         proxy = Vault(proxyAddr);
 
         vm.startPrank(vaultOwner);
         proxy.openTrustedMarginAccount(address(pool));
         dai.approve(address(pool), type(uint256).max);
-
-        bayc.setApprovalForAll(address(proxy), true);
-        mayc.setApprovalForAll(address(proxy), true);
-        dickButs.setApprovalForAll(address(proxy), true);
-        interleave.setApprovalForAll(address(proxy), true);
+        dai.approve(address(proxy), type(uint256).max);
         eth.approve(address(proxy), type(uint256).max);
         link.approve(address(proxy), type(uint256).max);
-        snx.approve(address(proxy), type(uint256).max);
-        safemoon.approve(address(proxy), type(uint256).max);
         vm.stopPrank();
+    }
+
+    /* ///////////////////////////////////////////////////////////////
+                    HELPER FUNCTIONS
+    /////////////////////////////////////////////////////////////// */
+    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
+        public
+        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
+    {
+        assetAddresses = new address[](1);
+        assetAddresses[0] = address(token);
+
+        assetIds = new uint256[](1);
+        assetIds[0] = 0;
+
+        assetAmounts = new uint256[](1);
+        assetAmounts[0] = amount;
+
+        vm.prank(tokenCreatorAddress);
+        token.mint(sender, amount);
+
+        vm.startPrank(sender);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+    }
+}
+
+contract BorrowAndRepay is EndToEndTest {
+    using stdStorage for StdStorage;
+
+    function setUp() public override {
+        super.setUp();
     }
 
     function testSuccess_getFreeMargin_AmountOfAllowedCredit(uint128 amountEth) public {
@@ -112,7 +137,7 @@ contract EndToEndTest is DeployArcadiaVaults {
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
         vm.stopPrank();
 
         assertEq(dai.balanceOf(vaultOwner), amountCredit);
@@ -134,7 +159,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         vm.startPrank(vaultOwner);
         vm.expectRevert("LP_B: Reverted");
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
         vm.stopPrank();
 
         assertEq(dai.balanceOf(vaultOwner), 0);
@@ -161,7 +186,7 @@ contract EndToEndTest is DeployArcadiaVaults {
         vm.assume(amountCredit <= maxCredit);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
         vm.stopPrank();
 
         _yearlyInterestRate = pool.interestRate();
@@ -203,13 +228,13 @@ contract EndToEndTest is DeployArcadiaVaults {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
         vm.stopPrank();
 
-        vm.roll(block.number + 10); //
+        vm.roll(block.number + 10);
         vm.startPrank(vaultOwner);
         vm.expectRevert("LP_B: Reverted");
-        pool.borrow(1, address(proxy), vaultOwner);
+        pool.borrow(1, address(proxy), vaultOwner, emptyBytes3);
         vm.stopPrank();
     }
 
@@ -233,7 +258,7 @@ contract EndToEndTest is DeployArcadiaVaults {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.startPrank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
         vm.stopPrank();
 
         vm.prank(oracleOwner);
@@ -259,24 +284,19 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
-        emit log_named_uint("valueOfOneEth", valueOfOneEth);
 
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        ) = depositERC20InVault(eth, amountEth, vaultOwner);
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            depositERC20InVault(eth, amountEth, vaultOwner);
 
         uint128 amountCredit = uint128(proxy.getFreeMargin() - 1);
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
         assetAmounts[0] = amountEthWithdrawal;
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_W: coll. value too low!");
-        proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.expectRevert("V_W: Vault Unhealthy");
+        proxy.withdraw(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -292,14 +312,9 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         uint256 valueOfOneEth = (Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals;
         vm.assume(amountEth < type(uint128).max / valueOfOneEth);
-        emit log_named_uint("valueOfOneEth", valueOfOneEth);
 
-        (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        ) = depositERC20InVault(eth, amountEth, vaultOwner);
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.assume(
             proxy.getFreeMargin()
@@ -308,12 +323,12 @@ contract EndToEndTest is DeployArcadiaVaults {
         );
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
         assetAmounts[0] = amountEthWithdrawal;
         vm.startPrank(vaultOwner);
         proxy.getFreeMargin();
-        proxy.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.withdraw(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -338,7 +353,7 @@ contract EndToEndTest is DeployArcadiaVaults {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
         uint256 _yearlyInterestRate = pool.interestRate();
 
@@ -357,6 +372,7 @@ contract EndToEndTest is DeployArcadiaVaults {
 
     function testSuccess_repay_ExactDebt(uint128 amountEth, uint128 amountCredit, uint16 blocksToRoll) public {
         vm.assume(amountEth > 0);
+        vm.assume(amountCredit > 0);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor_);
 
@@ -372,7 +388,7 @@ contract EndToEndTest is DeployArcadiaVaults {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
         vm.roll(block.number + blocksToRoll);
 
@@ -395,6 +411,7 @@ contract EndToEndTest is DeployArcadiaVaults {
     {
         vm.assume(amountEth > 0);
         vm.assume(factor > 0);
+        vm.assume(amountCredit > 0);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor_);
 
@@ -410,7 +427,7 @@ contract EndToEndTest is DeployArcadiaVaults {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
 
         vm.prank(liquidityProvider);
         dai.transfer(vaultOwner, factor * amountCredit);
@@ -439,8 +456,8 @@ contract EndToEndTest is DeployArcadiaVaults {
         uint24 deltaTimestamp,
         uint128 toRepay
     ) public {
-        // vm.assume(amountEth > 1e15 && amountCredit > 1e15 && blocksToRoll > 1000 && toRepay > 0);
         vm.assume(amountEth > 0);
+        vm.assume(toRepay > 0);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
         vm.assume(amountEth < type(uint128).max / collFactor_);
 
@@ -456,15 +473,17 @@ contract EndToEndTest is DeployArcadiaVaults {
         depositERC20InVault(eth, amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
-        pool.borrow(amountCredit, address(proxy), vaultOwner);
+        pool.borrow(amountCredit, address(proxy), vaultOwner, emptyBytes3);
+
+        uint256 _yearlyInterestRate = pool.interestRate();
 
         vm.warp(block.timestamp + deltaTimestamp);
 
         vm.assume(toRepay < amountCredit);
+        vm.assume(debt.previewWithdraw(toRepay) > 0);
 
         vm.prank(vaultOwner);
         pool.repay(toRepay, address(proxy));
-        uint256 _yearlyInterestRate = pool.interestRate();
         uint128 base = uint128(_yearlyInterestRate) + 10 ** 18;
         uint128 exponent = uint128((uint128(deltaTimestamp) * 10 ** 18) / pool.YEARLY_SECONDS());
         uint128 expectedDebt = uint128((amountCredit * (LogExpMath.pow(base, exponent))) / 10 ** 18) - toRepay;
@@ -479,91 +498,343 @@ contract EndToEndTest is DeployArcadiaVaults {
 
         assertEq(proxy.getUsedMargin(), expectedDebt);
     }
+}
 
-    function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](1);
-        assetAddresses[0] = address(token);
+contract DoActionWithLeverage is EndToEndTest {
+    using stdStorage for StdStorage;
 
-        assetIds = new uint256[](1);
-        assetIds[0] = 0;
+    ActionMultiCall public action;
+    MultiActionMock public multiActionMock;
 
-        assetAmounts = new uint256[](1);
-        assetAmounts[0] = amount;
+    function setUp() public override {
+        super.setUp();
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
+        vm.startPrank(creatorAddress);
+        multiActionMock = new MultiActionMock();
+        action = new ActionMultiCall();
+        mainRegistry.setAllowedAction(address(action), true);
+        vm.stopPrank();
+
+        vm.prank(vaultOwner);
+        proxy.setAssetManager(address(pool), true);
+    }
+
+    function testSuccess_doActionWithLeverage_repayExact(uint32 daiDebt, uint72 daiCollateral, uint32 ethOut) public {
+        (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0); //18 decimals
+        (uint256 daiRate,) = oracleHub.getRate(oracleDaiToUsdArr, 0); //18 decimals
+
+        uint256 daiIn = uint256(ethOut) * ethRate / 10 ** Constants.ethDecimals * 10 ** Constants.daiDecimals / daiRate;
+
+        //With leverage -> daiIn should be bigger than the available collateral
+        vm.assume(daiIn > daiCollateral);
+
+        uint256 daiMargin = daiIn - daiCollateral;
+
+        //Action is successfull -> total debt after transaction should be smaller than the Collateral Value
+        vm.assume(daiMargin + daiDebt <= collateralFactor * daiIn / 100);
+
+        //Set initial debt
+        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(daiDebt);
+        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(daiDebt);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(daiDebt);
+
+        //Deposit daiCollateral in Vault (have to burn first to avoid overflow)
+        vm.prank(liquidityProvider);
+        dai.burn(type(uint64).max);
+        depositERC20InVault(dai, daiCollateral, vaultOwner);
+
+        //Prepare input parameters
+        bytes[] memory data = new bytes[](3);
+        address[] memory to = new address[](3);
+
+        data[0] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), daiIn);
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)", address(dai), address(eth), daiIn, uint256(ethOut)
+        );
+        data[2] = abi.encodeWithSignature("approve(address,uint256)", address(proxy), uint256(ethOut));
 
         vm.prank(tokenCreatorAddress);
-        token.mint(sender, amount);
+        eth.mint(address(multiActionMock), ethOut);
 
-        vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        to[0] = address(dai);
+        to[1] = address(multiActionMock);
+        to[2] = address(eth);
+
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataOut.assets[0] = address(dai);
+        assetDataOut.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+        assetDataOut.assetAmounts[0] = daiCollateral;
+
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataIn.assets[0] = address(eth);
+        assetDataIn.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        //Do swap on leverage
+        vm.prank(vaultOwner);
+        pool.doActionWithLeverage(daiMargin, address(proxy), address(action), callData, emptyBytes3);
+
+        assertEq(dai.balanceOf(address(pool)), type(uint128).max - daiMargin);
+        assertEq(dai.balanceOf(address(multiActionMock)), daiIn);
+        assertEq(eth.balanceOf(address(proxy)), ethOut);
+        assertEq(debt.balanceOf(address(proxy)), uint256(daiDebt) + daiMargin);
+
+        uint256 debtAmount = proxy.getUsedMargin();
+
+        bytes[] memory dataArr = new bytes[](2);
+        dataArr[0] = abi.encodeWithSignature("approve(address,uint256)", address(pool), type(uint256).max);
+        dataArr[1] = abi.encodeWithSignature(
+            "executeRepay(address,address,address,uint256)", address(pool), address(dai), address(proxy), 0
+        );
+
+        address[] memory tos = new address[](2);
+        tos[0] = address(dai);
+        tos[1] = address(action);
+
+        ActionData memory ad;
+
+        vm.startPrank(liquidityProvider);
+        dai.transfer(address(action), debtAmount);
+        action.executeAction(abi.encode(ad, ad, tos, dataArr));
+        vm.stopPrank();
+
+        assertEq(debt.balanceOf(address(proxy)), 0);
+        assertEq(proxy.getUsedMargin(), 0);
+    }
+
+    function testSuccess_doActionWithLeverage(uint32 daiDebt, uint72 daiCollateral, uint32 ethOut) public {
+        (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0); //18 decimals
+        (uint256 daiRate,) = oracleHub.getRate(oracleDaiToUsdArr, 0); //18 decimals
+
+        uint256 daiIn = uint256(ethOut) * ethRate / 10 ** Constants.ethDecimals * 10 ** Constants.daiDecimals / daiRate;
+
+        //With leverage -> daiIn should be bigger than the available collateral
+        vm.assume(daiIn > daiCollateral);
+
+        uint256 daiMargin = daiIn - daiCollateral;
+
+        //Action is successfull -> total debt after transaction should be smaller than the Collateral Value
+        vm.assume(daiMargin + daiDebt <= collateralFactor * daiIn / 100);
+
+        //Set initial debt
+        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(daiDebt);
+        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(daiDebt);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(daiDebt);
+
+        //Deposit daiCollateral in Vault (have to burn first to avoid overflow)
+        vm.prank(liquidityProvider);
+        dai.burn(type(uint64).max);
+        depositERC20InVault(dai, daiCollateral, vaultOwner);
+
+        //Prepare input parameters
+        bytes[] memory data = new bytes[](3);
+        address[] memory to = new address[](3);
+
+        data[0] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), daiIn);
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)", address(dai), address(eth), daiIn, uint256(ethOut)
+        );
+        data[2] = abi.encodeWithSignature("approve(address,uint256)", address(proxy), uint256(ethOut));
+
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(multiActionMock), ethOut);
+
+        to[0] = address(dai);
+        to[1] = address(multiActionMock);
+        to[2] = address(eth);
+
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataOut.assets[0] = address(dai);
+        assetDataOut.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+        assetDataOut.assetAmounts[0] = daiCollateral;
+
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataIn.assets[0] = address(eth);
+        assetDataIn.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        //Do swap on leverage
+        vm.prank(vaultOwner);
+        pool.doActionWithLeverage(daiMargin, address(proxy), address(action), callData, emptyBytes3);
+
+        assertEq(dai.balanceOf(address(pool)), type(uint128).max - daiMargin);
+        assertEq(dai.balanceOf(address(multiActionMock)), daiIn);
+        assertEq(eth.balanceOf(address(proxy)), ethOut);
+        assertEq(debt.balanceOf(address(proxy)), uint256(daiDebt) + daiMargin);
+    }
+
+    function testRevert_doActionWithLeverage_InsufficientCollateral(uint64 daiDebt, uint64 daiCollateral, uint64 ethOut)
+        public
+    {
+        (uint256 ethRate,) = oracleHub.getRate(oracleEthToUsdArr, 0); //18 decimals
+        (uint256 daiRate,) = oracleHub.getRate(oracleDaiToUsdArr, 0); //18 decimals
+
+        uint256 daiIn = uint256(ethOut) * ethRate / 10 ** Constants.ethDecimals * 10 ** Constants.daiDecimals / daiRate;
+
+        //With leverage -> daiIn should be bigger than the available collateral
+        vm.assume(daiIn > daiCollateral);
+
+        uint256 daiMargin = daiIn - daiCollateral;
+
+        //Action is not successfull -> total debt after transaction should be bigger than the Collateral Value
+        vm.assume(daiMargin + daiDebt > collateralFactor * daiIn / 100);
+
+        //Set initial debt
+        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(daiDebt);
+        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(daiDebt);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(proxy)).checked_write(daiDebt);
+
+        //Deposit daiCollateral in Vault (have to burn first to avoid overflow)
+        vm.prank(liquidityProvider);
+        dai.burn(type(uint64).max);
+        depositERC20InVault(dai, daiCollateral, vaultOwner);
+
+        //Prepare input parameters
+        bytes[] memory data = new bytes[](3);
+        address[] memory to = new address[](3);
+
+        data[0] = abi.encodeWithSignature("approve(address,uint256)", address(multiActionMock), daiIn);
+        data[1] = abi.encodeWithSignature(
+            "swapAssets(address,address,uint256,uint256)", address(dai), address(eth), daiIn, uint256(ethOut)
+        );
+        data[2] = abi.encodeWithSignature("approve(address,uint256)", address(proxy), uint256(ethOut));
+
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(multiActionMock), ethOut);
+
+        to[0] = address(dai);
+        to[1] = address(multiActionMock);
+        to[2] = address(eth);
+
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataOut.assets[0] = address(dai);
+        assetDataOut.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+        assetDataOut.assetAmounts[0] = daiCollateral;
+
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](1),
+            assetIds: new uint256[](1),
+            assetAmounts: new uint256[](1),
+            assetTypes: new uint256[](1),
+            actionBalances: new uint256[](0)
+        });
+
+        assetDataIn.assets[0] = address(eth);
+        assetDataIn.assetTypes[0] = 0;
+        assetDataOut.assetIds[0] = 0;
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        //Do swap on leverage
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_VMA: Vault Unhealthy");
+        pool.doActionWithLeverage(daiMargin, address(proxy), address(action), callData, emptyBytes3);
         vm.stopPrank();
     }
 
-    function depositERC721InVault(ERC721Mock token, uint128[] memory tokenIds, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](tokenIds.length);
-        assetIds = new uint256[](tokenIds.length);
-        assetAmounts = new uint256[](tokenIds.length);
-        assetTypes = new uint256[](tokenIds.length);
+    function testRevert_doActionWithLeverage_DifferentTrustedCreditor() public {
+        vm.startPrank(vaultOwner);
+        proxy.closeTrustedMarginAccount();
+        proxy.setAssetManager(address(pool), true);
+        vm.stopPrank();
 
-        uint256 tokenIdToWorkWith;
-        for (uint256 i; i < tokenIds.length; ++i) {
-            tokenIdToWorkWith = tokenIds[i];
-            while (token.ownerOf(tokenIdToWorkWith) != address(0)) {
-                tokenIdToWorkWith++;
-            }
+        //Prepare input parameters
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](0),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](0),
+            assetTypes: new uint256[](0),
+            actionBalances: new uint256[](0)
+        });
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](0),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](0),
+            assetTypes: new uint256[](0),
+            actionBalances: new uint256[](0)
+        });
+        bytes[] memory data = new bytes[](0);
+        address[] memory to = new address[](0);
 
-            token.mint(sender, tokenIdToWorkWith);
-            assetAddresses[i] = address(token);
-            assetIds[i] = tokenIdToWorkWith;
-            assetAmounts[i] = 1;
-            assetTypes[i] = 1;
-        }
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
 
-        vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        //Do swap on leverage
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("LP_DAWL: Reverted");
+        pool.doActionWithLeverage(0, address(proxy), address(action), callData, emptyBytes3);
         vm.stopPrank();
     }
 
-    function depositERC1155InVault(ERC1155Mock token, uint256 tokenId, uint256 amount, address sender)
-        public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
-    {
-        assetAddresses = new address[](1);
-        assetIds = new uint256[](1);
-        assetAmounts = new uint256[](1);
-        assetTypes = new uint256[](1);
+    function testRevert_doActionWithLeverage_BadVaultVersion() public {
+        vm.prank(creatorAddress);
+        pool.setVaultVersion(1, false);
 
-        token.mint(sender, tokenId, amount);
-        assetAddresses[0] = address(token);
-        assetIds[0] = tokenId;
-        assetAmounts[0] = amount;
-        assetTypes[0] = 2;
+        //Prepare input parameters
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](0),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](0),
+            assetTypes: new uint256[](0),
+            actionBalances: new uint256[](0)
+        });
+        ActionData memory assetDataIn = ActionData({
+            assets: new address[](0),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](0),
+            assetTypes: new uint256[](0),
+            actionBalances: new uint256[](0)
+        });
+        bytes[] memory data = new bytes[](0);
+        address[] memory to = new address[](0);
 
-        vm.startPrank(sender);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        //Do swap on leverage
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("LP_DAWL: Reverted");
+        pool.doActionWithLeverage(0, address(proxy), address(action), callData, emptyBytes3);
         vm.stopPrank();
     }
 }

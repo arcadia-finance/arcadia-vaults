@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 interface IMainReg {
     function collateralFactors(address asset, uint256 baseCurrency) external view returns (uint16);

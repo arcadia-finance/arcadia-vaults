@@ -1,14 +1,12 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.13;
 
-import "../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import { Owned } from "lib/solmate/src/auth/Owned.sol";
 
-contract ArcadiaOracle is Ownable {
+contract ArcadiaOracle is Owned {
     // Configs
     address public asset_address;
     uint8 public decimals;
@@ -38,7 +36,7 @@ contract ArcadiaOracle is Ownable {
 
     mapping(address => OffchainConnector) internal offchain_connectors;
 
-    constructor(uint8 _decimals, string memory _description, address _asset_address) {
+    constructor(uint8 _decimals, string memory _description, address _asset_address) Owned(msg.sender) {
         decimals = _decimals;
         description = _description;
         asset_address = _asset_address;
@@ -54,7 +52,7 @@ contract ArcadiaOracle is Ownable {
             offchain_connectors[_transmitter].role != Role.Transmitter,
             "Oracle: Address is already saved as Transmitter!"
         );
-        offchain_connectors[_transmitter] = OffchainConnector({isActive: true, role: Role.Transmitter});
+        offchain_connectors[_transmitter] = OffchainConnector({ isActive: true, role: Role.Transmitter });
     }
 
     /**
@@ -70,10 +68,8 @@ contract ArcadiaOracle is Ownable {
      * @dev Throws if called by any account other than the transmitter.
      */
     modifier onlyTransmitter() {
-        require(
-            offchain_connectors[_msgSender()].role == Role.Transmitter, "Oracle: caller is not the valid transmitter"
-        );
-        require(offchain_connectors[_msgSender()].isActive, "Oracle: transmitter is not active");
+        require(offchain_connectors[msg.sender].role == Role.Transmitter, "Oracle: caller is not the valid transmitter");
+        require(offchain_connectors[msg.sender].isActive, "Oracle: transmitter is not active");
         _;
     }
 
@@ -111,5 +107,20 @@ contract ArcadiaOracle is Ownable {
             transmissions[uint32(roundId)].timestamp,
             roundId
         );
+    }
+
+    function aggregator() public view returns (address) {
+        return address(this);
+    }
+
+    int192 public minAnswer = 100;
+    int192 public maxAnswer = type(int192).max - 100;
+
+    function setMinAnswer(int192 minAnswer_) public {
+        minAnswer = minAnswer_;
+    }
+
+    function setMaxAnswer(int192 maxAnswer_) public {
+        maxAnswer = maxAnswer_;
     }
 }
