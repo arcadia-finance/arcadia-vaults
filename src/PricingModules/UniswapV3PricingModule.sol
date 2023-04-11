@@ -6,21 +6,19 @@
  */
 pragma solidity ^0.8.13;
 
-import '../interfaces/INonfungiblePositionManager.sol';
-import '../interfaces/IUniswapV3Factory.sol';
-import '../interfaces/IUniswapV3Pool.sol';
-
-import '../utils/TickMath.sol';
-import '../utils/LiquidityAmounts.sol';
-
-import "./AbstractPricingModule.sol";
+import { PricingModule } from "./AbstractPricingModule.sol";
+import {INonfungiblePositionManager} from './interfaces/INonfungiblePositionManager.sol';
+import {IUniswapV3Factory} from './interfaces/IUniswapV3Factory.sol';
+import {IUniswapV3Pool} from './interfaces/IUniswapV3Pool.sol';
+import { TickMath } from '../utils/TickMath.sol';
+import { LiquidityAmounts } from '../utils/LiquidityAmounts.sol';
 
 contract UniV3PriceModule is PricingModule {
 
     INonfungiblePositionManager public nonfungiblePositionManager;
     IUniswapV3Factory public uniswapV3Factory;
 
-    constructor (address _mainRegistry, address _oracleHub) PricingModule(_mainRegistry, _oracleHub) {
+    constructor (address mainRegistry_, address oracleHub_, address riskManager_) PricingModule(mainRegistry_, oracleHub_, 1, riskManager_) {
         nonfungiblePositionManager = INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
         uniswapV3Factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
          {}
