@@ -5,7 +5,6 @@ pragma solidity ^0.8.13;
 /// @notice Wraps Uniswap V3 positions in a non-fungible token interface which allows for them to be transferred
 /// and authorized.
 interface INonfungiblePositionManager {
-
     function positions(uint256 tokenId)
         external
         view
@@ -23,5 +22,4 @@ interface INonfungiblePositionManager {
             uint128 tokensOwed0,
             uint128 tokensOwed1
         );
-
 }
