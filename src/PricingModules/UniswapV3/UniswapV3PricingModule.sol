@@ -281,8 +281,8 @@ contract UniV3PriceModule is PricingModule {
 
         IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(assetToV3Factory[asset], token0, token1, fee));
 
-        // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic). 
-        // We do not use the TWAP price to calculate the current value of the asset, only to ensure ensure that the deposited Liquidity Range 
+        // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic).
+        // We do not use the TWAP price to calculate the current value of the asset, only to ensure ensure that the deposited Liquidity Range
         // hence the risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
         int24 tickCurrent = _getTickTwap(pool);
 
