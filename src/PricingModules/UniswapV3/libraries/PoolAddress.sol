@@ -15,19 +15,22 @@ library PoolAddress {
 
     /// @notice Deterministically computes the pool address given the factory and PoolKey
     /// @param factory The Uniswap V3 factory contract address
-    /// @param key The PoolKey
+    /// @param token0 Contract address of token0.
+    /// @param token1 Contract address of token1.
+    /// @param fee The fee of the pool.
     /// @return pool The contract address of the V3 pool
-    function computeAddress(address factory, PoolKey memory key) internal pure returns (address pool) {
-        require(key.token0 < key.token1);
+    function computeAddress(address factory, address token0, address token1, uint24 fee)
+        internal
+        pure
+        returns (address pool)
+    {
+        require(token0 < token1);
         pool = address(
             uint160(
                 uint256(
                     keccak256(
                         abi.encodePacked(
-                            hex"ff",
-                            factory,
-                            keccak256(abi.encode(key.token0, key.token1, key.fee)),
-                            POOL_INIT_CODE_HASH
+                            hex"ff", factory, keccak256(abi.encode(token0, token1, fee)), POOL_INIT_CODE_HASH
                         )
                     )
                 )

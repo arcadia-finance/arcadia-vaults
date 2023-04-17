@@ -15,6 +15,8 @@ interface IUniswapV3Pool {
             bool unlocked
         );
 
+    function observe(uint32[] calldata secondsAgos) external view returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s);
+
     function ticks(int24 tick)
         external
         view
@@ -29,7 +31,7 @@ interface IUniswapV3Pool {
             bool initialized
         );
 
-    function feeGrowthGlobal0X128() external view returns (uint256);
+    function feeGrowthGlobal0X128() external view returns (uint256 feeGrowthGlobal0X128);
 
-    function feeGrowthGlobal1X128() external view returns (uint256);
+    function feeGrowthGlobal1X128() external view returns (uint256 feeGrowthGlobal1X128);
 }
