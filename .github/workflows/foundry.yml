@@ -28,7 +28,7 @@ jobs:
         run: forge fmt --check
 
       - name: Run tests
-        run: FOUNDRY_PROFILE=gh forge test -vvv
+        run: RPC_URL=${{ env.RPC_URL }} FOUNDRY_PROFILE=gh forge test -vvv
 
       - name: Run snapshot
         run: forge snapshot --match-contract gas
