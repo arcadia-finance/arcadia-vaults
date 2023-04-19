@@ -21,13 +21,13 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
  * @title Pricing Module for Uniswap V3 Liquidity Positions.
  * @author Pragma Labs
  * @notice The pricing logic and basic information for Uniswap V3 Liquidity Positions.
- * @dev The UniV3PriceModule will not price the LP-tokens via direct price oracles,
+ * @dev The UniswapV3PricingModule will not price the LP-tokens via direct price oracles,
  * it will break down liquidity positions in the underlying tokens (ERC20s).
  * Only LP tokens for which the underlying tokens are allowed as collateral can be priced.
- * @dev No end-user should directly interact with the UniV3PriceModule, only the Main-registry,
+ * @dev No end-user should directly interact with the UniswapV3PricingModule, only the Main-registry,
  * or the contract owner.
  */
-contract UniV3PriceModule is PricingModule {
+contract UniswapV3PricingModule is PricingModule {
     using FixedPointMathLib for uint256;
     using FullMath for uint256;
 
@@ -78,7 +78,7 @@ contract UniV3PriceModule is PricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Adds a new asset to the UniV3PriceModule.
+     * @notice Adds a new asset to the UniswapV3PricingModule.
      * @param asset The contract address of the asset (also known as the NonfungiblePositionManager).
      * @dev Per protocol (eg. Uniswap V3 and its forks) there is a single asset,
      * and each liquidity position will have a different id.
@@ -107,7 +107,7 @@ contract UniV3PriceModule is PricingModule {
      * @return valueInBaseCurrency The value of the asset denominated in a BaseCurrency different from USD, with 18 Decimals precision.
      * @return collateralFactor The collateral factor of the asset for a given baseCurrency, with 2 decimals precision.
      * @return liquidationFactor The liquidation factor of the asset for a given baseCurrency, with 2 decimals precision.
-     * @dev The UniV3PriceModule will always return the value denominated in USD.
+     * @dev The UniswapV3PricingModule will always return the value denominated in USD.
      */
     function getValue(IPricingModule.GetValueInput memory getValueInput)
         public
