@@ -1,73 +1,86 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
-import "../../lib/forge-std/src/Test.sol";
-import "../PricingModules/UniswapV3/UniswapV3PricingModule.sol";
+import "./fixtures/ArcadiaVaultsFixture.f.sol";
+import { UniV3PriceModule } from "../PricingModules/UniswapV3/UniswapV3PricingModule.sol";
+import { INonfungiblePositionManager } from "../PricingModules/UniswapV3/interfaces/INonfungiblePositionManager.sol";
 
-contract UniV3Test is Test {
+abstract contract UniV3Test is DeployArcadiaVaults {
+    string RPC_URL = vm.envString("RPC_URL");
+    uint256 fork;
+
     UniV3PriceModule uniV3PriceModule;
+    INonfungiblePositionManager public uniV3 = INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
 
-    // function setUp() public {
-    //     uniV3PriceModule = new UniV3PriceModule();
-    // }
-    // // function testValuesV3() public {
-    // //     (address _token0,address _token1,uint24 _fee,uint256 _amount0,uint256 _amount1) = uniV3PriceModule._getNFTAmounts(351451);
-    // // }
+    event RiskManagerUpdated(address riskManager);
 
-    // // function testGetPos() public {
-    // //     (uint96 __nonce,
-    // //         address __operator,
-    // //         address __token0,
-    // //         address __token1,
-    // //         uint24 __fee,
-    // //         int24 __tickLower,
-    // //         int24 __tickUpper,
-    // //         uint128 __liquidity,
-    // //         uint256 __feeGrowthInside0LastX128,
-    // //         uint256 __feeGrowthInside1LastX128,
-    // //         uint128 __tokensOwed0,
-    // //         uint128 __tokensOwed1
-    // //     ) = uniV3PriceModule.getPos(1105);
-    // // }
+    //this is a before
+    constructor() DeployArcadiaVaults() {
+        vm.prank(creatorAddress);
+        uniV3PriceModule =
+        new UniV3PriceModule(address(mainRegistry), address(oracleHub), creatorAddress, address(standardERC20PricingModule));
+    }
 
-    // function testdostuff() public {
-    //     (
-    //         ,
-    //         ,
-    //         address token0,
-    //         address token1,
-    //         uint24 fee,
-    //         int24 tickLower,
-    //         int24 tickUpper,
-    //         uint128 liquidity,
-    //         uint256 positionFeeGrowthInside0LastX128,
-    //         uint256 positionFeeGrowthInside1LastX128,
-    //         uint256 tokensOwed0,
-    //         uint256 tokensOwed1
-    //     ) = uniV3PriceModule.nonfungiblePositionManager().positions(9814);
+    //this is a before each
+    function setUp() public virtual {
+        fork = vm.createFork(RPC_URL);
+    }
+}
 
-    //     emit log_named_address("token0", token0);
-    //     emit log_named_address("token1", token1);
-    //     emit log_named_uint("fee", fee);
-    //     emit log_named_int("tickLower", tickLower);
-    //     emit log_named_int("tickUpper", tickUpper);
-    //     emit log_named_uint("liquidity", liquidity);
-    //     emit log_named_uint("positionFeeGrowthInside0LastX128", positionFeeGrowthInside0LastX128);
-    //     emit log_named_uint("positionFeeGrowthInside1LastX128", positionFeeGrowthInside1LastX128);
-    //     emit log_named_uint("tokensOwed0", tokensOwed0);
-    //     emit log_named_uint("tokensOwed1", tokensOwed1);
+/* ///////////////////////////////////////////////////////////////
+                        DEPLOYMENT
+/////////////////////////////////////////////////////////////// */
+contract DeploymentTest is UniV3Test {
+    function setUp() public override { }
 
-    //     IUniswapV3Factory uniswapV3Factory = uniV3PriceModule.uniswapV3Factory();
-    //     IUniswapV3Pool _uniswapV3Pool = IUniswapV3Pool(uniswapV3Factory.getPool(token0, token1, fee));
-    //     (, int24 poolTick,,,,,) = _uniswapV3Pool.slot0();
-    //     emit log_named_int("poolTick", poolTick);
+    function testSuccess_deployment(
+        address mainRegistry_,
+        address oracleHub_,
+        address riskManager_,
+        address erc20PricingModule_
+    ) public {
+        vm.startPrank(creatorAddress);
+        vm.expectEmit(true, true, true, true);
+        emit RiskManagerUpdated(riskManager_);
+        uniV3PriceModule = new UniV3PriceModule(mainRegistry_, oracleHub_, riskManager_, erc20PricingModule_);
+        vm.stopPrank();
+    }
+}
 
-    //     uint160 _sqrtRatioX96 = TickMath.getSqrtRatioAtTick(poolTick);
-    //     emit log_named_uint("sqrtRatioX96", _sqrtRatioX96);
-    // }
+/*///////////////////////////////////////////////////////////////
+                    ASSET MANAGEMENT
+///////////////////////////////////////////////////////////////*/
+contract AssetManagementTest is UniV3Test {
+    using stdStorage for StdStorage;
+
+    function setUp() public override {
+        super.setUp();
+        vm.selectFork(fork);
+    }
+
+    function testRevert_addAsset_NonOwner(address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != creatorAddress);
+        vm.startPrank(unprivilegedAddress_);
+
+        vm.expectRevert("UNAUTHORIZED");
+        uniV3PriceModule.addAsset(address(uniV3));
+        vm.stopPrank();
+    }
+
+    function testRevert_addAsset_NonUniswapV3PositionManager(address badAddress) public {
+        vm.assume(badAddress != address(uniV3));
+
+        vm.startPrank(creatorAddress);
+        vm.expectRevert();
+        uniV3PriceModule.addAsset(badAddress);
+        vm.stopPrank();
+    }
+
+    function testSuccess_addAsset() public {
+        vm.prank(creatorAddress);
+        uniV3PriceModule.addAsset(address(uniV3));
+    }
 }
