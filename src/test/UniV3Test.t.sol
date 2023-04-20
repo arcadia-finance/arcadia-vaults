@@ -163,6 +163,7 @@ contract AllowListManagementTest is UniV3Test {
     }
 
     function testSuccess_isAllowListed_Positive(address lp, uint128 maxExposureA, uint128 maxExposureB) public {
+        vm.assume(lp != address(0));
         vm.assume(maxExposureA > 0);
         vm.assume(maxExposureB > 0);
 
