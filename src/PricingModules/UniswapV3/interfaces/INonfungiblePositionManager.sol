@@ -24,4 +24,6 @@ interface INonfungiblePositionManager {
         );
 
     function factory() external returns (address factory);
+
+    function totalSupply() external view returns (uint256 totalSupply);
 }

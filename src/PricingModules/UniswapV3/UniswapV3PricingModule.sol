@@ -54,23 +54,7 @@ contract UniswapV3PricingModule is PricingModule {
     constructor(address mainRegistry_, address oracleHub_, address riskManager_, address erc20PricingModule_)
         PricingModule(mainRegistry_, oracleHub_, 1, riskManager_)
     {
-        //uniswapV3Factory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
         erc20PricingModule = PricingModule(erc20PricingModule_);
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        ALLOW LIST MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Checks for a token address and the corresponding Id if it is allow-listed.
-     * @param asset The contract address of the asset.
-     * @param assetId The Id of the asset.
-     * @return A boolean, indicating if the asset is whitelisted.
-     */
-    function isAllowListed(address asset, uint256 assetId) public view override returns (bool) {
-        (,, address token0, address token1,,,,,,,,) = INonfungiblePositionManager(asset).positions(assetId);
-        return inPricingModule[asset] && exposure[token0].maxExposure != 0 && exposure[token1].maxExposure != 0;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -86,10 +70,46 @@ contract UniswapV3PricingModule is PricingModule {
     function addAsset(address asset) external onlyOwner {
         require(!inPricingModule[asset], "PMUV3_AA: already added");
 
+        inPricingModule[asset] = true;
+        assetsInPricingModule.push(asset);
+
         assetToV3Factory[asset] = INonfungiblePositionManager(asset).factory();
 
         // Will revert in MainRegistry if asset can't be added.
         IMainRegistry(mainRegistry).addAsset(asset, assetType);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        ALLOW LIST MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Checks for a token address and the corresponding Id if it is allow-listed.
+     * @param asset The contract address of the asset.
+     * @param assetId The Id of the asset.
+     * @return A boolean, indicating if the asset is whitelisted.
+     */
+    function isAllowListed(address asset, uint256 assetId) public view override returns (bool) {
+        if (!inPricingModule[asset]) return false;
+
+        try INonfungiblePositionManager(asset).positions(assetId) returns (
+            uint96,
+            address,
+            address token0,
+            address token1,
+            uint24,
+            int24,
+            int24,
+            uint128,
+            uint256,
+            uint256,
+            uint128,
+            uint128
+        ) {
+            return exposure[token0].maxExposure != 0 && exposure[token1].maxExposure != 0;
+        } catch {
+            return false;
+        }
     }
 
     /*///////////////////////////////////////////////////////////////
