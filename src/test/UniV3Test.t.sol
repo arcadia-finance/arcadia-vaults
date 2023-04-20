@@ -85,8 +85,9 @@ contract AssetManagementTest is UniV3Test {
     }
 
     function testRevert_addAsset_NonUniswapV3PositionManager(address badAddress) public {
-        vm.assume(badAddress != address(uniV3));
-        vm.assume(badAddress != address(this));
+        // badAddress cannot be a contract with a function: factory()
+        (bool success,) = badAddress.call(abi.encodeWithSignature("factory()"));
+        vm.assume(success == false);
 
         vm.startPrank(deployer);
         vm.expectRevert();
@@ -167,7 +168,7 @@ contract AllowListManagementTest is UniV3Test {
         vm.assume(maxExposureA > 0);
         vm.assume(maxExposureB > 0);
 
-        // Create a LP-position of two underlying assets: tokenA and tokenB
+        // Create a LP-position of two underlying assets: tokenA and tokenB.
         ERC20 tokenA = erc20Fixture.createToken();
         ERC20 tokenB = erc20Fixture.createToken();
         uniV3.createAndInitializePoolIfNecessary(address(tokenA), address(tokenB), 100, 1 << 96);
@@ -194,7 +195,7 @@ contract AllowListManagementTest is UniV3Test {
         );
         vm.stopPrank();
 
-        // Set the allowed exposure to tokenA and tokenB
+        // Set an allowed exposure for tokenA and tokenB greater than 0.
         vm.startPrank(deployer);
         uniV3PricingModule.setExposureOfAsset(address(tokenA), maxExposureA);
         uniV3PricingModule.setExposureOfAsset(address(tokenB), maxExposureB);
