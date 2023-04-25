@@ -336,11 +336,11 @@ contract UniswapV3PricingModule is PricingModule {
 
     function _getTickTwap(IUniswapV3Pool pool) internal view returns (int24 tick) {
         uint32[] memory secondsAgos = new uint32[](2);
-        secondsAgos[1] = 30; // We take a 30s time interval
+        secondsAgos[1] = 300; // We take a 5 minute time interval.
 
         (int56[] memory tickCumulatives,) = pool.observe(secondsAgos);
 
-        tick = int24((tickCumulatives[0] - tickCumulatives[1]) / 30);
+        tick = int24((tickCumulatives[0] - tickCumulatives[1]) / 300);
     }
 
     /**
