@@ -294,7 +294,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         );
         // Avoid rounding to 0
         vm.assume(amountOut0 > 1e2);
-         // Avoid rounding to 0
+        // Avoid rounding to 0
         vm.assume(amountOut1 > 1e2);
         // Total amountOut must be smaller as initial Liquidity.
         // Term 1e2: Avoid that full liquidity is almost swapped out since this would bring sqrtPriceLimitX96 to TickMath.MAX_SQRT_RATIO resulting in 'SPL'.
