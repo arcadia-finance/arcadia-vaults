@@ -1,21 +1,17 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
 import "../../../lib/forge-std/src/Test.sol";
-import {RiskModule} from "../../RiskModule.sol";
-import {RiskConstants} from "../../utils/RiskConstants.sol";
-import {FixedPointMathLib} from "../../utils/FixedPointMathLib.sol";
+import { RiskModule } from "../../RiskModule.sol";
+import { RiskConstants } from "../../utils/RiskConstants.sol";
 
 contract RiskModuleTest is Test {
     using stdStorage for StdStorage;
-    using FixedPointMathLib for uint256;
 
-    constructor() {}
+    constructor() { }
 
     function testSuccess_calculateCollateralFactor_Success(
         uint128 firstValue,

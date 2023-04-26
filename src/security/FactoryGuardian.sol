@@ -1,38 +1,40 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.13;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./BaseGuardian.sol";
+import { BaseGuardian } from "./BaseGuardian.sol";
 
 /**
  * @title Factory Guardian
- * @dev This module provides a mechanism that allows authorized accounts to trigger an emergency stop
- *
+ * @author Pragma Labs
+ * @notice This module provides the logic for the Factory that allows authorized accounts to trigger an emergency stop.
  */
 abstract contract FactoryGuardian is BaseGuardian {
-    /*
-    //////////////////////////////////////////////////////////////
-                            EVENTS
-    //////////////////////////////////////////////////////////////
-    */
+    /* //////////////////////////////////////////////////////////////
+                                STORAGE
+    ////////////////////////////////////////////////////////////// */
 
-    event PauseUpdate(address account, bool createPauseUpdate, bool liquidatePauseUpdate);
-
-    /*
-    //////////////////////////////////////////////////////////////
-                            STORAGE
-    //////////////////////////////////////////////////////////////
-    */
+    // Flag indicating if the create() function is paused.
     bool public createPaused;
+    // Flag indicating if the liquidate() function is paused.
     bool public liquidatePaused;
 
-    constructor() {}
+    /* //////////////////////////////////////////////////////////////
+                                EVENTS
+    ////////////////////////////////////////////////////////////// */
+
+    event PauseUpdate(bool createPauseUpdate, bool liquidatePauseUpdate);
+
+    /*
+    //////////////////////////////////////////////////////////////
+                            ERRORS
+    //////////////////////////////////////////////////////////////
+    */
+
+    error FunctionIsPaused();
 
     /*
     //////////////////////////////////////////////////////////////
@@ -45,7 +47,7 @@ abstract contract FactoryGuardian is BaseGuardian {
      * It throws if create vault is paused.
      */
     modifier whenCreateNotPaused() {
-        require(!createPaused, "Guardian: create paused");
+        if (createPaused) revert FunctionIsPaused();
         _;
     }
 
@@ -54,9 +56,19 @@ abstract contract FactoryGuardian is BaseGuardian {
      * It throws if liquidate vault is paused.
      */
     modifier whenLiquidateNotPaused() {
-        require(!liquidatePaused, "Guardian: liquidate paused");
+        if (liquidatePaused) revert FunctionIsPaused();
         _;
     }
+
+    /* //////////////////////////////////////////////////////////////
+                                CONSTRUCTOR
+    ////////////////////////////////////////////////////////////// */
+
+    constructor() { }
+
+    /* //////////////////////////////////////////////////////////////
+                            PAUSING LOGIC
+    ////////////////////////////////////////////////////////////// */
 
     /**
      * @inheritdoc BaseGuardian
@@ -66,21 +78,21 @@ abstract contract FactoryGuardian is BaseGuardian {
         createPaused = true;
         liquidatePaused = true;
         pauseTimestamp = block.timestamp;
-        emit PauseUpdate(msg.sender, true, true);
+        emit PauseUpdate(true, true);
     }
 
     /**
-     * @notice This function is used to unpause the contract.
-     * @param createPaused_ Whether create functionality should be paused.
-     * @param liquidatePaused_ Whether liquidate functionality should be paused.
-     *      This function can unPause variables individually.
-     *      Only owner can call this function. It updates the variables if incoming variable is false.
-     *  If variable is false and incoming variable is true, then it does not update the variable.
+     * @notice This function is used to unpause one or more flags.
+     * @param createPaused_ false when create functionality should be unPaused.
+     * @param liquidatePaused_ false when liquidate functionality should be unPaused.
+     * @dev This function can unPause repay, withdraw, borrow, and deposit individually.
+     * @dev Can only update flags from paused (true) to unPaused (false), cannot be used the other way around
+     * (to set unPaused flags to paused).
      */
     function unPause(bool createPaused_, bool liquidatePaused_) external onlyOwner {
         createPaused = createPaused && createPaused_;
         liquidatePaused = liquidatePaused && liquidatePaused_;
-        emit PauseUpdate(msg.sender, createPaused, liquidatePaused);
+        emit PauseUpdate(createPaused, liquidatePaused);
     }
 
     /**
@@ -91,7 +103,7 @@ abstract contract FactoryGuardian is BaseGuardian {
         if (createPaused || liquidatePaused) {
             createPaused = false;
             liquidatePaused = false;
-            emit PauseUpdate(msg.sender, false, false);
+            emit PauseUpdate(false, false);
         }
     }
 }

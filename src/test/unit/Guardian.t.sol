@@ -1,34 +1,28 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
 
 import "../../../lib/forge-std/src/Test.sol";
-import {FactoryGuardian} from "../../security/FactoryGuardian.sol";
-import {MainRegistryGuardian} from "../../security/MainRegistryGuardian.sol";
-import {BaseGuardian} from "../../security/BaseGuardian.sol";
+import { FactoryGuardian } from "../../security/FactoryGuardian.sol";
+import { MainRegistryGuardian } from "../../security/MainRegistryGuardian.sol";
+import { BaseGuardian } from "../../security/BaseGuardian.sol";
 
 contract BaseGuardianPossibleExtension is BaseGuardian {
     bool public pausedVar1;
     bool public pausedVar2;
-
-    event PauseUpdate(address account, bool pauseVar1, bool pauseVar2);
 
     function pause() external override onlyGuardian {
         require(block.timestamp > pauseTimestamp + 32 days, "G_P: Cannot pause");
         pausedVar1 = true;
         pausedVar2 = true;
         pauseTimestamp = block.timestamp;
-        emit PauseUpdate(msg.sender, true, true);
     }
 
     function unPause(bool pausedVar1_, bool pausedVar2_) external onlyOwner {
         pausedVar1 = pausedVar1 && pausedVar1_;
         pausedVar2 = pausedVar2 && pausedVar2_;
-        emit PauseUpdate(msg.sender, pausedVar1, pausedVar2);
     }
 
     function unPause() external override {
@@ -36,7 +30,6 @@ contract BaseGuardianPossibleExtension is BaseGuardian {
         if (pausedVar1 || pausedVar2) {
             pausedVar1 = false;
             pausedVar2 = false;
-            emit PauseUpdate(msg.sender, false, false);
         }
     }
 
@@ -49,22 +42,16 @@ contract BaseGuardianPossibleExtension is BaseGuardian {
 contract MainRegistryMockup is MainRegistryGuardian {
     uint256 public storedIncrement;
 
-    event Deposit(uint256 indexed amount, uint256 indexed increment);
-    event Withdraw(uint256 indexed amount, uint256 indexed increment);
-
-    function depositGuarded(uint256 amount) external whenDepositNotPaused {
+    function depositGuarded(uint256) external whenDepositNotPaused {
         storedIncrement += 1;
-        emit Deposit(amount, storedIncrement);
     }
 
-    function withdrawUnguarded(uint256 amount) external {
+    function withdrawUnguarded(uint256) external {
         storedIncrement += 1;
-        emit Withdraw(amount, storedIncrement);
     }
 
-    function withdrawGuarded(uint256 amount) external whenWithdrawNotPaused {
+    function withdrawGuarded(uint256) external whenWithdrawNotPaused {
         storedIncrement += 1;
-        emit Withdraw(amount, storedIncrement);
     }
 
     function reset() external onlyOwner {
@@ -80,22 +67,16 @@ contract MainRegistryMockup is MainRegistryGuardian {
 contract FactoryMockup is FactoryGuardian {
     uint256 public storedIncrement;
 
-    event Create(uint256 indexed id, uint256 indexed increment);
-    event Liquidate(uint256 indexed id, uint256 indexed increment);
-
-    function createGuarded(uint256 id) external whenCreateNotPaused {
+    function createGuarded(uint256) external whenCreateNotPaused {
         storedIncrement += 1;
-        emit Create(id, storedIncrement);
     }
 
-    function liquidateUnguarded(uint256 id) external {
+    function liquidateUnguarded(uint256) external {
         storedIncrement += 1;
-        emit Liquidate(id, storedIncrement);
     }
 
-    function liquidateGuarded(uint256 id) external whenLiquidateNotPaused {
+    function liquidateGuarded(uint256) external whenLiquidateNotPaused {
         storedIncrement += 1;
-        emit Liquidate(id, storedIncrement);
     }
 
     function reset() external onlyOwner {
@@ -115,6 +96,10 @@ contract BaseGuardianUnitTest is Test {
     address guardian = address(1);
     address owner = address(2);
 
+    event GuardianChanged(address indexed oldGuardian, address indexed newGuardian);
+
+    error FunctionIsPaused();
+
     constructor() {
         vm.startPrank(owner);
         baseGuardian = new BaseGuardianPossibleExtension();
@@ -128,7 +113,7 @@ contract BaseGuardianUnitTest is Test {
         vm.assume(nonOwner_ != owner);
         vm.startPrank(nonOwner_);
         // When: a non-owner tries to change the guardian, it is reverted
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         baseGuardian.changeGuardian(guardian);
         vm.stopPrank();
         // Then: the guardian is not changed
@@ -143,6 +128,8 @@ contract BaseGuardianUnitTest is Test {
         // Given: the contract owner is owner
         vm.startPrank(owner);
         // When: the owner changes the guardian
+        vm.expectEmit(true, true, true, true);
+        emit GuardianChanged(guardian, newGuardian_);
         baseGuardian.changeGuardian(newGuardian_);
         vm.stopPrank();
         // Then: the guardian is changed
@@ -310,8 +297,9 @@ contract MainRegistryGuardianUnitTest is Test {
     address guardian = address(1);
     address owner = address(2);
 
-    event Deposit(uint256 indexed amount, uint256 indexed increment);
-    event Withdraw(uint256 indexed amount, uint256 indexed increment);
+    event PauseUpdate(bool withdrawPauseUpdate, bool depositPauseUpdate);
+
+    error FunctionIsPaused();
 
     constructor() {
         vm.startPrank(owner);
@@ -328,6 +316,7 @@ contract MainRegistryGuardianUnitTest is Test {
 
         // Given: the contract is paused
         vm.startPrank(guardian);
+
         mainRegistry.pause();
         vm.stopPrank();
 
@@ -336,18 +325,20 @@ contract MainRegistryGuardianUnitTest is Test {
 
         // When: the owner unPauses the deposit
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, false);
         mainRegistry.unPause(true, false);
         vm.stopPrank();
 
         // When: the owner attempts the pause the deposit from the unPause
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, false);
         mainRegistry.unPause(true, true);
         vm.stopPrank();
 
         // Then: the user can still deposit because the once the deposit is unPaused, it cannot be paused
         vm.startPrank(user);
-        vm.expectEmit(true, true, false, true);
-        emit Deposit(100, 1);
         mainRegistry.depositGuarded(100);
         vm.stopPrank();
 
@@ -365,6 +356,8 @@ contract MainRegistryGuardianUnitTest is Test {
 
         // Given: the contract is paused
         vm.startPrank(guardian);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, true);
         mainRegistry.pause();
         vm.stopPrank();
 
@@ -376,6 +369,8 @@ contract MainRegistryGuardianUnitTest is Test {
 
         // When: the owner unPauses
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(withdrawPaused, depositPaused);
         mainRegistry.unPause(withdrawPaused, depositPaused);
         vm.stopPrank();
 
@@ -394,7 +389,7 @@ contract MainRegistryGuardianUnitTest is Test {
         vm.stopPrank();
 
         // When Then: a user tries to deposit, it is reverted as paused
-        vm.expectRevert("Guardian: deposit paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         vm.startPrank(user);
         mainRegistry.depositGuarded(100);
         vm.stopPrank();
@@ -409,8 +404,6 @@ contract MainRegistryGuardianUnitTest is Test {
 
         // Then: user tries to borrow, which is not paused
         vm.startPrank(user);
-        vm.expectEmit(true, true, false, true);
-        emit Withdraw(100, 1);
         mainRegistry.withdrawGuarded(100);
         vm.stopPrank();
 
@@ -427,8 +420,6 @@ contract MainRegistryGuardianUnitTest is Test {
         // Given: the contract is not paused
         vm.startPrank(user);
         // When: a user supplies
-        vm.expectEmit(true, true, false, true);
-        emit Deposit(100, 1);
         mainRegistry.depositGuarded(100);
         vm.stopPrank();
         // Then: the increment is updated
@@ -442,18 +433,20 @@ contract MainRegistryGuardianUnitTest is Test {
 
         // Given: the contract is paused
         vm.startPrank(guardian);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, true);
         mainRegistry.pause();
         vm.stopPrank();
 
         // Given: only withdraw left paused
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, false);
         mainRegistry.unPause(true, false);
         vm.stopPrank();
 
         // When: a user tries to deposit
         vm.startPrank(user);
-        vm.expectEmit(true, true, false, true);
-        emit Deposit(100, 1);
         mainRegistry.depositGuarded(100);
         vm.stopPrank();
 
@@ -461,7 +454,7 @@ contract MainRegistryGuardianUnitTest is Test {
         assertEq(mainRegistry.storedIncrement(), 1);
 
         // When: user tries to borrow, which is paused
-        vm.expectRevert("Guardian: withdraw paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         vm.startPrank(user);
         mainRegistry.withdrawGuarded(100);
         vm.stopPrank();
@@ -497,8 +490,9 @@ contract FactoryGuardianUnitTest is Test {
     address guardian = address(1);
     address owner = address(2);
 
-    event Create(uint256 indexed id, uint256 indexed increment);
-    event Liquidate(uint256 indexed id, uint256 indexed increment);
+    event PauseUpdate(bool createPauseUpdate, bool liquidatePauseUpdate);
+
+    error FunctionIsPaused();
 
     constructor() {
         vm.startPrank(owner);
@@ -515,6 +509,8 @@ contract FactoryGuardianUnitTest is Test {
 
         // Given: the contract is paused
         vm.startPrank(guardian);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, true);
         factory.pause();
         vm.stopPrank();
 
@@ -523,18 +519,20 @@ contract FactoryGuardianUnitTest is Test {
 
         // When: the owner unPauses the liquidate
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, false);
         factory.unPause(true, false);
         vm.stopPrank();
 
         // When: the owner attempts the pause the liquidate from the unPause
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, false);
         factory.unPause(true, true);
         vm.stopPrank();
 
         // Then: the user can still liquidate because the once the liquidate is unPaused, it cannot be paused
         vm.startPrank(user);
-        vm.expectEmit(true, true, false, true);
-        emit Liquidate(100, 1);
         factory.liquidateGuarded(100);
         vm.stopPrank();
 
@@ -552,6 +550,8 @@ contract FactoryGuardianUnitTest is Test {
 
         // Given: the contract is paused
         vm.startPrank(guardian);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, true);
         factory.pause();
         vm.stopPrank();
 
@@ -563,6 +563,8 @@ contract FactoryGuardianUnitTest is Test {
 
         // When: the owner unPauses
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(createPaused, liquidatePaused);
         factory.unPause(createPaused, liquidatePaused);
         vm.stopPrank();
 
@@ -581,7 +583,7 @@ contract FactoryGuardianUnitTest is Test {
         vm.stopPrank();
 
         // When Then: a user tries to create, it is reverted as paused
-        vm.expectRevert("Guardian: create paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         vm.startPrank(user);
         factory.createGuarded(1);
         vm.stopPrank();
@@ -596,8 +598,6 @@ contract FactoryGuardianUnitTest is Test {
 
         // Then: user tries to create, which is not paused
         vm.startPrank(user);
-        vm.expectEmit(true, true, false, true);
-        emit Create(100, 1);
         factory.createGuarded(100);
         vm.stopPrank();
 
@@ -614,8 +614,6 @@ contract FactoryGuardianUnitTest is Test {
         // Given: the contract is not paused
         vm.startPrank(user);
         // When: a user supplies
-        vm.expectEmit(true, true, false, true);
-        emit Create(100, 1);
         factory.createGuarded(100);
         vm.stopPrank();
         // Then: the increment is updated
@@ -629,18 +627,20 @@ contract FactoryGuardianUnitTest is Test {
 
         // Given: the contract is paused
         vm.startPrank(guardian);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, true);
         factory.pause();
         vm.stopPrank();
 
         // Given: only create left paused
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit PauseUpdate(true, false);
         factory.unPause(true, false);
         vm.stopPrank();
 
         // When: a user tries to liquidate
         vm.startPrank(user);
-        vm.expectEmit(true, true, false, true);
-        emit Liquidate(100, 1);
         factory.liquidateGuarded(100);
         vm.stopPrank();
 
@@ -648,7 +648,7 @@ contract FactoryGuardianUnitTest is Test {
         assertEq(factory.storedIncrement(), 1);
 
         // When: user tries to create, which is paused
-        vm.expectRevert("Guardian: create paused");
+        vm.expectRevert(FunctionIsPaused.selector);
         vm.startPrank(user);
         factory.createGuarded(100);
         vm.stopPrank();

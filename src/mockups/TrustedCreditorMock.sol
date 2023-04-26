@@ -1,12 +1,10 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
 
-import {TrustedCreditor} from "../../lib/arcadia-lending/src/TrustedCreditor.sol";
+import { TrustedCreditor } from "../../lib/arcadia-lending/src/TrustedCreditor.sol";
 
 contract TrustedCreditorMock is TrustedCreditor {
     bool isCallSuccesfull;
@@ -16,24 +14,24 @@ contract TrustedCreditorMock is TrustedCreditor {
 
     mapping(address => uint256) openPosition;
 
-    constructor() TrustedCreditor() {}
-
-    function liquidateVault(uint256) public override {}
+    constructor() TrustedCreditor() { }
 
     function openMarginAccount(uint256)
         external
         view
         override
-        returns (bool success, address baseCurrency_, address liquidator_)
+        returns (bool success, address baseCurrency_, address liquidator_, uint256 fixedLiquidationCost)
     {
         if (isCallSuccesfull) {
             success = true;
             baseCurrency_ = baseCurrency;
             liquidator_ = liquidator;
+            fixedLiquidationCost = 0;
         } else {
             success = false;
             baseCurrency_ = address(0);
             liquidator_ = address(0);
+            fixedLiquidationCost = 0;
         }
     }
 

@@ -1,22 +1,25 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 
-import {TrustedCreditorMock} from "../mockups/TrustedCreditorMock.sol";
-import {LendingPool, DebtToken, ERC20} from "../../lib/arcadia-lending/src/LendingPool.sol";
-import {Tranche} from "../../lib/arcadia-lending/src/Tranche.sol";
+import { TrustedCreditorMock } from "../mockups/TrustedCreditorMock.sol";
+import { LendingPool, DebtToken, ERC20 } from "../../lib/arcadia-lending/src/LendingPool.sol";
+import { Tranche } from "../../lib/arcadia-lending/src/Tranche.sol";
 
-import {ActionMultiCall} from "../actions/MultiCall.sol";
+import { ActionMultiCall } from "../actions/MultiCall.sol";
 import "../actions/utils/ActionData.sol";
-import {MultiActionMock} from "../mockups/MultiActionMock.sol";
+import { MultiActionMock } from "../mockups/MultiActionMock.sol";
 
 contract VaultTestExtension is Vault {
+    constructor(address mainReg_, uint16 vaultVersion_) Vault() {
+        registry = mainReg_;
+        vaultVersion = vaultVersion_;
+    }
+
     function getLengths() external view returns (uint256, uint256, uint256, uint256) {
         return (erc20Stored.length, erc721Stored.length, erc721TokenIds.length, erc1155Stored.length);
     }
@@ -27,6 +30,18 @@ contract VaultTestExtension is Vault {
 
     function setIsTrustedCreditorSet(bool set) public {
         isTrustedCreditorSet = set;
+    }
+
+    function setVaultVersion(uint16 version) public {
+        vaultVersion = version;
+    }
+
+    function setFixedLiquidationCost(uint96 fixedLiquidationCost_) public {
+        fixedLiquidationCost = fixedLiquidationCost_;
+    }
+
+    function setOwner(address newOwner) public {
+        owner = newOwner;
     }
 }
 
@@ -45,7 +60,6 @@ abstract contract vaultTests is DeployArcadiaVaults {
         address[] assetAddresses;
         uint256[] assetIds;
         uint256[] assetAmounts;
-        uint256[] assetTypes;
     }
 
     // EVENTS
@@ -54,18 +68,14 @@ abstract contract vaultTests is DeployArcadiaVaults {
     //this is a before
     constructor() DeployArcadiaVaults() {
         vm.startPrank(creatorAddress);
-        liquidator = new Liquidator(
-            address(factory),
-            address(mainRegistry)
-        );
+        liquidator = new Liquidator(address(factory));
 
-        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory));
-        pool.setLiquidator(address(liquidator));
+        pool = new LendingPool(ERC20(address(dai)), creatorAddress, address(factory), address(liquidator));
         pool.setVaultVersion(1, true);
         debt = DebtToken(address(pool));
 
         tranche = new Tranche(address(pool), "Senior", "SR");
-        pool.addTranche(address(tranche), 50);
+        pool.addTranche(address(tranche), 50, 0);
         vm.stopPrank();
 
         vm.prank(liquidityProvider);
@@ -78,19 +88,17 @@ abstract contract vaultTests is DeployArcadiaVaults {
     //this is a before each
     function setUp() public virtual {
         vm.prank(vaultOwner);
-        vault_ = new VaultTestExtension();
-
-        vm.prank(vaultOwner);
-        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
+        vault_ = new VaultTestExtension(address(mainRegistry), 1);
     }
 
     function deployFactory() internal {
         vm.startPrank(creatorAddress);
-        factory.setNewVaultInfo(address(mainRegistry), address(vault_), Constants.upgradeProof1To2);
-        factory.confirmNewVaultInfo();
+        factory.setNewVaultInfo(address(mainRegistry), address(vault_), Constants.upgradeProof1To2, "");
         vm.stopPrank();
 
         stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault_)).checked_write(true);
+        stdstore.target(address(factory)).sig(factory.vaultIndex.selector).with_key(address(vault_)).checked_write(10);
+        factory.setOwnerOf(vaultOwner, 10);
     }
 
     function openMarginAccount() internal {
@@ -125,12 +133,7 @@ abstract contract vaultTests is DeployArcadiaVaults {
     function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
         virtual
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
+        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
     {
         assetAddresses = new address[](1);
         assetAddresses[0] = address(token);
@@ -141,14 +144,11 @@ abstract contract vaultTests is DeployArcadiaVaults {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = amount;
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.prank(tokenCreatorAddress);
         token.mint(sender, amount);
 
         vm.startPrank(sender);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -162,29 +162,16 @@ abstract contract vaultTests is DeployArcadiaVaults {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amount * 10 ** Constants.ethDecimals;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.startPrank(sender);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
 
-        assetInfo = Assets({
-            assetAddresses: assetAddresses,
-            assetIds: assetIds,
-            assetAmounts: assetAmounts,
-            assetTypes: assetTypes
-        });
+        assetInfo = Assets({ assetAddresses: assetAddresses, assetIds: assetIds, assetAmounts: assetAmounts });
     }
 
     function depositLinkInVault(uint8 amount, address sender)
         public
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
+        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
     {
         assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
@@ -195,15 +182,38 @@ abstract contract vaultTests is DeployArcadiaVaults {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = amount * 10 ** Constants.linkDecimals;
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.startPrank(sender);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
     function depositBaycInVault(uint128[] memory tokenIds, address sender)
+        public
+        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
+    {
+        assetAddresses = new address[](tokenIds.length);
+        assetIds = new uint256[](tokenIds.length);
+        assetAmounts = new uint256[](tokenIds.length);
+
+        uint256 tokenIdToWorkWith;
+        for (uint256 i; i < tokenIds.length; ++i) {
+            tokenIdToWorkWith = tokenIds[i];
+            while (bayc.getOwnerOf(tokenIdToWorkWith) != address(0)) {
+                tokenIdToWorkWith++;
+            }
+
+            bayc.mint(sender, tokenIdToWorkWith);
+            assetAddresses[i] = address(bayc);
+            assetIds[i] = tokenIdToWorkWith;
+            assetAmounts[i] = 1;
+        }
+
+        vm.startPrank(sender);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+    }
+
+    function generateERC721DepositList(uint8 length)
         public
         returns (
             address[] memory assetAddresses,
@@ -212,28 +222,24 @@ abstract contract vaultTests is DeployArcadiaVaults {
             uint256[] memory assetTypes
         )
     {
-        assetAddresses = new address[](tokenIds.length);
-        assetIds = new uint256[](tokenIds.length);
-        assetAmounts = new uint256[](tokenIds.length);
-        assetTypes = new uint256[](tokenIds.length);
+        assetAddresses = new address[](length);
 
-        uint256 tokenIdToWorkWith;
-        for (uint256 i; i < tokenIds.length; ++i) {
-            tokenIdToWorkWith = tokenIds[i];
-            while (bayc.ownerOf(tokenIdToWorkWith) != address(0)) {
-                tokenIdToWorkWith++;
-            }
+        assetIds = new uint256[](length);
 
-            bayc.mint(sender, tokenIdToWorkWith);
+        assetAmounts = new uint256[](length);
+
+        assetTypes = new uint256[](length);
+
+        uint256 id = 10;
+        for (uint256 i; i < length; ++i) {
+            vm.prank(tokenCreatorAddress);
+            bayc.mint(vaultOwner, id);
             assetAddresses[i] = address(bayc);
-            assetIds[i] = tokenIdToWorkWith;
+            assetIds[i] = id;
             assetAmounts[i] = 1;
             assetTypes[i] = 1;
+            ++id;
         }
-
-        vm.startPrank(sender);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
-        vm.stopPrank();
     }
 }
 
@@ -254,18 +260,24 @@ contract DeploymentTest is vaultTests {
                     VAULT MANAGEMENT
 /////////////////////////////////////////////////////////////// */
 contract VaultManagementTest is vaultTests {
+    using stdStorage for StdStorage;
+
+    event BaseCurrencySet(address baseCurrency);
+
     function setUp() public override {
-        vault_ = new VaultTestExtension();
+        vm.prank(vaultOwner);
+        vault_ = new VaultTestExtension(address(mainRegistry), 1);
     }
 
     function testRevert_initialize_AlreadyInitialized() public {
-        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
-
         vm.expectRevert("V_I: Already initialized!");
         vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
     }
 
     function testRevert_initialize_InvalidVersion() public {
+        vault_.setVaultVersion(0);
+        vault_.setOwner(address(0));
+
         vm.expectRevert("V_I: Invalid vault version");
         vault_.initialize(vaultOwner, address(mainRegistry), 0, address(0));
     }
@@ -273,6 +285,11 @@ contract VaultManagementTest is vaultTests {
     function testSuccess_initialize(address owner_, uint16 vaultVersion_) public {
         vm.assume(vaultVersion_ > 0);
 
+        vault_.setVaultVersion(0);
+        vault_.setOwner(address(0));
+
+        vm.expectEmit(true, true, true, true);
+        emit BaseCurrencySet(address(0));
         vault_.initialize(owner_, address(mainRegistry), vaultVersion_, address(0));
 
         assertEq(vault_.owner(), owner_);
@@ -281,28 +298,57 @@ contract VaultManagementTest is vaultTests {
         assertEq(vault_.baseCurrency(), address(0));
     }
 
-    function testSuccess_upgradeVault(address newImplementation, uint16 newVersion) public {
-        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
+    function testSuccess_upgradeVault(
+        address newImplementation,
+        address newRegistry,
+        uint16 newVersion,
+        bytes calldata data
+    ) public {
+        //TrustedCreditor is set
+        vm.prank(vaultOwner);
+        vault_.openTrustedMarginAccount(address(pool));
 
-        vm.startPrank(address(factory));
-        vault_.upgradeVault(newImplementation, newVersion);
-        vm.stopPrank();
+        vm.prank(creatorAddress);
+        pool.setVaultVersion(newVersion, true);
+
+        vm.prank(address(factory));
+        vault_.upgradeVault(newImplementation, newRegistry, newVersion, data);
 
         uint16 expectedVersion = vault_.vaultVersion();
 
         assertEq(expectedVersion, newVersion);
     }
 
-    function testRevert_upgradeVault_byNonOwner(address newImplementation, uint16 newVersion, address nonOwner)
-        public
-    {
-        vm.assume(nonOwner != address(factory));
+    function testRevert_upgradeVault_byNonFactory(
+        address newImplementation,
+        address newRegistry,
+        uint16 newVersion,
+        address nonFactory,
+        bytes calldata data
+    ) public {
+        vm.assume(nonFactory != address(factory));
 
-        vault_.initialize(vaultOwner, address(mainRegistry), 1, address(0));
+        vm.startPrank(nonFactory);
+        vm.expectRevert("V: Only Factory");
+        vault_.upgradeVault(newImplementation, newRegistry, newVersion, data);
+        vm.stopPrank();
+    }
 
-        vm.startPrank(nonOwner);
-        vm.expectRevert("V: You are not the factory");
-        vault_.upgradeVault(newImplementation, newVersion);
+    function testRevert_upgradeVault_InvalidVaultVersion(
+        address newImplementation,
+        address newRegistry,
+        uint16 newVersion,
+        bytes calldata data
+    ) public {
+        vm.assume(newVersion != 1);
+
+        //TrustedCreditor is set
+        vm.prank(vaultOwner);
+        vault_.openTrustedMarginAccount(address(pool));
+
+        vm.startPrank(address(factory));
+        vm.expectRevert("V_UV: Invalid vault version");
+        vault_.upgradeVault(newImplementation, newRegistry, newVersion, data);
         vm.stopPrank();
     }
 }
@@ -321,7 +367,7 @@ contract OwnershipManagementTest is vaultTests {
         assertEq(vaultOwner, vault_.owner());
 
         vm.startPrank(sender);
-        vm.expectRevert("V: You are not the factory");
+        vm.expectRevert("V: Only Factory");
         vault_.transferOwnership(to);
         vm.stopPrank();
 
@@ -357,15 +403,20 @@ contract OwnershipManagementTest is vaultTests {
 contract BaseCurrencyLogicTest is vaultTests {
     using stdStorage for StdStorage;
 
+    event BaseCurrencySet(address baseCurrency);
+
     function setUp() public override {
         super.setUp();
         deployFactory();
-        openMarginAccount();
+        //openMarginAccount();
     }
 
     function testSuccess_setBaseCurrency() public {
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit BaseCurrencySet(address(eth));
         vault_.setBaseCurrency(address(eth));
+        vm.stopPrank();
 
         assertEq(vault_.baseCurrency(), address(eth));
     }
@@ -374,21 +425,16 @@ contract BaseCurrencyLogicTest is vaultTests {
         vm.assume(unprivilegedAddress_ != vaultOwner);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("V: You are not the owner");
+        vm.expectRevert("V: Only Owner");
         vault_.setBaseCurrency(address(eth));
         vm.stopPrank();
-
-        assertEq(vault_.baseCurrency(), address(dai));
     }
 
-    function testRevert_setBaseCurrency_WithUsedMargin() public {
-        bytes32 addDebt = bytes32(abi.encode(1));
-        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(addDebt);
-        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(addDebt);
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(addDebt);
+    function testRevert_setBaseCurrency_TrustedCreditorSet() public {
+        openMarginAccount();
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_SBC: Can't change baseCurrency when Used Margin > 0");
+        vm.expectRevert("V_SBC: Trusted Creditor Set");
         vault_.setBaseCurrency(address(eth));
         vm.stopPrank();
 
@@ -415,6 +461,9 @@ contract MarginAccountSettingsTest is vaultTests {
 
     TrustedCreditorMock trustedCreditor;
 
+    event BaseCurrencySet(address baseCurrency);
+    event TrustedMarginAccountChanged(address indexed protocol, address indexed liquidator);
+
     function setUp() public override {
         super.setUp();
         deployFactory();
@@ -426,7 +475,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.assume(unprivilegedAddress_ != vaultOwner);
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("V: You are not the owner");
+        vm.expectRevert("V: Only Owner");
         vault_.openTrustedMarginAccount(trustedCreditor_);
         vm.stopPrank();
     }
@@ -436,7 +485,7 @@ contract MarginAccountSettingsTest is vaultTests {
         vault_.openTrustedMarginAccount(address(pool));
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_OMA: ALREADY SET");
+        vm.expectRevert("V_OTMA: ALREADY SET");
         vault_.openTrustedMarginAccount(trustedCreditor_);
         vm.stopPrank();
     }
@@ -445,20 +494,29 @@ contract MarginAccountSettingsTest is vaultTests {
         trustedCreditor = new TrustedCreditorMock();
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_OMA: OPENING ACCOUNT REVERTED");
+        vm.expectRevert("V_OTMA: Invalid Version");
         vault_.openTrustedMarginAccount(address(trustedCreditor));
         vm.stopPrank();
     }
 
-    function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency() public {
+    function testSuccess_openTrustedMarginAccount_DifferentBaseCurrency(uint96 fixedLiquidationCost) public {
         assertEq(vault_.baseCurrency(), address(0));
 
-        vm.prank(vaultOwner);
+        vm.prank(creatorAddress);
+        pool.setFixedLiquidationCost(fixedLiquidationCost);
+
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit BaseCurrencySet(address(dai));
+        vm.expectEmit(true, true, true, true);
+        emit TrustedMarginAccountChanged(address(pool), address(liquidator));
         vault_.openTrustedMarginAccount(address(pool));
+        vm.stopPrank();
 
         assertEq(vault_.liquidator(), address(liquidator));
         assertEq(vault_.trustedCreditor(), address(pool));
         assertEq(vault_.baseCurrency(), address(dai));
+        assertEq(vault_.fixedLiquidationCost(), fixedLiquidationCost);
         assertTrue(vault_.isTrustedCreditorSet());
     }
 
@@ -467,8 +525,11 @@ contract MarginAccountSettingsTest is vaultTests {
         stdstore.target(address(vault_)).sig(vault_.baseCurrency.selector).checked_write(address(dai));
         assertEq(vault_.baseCurrency(), address(dai));
 
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit TrustedMarginAccountChanged(address(pool), address(liquidator));
         vault_.openTrustedMarginAccount(address(pool));
+        vm.stopPrank();
 
         assertEq(vault_.liquidator(), address(liquidator));
         assertEq(vault_.trustedCreditor(), address(pool));
@@ -480,14 +541,14 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.assume(nonOwner != vaultOwner);
 
         vm.startPrank(nonOwner);
-        vm.expectRevert("V: You are not the owner");
+        vm.expectRevert("V: Only Owner");
         vault_.closeTrustedMarginAccount();
         vm.stopPrank();
     }
 
     function testRevert_closeTrustedMarginAccount_NonSetTrustedMarginAccount() public {
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_CMA: NOT SET");
+        vm.expectRevert("V_CTMA: NOT SET");
         vault_.closeTrustedMarginAccount();
         vm.stopPrank();
     }
@@ -502,7 +563,7 @@ contract MarginAccountSettingsTest is vaultTests {
         stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(addDebt);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_CMA: NON-ZERO OPEN POSITION");
+        vm.expectRevert("V_CTMA: NON-ZERO OPEN POSITION");
         vault_.closeTrustedMarginAccount();
         vm.stopPrank();
     }
@@ -511,10 +572,15 @@ contract MarginAccountSettingsTest is vaultTests {
         vm.prank(vaultOwner);
         vault_.openTrustedMarginAccount(address(pool));
 
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit TrustedMarginAccountChanged(address(0), address(0));
         vault_.closeTrustedMarginAccount();
+        vm.stopPrank();
 
         assertTrue(!vault_.isTrustedCreditorSet());
+        assertTrue(vault_.trustedCreditor() == address(0));
+        assertTrue(vault_.liquidator() == address(0));
     }
 }
 
@@ -530,22 +596,16 @@ contract MarginRequirementsTest is vaultTests {
         openMarginAccount();
     }
 
-    function testSuccess_increaseMarginPosition_DifferentBaseCurrency(address baseCurrency, uint256 marginIncrease)
-        public
-    {
-        vm.prank(address(pool));
-        bool success = vault_.increaseMarginPosition(baseCurrency, marginIncrease);
-        assertTrue(!success);
-    }
-
-    function testSuccess_increaseMarginPosition_InsufficientMargin(
+    function testSuccess_isVaultHealthy_debtIncrease_InsufficientMargin(
         uint8 depositAmount,
         uint128 marginIncrease,
-        uint128 usedMargin,
+        uint128 openDebt,
+        uint96 fixedLiquidationCost,
         uint8 collFac,
         uint8 liqFac
     ) public {
-        // Given: Risk Factors for basecurrency are set
+        vm.assume(uint256(marginIncrease) + openDebt <= type(uint256).max - fixedLiquidationCost);
+        // Given: Risk Factors for baseCurrency are set
         vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
         vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
@@ -559,7 +619,8 @@ contract MarginRequirementsTest is vaultTests {
         standardERC20PricingModule.setBatchRiskVariables(riskVars_);
 
         // And: Vault has already used margin
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(openDebt);
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
         // And: Eth is deposited in the Vault
         depositEthInVault(depositAmount, vaultOwner);
@@ -567,25 +628,29 @@ contract MarginRequirementsTest is vaultTests {
         // And: There is insufficient Collateral to take more margin
         uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
-        vm.assume(collateralValue < uint256(usedMargin) + marginIncrease);
-        vm.assume(depositAmount > 0); // Devision by 0
+        vm.assume(collateralValue < uint256(openDebt) + marginIncrease + fixedLiquidationCost);
+        vm.assume(depositAmount > 0); // Division by 0
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        bool success = vault_.increaseMarginPosition(address(dai), marginIncrease);
+        (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(marginIncrease, 0);
 
-        // Then: The action is not succesfull
+        // Then: The action is not successful
         assertTrue(!success);
+        assertEq(creditor, address(pool));
+        assertEq(version, 1);
     }
 
-    function testSuccess_increaseMarginPosition_SufficientMargin(
+    function testSuccess_isVaultHealthy_debtIncrease_SufficientMargin(
         uint8 depositAmount,
         uint128 marginIncrease,
-        uint128 usedMargin,
+        uint128 openDebt,
+        uint96 fixedLiquidationCost,
         uint8 collFac,
         uint8 liqFac
     ) public {
-        // Given: Risk Factors for basecurrency are set
+        vm.assume(uint256(marginIncrease) + openDebt <= type(uint256).max - fixedLiquidationCost);
+        // Given: Risk Factors for baseCurrency are set
         vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
         vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
         PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
@@ -599,7 +664,8 @@ contract MarginRequirementsTest is vaultTests {
         standardERC20PricingModule.setBatchRiskVariables(riskVars_);
 
         // And: Vault has already used margin
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(openDebt);
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
         // And: Eth is deposited in the Vault
         depositEthInVault(depositAmount, vaultOwner);
@@ -607,15 +673,101 @@ contract MarginRequirementsTest is vaultTests {
         // And: There is sufficient Collateral to take more margin
         uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
-        vm.assume(collateralValue >= uint256(usedMargin) + marginIncrease);
-        vm.assume(depositAmount > 0); // Devision by 0
+        vm.assume(collateralValue >= uint256(openDebt) + marginIncrease + fixedLiquidationCost);
+        vm.assume(depositAmount > 0); // Division by 0
 
         // When: An Authorised protocol tries to take more margin against the vault
         vm.prank(address(pool));
-        bool success = vault_.increaseMarginPosition(address(dai), marginIncrease);
+        (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(marginIncrease, 0);
 
-        // Then: The action is succesfull
+        // Then: The action is successful
         assertTrue(success);
+        assertEq(creditor, address(pool));
+        assertEq(version, 1);
+    }
+
+    function testSuccess_isVaultHealthy_totalOpenDebt_InsufficientMargin(
+        uint8 depositAmount,
+        uint128 totalOpenDebt,
+        uint96 fixedLiquidationCost,
+        uint8 collFac,
+        uint8 liqFac
+    ) public {
+        // Given: Risk Factors for baseCurrency are set
+        vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
+        vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
+        PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
+        riskVars_[0] = PricingModule.RiskVarInput({
+            baseCurrency: uint8(Constants.DaiBaseCurrency),
+            asset: address(eth),
+            collateralFactor: collFac,
+            liquidationFactor: liqFac
+        });
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setBatchRiskVariables(riskVars_);
+
+        // And: Vault has already used margin
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
+
+        // And: Eth is deposited in the Vault
+        depositEthInVault(depositAmount, vaultOwner);
+
+        // And: There is insufficient Collateral to take more margin
+        uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
+            * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
+        vm.assume(collateralValue < uint256(totalOpenDebt) + fixedLiquidationCost);
+        vm.assume(depositAmount > 0); // Division by 0
+
+        // When: An Authorised protocol tries to take more margin against the vault
+        vm.prank(address(pool));
+        (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(0, totalOpenDebt);
+
+        // Then: The action is not successful
+        assertTrue(!success);
+        assertEq(creditor, address(pool));
+        assertEq(version, 1);
+    }
+
+    function testSuccess_isVaultHealthy_totalOpenDebt_SufficientMargin(
+        uint8 depositAmount,
+        uint128 totalOpenDebt,
+        uint96 fixedLiquidationCost,
+        uint8 collFac,
+        uint8 liqFac
+    ) public {
+        // Given: Risk Factors for baseCurrency are set
+        vm.assume(collFac <= RiskConstants.MAX_COLLATERAL_FACTOR);
+        vm.assume(liqFac <= RiskConstants.MAX_LIQUIDATION_FACTOR);
+        PricingModule.RiskVarInput[] memory riskVars_ = new PricingModule.RiskVarInput[](1);
+        riskVars_[0] = PricingModule.RiskVarInput({
+            baseCurrency: uint8(Constants.DaiBaseCurrency),
+            asset: address(eth),
+            collateralFactor: collFac,
+            liquidationFactor: liqFac
+        });
+        vm.prank(creatorAddress);
+        standardERC20PricingModule.setBatchRiskVariables(riskVars_);
+
+        // And: Vault has already used margin
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
+
+        // And: Eth is deposited in the Vault
+        depositEthInVault(depositAmount, vaultOwner);
+
+        // And: There is sufficient Collateral to take more margin
+        uint256 collateralValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
+            * depositAmount / 10 ** (18 - Constants.daiDecimals) * collFac / 100;
+        vm.assume(collateralValue >= uint256(totalOpenDebt) + fixedLiquidationCost);
+        vm.assume(depositAmount > 0); // Division by 0
+
+        // When: An Authorised protocol tries to take more margin against the vault
+        vm.prank(address(pool));
+        (bool success, address creditor, uint256 version) = vault_.isVaultHealthy(0, totalOpenDebt);
+
+        // Then: The action is successful
+        assertTrue(success);
+        assertEq(creditor, address(pool));
+        assertEq(version, 1);
     }
 
     function testSuccess_getVaultValue(uint8 depositAmount) public {
@@ -639,7 +791,7 @@ contract MarginRequirementsTest is vaultTests {
         vault_.getVaultValue(address(dai));
         uint256 gasAfter = gasleft();
         emit log_int(int256(gasStart - gasAfter));
-        assertLt(gasStart - gasAfter, 200000);
+        assertLt(gasStart - gasAfter, 200_000);
     }
 
     function testSuccess_getLiquidationValue(uint8 depositAmount) public {
@@ -666,10 +818,12 @@ contract MarginRequirementsTest is vaultTests {
         assertEq(expectedValue, actualValue);
     }
 
-    function testSuccess_getUsedMargin(uint256 usedMargin) public {
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+    function testSuccess_getUsedMargin(uint256 openDebt, uint96 fixedLiquidationCost) public {
+        vm.assume(openDebt <= type(uint256).max - fixedLiquidationCost);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(openDebt);
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
-        assertEq(usedMargin, vault_.getUsedMargin());
+        assertEq(openDebt + fixedLiquidationCost, vault_.getUsedMargin());
     }
 
     function testSuccess_getFreeMargin_ZeroInitially() public {
@@ -706,10 +860,10 @@ contract MarginRequirementsTest is vaultTests {
             vault_.getFreeMargin()
         );
 
-        (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIds, vaultOwner);
+        (, uint256[] memory assetIds,) = depositBaycInVault(tokenIds, vaultOwner);
         uint256 depositBaycValue = (
-            (Constants.WAD * rateWbaycToEth * rateEthToUsd)
-                / 10 ** (Constants.oracleEthToUsdDecimals + Constants.oracleWbaycToEthDecimals)
+            (Constants.WAD * rateBaycToEth * rateEthToUsd)
+                / 10 ** (Constants.oracleEthToUsdDecimals + Constants.oracleBaycToEthDecimals)
         ) * assetIds.length;
         assertEq(
             ((depositValueEth + depositValueLink + depositBaycValue) / 10 ** (18 - Constants.daiDecimals) * collFactor_)
@@ -718,20 +872,25 @@ contract MarginRequirementsTest is vaultTests {
         );
     }
 
-    function testSuccess_getFreeMargin_AfterTakingCredit(uint8 amountEth, uint128 amountCredit) public {
+    function testSuccess_getFreeMargin_AfterTakingCredit(
+        uint8 amountEth,
+        uint128 amountCredit,
+        uint16 fixedLiquidationCost
+    ) public {
         uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth
             / 10 ** (18 - Constants.daiDecimals);
 
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        vm.assume((depositValue * collFactor_) / 100 > amountCredit);
+        vm.assume((depositValue * collFactor_) / 100 > uint256(amountCredit) + fixedLiquidationCost);
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
         depositEthInVault(amountEth, vaultOwner);
 
         vm.prank(vaultOwner);
         pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         uint256 actualRemainingCredit = vault_.getFreeMargin();
-        uint256 expectedRemainingCredit = (depositValue * collFactor_) / 100 - amountCredit;
+        uint256 expectedRemainingCredit = (depositValue * collFactor_) / 100 - amountCredit - fixedLiquidationCost;
 
         assertEq(expectedRemainingCredit, actualRemainingCredit);
     }
@@ -771,40 +930,65 @@ contract MarginRequirementsTest is vaultTests {
 contract LiquidationLogicTest is vaultTests {
     using stdStorage for StdStorage;
 
+    event TrustedMarginAccountChanged(address indexed protocol, address indexed liquidator);
+
     function setUp() public override {
         super.setUp();
         deployFactory();
         openMarginAccount();
     }
 
-    function testRevert_liquidateVault_NotAuthorized(address unprivilegedAddress_, address liquidationInitiator)
-        public
-    {
-        vm.assume(unprivilegedAddress_ != address(factory));
+    function testRevert_liquidateVault_NotAuthorized(address unprivilegedAddress_, uint128 openDebt) public {
+        vm.assume(unprivilegedAddress_ != address(liquidator));
 
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("V: You are not the factory");
-        vault_.liquidateVault(liquidationInitiator);
+        vm.expectRevert("V_LV: Only Liquidator");
+        vault_.liquidateVault(openDebt);
         vm.stopPrank();
     }
 
-    function testRevert_liquidateVault_VaultIsHealthy(address liquidationInitiator) public {
-        vm.startPrank(address(factory));
-        vm.expectRevert("V_LV: This vault is healthy");
-        vault_.liquidateVault(liquidationInitiator);
+    function testRevert_liquidateVault_VaultIsHealthy() public {
+        vm.startPrank(address(liquidator));
+        vm.expectRevert("V_LV: liqValue above usedMargin");
+        vault_.liquidateVault(0);
         vm.stopPrank();
     }
 
-    function testSuccess_liquidateVault(address liquidationInitiator, uint128 usedMargin) public {
-        vm.assume(usedMargin > 0);
-        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(usedMargin);
-        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(usedMargin);
-        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(usedMargin);
+    function testSuccess_liquidateVault(uint8 amountEth, uint128 openDebt, uint16 fixedLiquidationCost) public {
+        vm.assume(openDebt > 0);
 
-        vm.prank(address(factory));
-        address liquidator_ = vault_.liquidateVault(liquidationInitiator);
+        uint256 depositValue = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals) * amountEth
+            / 10 ** (18 - Constants.daiDecimals);
 
-        assertEq(liquidator_, address(liquidator));
+        uint16 liqFactor_ = RiskConstants.DEFAULT_LIQUIDATION_FACTOR;
+
+        vm.assume((depositValue * liqFactor_) / 100 < uint256(openDebt) + fixedLiquidationCost);
+        depositEthInVault(amountEth, vaultOwner);
+
+        bytes32 addDebt = bytes32(abi.encode(openDebt));
+        stdstore.target(address(debt)).sig(debt.totalSupply.selector).checked_write(addDebt);
+        stdstore.target(address(debt)).sig(debt.realisedDebt.selector).checked_write(addDebt);
+        stdstore.target(address(debt)).sig(debt.balanceOf.selector).with_key(address(vault_)).checked_write(addDebt);
+
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
+
+        vm.startPrank(address(liquidator));
+        vm.expectEmit(true, true, true, true);
+        emit TrustedMarginAccountChanged(address(0), address(0));
+        (address originalOwner, address baseCurrency, address trustedCreditor) = vault_.liquidateVault(openDebt);
+        vm.stopPrank();
+
+        assertEq(originalOwner, vaultOwner);
+        assertEq(baseCurrency, address(dai));
+        assertEq(trustedCreditor, address(pool));
+
+        assertEq(vault_.owner(), address(liquidator));
+        assertEq(vault_.isTrustedCreditorSet(), false);
+        assertEq(vault_.trustedCreditor(), address(0));
+        assertEq(vault_.fixedLiquidationCost(), 0);
+
+        uint256 index = factory.vaultIndex(address(vault_));
+        assertEq(factory.ownerOf(index), address(liquidator));
     }
 }
 
@@ -818,15 +1002,12 @@ contract VaultActionTest is vaultTests {
     VaultTestExtension public proxy_;
     TrustedCreditorMock public trustedCreditor;
 
+    event AssetManagerSet(address indexed owner, address indexed assetManager, bool value);
+
     function depositERC20InVault(ERC20Mock token, uint128 amount, address sender)
         public
         override
-        returns (
-            address[] memory assetAddresses,
-            uint256[] memory assetIds,
-            uint256[] memory assetAmounts,
-            uint256[] memory assetTypes
-        )
+        returns (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts)
     {
         assetAddresses = new address[](1);
         assetAddresses[0] = address(token);
@@ -837,9 +1018,6 @@ contract VaultActionTest is vaultTests {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = amount;
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.prank(tokenCreatorAddress);
         token.mint(sender, amount);
 
@@ -847,7 +1025,7 @@ contract VaultActionTest is vaultTests {
 
         vm.startPrank(sender);
         token.approve(address(proxy_), amount);
-        proxy_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -855,17 +1033,16 @@ contract VaultActionTest is vaultTests {
         super.setUp();
         deployFactory();
 
-        action = new ActionMultiCall(address(mainRegistry));
+        action = new ActionMultiCall();
         deal(address(eth), address(action), 1000 * 10 ** 20, false);
 
         vm.startPrank(creatorAddress);
-        vault = new VaultTestExtension();
-        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
-        factory.confirmNewVaultInfo();
+        vault = new VaultTestExtension(address(mainRegistry), 1);
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2, "");
         vm.stopPrank();
 
         vm.startPrank(vaultOwner);
-        proxyAddr = factory.createVault(12345678, 0, address(0));
+        proxyAddr = factory.createVault(12_345_678, 0, address(0));
         proxy_ = VaultTestExtension(proxyAddr);
         vm.stopPrank();
 
@@ -882,30 +1059,53 @@ contract VaultActionTest is vaultTests {
         vm.assume(nonOwner != vaultOwner);
 
         vm.startPrank(nonOwner);
-        vm.expectRevert("V: You are not the owner");
+        vm.expectRevert("V: Only Owner");
         vault_.setAssetManager(assetManager, value);
         vm.stopPrank();
     }
 
     function testSuccess_setAssetManager(address assetManager, bool startValue, bool endvalue) public {
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit AssetManagerSet(vaultOwner, assetManager, startValue);
         vault_.setAssetManager(assetManager, startValue);
-        assertEq(vault_.isAssetManager(assetManager), startValue);
+        vm.stopPrank();
+        assertEq(vault_.isAssetManager(vaultOwner, assetManager), startValue);
 
-        vm.prank(vaultOwner);
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit AssetManagerSet(vaultOwner, assetManager, endvalue);
         vault_.setAssetManager(assetManager, endvalue);
-        assertEq(vault_.isAssetManager(assetManager), endvalue);
+        vm.stopPrank();
+        assertEq(vault_.isAssetManager(vaultOwner, assetManager), endvalue);
     }
 
     function testRevert_vaultManagementAction_NonAssetManager(address sender, address assetManager) public {
         vm.assume(sender != vaultOwner);
         vm.assume(sender != assetManager);
+        vm.assume(sender != address(0));
 
         vm.prank(vaultOwner);
         proxy_.setAssetManager(assetManager, true);
 
         vm.startPrank(sender);
-        vm.expectRevert("V: You are not an asset manager");
+        vm.expectRevert("V: Only Asset Manager");
+        proxy_.vaultManagementAction(address(action), new bytes(0));
+        vm.stopPrank();
+    }
+
+    function testRevert_vaultManagementAction_OwnerChanged(address assetManager) public {
+        vm.assume(assetManager != address(0));
+        address newOwner = address(60); //Annoying to fuzz since it often fuzzes to existing contracts without an onERC721Received
+
+        vm.prank(vaultOwner);
+        proxy_.setAssetManager(assetManager, true);
+
+        vm.prank(vaultOwner);
+        factory.safeTransferFrom(vaultOwner, newOwner, address(proxy_));
+
+        vm.startPrank(assetManager);
+        vm.expectRevert("V: Only Asset Manager");
         proxy_.vaultManagementAction(address(action), new bytes(0));
         vm.stopPrank();
     }
@@ -914,13 +1114,64 @@ contract VaultActionTest is vaultTests {
         vm.assume(action_ != address(action));
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("VL_VMA: Action is not allowlisted");
+        vm.expectRevert("V_VMA: Action not allowed");
         proxy_.vaultManagementAction(action_, new bytes(0));
         vm.stopPrank();
     }
 
-    function testSuccess_vaultManagementAction_Owner(uint128 debtAmount) public {
+    function testRevert_vaultManagementAction_tooManyAssets(uint8 arrLength) public {
+        vm.assume(arrLength > proxy_.ASSET_LIMIT() && arrLength < 50);
+
+        address[] memory assetAddresses = new address[](arrLength);
+
+        uint256[] memory assetIds = new uint256[](arrLength);
+
+        uint256[] memory assetAmounts = new uint256[](arrLength);
+
+        uint256[] memory assetTypes = new uint256[](arrLength);
+
+        (assetAddresses, assetIds, assetAmounts, assetTypes) = generateERC721DepositList(arrLength);
+
+        bytes[] memory data = new bytes[](0);
+        address[] memory to = new address[](0);
+
+        ActionData memory assetDataOut = ActionData({
+            assets: new address[](0),
+            assetIds: new uint256[](0),
+            assetAmounts: new uint256[](0),
+            assetTypes: new uint256[](0),
+            actionBalances: new uint256[](0)
+        });
+
+        ActionData memory assetDataIn = ActionData({
+            assets: assetAddresses,
+            assetIds: assetIds,
+            assetAmounts: assetAmounts,
+            assetTypes: assetTypes,
+            actionBalances: new uint256[](0)
+        });
+
+        bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
+
+        //Already sent asset to action contract
+        uint256 id = 10;
+        for (uint256 i; i < arrLength; ++i) {
+            vm.prank(vaultOwner);
+            bayc.transferFrom(vaultOwner, address(action), id);
+            ++id;
+        }
+        vm.prank(address(action));
+        bayc.setApprovalForAll(address(proxy_), true);
+
+        vm.prank(vaultOwner);
+        vm.expectRevert("V_D: Too many assets");
+        proxy_.vaultManagementAction(address(action), callData);
+    }
+
+    function testSuccess_vaultManagementAction_Owner(uint128 debtAmount, uint32 fixedLiquidationCost) public {
         multiActionMock = new MultiActionMock();
+
+        proxy_.setFixedLiquidationCost(fixedLiquidationCost);
 
         vm.prank(vaultOwner);
         proxy_.setBaseCurrency(address(eth));
@@ -933,7 +1184,7 @@ contract VaultActionTest is vaultTests {
         (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
 
         uint256 ethToLinkRatio = ethRate / linkRate;
-        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+        vm.assume(1000 * 10 ** 18 + ((uint256(debtAmount) + fixedLiquidationCost) * ethToLinkRatio) < type(uint256).max);
 
         bytes[] memory data = new bytes[](3);
         address[] memory to = new address[](3);
@@ -994,9 +1245,15 @@ contract VaultActionTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testSuccess_vaultManagementAction_Assetmanager(uint128 debtAmount, address assetManager) public {
+    function testSuccess_vaultManagementAction_AssetManager(
+        uint128 debtAmount,
+        uint32 fixedLiquidationCost,
+        address assetManager
+    ) public {
         vm.assume(vaultOwner != assetManager);
         multiActionMock = new MultiActionMock();
+
+        proxy_.setFixedLiquidationCost(fixedLiquidationCost);
 
         vm.prank(vaultOwner);
         proxy_.setBaseCurrency(address(eth));
@@ -1012,7 +1269,7 @@ contract VaultActionTest is vaultTests {
         (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
 
         uint256 ethToLinkRatio = ethRate / linkRate;
-        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+        vm.assume(1000 * 10 ** 18 + ((uint256(debtAmount) + fixedLiquidationCost) * ethToLinkRatio) < type(uint256).max);
 
         bytes[] memory data = new bytes[](3);
         address[] memory to = new address[](3);
@@ -1073,8 +1330,12 @@ contract VaultActionTest is vaultTests {
         vm.stopPrank();
     }
 
-    function testRevert_vaultManagementAction_InsufficientReturned(uint128 debtAmount) public {
+    function testRevert_vaultManagementAction_InsufficientReturned(uint128 debtAmount, uint32 fixedLiquidationCost)
+        public
+    {
         vm.assume(debtAmount > 0);
+
+        proxy_.setFixedLiquidationCost(fixedLiquidationCost);
 
         multiActionMock = new MultiActionMock();
 
@@ -1089,7 +1350,7 @@ contract VaultActionTest is vaultTests {
         (uint256 linkRate,) = oracleHub.getRate(oracleLinkToUsdArr, 0);
 
         uint256 ethToLinkRatio = ethRate / linkRate;
-        vm.assume(1000 * 10 ** 18 + (uint256(debtAmount) * ethToLinkRatio) < type(uint256).max);
+        vm.assume(1000 * 10 ** 18 + ((uint256(debtAmount) + fixedLiquidationCost) * ethToLinkRatio) < type(uint256).max);
 
         bytes[] memory data = new bytes[](3);
         address[] memory to = new address[](3);
@@ -1143,7 +1404,7 @@ contract VaultActionTest is vaultTests {
         bytes memory callData = abi.encode(assetDataOut, assetDataIn, to, data);
 
         vm.startPrank(vaultOwner);
-        vm.expectRevert("VMA: coll. value too low");
+        vm.expectRevert("V_VMA: Vault Unhealthy");
         proxy_.vaultManagementAction(address(action), callData);
         vm.stopPrank();
     }
@@ -1153,6 +1414,10 @@ contract VaultActionTest is vaultTests {
             ASSET DEPOSIT/WITHDRAWN LOGIC
 /////////////////////////////////////////////////////////////// */
 contract AssetManagementTest is vaultTests {
+    using stdStorage for StdStorage;
+
+    VaultTestExtension public vault2;
+
     function setUp() public override {
         super.setUp();
         deployFactory();
@@ -1171,12 +1436,9 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 10 * 10 ** Constants.ethDecimals;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.startPrank(sender);
-        vm.expectRevert("V: You are not the owner");
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.expectRevert("V: Only Owner");
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -1189,11 +1451,11 @@ contract AssetManagementTest is vaultTests {
 
         uint256[] memory assetAmounts = new uint256[](arrLength);
 
-        uint256[] memory assetTypes = new uint256[](arrLength);
+        (assetAddresses, assetIds, assetAmounts,) = generateERC721DepositList(arrLength);
 
         vm.prank(vaultOwner);
         vm.expectRevert("V_D: Too many assets");
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testRevert_deposit_tooManyAssetsNotAtOnce(uint8 arrLength) public {
@@ -1209,11 +1471,8 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 10 * 10 ** Constants.ethDecimals;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.prank(vaultOwner);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
 
         assertEq(vault_.erc20Stored(0), address(eth));
@@ -1226,22 +1485,17 @@ contract AssetManagementTest is vaultTests {
 
         assetAmounts = new uint256[](arrLength);
 
-        assetTypes = new uint256[](arrLength);
+        (assetAddresses, assetIds, assetAmounts,) = generateERC721DepositList(arrLength);
 
         vm.prank(vaultOwner);
         vm.expectRevert("V_D: Too many assets");
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     //input as uint8 to prevent too long lists as fuzz input
-    function testRevert_deposit_LengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen, uint8 typesLen)
-        public
-    {
-        vm.assume((addrLen != idLen && addrLen != amountLen && addrLen != typesLen));
-        vm.assume(
-            addrLen <= vault_.ASSET_LIMIT() && idLen <= vault_.ASSET_LIMIT() && amountLen <= vault_.ASSET_LIMIT()
-                && typesLen <= vault_.ASSET_LIMIT()
-        );
+    function testRevert_deposit_LengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen) public {
+        vm.assume((addrLen != idLen && addrLen != amountLen));
+        vm.assume(addrLen <= vault_.ASSET_LIMIT() && idLen <= vault_.ASSET_LIMIT() && amountLen <= vault_.ASSET_LIMIT());
 
         address[] memory assetAddresses = new address[](addrLen);
         for (uint256 i; i < addrLen; ++i) {
@@ -1258,14 +1512,9 @@ contract AssetManagementTest is vaultTests {
             assetAmounts[k] = k;
         }
 
-        uint256[] memory assetTypes = new uint256[](typesLen);
-        for (uint256 l; l < typesLen; l++) {
-            assetTypes[l] = l;
-        }
-
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_D: Length mismatch");
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.expectRevert("MR_BPD: LENGTH_MISMATCH");
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -1275,6 +1524,7 @@ contract AssetManagementTest is vaultTests {
         vm.assume(inputAddr != address(snx));
         vm.assume(inputAddr != address(bayc));
         vm.assume(inputAddr != address(interleave));
+        vm.assume(inputAddr != address(dai));
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = inputAddr;
@@ -1285,12 +1535,9 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1000;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.startPrank(vaultOwner);
-        vm.expectRevert("MR_BPD: Asset not in mainreg");
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.expectRevert();
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -1311,17 +1558,16 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 1;
-
         vm.startPrank(vaultOwner);
-        vm.expectRevert("MR_BPD: Asset not in mainreg");
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.expectRevert();
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
-    function testRevert_deposit_UnknownAssetType(uint256 assetType) public {
+    function testRevert_deposit_UnknownAssetType(uint96 assetType) public {
         vm.assume(assetType >= 3);
+
+        mainRegistry.setAssetType(address(eth), assetType);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -1332,12 +1578,9 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = assetType;
-
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_D: Unknown asset type");
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -1351,11 +1594,8 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 0;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.prank(vaultOwner);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
 
         (uint256 erc20Len,,,) = vault_.getLengths();
@@ -1374,11 +1614,8 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amount * 10 ** Constants.ethDecimals;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.prank(vaultOwner);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
 
         assertEq(vault_.erc20Stored(0), address(eth));
@@ -1386,7 +1623,7 @@ contract AssetManagementTest is vaultTests {
     }
 
     function testSuccess_deposit_MultipleSameERC20(uint16 amount) public {
-        vm.assume(amount <= 50000);
+        vm.assume(amount <= 50_000);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(link);
@@ -1397,14 +1634,11 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amount * 10 ** Constants.linkDecimals;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.startPrank(vaultOwner);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         (uint256 erc20StoredDuring,,,) = vault_.getLengths();
 
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         (uint256 erc20StoredAfter,,,) = vault_.getLengths();
         vm.stopPrank();
 
@@ -1422,11 +1656,8 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 1;
-
         vm.prank(vaultOwner);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
 
         assertEq(vault_.erc721Stored(0), address(bayc));
     }
@@ -1441,11 +1672,8 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 1;
-
         vm.prank(vaultOwner);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
 
         assertEq(vault_.erc721Stored(0), address(bayc));
         (, uint256 erc721LengthFirst,,) = vault_.getLengths();
@@ -1453,7 +1681,7 @@ contract AssetManagementTest is vaultTests {
 
         assetIds[0] = 3;
         vm.prank(vaultOwner);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
 
         assertEq(vault_.erc721Stored(1), address(bayc));
         (, uint256 erc721LengthSecond,,) = vault_.getLengths();
@@ -1473,11 +1701,8 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 2;
-
         vm.prank(vaultOwner);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
 
         assertEq(vault_.erc1155Stored(0), address(interleave));
         assertEq(vault_.erc1155TokenIds(0), 1);
@@ -1500,13 +1725,8 @@ contract AssetManagementTest is vaultTests {
         assetAmounts[1] = erc20Amount2 * 10 ** Constants.linkDecimals;
         assetAmounts[2] = 1;
 
-        uint256[] memory assetTypes = new uint256[](3);
-        assetTypes[0] = 0;
-        assetTypes[1] = 0;
-        assetTypes[2] = 1;
-
         vm.prank(vaultOwner);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         assertEq(vault_.erc20Balances(address(eth)), eth.balanceOf(address(vault_)));
         assertEq(vault_.erc20Balances(address(eth)), erc20Amount1 * 10 ** Constants.ethDecimals);
         assertEq(vault_.erc20Balances(address(link)), link.balanceOf(address(vault_)));
@@ -1534,14 +1754,8 @@ contract AssetManagementTest is vaultTests {
         assetAmounts[2] = 1;
         assetAmounts[3] = erc1155Amount;
 
-        uint256[] memory assetTypes = new uint256[](4);
-        assetTypes[0] = 0;
-        assetTypes[1] = 0;
-        assetTypes[2] = 1;
-        assetTypes[3] = 2;
-
         vm.prank(vaultOwner);
-        vault_.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
         assertEq(vault_.erc20Balances(address(eth)), eth.balanceOf(address(vault_)));
         assertEq(vault_.erc20Balances(address(eth)), erc20Amount1 * 10 ** Constants.ethDecimals);
         assertEq(vault_.erc20Balances(address(link)), link.balanceOf(address(vault_)));
@@ -1557,15 +1771,13 @@ contract AssetManagementTest is vaultTests {
 
         assetInfo.assetAmounts[0] = withdrawalAmount * 10 ** Constants.ethDecimals;
         vm.startPrank(sender);
-        vm.expectRevert("V: You are not the owner");
-        vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
+        vm.expectRevert("V: Only Owner");
+        vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts);
     }
 
     //input as uint8 to prevent too long lists as fuzz input
-    function testRevert_withdraw_LengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen, uint8 typesLen)
-        public
-    {
-        vm.assume((addrLen != idLen && addrLen != amountLen && addrLen != typesLen));
+    function testRevert_withdraw_LengthOfListDoesNotMatch(uint8 addrLen, uint8 idLen, uint8 amountLen) public {
+        vm.assume((addrLen != idLen && addrLen != amountLen));
 
         address[] memory assetAddresses = new address[](addrLen);
         for (uint256 i; i < addrLen; ++i) {
@@ -1582,20 +1794,17 @@ contract AssetManagementTest is vaultTests {
             assetAmounts[k] = k;
         }
 
-        uint256[] memory assetTypes = new uint256[](typesLen);
-        for (uint256 l; l < typesLen; l++) {
-            assetTypes[l] = l;
-        }
-
         vm.startPrank(vaultOwner);
-        vm.expectRevert("V_W: Length mismatch");
-        vault_.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vm.expectRevert("MR_BPW: LENGTH_MISMATCH");
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
-    function testRevert_withdraw_UnknownAssetType(uint256 assetType) public {
+    function testRevert_withdraw_UnknownAssetType(uint96 assetType) public {
         vm.assume(assetType >= 3);
         depositEthInVault(5, vaultOwner);
+
+        mainRegistry.setAssetType(address(eth), assetType);
 
         address[] memory assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -1606,12 +1815,9 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = assetType;
-
         vm.startPrank(vaultOwner);
         vm.expectRevert("V_W: Unknown asset type");
-        vault_.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
@@ -1629,18 +1835,99 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory assetAmounts = new uint256[](1);
         assetAmounts[0] = amountWithdraw;
 
-        uint256[] memory assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.startPrank(vaultOwner);
         vm.expectRevert(stdError.arithmeticError);
-        vault_.withdraw(assetAddresses, assetIds, assetAmounts, assetTypes);
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+    }
+
+    function testRevert_withdraw_ERC721TransferAndWithdrawTokenOneERC721Deposited() public {
+        bayc.mint(vaultOwner, 20);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(bayc);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 20;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 1;
+
+        vm.startPrank(vaultOwner);
+        bayc.approve(address(vault_), 20);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+
+        vm.prank(vaultOwner);
+        vault2 = new VaultTestExtension(address(mainRegistry), 2);
+        stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault2)).checked_write(true);
+        stdstore.target(address(factory)).sig(factory.vaultIndex.selector).with_key(address(vault2)).checked_write(11);
+        factory.setOwnerOf(vaultOwner, 11);
+
+        mayc.mint(vaultOwner, 10);
+        mayc.mint(vaultOwner, 11);
+
+        assetAddresses[0] = address(mayc);
+        assetIds[0] = 10;
+
+        vm.startPrank(vaultOwner);
+        mayc.approve(address(vault2), 10);
+        vault2.deposit(assetAddresses, assetIds, assetAmounts);
+        mayc.safeTransferFrom(vaultOwner, address(vault_), 11);
+        vm.stopPrank();
+
+        assetIds[0] = 11;
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_W721: Unknown asset");
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts);
+        vm.stopPrank();
+    }
+
+    function testRevert_withdraw_ERC721TransferAndWithdrawTokenNotOneERC721Deposited(uint128[] calldata tokenIdsDeposit)
+        public
+    {
+        vm.assume(tokenIdsDeposit.length < vault_.ASSET_LIMIT());
+        vm.assume(tokenIdsDeposit.length != 1);
+
+        depositBaycInVault(tokenIdsDeposit, vaultOwner);
+
+        vm.prank(vaultOwner);
+        vault2 = new VaultTestExtension(address(mainRegistry), 2);
+        stdstore.target(address(factory)).sig(factory.isVault.selector).with_key(address(vault2)).checked_write(true);
+        stdstore.target(address(factory)).sig(factory.vaultIndex.selector).with_key(address(vault2)).checked_write(11);
+        factory.setOwnerOf(vaultOwner, 11);
+
+        mayc.mint(vaultOwner, 10);
+        mayc.mint(vaultOwner, 11);
+
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(mayc);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 10;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 1;
+
+        vm.startPrank(vaultOwner);
+        mayc.approve(address(vault2), 10);
+        vault2.deposit(assetAddresses, assetIds, assetAmounts);
+        mayc.safeTransferFrom(vaultOwner, address(vault_), 11);
+        vm.stopPrank();
+
+        assetIds[0] = 11;
+
+        vm.startPrank(vaultOwner);
+        vm.expectRevert("V_W721: Unknown asset");
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts);
         vm.stopPrank();
     }
 
     function testRevert_withdraw_ERC20UnsufficientCollateral(
         uint8 baseAmountDeposit,
         uint24 baseAmountCredit,
+        uint32 fixedLiquidationCost,
         uint8 baseAmountWithdraw
     ) public {
         vm.assume(baseAmountCredit > 0);
@@ -1656,17 +1943,19 @@ contract AssetManagementTest is vaultTests {
 
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        vm.assume(amountCredit <= (valueDeposit * collFactor_) / 100);
-        vm.assume(amountCredit > ((valueDeposit - ValueWithdraw) * collFactor_) / 100);
+        vm.assume(amountCredit + fixedLiquidationCost <= (valueDeposit * collFactor_) / 100);
+        vm.assume(amountCredit + fixedLiquidationCost > ((valueDeposit - ValueWithdraw) * collFactor_) / 100);
 
         Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
+
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
         vm.startPrank(vaultOwner);
         pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
 
         assetInfo.assetAmounts[0] = amountWithdraw;
-        vm.expectRevert("V_W: coll. value too low!");
-        vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
+        vm.expectRevert("V_W: Vault Unhealthy");
+        vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts);
         vm.stopPrank();
     }
 
@@ -1676,13 +1965,12 @@ contract AssetManagementTest is vaultTests {
     ) public {
         vm.assume(tokenIdsDeposit.length < vault_.ASSET_LIMIT());
 
-        (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
+        (, uint256[] memory assetIds,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
         vm.assume(assetIds.length >= amountsWithdrawn && assetIds.length > 1 && amountsWithdrawn > 1);
 
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
-        uint256 rateInUsd = (
-            ((Constants.WAD * rateWbaycToEth) / 10 ** Constants.oracleWbaycToEthDecimals) * rateEthToUsd
-        ) / 10 ** Constants.oracleEthToUsdDecimals / 10 ** (18 - Constants.daiDecimals);
+        uint256 rateInUsd = (((Constants.WAD * rateBaycToEth) / 10 ** Constants.oracleBaycToEthDecimals) * rateEthToUsd)
+            / 10 ** Constants.oracleEthToUsdDecimals / 10 ** (18 - Constants.daiDecimals);
 
         uint128 maxAmountCredit = uint128(((assetIds.length - amountsWithdrawn) * rateInUsd * collFactor_) / 100);
 
@@ -1692,19 +1980,17 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory withdrawalIds = new uint256[](amountsWithdrawn);
         address[] memory withdrawalAddresses = new address[](amountsWithdrawn);
         uint256[] memory withdrawalAmounts = new uint256[](amountsWithdrawn);
-        uint256[] memory withdrawalTypes = new uint256[](amountsWithdrawn);
         for (uint256 i; i < amountsWithdrawn; ++i) {
             withdrawalIds[i] = assetIds[i];
             withdrawalAddresses[i] = address(bayc);
             withdrawalAmounts[i] = 1;
-            withdrawalTypes[i] = 1;
         }
 
-        vm.expectRevert("V_W: coll. value too low!");
-        vault_.withdraw(withdrawalAddresses, withdrawalIds, withdrawalAmounts, withdrawalTypes);
+        vm.expectRevert("V_W: Vault Unhealthy");
+        vault_.withdraw(withdrawalAddresses, withdrawalIds, withdrawalAmounts);
     }
 
-    function testSuccess_withdraw_ERC20NoDebt(uint8 baseAmountDeposit) public {
+    function testSuccess_withdraw_ERC20NoDebt(uint8 baseAmountDeposit, uint32 fixedLiquidationCost) public {
         vm.assume(baseAmountDeposit > 0);
         uint256 valueAmount = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
             * baseAmountDeposit / 10 ** (18 - Constants.daiDecimals);
@@ -1715,10 +2001,12 @@ contract AssetManagementTest is vaultTests {
 
         assertEq(vaultValue, valueAmount);
 
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
+
         vm.startPrank(vaultOwner);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(vault_), vaultOwner, assetInfo.assetAmounts[0]);
-        vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
+        vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts);
         vm.stopPrank();
 
         uint256 vaultValueAfter = vault_.getVaultValue(address(dai));
@@ -1730,9 +2018,10 @@ contract AssetManagementTest is vaultTests {
         assertEq(assetAmounts.length, 0);
     }
 
-    function testSuccess_withdraw_ERC20fterTakingCredit(
+    function testSuccess_withdraw_ERC20AfterTakingCredit(
         uint8 baseAmountDeposit,
         uint32 baseAmountCredit,
+        uint32 fixedLiquidationCost,
         uint8 baseAmountWithdraw
     ) public {
         uint256 valueDeposit = ((Constants.WAD * rateEthToUsd) / 10 ** Constants.oracleEthToUsdDecimals)
@@ -1745,13 +2034,15 @@ contract AssetManagementTest is vaultTests {
 
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        vm.assume(amountCredit < ((valueDeposit - valueWithdraw) * collFactor_) / 100);
+        vm.assume(amountCredit + fixedLiquidationCost <= ((valueDeposit - valueWithdraw) * collFactor_) / 100);
+
+        vault_.setFixedLiquidationCost(fixedLiquidationCost);
 
         Assets memory assetInfo = depositEthInVault(baseAmountDeposit, vaultOwner);
         vm.startPrank(vaultOwner);
         pool.borrow(amountCredit, address(vault_), vaultOwner, emptyBytes3);
         assetInfo.assetAmounts[0] = amountWithdraw;
-        vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts, assetInfo.assetTypes);
+        vault_.withdraw(assetInfo.assetAddresses, assetInfo.assetIds, assetInfo.assetAmounts);
         vm.stopPrank();
 
         uint256 actualValue = vault_.getVaultValue(address(dai));
@@ -1766,7 +2057,7 @@ contract AssetManagementTest is vaultTests {
         vm.assume(tokenIdsDeposit.length < vault_.ASSET_LIMIT());
         uint128 amountCredit = uint128(baseAmountCredit * 10 ** Constants.daiDecimals);
 
-        (, uint256[] memory assetIds,,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
+        (, uint256[] memory assetIds,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
 
         uint256 randomAmounts = assetIds.length > 0
             ? uint256(
@@ -1780,9 +2071,8 @@ contract AssetManagementTest is vaultTests {
 
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
 
-        uint256 rateInUsd = (
-            ((Constants.WAD * rateWbaycToEth) / 10 ** Constants.oracleWbaycToEthDecimals) * rateEthToUsd
-        ) / 10 ** Constants.oracleEthToUsdDecimals / 10 ** (18 - Constants.daiDecimals);
+        uint256 rateInUsd = (((Constants.WAD * rateBaycToEth) / 10 ** Constants.oracleBaycToEthDecimals) * rateEthToUsd)
+            / 10 ** Constants.oracleEthToUsdDecimals / 10 ** (18 - Constants.daiDecimals);
         uint256 valueOfDeposit = rateInUsd * assetIds.length;
 
         uint256 valueOfWithdrawal = rateInUsd * randomAmounts;
@@ -1797,20 +2087,168 @@ contract AssetManagementTest is vaultTests {
         uint256[] memory withdrawalIds = new uint256[](randomAmounts);
         address[] memory withdrawalAddresses = new address[](randomAmounts);
         uint256[] memory withdrawalAmounts = new uint256[](randomAmounts);
-        uint256[] memory withdrawalTypes = new uint256[](randomAmounts);
         for (uint256 i; i < randomAmounts; ++i) {
             withdrawalIds[i] = assetIds[i];
             withdrawalAddresses[i] = address(bayc);
             withdrawalAmounts[i] = 1;
-            withdrawalTypes[i] = 1;
         }
 
-        vault_.withdraw(withdrawalAddresses, withdrawalIds, withdrawalAmounts, withdrawalTypes);
+        vault_.withdraw(withdrawalAddresses, withdrawalIds, withdrawalAmounts);
 
         uint256 actualValue = vault_.getVaultValue(address(dai));
         uint256 expectedValue = valueOfDeposit - valueOfWithdrawal;
 
         assertEq(expectedValue, actualValue);
+    }
+
+    function testRevert_skim_NonOwner(address sender) public {
+        vm.assume(sender != vaultOwner);
+
+        vm.startPrank(sender);
+        vm.expectRevert("V_S: Only owner can skim");
+        vault_.skim(address(eth), 0, 0);
+        vm.stopPrank();
+    }
+
+    function testSuccess_skim_type0_skim() public {
+        depositERC20InVault(eth, 2000, vaultOwner);
+
+        vm.prank(tokenCreatorAddress);
+        eth.mint(address(vault_), 1000);
+
+        vm.startPrank(vaultOwner);
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(vault_), vaultOwner, 1000);
+        vault_.skim(address(eth), 0, 0);
+        vm.stopPrank();
+    }
+
+    function testSuccess_skim_type0_nothingToSkim() public {
+        depositERC20InVault(eth, 2000, vaultOwner);
+
+        uint256 balanceBeforeStored = vault_.erc20Balances(address(eth));
+        uint256 balanceBefore = eth.balanceOf(address(vault_));
+        assertEq(balanceBeforeStored, balanceBefore);
+
+        vm.startPrank(vaultOwner);
+        vault_.skim(address(eth), 0, 0);
+        vm.stopPrank();
+
+        uint256 balancePostStored = vault_.erc20Balances(address(eth));
+        uint256 balancePost = eth.balanceOf(address(vault_));
+        assertEq(balancePostStored, balancePost);
+        assertEq(balancePostStored, balanceBeforeStored);
+    }
+
+    function testSuccess_skim_type1_skim(uint128[] calldata tokenIdsDeposit) public {
+        vm.assume(tokenIdsDeposit.length < 15 && tokenIdsDeposit.length > 0);
+        (address[] memory assetAddresses, uint256[] memory assetIds, uint256[] memory assetAmounts) =
+            depositBaycInVault(tokenIdsDeposit, vaultOwner);
+
+        address[] memory assetAddrOne = new address[](1);
+        uint256[] memory assetIdOne = new uint256[](1);
+        uint256[] memory assetAmountOne = new uint256[](1);
+
+        assetAddrOne[0] = assetAddresses[0];
+        assetIdOne[0] = assetIds[0];
+        assetAmountOne[0] = assetAmounts[0];
+
+        vm.startPrank(vaultOwner);
+        vault_.withdraw(assetAddrOne, assetIdOne, assetAmountOne);
+        bayc.transferFrom(vaultOwner, address(vault_), assetIdOne[0]);
+
+        vault_.skim(assetAddrOne[0], assetIdOne[0], 1);
+        vm.stopPrank();
+
+        assertEq(bayc.ownerOf(assetIdOne[0]), vaultOwner);
+    }
+
+    function testSuccess_skim_type1_nothingToSkim() public {
+        uint128[] memory tokenIdsDeposit = new uint128[](5);
+        tokenIdsDeposit[0] = 100;
+        tokenIdsDeposit[1] = 200;
+        tokenIdsDeposit[2] = 300;
+        tokenIdsDeposit[3] = 400;
+        tokenIdsDeposit[4] = 500;
+        (address[] memory assetAddresses, uint256[] memory assetIds,) = depositBaycInVault(tokenIdsDeposit, vaultOwner);
+
+        uint256 balanceBefore = bayc.balanceOf(address(vault_));
+
+        vm.startPrank(vaultOwner);
+        vault_.skim(assetAddresses[0], assetIds[0], 1);
+        vm.stopPrank();
+
+        uint256 balancePost = bayc.balanceOf(address(vault_));
+
+        assertEq(balanceBefore, balancePost);
+        assertEq(bayc.ownerOf(assetIds[0]), address(vault_));
+    }
+
+    function testSuccess_skim_type2_skim() public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(interleave);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 1;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 10_000;
+
+        vm.prank(vaultOwner);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
+
+        assetAmounts[0] = 100;
+        vm.startPrank(vaultOwner);
+        vault_.withdraw(assetAddresses, assetIds, assetAmounts);
+        interleave.safeTransferFrom(vaultOwner, address(vault_), 1, 100, "");
+
+        uint256 balanceOwnerBefore = interleave.balanceOf(vaultOwner, 1);
+
+        vault_.skim(address(interleave), 1, 2);
+        vm.stopPrank();
+
+        uint256 balanceOwnerAfter = interleave.balanceOf(vaultOwner, 1);
+
+        assertEq(interleave.balanceOf(address(vault_), 1), vault_.erc1155Balances(address(interleave), 1));
+        assertEq(balanceOwnerBefore + 100, balanceOwnerAfter);
+    }
+
+    function testSuccess_skim_type2_nothingToSkim() public {
+        address[] memory assetAddresses = new address[](1);
+        assetAddresses[0] = address(interleave);
+
+        uint256[] memory assetIds = new uint256[](1);
+        assetIds[0] = 1;
+
+        uint256[] memory assetAmounts = new uint256[](1);
+        assetAmounts[0] = 10_000;
+
+        vm.startPrank(vaultOwner);
+        vault_.deposit(assetAddresses, assetIds, assetAmounts);
+
+        uint256 balanceBefore = interleave.balanceOf(address(vault_), 1);
+
+        vault_.skim(address(interleave), 1, 2);
+        vm.stopPrank();
+
+        uint256 balancePost = interleave.balanceOf(address(vault_), 1);
+
+        assertEq(balanceBefore, balancePost);
+        assertEq(interleave.balanceOf(address(vault_), 1), vault_.erc1155Balances(address(interleave), 1));
+    }
+
+    function testSuccess_skim_ether() public {
+        vm.deal(address(vault_), 1e21);
+        assertEq(address(vault_).balance, 1e21);
+
+        uint256 balanceOwnerBefore = vaultOwner.balance;
+
+        vm.prank(vaultOwner);
+        vault_.skim(address(0), 0, 0);
+
+        uint256 balanceOwnerAfter = vaultOwner.balance;
+
+        assertEq(balanceOwnerBefore + 1e21, balanceOwnerAfter);
     }
 }
 
@@ -1879,7 +2317,7 @@ contract DepreciatedTest is vaultTests {
 
     //overflows from deltaTimestamp = 894262060268226281981748468
     function testSuccess_CheckExponentUnchecked() public {
-        uint256 yearlySeconds = 31536000;
+        uint256 yearlySeconds = 31_536_000;
         uint256 maxDeltaTimestamp = (uint256(type(uint128).max) * uint256(yearlySeconds)) / 10 ** 18;
 
         uint256 exponent256 = (maxDeltaTimestamp * 1e18) / yearlySeconds;
@@ -1900,7 +2338,7 @@ contract DepreciatedTest is vaultTests {
         vm.assume(deltaTimestamp <= 5 * 365 * 24 * 60 * 60); //5 year
         vm.assume(openDebt <= type(uint128).max / (10 ** 5)); //highest possible debt at 1000% over 5 years: 3402823669209384912995114146594816
 
-        uint256 yearlySeconds = 31536000;
+        uint256 yearlySeconds = 31_536_000;
         uint128 exponent = uint128(((uint256(deltaTimestamp)) * 1e18) / yearlySeconds);
         vm.assume(LogExpMath.pow(base, exponent) > 0);
 
@@ -1940,7 +2378,7 @@ contract DepreciatedTest is vaultTests {
         ); // This is always zero
         amountEthToDeposit += uint128(additionalDeposit);
 
-        uint256 yearlySeconds = 31536000;
+        uint256 yearlySeconds = 31_536_000;
         uint128 exponent = uint128(((uint256(deltaTimestamp)) * 1e18) / yearlySeconds);
 
         uint256 remainingCredit = depositEthAndTakeMaxCredit(amountEthToDeposit);
@@ -1962,7 +2400,7 @@ contract DepreciatedTest is vaultTests {
     function testSuccess_syncInterests_GetOpenDebtUnchecked(uint32 blocksToRoll, uint128 baseAmountEthToDeposit)
         public
     {
-        vm.assume(blocksToRoll <= 255555555); //up to the year 2122
+        vm.assume(blocksToRoll <= 255_555_555); //up to the year 2122
         vm.assume(baseAmountEthToDeposit > 0);
         vm.assume(baseAmountEthToDeposit < 10);
         uint16 collFactor_ = RiskConstants.DEFAULT_COLLATERAL_FACTOR;

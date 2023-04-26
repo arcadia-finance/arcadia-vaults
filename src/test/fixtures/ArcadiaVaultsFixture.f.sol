@@ -1,31 +1,46 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "../../../lib/forge-std/src/Test.sol";
 
 import "../../Factory.sol";
 import "../../Proxy.sol";
-import "../../Vault.sol";
-import {ERC20Mock} from "../../mockups/ERC20SolmateMock.sol";
+import { Vault, ActionData } from "../../Vault.sol";
+import { ERC20Mock } from "../../mockups/ERC20SolmateMock.sol";
 import "../../mockups/ERC721SolmateMock.sol";
 import "../../mockups/ERC1155SolmateMock.sol";
-import "../../AssetRegistry/MainRegistry.sol";
-import "../../AssetRegistry/FloorERC721PricingModule.sol";
-import "../../AssetRegistry/StandardERC20PricingModule.sol";
-import "../../AssetRegistry/FloorERC1155PricingModule.sol";
-import "../../Liquidator.sol";
+import "../../MainRegistry.sol";
+import { PricingModule, StandardERC20PricingModule } from "../../PricingModules/StandardERC20PricingModule.sol";
+import { FloorERC721PricingModule } from "../../PricingModules/FloorERC721PricingModule.sol";
+import { FloorERC1155PricingModule } from "../../PricingModules/FloorERC1155PricingModule.sol";
+import { Liquidator, LogExpMath } from "../../Liquidator.sol";
 import "../../OracleHub.sol";
 import "../../utils/Constants.sol";
 import "../../mockups/ArcadiaOracle.sol";
+import { RiskConstants } from "../../utils/RiskConstants.sol";
 import ".././fixtures/ArcadiaOracleFixture.f.sol";
 
+contract mainRegistryExtension is MainRegistry {
+    using FixedPointMathLib for uint256;
+
+    constructor(address factory_) MainRegistry(factory_) { }
+
+    function setAssetType(address asset, uint96 assetType) public {
+        assetToAssetInformation[asset].assetType = assetType;
+    }
+}
+
+contract FactoryExtension is Factory {
+    function setOwnerOf(address owner_, uint256 vaultId) public {
+        _ownerOf[vaultId] = owner_;
+    }
+}
+
 contract DeployArcadiaVaults is Test {
-    Factory public factory;
+    FactoryExtension public factory;
     Vault public vault;
     Vault public proxy;
     address public proxyAddr;
@@ -37,18 +52,16 @@ contract DeployArcadiaVaults is Test {
     ERC721Mock public bayc;
     ERC721Mock public mayc;
     ERC721Mock public dickButs;
-    ERC20Mock public wbayc;
-    ERC20Mock public wmayc;
     ERC1155Mock public interleave;
     OracleHub public oracleHub;
     ArcadiaOracle public oracleDaiToUsd;
     ArcadiaOracle public oracleEthToUsd;
     ArcadiaOracle public oracleLinkToUsd;
     ArcadiaOracle public oracleSnxToEth;
-    ArcadiaOracle public oracleWbaycToEth;
-    ArcadiaOracle public oracleWmaycToUsd;
+    ArcadiaOracle public oracleBaycToEth;
+    ArcadiaOracle public oracleMaycToUsd;
     ArcadiaOracle public oracleInterleaveToEth;
-    MainRegistry public mainRegistry;
+    mainRegistryExtension public mainRegistry;
     StandardERC20PricingModule public standardERC20PricingModule;
     FloorERC721PricingModule public floorERC721PricingModule;
     FloorERC1155PricingModule public floorERC1155PricingModule;
@@ -64,17 +77,17 @@ contract DeployArcadiaVaults is Test {
     uint256 rateDaiToUsd = 1 * 10 ** Constants.oracleDaiToUsdDecimals;
     uint256 rateEthToUsd = 3000 * 10 ** Constants.oracleEthToUsdDecimals;
     uint256 rateLinkToUsd = 20 * 10 ** Constants.oracleLinkToUsdDecimals;
-    uint256 rateSnxToEth = 1600000000000000;
-    uint256 rateWbaycToEth = 85 * 10 ** Constants.oracleWbaycToEthDecimals;
-    uint256 rateWmaycToUsd = 50000 * 10 ** Constants.oracleWmaycToUsdDecimals;
+    uint256 rateSnxToEth = 1_600_000_000_000_000;
+    uint256 rateBaycToEth = 85 * 10 ** Constants.oracleBaycToEthDecimals;
+    uint256 rateMaycToUsd = 50_000 * 10 ** Constants.oracleMaycToUsdDecimals;
     uint256 rateInterleaveToEth = 1 * 10 ** (Constants.oracleInterleaveToEthDecimals - 2);
 
     address[] public oracleDaiToUsdArr = new address[](1);
     address[] public oracleEthToUsdArr = new address[](1);
     address[] public oracleLinkToUsdArr = new address[](1);
     address[] public oracleSnxToEthEthToUsd = new address[](2);
-    address[] public oracleWbaycToEthEthToUsd = new address[](2);
-    address[] public oracleWmaycToUsdArr = new address[](1);
+    address[] public oracleBaycToEthEthToUsd = new address[](2);
+    address[] public oracleMaycToUsdArr = new address[](1);
     address[] public oracleInterleaveToEthEthToUsd = new address[](2);
 
     uint16 public collateralFactor = RiskConstants.DEFAULT_COLLATERAL_FACTOR;
@@ -93,21 +106,21 @@ contract DeployArcadiaVaults is Test {
         dai = new ERC20Mock("DAI Mock", "mDAI", uint8(Constants.daiDecimals));
         dai.mint(liquidityProvider, type(uint256).max);
         eth = new ERC20Mock("ETH Mock", "mETH", uint8(Constants.ethDecimals));
-        eth.mint(tokenCreatorAddress, 200000 * 10 ** Constants.ethDecimals);
+        eth.mint(tokenCreatorAddress, 200_000 * 10 ** Constants.ethDecimals);
         snx = new ERC20Mock("SNX Mock", "mSNX", uint8(Constants.snxDecimals));
-        snx.mint(tokenCreatorAddress, 200000 * 10 ** Constants.snxDecimals);
+        snx.mint(tokenCreatorAddress, 200_000 * 10 ** Constants.snxDecimals);
         link = new ERC20Mock(
             "LINK Mock",
             "mLINK",
             uint8(Constants.linkDecimals)
         );
-        link.mint(tokenCreatorAddress, 200000 * 10 ** Constants.linkDecimals);
+        link.mint(tokenCreatorAddress, 200_000 * 10 ** Constants.linkDecimals);
         safemoon = new ERC20Mock(
             "Safemoon Mock",
             "mSFMN",
             uint8(Constants.safemoonDecimals)
         );
-        safemoon.mint(tokenCreatorAddress, 200000 * 10 ** Constants.safemoonDecimals);
+        safemoon.mint(tokenCreatorAddress, 200_000 * 10 ** Constants.safemoonDecimals);
         bayc = new ERC721Mock("BAYC Mock", "mBAYC");
         bayc.mint(tokenCreatorAddress, 0);
         bayc.mint(tokenCreatorAddress, 1);
@@ -117,19 +130,13 @@ contract DeployArcadiaVaults is Test {
         mayc.mint(tokenCreatorAddress, 0);
         dickButs = new ERC721Mock("DickButs Mock", "mDICK");
         dickButs.mint(tokenCreatorAddress, 0);
-        wbayc = new ERC20Mock(
-            "wBAYC Mock",
-            "mwBAYC",
-            uint8(Constants.wbaycDecimals)
-        );
-        wbayc.mint(tokenCreatorAddress, 100000 * 10 ** Constants.wbaycDecimals);
         interleave = new ERC1155Mock("Interleave Mock", "mInterleave");
-        interleave.mint(tokenCreatorAddress, 1, 100000);
+        interleave.mint(tokenCreatorAddress, 1, 100_000);
 
-        eth.transfer(vaultOwner, 100000 * 10 ** Constants.ethDecimals);
-        link.transfer(vaultOwner, 100000 * 10 ** Constants.linkDecimals);
-        snx.transfer(vaultOwner, 100000 * 10 ** Constants.snxDecimals);
-        safemoon.transfer(vaultOwner, 100000 * 10 ** Constants.safemoonDecimals);
+        eth.transfer(vaultOwner, 100_000 * 10 ** Constants.ethDecimals);
+        link.transfer(vaultOwner, 100_000 * 10 ** Constants.linkDecimals);
+        snx.transfer(vaultOwner, 100_000 * 10 ** Constants.snxDecimals);
+        safemoon.transfer(vaultOwner, 100_000 * 10 ** Constants.safemoonDecimals);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 0);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 1);
         bayc.transferFrom(tokenCreatorAddress, vaultOwner, 2);
@@ -140,7 +147,7 @@ contract DeployArcadiaVaults is Test {
             tokenCreatorAddress,
             vaultOwner,
             1,
-            100000,
+            100_000,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
         eth.transfer(unprivilegedAddress, 1000 * 10 ** Constants.ethDecimals);
@@ -151,10 +158,8 @@ contract DeployArcadiaVaults is Test {
         oracleEthToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleEthToUsdDecimals), "ETH / USD");
         oracleLinkToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleLinkToUsdDecimals), "LINK / USD");
         oracleSnxToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleSnxToEthDecimals), "SNX / ETH");
-        oracleWbaycToEth =
-            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWbaycToEthDecimals), "WBAYC / ETH");
-        oracleWmaycToUsd =
-            arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleWmaycToUsdDecimals), "WBAYC / USD");
+        oracleBaycToEth = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleBaycToEthDecimals), "BAYC / ETH");
+        oracleMaycToUsd = arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleMaycToUsdDecimals), "MAYC / USD");
         oracleInterleaveToEth =
             arcadiaOracleFixture.initMockedOracle(uint8(Constants.oracleInterleaveToEthDecimals), "INTERLEAVE / ETH");
 
@@ -163,9 +168,9 @@ contract DeployArcadiaVaults is Test {
         oracleLinkToUsdArr[0] = address(oracleLinkToUsd);
         oracleSnxToEthEthToUsd[0] = address(oracleSnxToEth);
         oracleSnxToEthEthToUsd[1] = address(oracleEthToUsd);
-        oracleWbaycToEthEthToUsd[0] = address(oracleWbaycToEth);
-        oracleWbaycToEthEthToUsd[1] = address(oracleEthToUsd);
-        oracleWmaycToUsdArr[0] = address(oracleWmaycToUsd);
+        oracleBaycToEthEthToUsd[0] = address(oracleBaycToEth);
+        oracleBaycToEthEthToUsd[1] = address(oracleEthToUsd);
+        oracleMaycToUsdArr[0] = address(oracleMaycToUsd);
         oracleInterleaveToEthEthToUsd[0] = address(oracleInterleaveToEth);
         oracleInterleaveToEthEthToUsd[1] = address(oracleEthToUsd);
 
@@ -174,103 +179,102 @@ contract DeployArcadiaVaults is Test {
         oracleEthToUsd.transmit(int256(rateEthToUsd));
         oracleLinkToUsd.transmit(int256(rateLinkToUsd));
         oracleSnxToEth.transmit(int256(rateSnxToEth));
-        oracleWbaycToEth.transmit(int256(rateWbaycToEth));
-        oracleWmaycToUsd.transmit(int256(rateWmaycToUsd));
+        oracleBaycToEth.transmit(int256(rateBaycToEth));
+        oracleMaycToUsd.transmit(int256(rateMaycToUsd));
         oracleInterleaveToEth.transmit(int256(rateInterleaveToEth));
         vm.stopPrank();
 
         //Deploy Arcadia Vaults contracts
         vm.startPrank(creatorAddress);
         oracleHub = new OracleHub();
-        factory = new Factory();
+        factory = new FactoryExtension();
 
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleDaiToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "DAI",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "DAI",
+                quoteAsset: "USD",
                 oracle: address(oracleDaiToUsd),
-                quoteAssetAddress: address(dai),
-                baseAssetIsBaseCurrency: true
+                baseAssetAddress: address(dai),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleEthToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "ETH",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "ETH",
+                quoteAsset: "USD",
                 oracle: address(oracleEthToUsd),
-                quoteAssetAddress: address(eth),
-                baseAssetIsBaseCurrency: true
+                baseAssetAddress: address(eth),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleLinkToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "LINK",
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "LINK",
+                quoteAsset: "USD",
                 oracle: address(oracleLinkToUsd),
-                quoteAssetAddress: address(link),
-                baseAssetIsBaseCurrency: true
+                baseAssetAddress: address(link),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleSnxToEthUnit),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "SNX",
-                baseAsset: "ETH",
+                quoteAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                baseAsset: "SNX",
+                quoteAsset: "ETH",
                 oracle: address(oracleSnxToEth),
-                quoteAssetAddress: address(snx),
-                baseAssetIsBaseCurrency: true
+                baseAssetAddress: address(snx),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleWbaycToEthUnit),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "WBAYC",
-                baseAsset: "ETH",
-                oracle: address(oracleWbaycToEth),
-                quoteAssetAddress: address(wbayc),
-                baseAssetIsBaseCurrency: true
+                oracleUnit: uint64(Constants.oracleBaycToEthUnit),
+                quoteAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                baseAsset: "BAYC",
+                quoteAsset: "ETH",
+                oracle: address(oracleBaycToEth),
+                baseAssetAddress: address(bayc),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
-                oracleUnit: uint64(Constants.oracleWmaycToUsdUnit),
-                baseAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
-                quoteAsset: "WMAYC",
-                baseAsset: "USD",
-                oracle: address(oracleWmaycToUsd),
-                quoteAssetAddress: address(wmayc),
-                baseAssetIsBaseCurrency: true
+                oracleUnit: uint64(Constants.oracleMaycToUsdUnit),
+                quoteAssetBaseCurrency: uint8(Constants.UsdBaseCurrency),
+                baseAsset: "MAYC",
+                quoteAsset: "USD",
+                oracle: address(oracleMaycToUsd),
+                baseAssetAddress: address(mayc),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(Constants.oracleInterleaveToEthUnit),
-                baseAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
-                quoteAsset: "INTERLEAVE",
-                baseAsset: "ETH",
+                quoteAssetBaseCurrency: uint8(Constants.EthBaseCurrency),
+                baseAsset: "INTERLEAVE",
+                quoteAsset: "ETH",
                 oracle: address(oracleInterleaveToEth),
-                quoteAssetAddress: address(interleave),
-                baseAssetIsBaseCurrency: true
+                baseAssetAddress: address(interleave),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
 
-        mainRegistry = new MainRegistry(
-            MainRegistry.BaseCurrencyInformation({
-                baseCurrencyToUsdOracleUnit: 0,
-                assetAddress: 0x0000000000000000000000000000000000000000,
-                baseCurrencyToUsdOracle: 0x0000000000000000000000000000000000000000,
-                baseCurrencyLabel: "USD",
-                baseCurrencyUnitCorrection: uint64(10**(18 - Constants.usdDecimals))
-            })
-        );
+        mainRegistry = new mainRegistryExtension(address(factory));
         mainRegistry.addBaseCurrency(
             MainRegistry.BaseCurrencyInformation({
                 baseCurrencyToUsdOracleUnit: uint64(10 ** Constants.oracleDaiToUsdDecimals),
@@ -292,15 +296,18 @@ contract DeployArcadiaVaults is Test {
 
         standardERC20PricingModule = new StandardERC20PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            0
         );
         floorERC721PricingModule = new FloorERC721PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            1
         );
         floorERC1155PricingModule = new FloorERC1155PricingModule(
             address(mainRegistry),
-            address(oracleHub)
+            address(oracleHub),
+            2
         );
 
         mainRegistry.addPricingModule(address(standardERC20PricingModule));
@@ -340,7 +347,10 @@ contract DeployArcadiaVaults is Test {
         standardERC20PricingModule.addAsset(address(snx), oracleSnxToEthEthToUsd, riskVars_, type(uint128).max);
 
         floorERC721PricingModule.addAsset(
-            address(bayc), 0, type(uint256).max, oracleWbaycToEthEthToUsd, riskVars_, type(uint128).max
+            address(bayc), 0, type(uint256).max, oracleBaycToEthEthToUsd, riskVars_, type(uint128).max
+        );
+        floorERC721PricingModule.addAsset(
+            address(mayc), 0, type(uint256).max, oracleMaycToUsdArr, riskVars_, type(uint128).max
         );
 
         floorERC1155PricingModule.addAsset(
@@ -348,9 +358,7 @@ contract DeployArcadiaVaults is Test {
         );
 
         vault = new Vault();
-        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2);
-        factory.confirmNewVaultInfo();
-        mainRegistry.setFactory(address(factory));
+        factory.setNewVaultInfo(address(mainRegistry), address(vault), Constants.upgradeProof1To2, "");
         vm.stopPrank();
     }
 }

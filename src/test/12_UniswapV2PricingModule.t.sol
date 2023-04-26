@@ -1,20 +1,22 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "./fixtures/ArcadiaVaultsFixture.f.sol";
 import "../mockups/UniswapV2FactoryMock.sol";
 import "../mockups/UniswapV2PairMock.sol";
-import "../AssetRegistry/UniswapV2PricingModule.sol";
+import { UniswapV2PricingModule } from "../PricingModules/UniswapV2PricingModule.sol";
 
 contract UniswapV2PricingModuleExtension is UniswapV2PricingModule {
-    constructor(address mainRegistry_, address oracleHub_, address uniswapV2Factory_, address erc20PricingModule_)
-        UniswapV2PricingModule(mainRegistry_, oracleHub_, uniswapV2Factory_, erc20PricingModule_)
-    {}
+    constructor(
+        address mainRegistry_,
+        address oracleHub_,
+        uint256 assetType_,
+        address uniswapV2Factory_,
+        address erc20PricingModule_
+    ) UniswapV2PricingModule(mainRegistry_, oracleHub_, assetType_, uniswapV2Factory_, erc20PricingModule_) { }
 
     function getTrustedTokenAmounts(
         address pair,
@@ -95,6 +97,7 @@ abstract contract UniswapV2PricingModuleTest is DeployArcadiaVaults {
         uniswapV2PricingModule = new UniswapV2PricingModuleExtension(
             address(mainRegistry),
             address(oracleHub),
+            0,
             address(uniswapV2Factory),
             address(standardERC20PricingModule)
         );
@@ -103,7 +106,7 @@ abstract contract UniswapV2PricingModuleTest is DeployArcadiaVaults {
     }
 
     //this is a before each
-    function setUp() public virtual {}
+    function setUp() public virtual { }
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -117,6 +120,7 @@ contract DeploymentTest is UniswapV2PricingModuleTest {
     function testSuccess_deployment() public {
         assertEq(uniswapV2PricingModule.mainRegistry(), address(mainRegistry));
         assertEq(uniswapV2PricingModule.oracleHub(), address(oracleHub));
+        assertEq(uniswapV2PricingModule.assetType(), 0);
         assertEq(uniswapV2PricingModule.uniswapV2Factory(), address(uniswapV2Factory));
         assertEq(uniswapV2PricingModule.erc20PricingModule(), address(standardERC20PricingModule));
     }
@@ -210,9 +214,9 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         vm.assume(unprivilegedAddress_ != creatorAddress);
 
         //When: unprivilegedAddress_ adds a new asset
-        //Then: addAsset reverts with "Ownable: caller is not the owner"
+        //Then: addAsset reverts with "UNAUTHORIZED"
         vm.startPrank(unprivilegedAddress_);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint128).max);
         vm.stopPrank();
     }
@@ -220,7 +224,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
     function testRevert_addAsset_NonWhiteListedUnderlyingAsset() public {
         //Given: One of the underlying assets is not whitelisted (SafeMoon)
         //When: creator adds a new asset
-        //Then: addAsset reverts with "Ownable: caller is not the owner"
+        //Then: addAsset reverts with "UNAUTHORIZED"
         vm.startPrank(creatorAddress);
         vm.expectRevert("PMUV2_AA: TOKENO_NOT_WHITELISTED");
         uniswapV2PricingModule.addAsset(address(pairSafemoonEth), emptyRiskVarInput, type(uint128).max);
@@ -239,16 +243,6 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, type(uint128).max);
     }
 
-    function testRevert_addAsset_ExposureNotInLimits() public {
-        // Given: All necessary contracts deployed on setup
-        // When: creatorAddress calls addAsset with maxExposure exceeding type(uint128).max
-        // Then: addAsset should revert with "PMUV2_AA: Max Exposure not in limits"
-        vm.startPrank(creatorAddress);
-        vm.expectRevert("PMUV2_AA: Max Exposure not in limits");
-        uniswapV2PricingModule.addAsset(address(pairSnxEth), emptyRiskVarInput, uint256(type(uint128).max) + 1);
-        vm.stopPrank();
-    }
-
     function testSuccess_addAsset_EmptyListCreditRatings() public {
         //Given: credit rating list is empty
 
@@ -262,7 +256,7 @@ contract AssetManagement is UniswapV2PricingModuleTest {
         (address token0, address token1) = uniswapV2PricingModule.assetToInformation(address(pairSnxEth));
         assertEq(token0, address(snx));
         assertEq(token1, address(eth));
-        assertTrue(uniswapV2PricingModule.isWhiteListed(address(pairSnxEth), 0));
+        assertTrue(uniswapV2PricingModule.isAllowListed(address(pairSnxEth), 0));
     }
 
     function testSuccess_addAsset_OwnerAddsAssetWithNonFullListRiskVariables() public {
@@ -343,13 +337,13 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         uint256 maxProfit = profitArbitrage(priceTokenIn, priceTokenOut, amountIn, reserveIn, reserveOut);
 
         //Due to numerical rounding actual maximum might be deviating bit from calculated max, but must be in a range of 1%
-        vm.assume(maxProfit <= type(uint256).max / 10001); //Prevent overflow on underlying overflows, maxProfit can still be a ridiculous big number
+        vm.assume(maxProfit <= type(uint256).max / 10_001); //Prevent overflow on underlying overflows, maxProfit can still be a ridiculous big number
         assertGe(
-            maxProfit * 10001 / 10000,
+            maxProfit * 10_001 / 10_000,
             profitArbitrage(priceTokenIn, priceTokenOut, amountIn * 999 / 1000, reserveIn, reserveOut)
         );
         assertGe(
-            maxProfit * 10001 / 10000,
+            maxProfit * 10_001 / 10_000,
             profitArbitrage(priceTokenIn, priceTokenOut, amountIn * 1001 / 1000, reserveIn, reserveOut)
         );
     }
@@ -604,7 +598,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             uint256(_rateEthToUsd) > type(uint256).max / Constants.WAD / Constants.WAD * 10 ** _oracleEthToUsdDecimals; // trustedPriceEthToUsd overflows
         vm.assume(cond0 || cond1);
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(pairSnxEth),
             assetId: 0,
             assetAmount: pairSnxEth.totalSupply(),
@@ -672,7 +666,7 @@ contract PricingLogic is UniswapV2PricingModuleTest {
             Constants.WAD * _rateEthToUsd / 10 ** _oracleEthToUsdDecimals * amountEth / 10 ** _ethDecimals;
         uint256 expectedValueInUsd = valueSnx + valueEth;
 
-        PricingModule.GetValueInput memory getValueInput = PricingModule.GetValueInput({
+        IPricingModule.GetValueInput memory getValueInput = IPricingModule.GetValueInput({
             asset: address(pairSnxEth),
             assetId: 0,
             assetAmount: pairSnxEth.totalSupply(),
@@ -715,12 +709,13 @@ contract PricingLogic is UniswapV2PricingModuleTest {
         oracleHub.addOracle(
             OracleHub.OracleInformation({
                 oracleUnit: uint64(10 ** oracleTokenToUsdDecimals),
-                baseAssetBaseCurrency: 0,
-                quoteAsset: label,
-                baseAsset: "USD",
+                quoteAssetBaseCurrency: 0,
+                baseAsset: bytes8(abi.encodePacked(label)),
+                quoteAsset: "USD",
                 oracle: address(oracleTokenToUsd),
-                quoteAssetAddress: address(token),
-                baseAssetIsBaseCurrency: true
+                baseAssetAddress: address(token),
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
             })
         );
         standardERC20PricingModule.addAsset(address(token), oracleTokenToUsdArr, emptyRiskVarInput, type(uint128).max);

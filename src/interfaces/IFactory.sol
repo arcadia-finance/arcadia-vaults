@@ -1,19 +1,28 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
- * SPDX-License-Identifier: AGPL-3.0-or-later
+ * Created by Pragma Labs
+ * SPDX-License-Identifier: MIT
  */
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.13;
 
 interface IFactory {
-    function isVault(address vaultAddress) external view returns (bool);
+    /**
+     * @notice Checks if a contract is a Vault.
+     * @param vault The contract address of the Vault.
+     * @return bool indicating if the address is a vault or not.
+     */
+    function isVault(address vault) external view returns (bool);
 
-    function safeTransferFrom(address from, address to, uint256 id) external;
+    /**
+     * @notice Function used to transfer a vault between users.
+     * @param from The sender.
+     * @param to The target.
+     * @param vault The address of the vault that is transferred.
+     */
+    function safeTransferFrom(address from, address to, address vault) external;
 
-    function liquidate(address vault) external returns (bool);
-
-    function vaultIndex(address vaultAddress) external view returns (uint256);
-
-    function getCurrentRegistry() external view returns (address);
+    /**
+     * @notice Function called by a Vault at the start of a liquidation to transfer ownership to the Liquidator contract.
+     * @param liquidator The contract address of the liquidator.
+     */
+    function liquidate(address liquidator) external;
 }

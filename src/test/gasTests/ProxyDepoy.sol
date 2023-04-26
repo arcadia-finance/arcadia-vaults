@@ -1,10 +1,8 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "../fixtures/GastTestFixture.f.sol";
 
@@ -12,7 +10,7 @@ contract gasProxyDeploy is GasTestFixture {
     using stdStorage for StdStorage;
 
     //this is a before
-    constructor() GasTestFixture() {}
+    constructor() GasTestFixture() { }
 
     //this is a before each
     function setUp() public override {
@@ -20,7 +18,7 @@ contract gasProxyDeploy is GasTestFixture {
     }
 
     function testCreateProxyVault() public {
-        uint256 salt = 123456789;
+        uint256 salt = 123_456_789;
         factory.createVault(salt, 0, address(0));
     }
 

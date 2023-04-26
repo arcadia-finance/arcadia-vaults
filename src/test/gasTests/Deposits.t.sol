@@ -1,10 +1,8 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
-pragma solidity >0.8.10;
+pragma solidity ^0.8.13;
 
 import "../fixtures/GastTestFixture.f.sol";
 
@@ -12,7 +10,7 @@ contract gasDeposits is GasTestFixture {
     using stdStorage for StdStorage;
 
     //this is a before
-    constructor() GasTestFixture() {}
+    constructor() GasTestFixture() { }
 
     //this is a before each
     function setUp() public override {
@@ -23,7 +21,6 @@ contract gasDeposits is GasTestFixture {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](1);
         assetAddresses[0] = address(eth);
@@ -34,18 +31,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = 1e18;
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 0;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_2_ERC20s() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](2);
         assetAddresses[0] = address(eth);
@@ -59,19 +52,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[0] = 10 ** Constants.ethDecimals;
         assetAmounts[1] = 10 ** Constants.linkDecimals;
 
-        assetTypes = new uint256[](2);
-        assetTypes[0] = 0;
-        assetTypes[1] = 0;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_3_ERC20s() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](3);
         assetAddresses[0] = address(eth);
@@ -88,20 +76,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[1] = 10 ** Constants.linkDecimals;
         assetAmounts[2] = 10 ** Constants.snxDecimals;
 
-        assetTypes = new uint256[](3);
-        assetTypes[0] = 0;
-        assetTypes[1] = 0;
-        assetTypes[2] = 0;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_1_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](1);
         assetAddresses[0] = address(bayc);
@@ -112,18 +94,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 1;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_2_same_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](2);
         assetAddresses[0] = address(bayc);
@@ -137,19 +115,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[0] = 1;
         assetAmounts[1] = 1;
 
-        assetTypes = new uint256[](2);
-        assetTypes[0] = 1;
-        assetTypes[1] = 1;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_2_diff_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](2);
         assetAddresses[0] = address(bayc);
@@ -163,19 +136,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[0] = 1;
         assetAmounts[1] = 1;
 
-        assetTypes = new uint256[](2);
-        assetTypes[0] = 1;
-        assetTypes[1] = 1;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_1_ERC1155() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](1);
         assetAddresses[0] = address(interleave);
@@ -186,18 +154,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts = new uint256[](1);
         assetAmounts[0] = 1;
 
-        assetTypes = new uint256[](1);
-        assetTypes[0] = 2;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_2_diff_ERC1155() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](2);
         assetAddresses[0] = address(interleave);
@@ -211,19 +175,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[0] = 1;
         assetAmounts[1] = 1;
 
-        assetTypes = new uint256[](2);
-        assetTypes[0] = 2;
-        assetTypes[1] = 2;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_1_ERC20_1_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](2);
         assetAddresses[0] = address(link);
@@ -237,19 +196,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[0] = 1000;
         assetAmounts[1] = 1;
 
-        assetTypes = new uint256[](2);
-        assetTypes[0] = 0;
-        assetTypes[1] = 1;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_1_ERC20_2_same_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](3);
         assetAddresses[0] = address(link);
@@ -266,20 +220,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[1] = 1;
         assetAmounts[2] = 1;
 
-        assetTypes = new uint256[](3);
-        assetTypes[0] = 0;
-        assetTypes[1] = 1;
-        assetTypes[2] = 1;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_1_ERC20_2_diff_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](3);
         assetAddresses[0] = address(link);
@@ -296,20 +244,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[1] = 1;
         assetAmounts[2] = 1;
 
-        assetTypes = new uint256[](3);
-        assetTypes[0] = 0;
-        assetTypes[1] = 1;
-        assetTypes[2] = 1;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_2_ERC20_2_diff_ERC721() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](4);
         assetAddresses[0] = address(link);
@@ -329,21 +271,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[2] = 1;
         assetAmounts[3] = 100;
 
-        assetTypes = new uint256[](4);
-        assetTypes[0] = 0;
-        assetTypes[1] = 1;
-        assetTypes[2] = 1;
-        assetTypes[3] = 0;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_2_ERC20_2_same_ERC721_2_diff_ERC1155() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](6);
         assetAddresses[0] = address(link);
@@ -369,23 +304,14 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[4] = 10;
         assetAmounts[5] = 100;
 
-        assetTypes = new uint256[](6);
-        assetTypes[0] = 0;
-        assetTypes[1] = 1;
-        assetTypes[2] = 1;
-        assetTypes[3] = 2;
-        assetTypes[4] = 2;
-        assetTypes[5] = 0;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 
     function testDeposit_2_ERC20_2_diff_ERC721_2_diff_ERC1155() public {
         address[] memory assetAddresses;
         uint256[] memory assetIds;
         uint256[] memory assetAmounts;
-        uint256[] memory assetTypes;
 
         assetAddresses = new address[](6);
         assetAddresses[0] = address(link);
@@ -411,15 +337,7 @@ contract gasDeposits is GasTestFixture {
         assetAmounts[4] = 10;
         assetAmounts[5] = 100;
 
-        assetTypes = new uint256[](6);
-        assetTypes[0] = 0;
-        assetTypes[1] = 1;
-        assetTypes[2] = 1;
-        assetTypes[3] = 2;
-        assetTypes[4] = 2;
-        assetTypes[5] = 0;
-
         vm.prank(vaultOwner);
-        proxy.deposit(assetAddresses, assetIds, assetAmounts, assetTypes);
+        proxy.deposit(assetAddresses, assetIds, assetAmounts);
     }
 }

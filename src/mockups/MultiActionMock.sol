@@ -1,12 +1,10 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
 
-import {IERC20} from "../interfaces/IERC20.sol";
+import { IERC20 } from "../interfaces/IERC20.sol";
 
 contract MultiActionMock {
     function swapAssets(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut) public {

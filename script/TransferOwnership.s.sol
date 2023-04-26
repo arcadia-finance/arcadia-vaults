@@ -1,17 +1,15 @@
 /**
- * Created by Arcadia Finance
- * https://www.arcadia.finance
- *
+ * Created by Pragma Labs
  * SPDX-License-Identifier: BUSL-1.1
  */
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import {ArcadiaAddresses, ArcadiaContractAddresses} from "./Constants/TransferOwnershipConstants.sol";
+import { ArcadiaAddresses, ArcadiaContractAddresses } from "./Constants/TransferOwnershipConstants.sol";
 
 import "../src/Factory.sol";
-import "../src/AssetRegistry/MainRegistry.sol";
-import "../src/AssetRegistry/StandardERC20PricingModule.sol";
+import "../src/MainRegistry.sol";
+import { StandardERC20PricingModule } from "../src/PricingModules/StandardERC20PricingModule.sol";
 import "../src/Liquidator.sol";
 import "../src/OracleHub.sol";
 
