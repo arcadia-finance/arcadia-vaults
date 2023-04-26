@@ -27,7 +27,7 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
  * @dev No end-user should directly interact with the UniswapV3PricingModule, only the Main-registry,
  * or the contract owner.
  */
-contract UniswapV3PricingModule is PricingModule {
+contract UniswapV3WithFeesPricingModule is PricingModule {
     using FixedPointMathLib for uint256;
     using FullMath for uint256;
 
@@ -136,43 +136,53 @@ contract UniswapV3PricingModule is PricingModule {
         returns (uint256 valueInUsd, uint256, uint256 collateralFactor, uint256 liquidationFactor)
     {
         // Use variables as much as possible in local context, to avoid stack too deep errors.
+        address asset = getValueInput.asset;
+        uint256 id = getValueInput.assetId;
+        uint256 baseCurrency = getValueInput.baseCurrency;
         address token0;
         address token1;
+        uint256 usdPriceToken0;
+        uint256 usdPriceToken1;
+        uint256 principal0;
+        uint256 principal1;
         {
             int24 tickLower;
             int24 tickUpper;
             uint128 liquidity;
-            (,, token0, token1,, tickLower, tickUpper, liquidity,,,,) =
-                INonfungiblePositionManager(getValueInput.asset).positions(getValueInput.assetId);
+            (,, token0, token1,, tickLower, tickUpper, liquidity,,,,) = INonfungiblePositionManager(asset).positions(id);
 
             // Uniswap Pools can be manipulated, we can't rely on the current price (or tick).
             // We use Chainlink oracles of the underlying assets to calculate the flashloan resistant current price.
             // usdPriceToken is the USD price for 10**18 (or 1 WAD) of tokens, it has a precision of: 36-tokenDecimals.
-            (uint256 usdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
+            (usdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
                 GetValueInput({ asset: token0, assetId: 0, assetAmount: FixedPointMathLib.WAD, baseCurrency: 0 })
             );
-            (uint256 usdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
+            (usdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
                 GetValueInput({ asset: token1, assetId: 0, assetAmount: FixedPointMathLib.WAD, baseCurrency: 0 })
             );
 
             // Calculate amount0 and amount1 of the principal (the actual liquidity position).
-            (uint256 amount0, uint256 amount1) =
+            (principal0, principal1) =
                 _getPrincipalAmounts(tickLower, tickUpper, liquidity, usdPriceToken0, usdPriceToken1);
+        }
+
+        {
+            // Calculate amount0 and amount1 of the accumulated fees.
+            (uint256 fee0, uint256 fee1) = _getFeeAmounts(asset, id);
 
             // Calculate the total value in USD, with 18 decimals precision.
             // usdPriceToken has precision: 36-tokenDecimals.
-            // amount has precision: tokenDecimals.
-            // -> Product has precision of 36 decimals -> divide product by 1e18.
-            valueInUsd = usdPriceToken0.mulDivDown(amount0, FixedPointMathLib.WAD)
-                + usdPriceToken1.mulDivDown(amount1, FixedPointMathLib.WAD);
+            // (principal0 + fee0) has precision: tokenDecimals.
+            valueInUsd = usdPriceToken0.mulDivDown(principal0 + fee0, FixedPointMathLib.WAD)
+                + usdPriceToken1.mulDivDown(principal1 + fee1, FixedPointMathLib.WAD);
         }
 
         {
             // Fetch the risk variables of the underlying tokens for the given baseCurrency.
             (uint256 collateralFactor0, uint256 liquidationFactor0) =
-                PricingModule(erc20PricingModule).getRiskVariables(token0, getValueInput.baseCurrency);
+                PricingModule(erc20PricingModule).getRiskVariables(token0, baseCurrency);
             (uint256 collateralFactor1, uint256 liquidationFactor1) =
-                PricingModule(erc20PricingModule).getRiskVariables(token1, getValueInput.baseCurrency);
+                PricingModule(erc20PricingModule).getRiskVariables(token1, baseCurrency);
 
             // We take the most conservative factor of both underlying assets.
             // If one token loses in value compared to the other token, Liquidity Providers will be relatively more exposed
@@ -208,6 +218,62 @@ contract UniswapV3PricingModule is PricingModule {
 
         // Change sqrtPrice from a decimal fixed point number with 18 digits to a binary fixed point number with 96 digits.
         sqrtPriceX96 = uint160(sqrtPriceXd18 << FixedPoint96.RESOLUTION / FixedPointMathLib.WAD);
+    }
+
+    function _getFeeAmounts(address asset, uint256 id) internal view returns (uint256 amount0, uint256 amount1) {
+        address factory = assetToV3Factory[asset]; // Have to cache the factory address to avoid a stack too deep error.
+        (
+            ,
+            ,
+            address token0,
+            address token1,
+            uint24 fee,
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
+            uint256 tokensOwed0,
+            uint256 tokensOwed1
+        ) = INonfungiblePositionManager(asset).positions(id);
+
+        (uint256 feeGrowthInside0CurrentX128, uint256 feeGrowthInside1CurrentX128) =
+            _getFeeGrowthInside(factory, token0, token1, fee, tickLower, tickUpper);
+
+        // Calculate the total amount of fees by adding the already realized fees (tokensOwed), to the accumulated fees
+        // since the last time the position was updated ((feeGrowthInsideCurrentX128 - feeGrowthInsideLastX128) * liquidity).
+        amount0 = FullMath.mulDiv(feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128)
+            + tokensOwed0;
+        amount1 = FullMath.mulDiv(feeGrowthInside1CurrentX128 - feeGrowthInside1LastX128, liquidity, FixedPoint128.Q128)
+            + tokensOwed1;
+    }
+
+    function _getFeeGrowthInside(
+        address factory,
+        address token0,
+        address token1,
+        uint24 fee,
+        int24 tickLower,
+        int24 tickUpper
+    ) internal view returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) {
+        IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, token0, token1, fee));
+
+        // To calculate the pending fees, the actual current tick has to be used, even if the pool would be manipulated.
+        (, int24 tickCurrent,,,,,) = pool.slot0();
+        (,, uint256 lowerFeeGrowthOutside0X128, uint256 lowerFeeGrowthOutside1X128,,,,) = pool.ticks(tickLower);
+        (,, uint256 upperFeeGrowthOutside0X128, uint256 upperFeeGrowthOutside1X128,,,,) = pool.ticks(tickUpper);
+
+        // Calculate the fee growth inside of the Liquidity Range since the last time the position was updated.
+        if (tickCurrent < tickLower) {
+            feeGrowthInside0X128 = lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
+            feeGrowthInside1X128 = lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+        } else if (tickCurrent < tickUpper) {
+            feeGrowthInside0X128 = pool.feeGrowthGlobal0X128() - lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
+            feeGrowthInside1X128 = pool.feeGrowthGlobal1X128() - lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+        } else {
+            feeGrowthInside0X128 = upperFeeGrowthOutside0X128 - lowerFeeGrowthOutside0X128;
+            feeGrowthInside1X128 = upperFeeGrowthOutside1X128 - lowerFeeGrowthOutside1X128;
+        }
     }
 
     /*///////////////////////////////////////////////////////////////
