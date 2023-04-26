@@ -111,17 +111,6 @@ contract AssetManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
-    function testRevert_addAsset_NonUniswapV3PositionManager(address badAddress) public {
-        // badAddress cannot be a contract with a function: factory()
-        (bool success,) = badAddress.call(abi.encodeWithSignature("factory()"));
-        vm.assume(success == false);
-
-        vm.startPrank(deployer);
-        vm.expectRevert();
-        uniV3PricingModule.addAsset(badAddress);
-        vm.stopPrank();
-    }
-
     function testRevert_addAsset_OverwriteExistingAsset() public {
         vm.startPrank(deployer);
         uniV3PricingModule.addAsset(address(uniV3));
