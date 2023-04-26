@@ -780,4 +780,76 @@ contract RiskVariablesManagementTest is UniV3Test {
         assertEq(exposure0, amount0 + initialExposure0);
         assertEq(exposure1, amount1 + initialExposure1);
     }
+
+    function testRevert_processWithdrawal_NonMainRegistry(address unprivilegedAddress, address asset, uint256 id)
+        public
+    {
+        vm.assume(unprivilegedAddress != address(mainRegistry));
+
+        vm.startPrank(unprivilegedAddress);
+        vm.expectRevert("APM: ONLY_MAIN_REGISTRY");
+        uniV3PricingModule.processWithdrawal(address(0), asset, id, 0);
+        vm.stopPrank();
+    }
+
+    function testRevert_processWithdrawal_Success(
+        uint128 liquidity,
+        int24 tickLower,
+        int24 tickHigher,
+        int24 tickCurrent,
+        uint128 initialExposure0,
+        uint128 initialExposure1,
+        uint128 maxExposure0,
+        uint128 maxExposure1
+    ) public {
+        // Check that ticks are within allowed ranges.
+        vm.assume(tickCurrent <= int256(tickLower) + 16_095);
+        vm.assume(tickCurrent >= int256(tickHigher) - 16_095);
+        vm.assume(tickLower < tickHigher);
+        vm.assume(isWithinAllowedRange(tickLower));
+        vm.assume(isWithinAllowedRange(tickHigher));
+        vm.assume(isWithinAllowedRange(tickCurrent));
+
+        // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
+        createPool(TickMath.getSqrtRatioAtTick(tickCurrent), 300);
+
+        // Check that Liquidity is within allowed ranges.
+        vm.assume(liquidity > 0);
+        vm.assume(liquidity <= pool.maxLiquidityPerTick());
+
+        // Mint liquidity position.
+        uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickHigher, false);
+
+        // Calculate expose to underlying tokens.
+        // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
+        // This is because there might be some small differences due to rounding errors.
+        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
+        uint256 amount0 = LiquidityAmounts.getAmount0ForLiquidity(
+            TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickHigher), liquidity_
+        );
+        uint256 amount1 = LiquidityAmounts.getAmount1ForLiquidity(
+            TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickHigher), liquidity_
+        );
+
+        // Check that exposures are bigger than amounts (tokens had to be deposited first).
+        // Contract should never be able to reach a state where amount > exposure.
+        vm.assume(amount0 <= initialExposure0);
+        vm.assume(amount1 <= initialExposure1);
+        // Set maxExposures
+        vm.startPrank(deployer);
+        uniV3PricingModule.setExposure(address(token0), initialExposure0, maxExposure0);
+        uniV3PricingModule.setExposure(address(token1), initialExposure1, maxExposure1);
+        vm.stopPrank();
+
+        // Warp 300 seconds to ensure that TWAP of 300s can be calculated.
+        vm.warp(block.timestamp + 300);
+
+        vm.prank(address(mainRegistry));
+        uniV3PricingModule.processWithdrawal(address(0), address(uniV3), tokenId, 0);
+
+        (, uint128 exposure0) = uniV3PricingModule.exposure(address(token0));
+        (, uint128 exposure1) = uniV3PricingModule.exposure(address(token1));
+        assertEq(exposure0, initialExposure0 - amount0);
+        assertEq(exposure1, initialExposure1 - amount1);
+    }
 }
