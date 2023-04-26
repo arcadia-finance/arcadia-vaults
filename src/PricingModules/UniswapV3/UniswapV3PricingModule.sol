@@ -118,7 +118,7 @@ contract UniswapV3PricingModule is PricingModule {
 
     /**
      * @notice Returns the value of a Uniswap 3 Liquidity Range, denominated in USD.
-     * @param getValueInput A Struct with the input variables (avoid stack to deep).
+     * @param getValueInput A Struct with the input variables (avoid stack too deep).
      * - asset: The contract address of the asset.
      * - assetId: The Id of the range.
      * - assetAmount: The amount of assets.
@@ -135,7 +135,7 @@ contract UniswapV3PricingModule is PricingModule {
         override
         returns (uint256 valueInUsd, uint256, uint256 collateralFactor, uint256 liquidationFactor)
     {
-        // Use variables as much as possible in local context, to avoid stack to deep errors.
+        // Use variables as much as possible in local context, to avoid stack too deep errors.
         address asset = getValueInput.asset;
         uint256 id = getValueInput.assetId;
         uint256 baseCurrency = getValueInput.baseCurrency;
@@ -185,7 +185,7 @@ contract UniswapV3PricingModule is PricingModule {
                 PricingModule(erc20PricingModule).getRiskVariables(token1, baseCurrency);
 
             // We take the most conservative factor of both underlying assets.
-            // If one token loses in value compared to the other token, Liquidity Providers will be relatively be more exposed
+            // If one token loses in value compared to the other token, Liquidity Providers will be relatively more exposed
             // to the asset that loses value. This is especially true for Uniswap V3: when the current tick is outside of the
             // liquidity range the LP is fully exposed to a single asset.
             collateralFactor = collateralFactor0 > collateralFactor1 ? collateralFactor1 : collateralFactor0;
@@ -221,7 +221,7 @@ contract UniswapV3PricingModule is PricingModule {
     }
 
     function _getFeeAmounts(address asset, uint256 id) internal view returns (uint256 amount0, uint256 amount1) {
-        address factory = assetToV3Factory[asset]; // Have to cache the factory address to avoid a stack to deep error.
+        address factory = assetToV3Factory[asset]; // Have to cache the factory address to avoid a stack too deep error.
         (
             ,
             ,
