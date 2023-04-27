@@ -792,11 +792,10 @@ contract RiskVariablesManagement1Test is UniV3Test {
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/
     function testSuccess_getSqrtPriceX96(uint256 priceToken0, uint256 priceToken1) public {
-        // Avoid divide by 0, already checked on earlier in function.
+        // Avoid divide by 0, which is already checked in earlier in function.
         vm.assume(priceToken1 > 0);
         // Function will overFlow, not realistic.
         vm.assume(priceToken0 <= type(uint256).max / 1e18);
-        console.log(2 ** 96 / (1 << 96));
 
         uint256 priceXd18 = priceToken0 * 1e18 / priceToken1;
 

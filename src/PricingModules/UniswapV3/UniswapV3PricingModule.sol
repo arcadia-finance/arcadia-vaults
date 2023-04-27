@@ -22,6 +22,12 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
  * @title Pricing Module for Uniswap V3 Liquidity Positions.
  * @author Pragma Labs
  * @notice The pricing logic and basic information for Uniswap V3 Liquidity Positions.
+ * @dev This Pricing Module only takes into account the value of the principal
+ * (the actual Liquidity Position), not the value of accrued fees.
+ * This is a deliberate choice to reduce complexity and gas usage.
+ * A reference implementation (non audited as of deployment of this contract)
+ * for a Pricing Module with fees can be found here:
+ *
  * @dev The UniswapV3PricingModule will not price the LP-tokens via direct price oracles,
  * it will break down liquidity positions in the underlying tokens (ERC20s).
  * Only LP tokens for which the underlying tokens are allowed as collateral can be priced.
@@ -150,12 +156,12 @@ contract UniswapV3PricingModule is PricingModule {
 
             // Uniswap Pools can be manipulated, we can't rely on the current price (or tick).
             // We use Chainlink oracles of the underlying assets to calculate the flashloan resistant current price.
-            // usdPriceToken is the USD price for 10**18 (or 1 WAD) of tokens, it has a precision of: 36-tokenDecimals.
+            // usdPriceToken is the USD price for 10**tokenDecimals of tokens, it has 18 decimals precision.
             (uint256 usdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
-                GetValueInput({ asset: token0, assetId: 0, assetAmount: FixedPointMathLib.WAD, baseCurrency: 0 })
+                GetValueInput({ asset: token0, assetId: 0, assetAmount: unit[token0], baseCurrency: 0 })
             );
             (uint256 usdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
-                GetValueInput({ asset: token1, assetId: 0, assetAmount: FixedPointMathLib.WAD, baseCurrency: 0 })
+                GetValueInput({ asset: token1, assetId: 0, assetAmount: unit[token1], baseCurrency: 0 })
             );
 
             // If the Usd price of one of the tokens is 0, the LP-token will also have a value of 0.
@@ -191,16 +197,25 @@ contract UniswapV3PricingModule is PricingModule {
         return (valueInUsd, 0, collateralFactor, liquidationFactor);
     }
 
+    /**
+     * @notice Calculates the underlying token amounts of a liquidity position, given external trusted prices.
+     * @param tickLower The lower tick of the liquidity position.
+     * @param tickUpper The upper tick of the liquidity position.
+     * @param priceToken0 The price of token0 in USD, with 18 decimals precision.
+     * @param priceToken1 The price of token1 in USD, with 18 decimals precision.
+     * @param amount0 The amount of underlying token0 tokens.
+     * @param amount1 The amount of underlying token1 tokens.
+     */
     function _getPrincipalAmounts(
         int24 tickLower,
         int24 tickUpper,
         uint128 liquidity,
-        uint256 usdPriceToken0,
-        uint256 usdPriceToken1
+        uint256 priceToken0,
+        uint256 priceToken1
     ) internal pure returns (uint256 amount0, uint256 amount1) {
         // Calculate the square root of the relative rate sqrt(token1/token0) from the USD-price of both tokens.
         // sqrtPriceX96 is a binary fixed point number with 96 digits precision.
-        uint160 sqrtPriceX96 = _getSqrtPriceX96(usdPriceToken0, usdPriceToken1);
+        uint160 sqrtPriceX96 = _getSqrtPriceX96(priceToken0, priceToken1);
 
         // Calculate amount0 and amount1 of the principal (the liquidity position without accumulated fees).
         (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(
@@ -210,13 +225,19 @@ contract UniswapV3PricingModule is PricingModule {
 
     /**
      * @notice Calculates the square root of the price (token1/token0).
-     * @param priceToken0 The price of token0 in USD, with 18 to 36 decimals precision (36 - decimalsToken0).
-     * @param priceToken1 The price of token1 in USD, with 18 to 36 decimals precision (36 - decimalsToken1).
+     * @param priceToken0 The price of token0 in USD, with 18 decimals precision.
+     * @param priceToken1 The price of token1 in USD, with 18 decimals precision.
      * @return sqrtPriceX96 The square root of the price (token1/token0), with 96 binary precision.
-     * @dev The price in Uniswap V3 is defined as amountToken1/amountToken0.
-     * The usdPriceToken is defined as 10 ** (36 - decimalsToken) USD / amountToken
+     * @dev The price in Uniswap V3 is defined as:
+     * price = amountToken1/amountToken0.
+     * The usdPriceToken is defined as: usdPriceToken = amountUsd/amountToken.
+     * => amountToken = amountUsd/usdPriceToken.
+     * Hence we can derive the Uniswap V3 price as:
+     * price = (amountUsd/usdPriceToken1)/(amountUsd/usdPriceToken0) = usdPriceToken0/usdPriceToken1.
      */
     function _getSqrtPriceX96(uint256 priceToken0, uint256 priceToken1) internal pure returns (uint160 sqrtPriceX96) {
+        // Both priceTokens have 18 decimals precision and result of division should also have 18 decimals precision.
+        // -> multiply by 10**18
         uint256 priceXd18 = priceToken0.mulDivDown(FixedPointMathLib.WAD, priceToken1);
         uint256 sqrtPriceXd18 = FixedPointMathLib.sqrt(priceXd18);
 
