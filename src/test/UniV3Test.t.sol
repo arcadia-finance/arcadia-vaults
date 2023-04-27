@@ -327,8 +327,8 @@ contract RiskVariablesManagement1Test is UniV3Test {
         int24 tickHigher,
         bool revertsOnZeroLiquidity
     ) public returns (uint256 tokenId) {
-        // Check if test should revert or be skipped when liquidity is zero
-        // This is hard to assume by checking the fuzzed inputs due to rounding errors
+        // Check if test should revert or be skipped when liquidity is zero.
+        // This is hard to check with assumes of the fuzzed inputs due to rounding errors.
         // In the various advanced numeric libraries.
         if (!revertsOnZeroLiquidity) {
             (uint160 sqrtPrice,,,,,,) = pool.slot0();
