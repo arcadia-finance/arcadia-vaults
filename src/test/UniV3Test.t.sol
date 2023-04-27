@@ -580,7 +580,7 @@ contract RiskVariablesManagement1Test is UniV3Test {
         // Mint liquidity position.
         uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickHigher, false);
 
-        // Calculate expose to underlying tokens.
+        // Calculate amounts of underlying tokens.
         // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
         // This is because there might be some small differences due to rounding errors.
         (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
@@ -631,7 +631,7 @@ contract RiskVariablesManagement1Test is UniV3Test {
         // Mint liquidity position.
         uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickHigher, false);
 
-        // Calculate expose to underlying tokens.
+        // Calculate amounts of underlying tokens.
         // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
         // This is because there might be some small differences due to rounding errors.
         (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
@@ -684,7 +684,7 @@ contract RiskVariablesManagement1Test is UniV3Test {
         // Mint liquidity position.
         uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickHigher, false);
 
-        // Calculate expose to underlying tokens.
+        // Calculate amounts of underlying tokens.
         // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
         // This is because there might be some small differences due to rounding errors.
         (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
