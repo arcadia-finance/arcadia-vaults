@@ -414,7 +414,7 @@ contract RiskVariablesManagement1Test is UniV3Test {
 
         // Check that amounts are within allowed ranges.
         vm.assume(amountOut0 > 0);
-        vm.assume(amountOut1 > 0);
+        vm.assume(amountOut1 > 10); // Avoid error "SPL" when amountOut1is very small and amountOut0~amount0Initial.
         vm.assume(uint256(amountOut0) + amountOut1 < amount0Initial);
 
         // Create a pool with the minimum initial price (4_295_128_739) and cardinality 300.
