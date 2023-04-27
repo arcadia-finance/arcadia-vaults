@@ -9,7 +9,10 @@ import { DeployedContracts } from "./fixtures/DeployedContracts.f.sol";
 import { ERC20Fixture } from "./fixtures/ERC20Fixture.f.sol";
 import { ERC20 } from "../../lib/solmate/src/tokens/ERC20.sol";
 import {
-    UniswapV3PricingModule, TickMath, LiquidityAmounts
+    UniswapV3PricingModule,
+    TickMath,
+    LiquidityAmounts,
+    FixedPointMathLib
 } from "../PricingModules/UniswapV3/UniswapV3PricingModule.sol";
 import { INonfungiblePositionManagerExtension } from "./interfaces/INonfungiblePositionManagerExtension.sol";
 import { IUniswapV3PoolExtension } from "./interfaces/IUniswapV3PoolExtension.sol";
@@ -23,8 +26,22 @@ contract UniswapV3PricingModuleExtension is UniswapV3PricingModule {
         UniswapV3PricingModule(mainRegistry_, oracleHub_, riskManager_, erc20PricingModule_)
     { }
 
+    function getPrincipalAmounts(
+        int24 tickLower,
+        int24 tickUpper,
+        uint128 liquidity,
+        uint256 usdPriceToken0,
+        uint256 usdPriceToken1
+    ) public pure returns (uint256 amount0, uint256 amount1) {
+        return _getPrincipalAmounts(tickLower, tickUpper, liquidity, usdPriceToken0, usdPriceToken1);
+    }
+
+    function getSqrtPriceX96(uint256 priceToken0, uint256 priceToken1) public pure returns (uint160 sqrtPriceX96) {
+        return _getSqrtPriceX96(priceToken0, priceToken1);
+    }
+
     function getTickTwap(IUniswapV3PoolExtension pool) external view returns (int24 tick) {
-        return _getTickTwap(pool);
+        return _getTwat(pool);
     }
 
     function setExposure(address asset, uint128 exposure_, uint128 maxExposure) public {
@@ -49,6 +66,7 @@ abstract contract UniV3Test is DeployedContracts, Test {
     ERC20Fixture erc20Fixture;
 
     event RiskManagerUpdated(address riskManager);
+    event MaxExposureSet(address indexed asset, uint128 maxExposure);
 
     //this is a before
     constructor() {
@@ -225,7 +243,7 @@ contract AllowListManagementTest is UniV3Test {
 /*///////////////////////////////////////////////////////////////
                 RISK VARIABLES MANAGEMENT
 ///////////////////////////////////////////////////////////////*/
-contract RiskVariablesManagementTest is UniV3Test {
+contract RiskVariablesManagement1Test is UniV3Test {
     using stdStorage for StdStorage;
 
     ERC20 token0;
@@ -347,7 +365,38 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
-    function testSuccess_getTickTwap(
+    function testRevert_setExposureOfAsset_NonRiskManager(
+        address unprivilegedAddress_,
+        address asset,
+        uint128 maxExposure
+    ) public {
+        vm.assume(unprivilegedAddress_ != deployer);
+
+        vm.startPrank(unprivilegedAddress_);
+        vm.expectRevert("APM: ONLY_RISK_MANAGER");
+        uniV3PricingModule.setExposureOfAsset(asset, maxExposure);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setExposureOfAsset(uint8 decimals, uint128 maxExposure) public {
+        vm.assume(decimals <= 18);
+
+        token0 = erc20Fixture.createToken(deployer, decimals);
+
+        vm.startPrank(deployer);
+        vm.expectEmit(true, true, true, true);
+        emit MaxExposureSet(address(token0), maxExposure);
+        uniV3PricingModule.setExposureOfAsset(address(token0), maxExposure);
+        vm.stopPrank();
+
+        (uint128 actualMaxExposure,) = uniV3PricingModule.exposure(address(token0));
+        assertEq(actualMaxExposure, maxExposure);
+
+        uint256 actualUnit = uniV3PricingModule.unit(address(token0));
+        assertEq(actualUnit, 10 ** decimals);
+    }
+
+    function testSuccess_getTwat(
         uint256 timePassed,
         int24 tickLower,
         int24 tickHigher,
@@ -505,56 +554,6 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
-    function testRevert_processDeposit_OverflowExposureToken0(
-        uint128 liquidity,
-        int24 tickLower,
-        int24 tickHigher,
-        int24 tickCurrent,
-        uint128 initialExposure0,
-        uint128 maxExposure0
-    ) public {
-        // Check that ticks are within allowed ranges.
-        vm.assume(tickCurrent <= int256(tickLower) + 16_095);
-        vm.assume(tickCurrent >= int256(tickHigher) - 16_095);
-        vm.assume(tickLower < tickHigher);
-        vm.assume(isWithinAllowedRange(tickLower));
-        vm.assume(isWithinAllowedRange(tickHigher));
-        vm.assume(isWithinAllowedRange(tickCurrent));
-
-        // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
-        createPool(TickMath.getSqrtRatioAtTick(tickCurrent), 300);
-
-        // Check that Liquidity is within allowed ranges.
-        vm.assume(liquidity > 0);
-        vm.assume(liquidity <= pool.maxLiquidityPerTick());
-
-        // Mint liquidity position.
-        uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickHigher, false);
-
-        // Calculate expose to underlying tokens.
-        // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
-        // This is because there might be some small differences due to rounding errors.
-        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
-        uint256 amount0 = LiquidityAmounts.getAmount0ForLiquidity(
-            TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickHigher), liquidity_
-        );
-        // Condition on which the call should revert: overflow of exposure0.
-        vm.assume(amount0 + initialExposure0 > type(uint128).max);
-        // Set maxExposures
-        vm.startPrank(deployer);
-        uniV3PricingModule.setExposure(address(token0), initialExposure0, maxExposure0);
-        uniV3PricingModule.setExposureOfAsset(address(token1), type(uint128).max);
-        vm.stopPrank();
-
-        // Warp 300 seconds to ensure that TWAP of 300s can be calculated.
-        vm.warp(block.timestamp + 300);
-
-        vm.startPrank(address(mainRegistry));
-        vm.expectRevert(stdError.arithmeticError);
-        uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
-        vm.stopPrank();
-    }
-
     function testRevert_processDeposit_ExposureToken0ExceedingMax(
         uint128 liquidity,
         int24 tickLower,
@@ -588,8 +587,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         uint256 amount0 = LiquidityAmounts.getAmount0ForLiquidity(
             TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickHigher), liquidity_
         );
-        // No Overflow.
-        vm.assume(amount0 + initialExposure0 <= type(uint128).max);
+
         // Condition on which the call should revert: exposure to token0 becomes bigger as maxExposure0.
         vm.assume(amount0 + initialExposure0 > maxExposure0);
         // Set maxExposures
@@ -603,57 +601,6 @@ contract RiskVariablesManagementTest is UniV3Test {
 
         vm.startPrank(address(mainRegistry));
         vm.expectRevert("PMUV3_PD: Exposure not in limits");
-        uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
-        vm.stopPrank();
-    }
-
-    function testRevert_processDeposit_OverflowExposureToken1(
-        uint128 liquidity,
-        int24 tickLower,
-        int24 tickHigher,
-        int24 tickCurrent,
-        uint128 initialExposure1,
-        uint128 maxExposure1
-    ) public {
-        // Check that ticks are within allowed ranges.
-        vm.assume(tickCurrent <= int256(tickLower) + 16_095);
-        vm.assume(tickCurrent >= int256(tickHigher) - 16_095);
-        vm.assume(tickLower < tickHigher);
-        vm.assume(isWithinAllowedRange(tickLower));
-        vm.assume(isWithinAllowedRange(tickHigher));
-        vm.assume(isWithinAllowedRange(tickCurrent));
-
-        // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
-        createPool(TickMath.getSqrtRatioAtTick(tickCurrent), 300);
-
-        // Check that Liquidity is within allowed ranges.
-        vm.assume(liquidity > 0);
-        vm.assume(liquidity <= pool.maxLiquidityPerTick());
-
-        // Mint liquidity position.
-        uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickHigher, false);
-
-        // Calculate expose to underlying tokens.
-        // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
-        // This is because there might be some small differences due to rounding errors.
-        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
-        uint256 amount1 = LiquidityAmounts.getAmount1ForLiquidity(
-            TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickHigher), liquidity_
-        );
-        // Condition on which the call should revert: overflow of exposure1.
-        vm.assume(amount1 + initialExposure1 > type(uint128).max);
-
-        // Set maxExposures
-        vm.startPrank(deployer);
-        uniV3PricingModule.setExposureOfAsset(address(token0), type(uint128).max);
-        uniV3PricingModule.setExposure(address(token1), initialExposure1, maxExposure1);
-        vm.stopPrank();
-
-        // Warp 300 seconds to ensure that TWAP of 300s can be calculated.
-        vm.warp(block.timestamp + 300);
-
-        vm.startPrank(address(mainRegistry));
-        vm.expectRevert(stdError.arithmeticError);
         uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
         vm.stopPrank();
     }
@@ -691,8 +638,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         uint256 amount1 = LiquidityAmounts.getAmount1ForLiquidity(
             TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickHigher), liquidity_
         );
-        // No Overflow
-        vm.assume(amount1 + initialExposure1 <= type(uint128).max); // Overflow
+
         // Condition on which the call should revert: exposure to token1 becomes bigger as maxExposure1.
         vm.assume(amount1 + initialExposure1 > maxExposure1);
         // Set maxExposures
@@ -781,7 +727,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
-    function testRevert_processWithdrawal_Success(
+    function testSuccess_processWithdrawal(
         uint128 liquidity,
         int24 tickLower,
         int24 tickHigher,
@@ -840,5 +786,24 @@ contract RiskVariablesManagementTest is UniV3Test {
         (, uint128 exposure1) = uniV3PricingModule.exposure(address(token1));
         assertEq(exposure0, initialExposure0 - amount0);
         assertEq(exposure1, initialExposure1 - amount1);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                          PRICING LOGIC
+    ///////////////////////////////////////////////////////////////*/
+    function testSuccess_getSqrtPriceX96(uint256 priceToken0, uint256 priceToken1) public {
+        // Avoid divide by 0, already checked on earlier in function.
+        vm.assume(priceToken1 > 0);
+        // Function will overFlow, not realistic.
+        vm.assume(priceToken0 <= type(uint256).max / 1e18);
+        console.log(2 ** 96 / (1 << 96));
+
+        uint256 priceXd18 = priceToken0 * 1e18 / priceToken1;
+
+        uint256 sqrtPriceXd18 = FixedPointMathLib.sqrt(priceXd18);
+        uint256 expectedSqrtPriceX96 = sqrtPriceXd18 * 2 ** 96 / 1e18;
+
+        uint256 actualSqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(priceToken0, priceToken1);
+        assertEq(actualSqrtPriceX96, expectedSqrtPriceX96);
     }
 }

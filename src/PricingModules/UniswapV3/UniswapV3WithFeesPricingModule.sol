@@ -304,7 +304,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic).
         // We do not use the TWAP price to calculate the current value of the asset, only to ensure ensure that the deposited Liquidity Range
         // hence the risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
-        int24 tickCurrent = _getTickTwap(pool);
+        int24 tickCurrent = _getTwat(pool);
 
         // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
         // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
@@ -334,7 +334,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         exposure[token1].exposure += amount1Max;
     }
 
-    function _getTickTwap(IUniswapV3Pool pool) internal view returns (int24 tick) {
+    function _getTwat(IUniswapV3Pool pool) internal view returns (int24 tick) {
         uint32[] memory secondsAgos = new uint32[](2);
         secondsAgos[1] = 300; // We take a 5 minute time interval.
 
