@@ -370,6 +370,37 @@ contract RiskVariablesManagement1Test is UniV3Test {
         vm.stopPrank();
     }
 
+    // Helper function.
+    function addUnderlyingTokenToArcadia(address token, int256 price) internal {
+        ArcadiaOracle oracle = oracleFixture.initMockedOracle(0, "Token / USD");
+        address[] memory oracleArr = new address[](1);
+        oracleArr[0] = address(oracle);
+        PricingModule.RiskVarInput[] memory riskVars = new PricingModule.RiskVarInput[](1);
+        riskVars[0] = PricingModule.RiskVarInput({
+            baseCurrency: 0,
+            asset: address(0),
+            collateralFactor: 80,
+            liquidationFactor: 90
+        });
+
+        vm.startPrank(deployer);
+        oracle.transmit(price);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 1,
+                quoteAssetBaseCurrency: 0,
+                baseAsset: "Token",
+                quoteAsset: "USD",
+                oracle: address(oracle),
+                baseAssetAddress: token,
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        standardERC20PricingModule.addAsset(token, oracleArr, riskVars, type(uint128).max);
+        vm.stopPrank();
+    }
+
     function testRevert_setExposureOfAsset_NonRiskManager(
         address unprivilegedAddress_,
         address asset,
@@ -916,33 +947,52 @@ contract RiskVariablesManagement1Test is UniV3Test {
         assertEq(actualValueInBaseCurrency, 0);
     }
 
-    function addUnderlyingTokenToArcadia(address token, int256 price) internal {
-        ArcadiaOracle oracle = oracleFixture.initMockedOracle(0, "Token / USD");
-        address[] memory oracleArr = new address[](1);
-        oracleArr[0] = address(oracle);
-        PricingModule.RiskVarInput[] memory riskVars = new PricingModule.RiskVarInput[](1);
-        riskVars[0] = PricingModule.RiskVarInput({
-            baseCurrency: 0,
-            asset: address(0),
-            collateralFactor: 80,
-            liquidationFactor: 90
-        });
+    function testSuccess_getValue_RiskFactors(
+        uint256 collFactor0,
+        uint256 liqFactor0,
+        uint256 collFactor1,
+        uint256 liqFactor1
+    ) public {
+        liqFactor0 = bound(liqFactor0, 0, 100);
+        collFactor0 = bound(collFactor0, 0, liqFactor0);
+        liqFactor1 = bound(liqFactor1, 0, 100);
+        collFactor1 = bound(collFactor1, 0, liqFactor1);
 
+        createPool(TickMath.getSqrtRatioAtTick(0), 300);
+        uint256 tokenId = addLiquidity(1e5, liquidityProvider, 0, 10, true);
+
+        // Add underlying tokens and its oracles to Arcadia.
+        addUnderlyingTokenToArcadia(address(token0), 1);
+        addUnderlyingTokenToArcadia(address(token1), 1);
         vm.startPrank(deployer);
-        oracle.transmit(price);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: 1,
-                quoteAssetBaseCurrency: 0,
-                baseAsset: "Token",
-                quoteAsset: "USD",
-                oracle: address(oracle),
-                baseAssetAddress: token,
-                quoteAssetIsBaseCurrency: true,
-                isActive: true
-            })
-        );
-        standardERC20PricingModule.addAsset(token, oracleArr, riskVars, type(uint128).max);
+        uniV3PricingModule.setExposureOfAsset(address(token0), type(uint128).max);
+        uniV3PricingModule.setExposureOfAsset(address(token1), type(uint128).max);
         vm.stopPrank();
+
+        PricingModule.RiskVarInput[] memory riskVarInputs = new PricingModule.RiskVarInput[](2);
+        riskVarInputs[0] = PricingModule.RiskVarInput({
+            asset: address(token0),
+            baseCurrency: 0,
+            collateralFactor: uint16(collFactor0),
+            liquidationFactor: uint16(liqFactor0)
+        });
+        riskVarInputs[1] = PricingModule.RiskVarInput({
+            asset: address(token1),
+            baseCurrency: 0,
+            collateralFactor: uint16(collFactor1),
+            liquidationFactor: uint16(liqFactor1)
+        });
+        vm.prank(deployer);
+        standardERC20PricingModule.setBatchRiskVariables(riskVarInputs);
+
+        uint256 expectedCollFactor = collFactor0 < collFactor1 ? collFactor0 : collFactor1;
+        uint256 expectedLiqFactor = liqFactor0 < liqFactor1 ? liqFactor0 : liqFactor1;
+
+        (,, uint256 actualCollFactor, uint256 actualLiqFactor) = uniV3PricingModule.getValue(
+            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
+        );
+
+        assertEq(actualCollFactor, expectedCollFactor);
+        assertEq(actualLiqFactor, expectedLiqFactor);
     }
 }
