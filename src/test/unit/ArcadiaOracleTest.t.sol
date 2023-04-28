@@ -51,7 +51,6 @@ contract ArcadiaOracleTest is Test {
         // when: defaultCreatorAddress should be able to add new transmitter, and adds
         vm.prank(arcadiaOracleFixture.defaultCreatorAddress());
         oracle.setOffchainTransmitter(nonTransmitter);
-        vm.stopPrank();
 
         // then: new transmitter should be able to transmit
         int192 answerToTransmit = int192(int256(11 ** decimals));
