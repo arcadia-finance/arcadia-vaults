@@ -27,7 +27,7 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
  * This is a deliberate choice to reduce complexity and gas usage.
  * A reference implementation (non audited as of deployment of this contract)
  * for a Pricing Module with fees can be found here:
- *
+ * https://github.com/arcadia-finance/arcadia-vaults/blob/main/src/PricingModules/Uniswap-V3/UniswapV3WithFeesPricingModule.sol
  * @dev The UniswapV3PricingModule will not price the LP-tokens via direct price oracles,
  * it will break down liquidity positions in the underlying tokens (ERC20s).
  * Only LP tokens for which the underlying tokens are allowed as collateral can be priced.
@@ -200,8 +200,8 @@ contract UniswapV3PricingModule is PricingModule {
      * @param tickUpper The upper tick of the liquidity position.
      * @param priceToken0 The price of token0 in USD, with 18 decimals precision.
      * @param priceToken1 The price of token1 in USD, with 18 decimals precision.
-     * @param amount0 The amount of underlying token0 tokens.
-     * @param amount1 The amount of underlying token1 tokens.
+     * @return amount0 The amount of underlying token0 tokens.
+     * @return amount1 The amount of underlying token1 tokens.
      */
     function _getPrincipalAmounts(
         int24 tickLower,

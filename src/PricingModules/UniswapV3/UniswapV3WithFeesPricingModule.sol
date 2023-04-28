@@ -8,6 +8,7 @@ import { PricingModule, IPricingModule } from "../AbstractPricingModule.sol";
 import { IMainRegistry } from "../interfaces/IMainRegistry.sol";
 import { INonfungiblePositionManager } from "./interfaces/INonfungiblePositionManager.sol";
 import { IUniswapV3Pool } from "./interfaces/IUniswapV3Pool.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
 import { TickMath } from "./libraries/TickMath.sol";
 import { FullMath } from "./libraries/FullMath.sol";
 import { PoolAddress } from "./libraries/PoolAddress.sol";
@@ -37,6 +38,8 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
 
     // Map asset => uniswapV3Factory.
     mapping(address => address) public assetToV3Factory;
+    // Map asset => assetUnit.
+    mapping(address => uint256) public unit;
 
     // The Arcadia Pricing Module for standard ERC20 tokens (the underlying assets).
     PricingModule immutable erc20PricingModule;
@@ -153,13 +156,16 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
 
             // Uniswap Pools can be manipulated, we can't rely on the current price (or tick).
             // We use Chainlink oracles of the underlying assets to calculate the flashloan resistant current price.
-            // usdPriceToken is the USD price for 10**18 (or 1 WAD) of tokens, it has a precision of: 36-tokenDecimals.
+            // usdPriceToken is the USD price for 10**tokenDecimals of tokens, it has 18 decimals precision.
             (usdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
-                GetValueInput({ asset: token0, assetId: 0, assetAmount: FixedPointMathLib.WAD, baseCurrency: 0 })
+                GetValueInput({ asset: token0, assetId: 0, assetAmount: unit[token0], baseCurrency: 0 })
             );
             (usdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
-                GetValueInput({ asset: token1, assetId: 0, assetAmount: FixedPointMathLib.WAD, baseCurrency: 0 })
+                GetValueInput({ asset: token1, assetId: 0, assetAmount: unit[token1], baseCurrency: 0 })
             );
+
+            // If the Usd price of one of the tokens is 0, the LP-token will also have a value of 0.
+            if (usdPriceToken0 == 0 || usdPriceToken1 == 0) return (0, 0, 0, 0);
 
             // Calculate amount0 and amount1 of the principal (the actual liquidity position).
             (principal0, principal1) =
@@ -171,10 +177,8 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
             (uint256 fee0, uint256 fee1) = _getFeeAmounts(asset, id);
 
             // Calculate the total value in USD, with 18 decimals precision.
-            // usdPriceToken has precision: 36-tokenDecimals.
-            // (principal0 + fee0) has precision: tokenDecimals.
-            valueInUsd = usdPriceToken0.mulDivDown(principal0 + fee0, FixedPointMathLib.WAD)
-                + usdPriceToken1.mulDivDown(principal1 + fee1, FixedPointMathLib.WAD);
+            valueInUsd = usdPriceToken0.mulDivDown(principal0 + fee0, unit[token0])
+                + usdPriceToken1.mulDivDown(principal1 + fee1, unit[token1]);
         }
 
         {
@@ -195,16 +199,25 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         return (valueInUsd, 0, collateralFactor, liquidationFactor);
     }
 
+    /**
+     * @notice Calculates the underlying token amounts of a liquidity position, given external trusted prices.
+     * @param tickLower The lower tick of the liquidity position.
+     * @param tickUpper The upper tick of the liquidity position.
+     * @param priceToken0 The price of token0 in USD, with 18 decimals precision.
+     * @param priceToken1 The price of token1 in USD, with 18 decimals precision.
+     * @return amount0 The amount of underlying token0 tokens.
+     * @return amount1 The amount of underlying token1 tokens.
+     */
     function _getPrincipalAmounts(
         int24 tickLower,
         int24 tickUpper,
         uint128 liquidity,
-        uint256 usdPriceToken0,
-        uint256 usdPriceToken1
+        uint256 priceToken0,
+        uint256 priceToken1
     ) internal pure returns (uint256 amount0, uint256 amount1) {
         // Calculate the square root of the relative rate sqrt(token1/token0) from the USD-price of both tokens.
         // sqrtPriceX96 is a binary fixed point number with 96 digits precision.
-        uint160 sqrtPriceX96 = _getSqrtPriceX96(usdPriceToken0, usdPriceToken1);
+        uint160 sqrtPriceX96 = _getSqrtPriceX96(priceToken0, priceToken1);
 
         // Calculate amount0 and amount1 of the principal (the actual liquidity position).
         (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(
@@ -212,14 +225,35 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         );
     }
 
+    /**
+     * @notice Calculates the square root of the price (token1/token0).
+     * @param priceToken0 The price of token0 in USD, with 18 decimals precision.
+     * @param priceToken1 The price of token1 in USD, with 18 decimals precision.
+     * @return sqrtPriceX96 The square root of the price (token1/token0), with 96 binary precision.
+     * @dev The price in Uniswap V3 is defined as:
+     * price = amountToken1/amountToken0.
+     * The usdPriceToken is defined as: usdPriceToken = amountUsd/amountToken.
+     * => amountToken = amountUsd/usdPriceToken.
+     * Hence we can derive the Uniswap V3 price as:
+     * price = (amountUsd/usdPriceToken1)/(amountUsd/usdPriceToken0) = usdPriceToken0/usdPriceToken1.
+     */
     function _getSqrtPriceX96(uint256 priceToken0, uint256 priceToken1) internal pure returns (uint160 sqrtPriceX96) {
-        uint256 priceXd18 = priceToken1.mulDivDown(FixedPointMathLib.WAD, priceToken0);
+        // Both priceTokens have 18 decimals precision and result of division should also have 18 decimals precision.
+        // -> multiply by 10**18
+        uint256 priceXd18 = priceToken0.mulDivDown(FixedPointMathLib.WAD, priceToken1);
         uint256 sqrtPriceXd18 = FixedPointMathLib.sqrt(priceXd18);
 
         // Change sqrtPrice from a decimal fixed point number with 18 digits to a binary fixed point number with 96 digits.
-        sqrtPriceX96 = uint160(sqrtPriceXd18 << FixedPoint96.RESOLUTION / FixedPointMathLib.WAD);
+        sqrtPriceX96 = uint160((sqrtPriceXd18 << FixedPoint96.RESOLUTION) / FixedPointMathLib.WAD);
     }
 
+    /**
+     * @notice Calculates the underlying token amounts of accrued fees, both collected as uncollected.
+     * @param asset The contract address of the asset.
+     * @param id The Id of the range.
+     * @return amount0 The amount fees of underlying token0 tokens.
+     * @return amount1 The amount of fees underlying token1 tokens.
+     */
     function _getFeeAmounts(address asset, uint256 id) internal view returns (uint256 amount0, uint256 amount1) {
         address factory = assetToV3Factory[asset]; // Have to cache the factory address to avoid a stack too deep error.
         (
@@ -248,6 +282,17 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
             + tokensOwed1;
     }
 
+    /**
+     * @notice Calculates the current fee growth inside the Liquidity Range.
+     * @param factory The contract address of the pool factory.
+     * @param token0 Token0 of the Liquidity Pool.
+     * @param token1 Token1 of the Liquidity Pool.
+     * @param fee The fee of the Liquidity Pool.
+     * @param tickLower The lower tick of the liquidity position.
+     * @param tickUpper The upper tick of the liquidity position.
+     * @return feeGrowthInside0X128 The amount fees of underlying token0 tokens.
+     * @return feeGrowthInside1X128 The amount of fees underlying token1 tokens.
+     */
     function _getFeeGrowthInside(
         address factory,
         address token0,
@@ -281,6 +326,24 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
+     * @notice Sets the maximum exposure for an underlying asset.
+     * @param asset The contract address of the underlying asset.
+     * @param maxExposure The maximum protocol wide exposure to the underlying asset.
+     * @dev Can only be called by the Risk Manager, which can be different from the owner.
+     */
+    function setExposureOfAsset(address asset, uint256 maxExposure) public override {
+        // Authorization that only Risk Manager can set a new maxExposure is done in parent function.
+        super.setExposureOfAsset(asset, maxExposure);
+
+        // If the maximum exposure for an asset is set for the first time, check that the asset can be priced
+        // by the erc20PricingModule and also store the unit of the underlying asset.
+        if (exposure[asset].exposure == 0) {
+            require(PricingModule(erc20PricingModule).inPricingModule(asset), "PMUV3_SEOA: Unknown asset");
+            unit[asset] = 10 ** IERC20(asset).decimals();
+        }
+    }
+
+    /**
      * @notice Processes the deposit of an asset.
      * param vault The contract address of the Vault where the asset is transferred to.
      * @param asset The contract address of the asset.
@@ -299,41 +362,48 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         (,, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
             INonfungiblePositionManager(asset).positions(assetId);
 
-        IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(assetToV3Factory[asset], token0, token1, fee));
+        {
+            IUniswapV3Pool pool =
+                IUniswapV3Pool(PoolAddress.computeAddress(assetToV3Factory[asset], token0, token1, fee));
 
-        // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic).
-        // We do not use the TWAP price to calculate the current value of the asset, only to ensure ensure that the deposited Liquidity Range
-        // hence the risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
-        int24 tickCurrent = _getTwat(pool);
+            // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic).
+            // We do not use the TWAP price to calculate the current value of the asset, only to ensure ensure that the deposited Liquidity Range
+            // hence the risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
+            int24 tickCurrent = _getTwat(pool);
 
-        // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
-        // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
-        require(tickCurrent - tickLower <= 16_095, "PMUV3_PD: Range not in limits");
-        require(tickUpper - tickCurrent <= 16_095, "PMUV3_PD: Range not in limits");
+            // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
+            // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
+            require(tickCurrent - tickLower <= 16_095, "PMUV3_PD: Range not in limits");
+            require(tickUpper - tickCurrent <= 16_095, "PMUV3_PD: Range not in limits");
+        }
 
         // Cache sqrtRatio.
         uint160 sqrtRatioLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
         uint160 sqrtRatioUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
 
         // Calculate the maximal possible exposure to each underlying asset.
-        uint128 amount0Max = SafeCastLib.safeCastTo128(
-            LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity)
-        );
-        uint128 amount1Max = SafeCastLib.safeCastTo128(
-            LiquidityAmounts.getAmount1ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity)
-        );
+        uint256 amount0Max = LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity);
+        uint256 amount1Max = LiquidityAmounts.getAmount1ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity);
 
-        // Update exposure to underlying assets.
-        require(
-            exposure[token0].exposure + amount0Max <= exposure[token0].maxExposure, "PMUV3_PD: Exposure not in limits"
-        );
-        require(
-            exposure[token1].exposure + amount1Max <= exposure[token1].maxExposure, "PMUV3_PD: Exposure not in limits"
-        );
-        exposure[token0].exposure += amount0Max;
-        exposure[token1].exposure += amount1Max;
+        // Calculate updated exposure.
+        uint256 exposure0 = amount0Max + exposure[token0].exposure;
+        uint256 exposure1 = amount1Max + exposure[token1].exposure;
+
+        // Check that exposure doesn't exceed maxExposure
+        require(exposure0 <= exposure[token0].maxExposure, "PMUV3_PD: Exposure not in limits");
+        require(exposure1 <= exposure[token1].maxExposure, "PMUV3_PD: Exposure not in limits");
+
+        // Update exposure
+        // Unsafe casts: we already know from previous requires that exposure is smaller as maxExposure (uint128).
+        exposure[token0].exposure = uint128(exposure0);
+        exposure[token1].exposure = uint128(exposure1);
     }
 
+    /**
+     * @notice Calculates the time weighted average tick over 300s.
+     * @param pool The liquidity pool.
+     * @return tick The time weighted average tick over 300s.
+     */
     function _getTwat(IUniswapV3Pool pool) internal view returns (int24 tick) {
         uint32[] memory secondsAgos = new uint32[](2);
         secondsAgos[1] = 300; // We take a 5 minute time interval.
