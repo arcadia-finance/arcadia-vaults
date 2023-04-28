@@ -842,11 +842,16 @@ contract RiskVariablesManagement1Test is UniV3Test {
         vm.assume(priceToken1 > 0);
         // Function will overFlow, not realistic.
         vm.assume(priceToken0 <= type(uint256).max / 1e18);
+        // Cast to uint160 will overflow, not realistic.
+        vm.assume(priceToken0 / priceToken1 < 1e18 * 2 ** 128);
 
         uint256 priceXd18 = priceToken0 * 1e18 / priceToken1;
 
         uint256 sqrtPriceXd18 = FixedPointMathLib.sqrt(priceXd18);
         uint256 expectedSqrtPriceX96 = sqrtPriceXd18 * 2 ** 96 / 1e18;
+        console.log(uint160(expectedSqrtPriceX96));
+        console.log(1e18 * 2 ** 128);
+        console.log(priceToken0);
 
         uint256 actualSqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(priceToken0, priceToken1);
         assertEq(actualSqrtPriceX96, expectedSqrtPriceX96);

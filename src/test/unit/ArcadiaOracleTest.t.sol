@@ -36,7 +36,7 @@ contract ArcadiaOracleTest is Test {
 
         // when: nonTransmitter tries to transmit
         int192 answerToTransmit = int192(int256(11 ** decimals));
-        vm.prank(nonTransmitter);
+        vm.startPrank(nonTransmitter);
 
         // then: nonTransmitter shouldn not be able to add new transmission
         vm.expectRevert("Oracle: caller is not the valid transmitter");
@@ -57,7 +57,6 @@ contract ArcadiaOracleTest is Test {
         int192 answerToTransmit = int192(int256(11 ** decimals));
         vm.prank(nonTransmitter);
         oracle.transmit(answerToTransmit);
-        vm.stopPrank();
 
         // and: responses should match
         int256 answerFromOracle;
@@ -89,7 +88,7 @@ contract ArcadiaOracleTest is Test {
 
         // then: transmitter shouldn not be able to add new transmission
         int192 answerToTransmit = int192(int256(11 ** decimals));
-        vm.prank(transmitter);
+        vm.startPrank(transmitter);
         vm.expectRevert("Oracle: transmitter is not active");
         oracle.transmit(answerToTransmit);
         vm.stopPrank();

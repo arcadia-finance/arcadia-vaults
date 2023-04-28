@@ -239,6 +239,7 @@ contract UniswapV3PricingModule is PricingModule {
         uint256 sqrtPriceXd18 = FixedPointMathLib.sqrt(priceXd18);
 
         // Change sqrtPrice from a decimal fixed point number with 18 digits to a binary fixed point number with 96 digits.
+        // Unsafe cast: Function will only overflow when priceToken0/priceToken1 >= 10^¨18 * 2¨^128.
         sqrtPriceX96 = uint160((sqrtPriceXd18 << FixedPoint96.RESOLUTION) / FixedPointMathLib.WAD);
     }
 
