@@ -172,11 +172,8 @@ contract UniswapV3PricingModule is PricingModule {
                 _getPrincipalAmounts(tickLower, tickUpper, liquidity, usdPriceToken0, usdPriceToken1);
 
             // Calculate the total value in USD, with 18 decimals precision.
-            // usdPriceToken has precision: 36-tokenDecimals.
-            // amount has precision: tokenDecimals.
-            // -> Product has precision of 36 decimals -> divide product by 1e18.
-            valueInUsd = usdPriceToken0.mulDivDown(amount0, FixedPointMathLib.WAD)
-                + usdPriceToken1.mulDivDown(amount1, FixedPointMathLib.WAD);
+            valueInUsd =
+                usdPriceToken0.mulDivDown(amount0, unit[token0]) + usdPriceToken1.mulDivDown(amount1, unit[token1]);
         }
 
         {
@@ -186,12 +183,12 @@ contract UniswapV3PricingModule is PricingModule {
             (uint256 collateralFactor1, uint256 liquidationFactor1) =
                 PricingModule(erc20PricingModule).getRiskVariables(token1, getValueInput.baseCurrency);
 
-            // We take the most conservative factor of both underlying assets.
+            // We take the most conservative (lowest) factor of both underlying assets.
             // If one token loses in value compared to the other token, Liquidity Providers will be relatively more exposed
             // to the asset that loses value. This is especially true for Uniswap V3: when the current tick is outside of the
             // liquidity range the LP is fully exposed to a single asset.
-            collateralFactor = collateralFactor0 > collateralFactor1 ? collateralFactor1 : collateralFactor0;
-            liquidationFactor = liquidationFactor0 > liquidationFactor1 ? liquidationFactor1 : liquidationFactor0;
+            collateralFactor = collateralFactor0 < collateralFactor1 ? collateralFactor0 : collateralFactor1;
+            liquidationFactor = liquidationFactor0 < liquidationFactor1 ? liquidationFactor0 : liquidationFactor1;
         }
 
         return (valueInUsd, 0, collateralFactor, liquidationFactor);
@@ -213,7 +210,7 @@ contract UniswapV3PricingModule is PricingModule {
         uint256 priceToken0,
         uint256 priceToken1
     ) internal pure returns (uint256 amount0, uint256 amount1) {
-        // Calculate the square root of the relative rate sqrt(token1/token0) from the USD-price of both tokens.
+        // Calculate the square root of the relative rate sqrt(token1/token0) from the trusted USD-price of both tokens.
         // sqrtPriceX96 is a binary fixed point number with 96 digits precision.
         uint160 sqrtPriceX96 = _getSqrtPriceX96(priceToken0, priceToken1);
 
@@ -259,8 +256,10 @@ contract UniswapV3PricingModule is PricingModule {
         // Authorization that only Risk Manager can set a new maxExposure is done in parent function.
         super.setExposureOfAsset(asset, maxExposure);
 
-        // If the maximum exposure for an asset is set for the first time, also store the unit
+        // If the maximum exposure for an asset is set for the first time, check that the asset can be priced
+        // by the erc20PricingModule and also store the unit of the underlying asset.
         if (exposure[asset].exposure == 0) {
+            require(PricingModule(erc20PricingModule).inPricingModule(asset), "PMUV3_SEOA: Unknown asset");
             unit[asset] = 10 ** IERC20(asset).decimals();
         }
     }
