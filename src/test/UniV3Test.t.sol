@@ -84,6 +84,137 @@ abstract contract UniV3Test is DeployedContracts, Test {
 
     //this is a before each
     function setUp() public virtual { }
+
+    /*///////////////////////////////////////////////////////////////
+                    HELPER FUNCTIONS
+    ///////////////////////////////////////////////////////////////*/
+    function isBelowMaxLiquidityPerTick(
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amount0,
+        uint256 amount1,
+        IUniswapV3PoolExtension pool_
+    ) public view returns (bool) {
+        (uint160 sqrtPrice,,,,,,) = pool_.slot0();
+
+        uint256 liquidity = LiquidityAmountsExtension.getLiquidityForAmounts(
+            sqrtPrice, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), amount0, amount1
+        );
+
+        return liquidity <= pool_.maxLiquidityPerTick();
+    }
+
+    function isWithinAllowedRange(int24 tick) public pure returns (bool) {
+        int24 MIN_TICK = -887_272;
+        int24 MAX_TICK = -MIN_TICK;
+        return (tick < 0 ? uint256(-int256(tick)) : uint256(int256(tick))) <= uint256(uint24(MAX_TICK));
+    }
+
+    function createPool(ERC20 token0, ERC20 token1, uint160 sqrtPriceX96, uint16 observationCardinality)
+        public
+        returns (IUniswapV3PoolExtension pool)
+    {
+        address poolAddress =
+            uniV3.createAndInitializePoolIfNecessary(address(token0), address(token1), 100, sqrtPriceX96); // Set initial price to lowest possible price.
+        pool = IUniswapV3PoolExtension(poolAddress);
+        pool.increaseObservationCardinalityNext(observationCardinality);
+    }
+
+    function addLiquidity(
+        IUniswapV3PoolExtension pool,
+        uint128 liquidity,
+        address liquidityProvider_,
+        int24 tickLower,
+        int24 tickUpper,
+        bool revertsOnZeroLiquidity
+    ) public returns (uint256 tokenId) {
+        (uint160 sqrtPrice,,,,,,) = pool.slot0();
+
+        (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
+            sqrtPrice, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity
+        );
+
+        tokenId = addLiquidity(pool, amount0, amount1, liquidityProvider_, tickLower, tickUpper, revertsOnZeroLiquidity);
+    }
+
+    function addLiquidity(
+        IUniswapV3PoolExtension pool,
+        uint256 amount0,
+        uint256 amount1,
+        address liquidityProvider_,
+        int24 tickLower,
+        int24 tickUpper,
+        bool revertsOnZeroLiquidity
+    ) public returns (uint256 tokenId) {
+        // Check if test should revert or be skipped when liquidity is zero.
+        // This is hard to check with assumes of the fuzzed inputs due to rounding errors.
+        if (!revertsOnZeroLiquidity) {
+            (uint160 sqrtPrice,,,,,,) = pool.slot0();
+            uint256 liquidity = LiquidityAmountsExtension.getLiquidityForAmounts(
+                sqrtPrice,
+                TickMath.getSqrtRatioAtTick(tickLower),
+                TickMath.getSqrtRatioAtTick(tickUpper),
+                amount0,
+                amount1
+            );
+            vm.assume(liquidity > 0);
+        }
+
+        address token0 = pool.token0();
+        address token1 = pool.token1();
+
+        deal(token0, liquidityProvider_, amount0);
+        deal(token1, liquidityProvider_, amount1);
+        vm.startPrank(liquidityProvider_);
+        ERC20(token0).approve(address(uniV3), type(uint256).max);
+        ERC20(token1).approve(address(uniV3), type(uint256).max);
+        (tokenId,,,) = uniV3.mint(
+            INonfungiblePositionManagerExtension.MintParams({
+                token0: token0,
+                token1: token1,
+                fee: 100,
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                amount0Desired: amount0,
+                amount1Desired: amount1,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: liquidityProvider_,
+                deadline: type(uint256).max
+            })
+        );
+        vm.stopPrank();
+    }
+
+    function addUnderlyingTokenToArcadia(address token, int256 price) internal {
+        ArcadiaOracle oracle = oracleFixture.initMockedOracle(0, "Token / USD");
+        address[] memory oracleArr = new address[](1);
+        oracleArr[0] = address(oracle);
+        PricingModule.RiskVarInput[] memory riskVars = new PricingModule.RiskVarInput[](1);
+        riskVars[0] = PricingModule.RiskVarInput({
+            baseCurrency: 0,
+            asset: address(0),
+            collateralFactor: 80,
+            liquidationFactor: 90
+        });
+
+        vm.startPrank(deployer);
+        oracle.transmit(price);
+        oracleHub.addOracle(
+            OracleHub.OracleInformation({
+                oracleUnit: 1,
+                quoteAssetBaseCurrency: 0,
+                baseAsset: "Token",
+                quoteAsset: "USD",
+                oracle: address(oracle),
+                baseAssetAddress: token,
+                quoteAssetIsBaseCurrency: true,
+                isActive: true
+            })
+        );
+        standardERC20PricingModule.addAsset(token, oracleArr, riskVars, type(uint128).max);
+        vm.stopPrank();
+    }
 }
 
 /* ///////////////////////////////////////////////////////////////
@@ -249,7 +380,7 @@ contract AllowListManagementTest is UniV3Test {
 /*///////////////////////////////////////////////////////////////
                 RISK VARIABLES MANAGEMENT
 ///////////////////////////////////////////////////////////////*/
-contract RiskVariablesManagement1Test is UniV3Test {
+contract RiskVariablesManagementTest is UniV3Test {
     using stdStorage for StdStorage;
 
     ERC20 token0;
@@ -273,132 +404,6 @@ contract RiskVariablesManagement1Test is UniV3Test {
         token0 = erc20Fixture.createToken();
         token1 = erc20Fixture.createToken();
         (token0, token1) = token0 < token1 ? (token0, token1) : (token1, token0);
-    }
-
-    // Helper function.
-    function isBelowMaxLiquidityPerTick(
-        int24 tickLower,
-        int24 tickUpper,
-        uint256 amount0,
-        uint256 amount1,
-        IUniswapV3PoolExtension pool_
-    ) public view returns (bool) {
-        (uint160 sqrtPrice,,,,,,) = pool_.slot0();
-
-        uint256 liquidity = LiquidityAmountsExtension.getLiquidityForAmounts(
-            sqrtPrice, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), amount0, amount1
-        );
-
-        return liquidity <= pool_.maxLiquidityPerTick();
-    }
-
-    // Helper function.
-    function isWithinAllowedRange(int24 tick) public pure returns (bool) {
-        int24 MIN_TICK = -887_272;
-        int24 MAX_TICK = -MIN_TICK;
-        return (tick < 0 ? uint256(-int256(tick)) : uint256(int256(tick))) <= uint256(uint24(MAX_TICK));
-    }
-
-    // Helper function.
-    function createPool(uint160 sqrtPriceX96, uint16 observationCardinality) public {
-        address poolAddress =
-            uniV3.createAndInitializePoolIfNecessary(address(token0), address(token1), 100, sqrtPriceX96); // Set initial price to lowest possible price.
-        pool = IUniswapV3PoolExtension(poolAddress);
-        pool.increaseObservationCardinalityNext(observationCardinality);
-    }
-
-    // Helper function.
-    function addLiquidity(
-        uint128 liquidity,
-        address liquidityProvider_,
-        int24 tickLower,
-        int24 tickUpper,
-        bool revertsOnZeroLiquidity
-    ) public returns (uint256 tokenId) {
-        (uint160 sqrtPrice,,,,,,) = pool.slot0();
-
-        (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
-            sqrtPrice, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity
-        );
-
-        tokenId = addLiquidity(amount0, amount1, liquidityProvider_, tickLower, tickUpper, revertsOnZeroLiquidity);
-    }
-
-    // Helper function.
-    function addLiquidity(
-        uint256 amount0,
-        uint256 amount1,
-        address liquidityProvider_,
-        int24 tickLower,
-        int24 tickUpper,
-        bool revertsOnZeroLiquidity
-    ) public returns (uint256 tokenId) {
-        // Check if test should revert or be skipped when liquidity is zero.
-        // This is hard to check with assumes of the fuzzed inputs due to rounding errors.
-        if (!revertsOnZeroLiquidity) {
-            (uint160 sqrtPrice,,,,,,) = pool.slot0();
-            uint256 liquidity = LiquidityAmountsExtension.getLiquidityForAmounts(
-                sqrtPrice,
-                TickMath.getSqrtRatioAtTick(tickLower),
-                TickMath.getSqrtRatioAtTick(tickUpper),
-                amount0,
-                amount1
-            );
-            vm.assume(liquidity > 0);
-        }
-
-        deal(address(token0), liquidityProvider_, amount0);
-        deal(address(token1), liquidityProvider_, amount1);
-        vm.startPrank(liquidityProvider_);
-        token0.approve(address(uniV3), type(uint256).max);
-        token1.approve(address(uniV3), type(uint256).max);
-        (tokenId,,,) = uniV3.mint(
-            INonfungiblePositionManagerExtension.MintParams({
-                token0: address(token0),
-                token1: address(token1),
-                fee: 100,
-                tickLower: tickLower,
-                tickUpper: tickUpper,
-                amount0Desired: amount0,
-                amount1Desired: amount1,
-                amount0Min: 0,
-                amount1Min: 0,
-                recipient: liquidityProvider_,
-                deadline: type(uint256).max
-            })
-        );
-        vm.stopPrank();
-    }
-
-    // Helper function.
-    function addUnderlyingTokenToArcadia(address token, int256 price) internal {
-        ArcadiaOracle oracle = oracleFixture.initMockedOracle(0, "Token / USD");
-        address[] memory oracleArr = new address[](1);
-        oracleArr[0] = address(oracle);
-        PricingModule.RiskVarInput[] memory riskVars = new PricingModule.RiskVarInput[](1);
-        riskVars[0] = PricingModule.RiskVarInput({
-            baseCurrency: 0,
-            asset: address(0),
-            collateralFactor: 80,
-            liquidationFactor: 90
-        });
-
-        vm.startPrank(deployer);
-        oracle.transmit(price);
-        oracleHub.addOracle(
-            OracleHub.OracleInformation({
-                oracleUnit: 1,
-                quoteAssetBaseCurrency: 0,
-                baseAsset: "Token",
-                quoteAsset: "USD",
-                oracle: address(oracle),
-                baseAssetAddress: token,
-                quoteAssetIsBaseCurrency: true,
-                isActive: true
-            })
-        );
-        standardERC20PricingModule.addAsset(token, oracleArr, riskVars, type(uint128).max);
-        vm.stopPrank();
     }
 
     function testRevert_setExposureOfAsset_NonRiskManager(
@@ -464,11 +469,11 @@ contract RiskVariablesManagement1Test is UniV3Test {
         vm.assume(uint256(amountOut0) + amountOut1 < amount0Initial);
 
         // Create a pool with the minimum initial price (4_295_128_739) and cardinality 300.
-        createPool(4_295_128_739, 300);
+        pool = createPool(token0, token1, 4_295_128_739, 300);
         vm.assume(isBelowMaxLiquidityPerTick(tickLower, tickUpper, amount0Initial, 0, pool));
 
         // Provide liquidity only in token0.
-        addLiquidity(amount0Initial, 0, liquidityProvider, tickLower, tickUpper, false);
+        addLiquidity(pool, amount0Initial, 0, liquidityProvider, tickLower, tickUpper, false);
 
         // Do a first swap.
         deal(address(token1), swapper, type(uint256).max);
@@ -548,14 +553,14 @@ contract RiskVariablesManagement1Test is UniV3Test {
         vm.assume(isWithinAllowedRange(tickCurrent));
 
         // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
-        createPool(TickMath.getSqrtRatioAtTick(tickCurrent), 300);
+        pool = createPool(token0, token1, TickMath.getSqrtRatioAtTick(tickCurrent), 300);
 
         // Check that Liquidity is within allowed ranges.
         vm.assume(liquidity > 0);
         vm.assume(liquidity <= pool.maxLiquidityPerTick());
 
         // Mint liquidity position.
-        uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickUpper, false);
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
         // Warp 300 seconds to ensure that TWAT of 300s can be calculated.
         vm.warp(block.timestamp + 300);
 
@@ -583,14 +588,14 @@ contract RiskVariablesManagement1Test is UniV3Test {
         vm.assume(isWithinAllowedRange(tickCurrent));
 
         // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
-        createPool(TickMath.getSqrtRatioAtTick(tickCurrent), 300);
+        pool = createPool(token0, token1, TickMath.getSqrtRatioAtTick(tickCurrent), 300);
 
         // Check that Liquidity is within allowed ranges.
         vm.assume(liquidity > 0);
         vm.assume(liquidity <= pool.maxLiquidityPerTick());
 
         // Mint liquidity position.
-        uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickUpper, false);
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
         // Warp 300 seconds to ensure that TWAT of 300s can be calculated.
         vm.warp(block.timestamp + 300);
 
@@ -617,14 +622,14 @@ contract RiskVariablesManagement1Test is UniV3Test {
         vm.assume(isWithinAllowedRange(tickCurrent));
 
         // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
-        createPool(TickMath.getSqrtRatioAtTick(tickCurrent), 300);
+        pool = createPool(token0, token1, TickMath.getSqrtRatioAtTick(tickCurrent), 300);
 
         // Check that Liquidity is within allowed ranges.
         vm.assume(liquidity > 0);
         vm.assume(liquidity <= pool.maxLiquidityPerTick());
 
         // Mint liquidity position.
-        uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickUpper, false);
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
 
         // Calculate amounts of underlying tokens.
         // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
@@ -668,14 +673,14 @@ contract RiskVariablesManagement1Test is UniV3Test {
         vm.assume(isWithinAllowedRange(tickCurrent));
 
         // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
-        createPool(TickMath.getSqrtRatioAtTick(tickCurrent), 300);
+        pool = createPool(token0, token1, TickMath.getSqrtRatioAtTick(tickCurrent), 300);
 
         // Check that Liquidity is within allowed ranges.
         vm.assume(liquidity > 0);
         vm.assume(liquidity <= pool.maxLiquidityPerTick());
 
         // Mint liquidity position.
-        uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickUpper, false);
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
 
         // Calculate amounts of underlying tokens.
         // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
@@ -721,14 +726,14 @@ contract RiskVariablesManagement1Test is UniV3Test {
         vm.assume(isWithinAllowedRange(tickCurrent));
 
         // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
-        createPool(TickMath.getSqrtRatioAtTick(tickCurrent), 300);
+        pool = createPool(token0, token1, TickMath.getSqrtRatioAtTick(tickCurrent), 300);
 
         // Check that Liquidity is within allowed ranges.
         vm.assume(liquidity > 0);
         vm.assume(liquidity <= pool.maxLiquidityPerTick());
 
         // Mint liquidity position.
-        uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickUpper, false);
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
 
         // Calculate amounts of underlying tokens.
         // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
@@ -792,14 +797,14 @@ contract RiskVariablesManagement1Test is UniV3Test {
         vm.assume(isWithinAllowedRange(tickCurrent));
 
         // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
-        createPool(TickMath.getSqrtRatioAtTick(tickCurrent), 300);
+        pool = createPool(token0, token1, TickMath.getSqrtRatioAtTick(tickCurrent), 300);
 
         // Check that Liquidity is within allowed ranges.
         vm.assume(liquidity > 0);
         vm.assume(liquidity <= pool.maxLiquidityPerTick());
 
         // Mint liquidity position.
-        uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickUpper, false);
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
 
         // Calculate expose to underlying tokens.
         // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
@@ -913,14 +918,14 @@ contract RiskVariablesManagement1Test is UniV3Test {
             (decimals0, decimals1) = (decimals1, decimals0);
         }
 
-        createPool(sqrtPriceX96, 300);
+        pool = createPool(token0, token1, sqrtPriceX96, 300);
 
         // Check that Liquidity is within allowed ranges.
         vm.assume(liquidity > 0);
         vm.assume(liquidity <= pool.maxLiquidityPerTick());
 
         // Mint liquidity position.
-        uint256 tokenId = addLiquidity(liquidity, liquidityProvider, tickLower, tickUpper, false);
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
 
         // Calculate amounts of underlying tokens.
         // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
@@ -963,8 +968,8 @@ contract RiskVariablesManagement1Test is UniV3Test {
         liqFactor1 = bound(liqFactor1, 0, 100);
         collFactor1 = bound(collFactor1, 0, liqFactor1);
 
-        createPool(TickMath.getSqrtRatioAtTick(0), 300);
-        uint256 tokenId = addLiquidity(1e5, liquidityProvider, 0, 10, true);
+        pool = createPool(token0, token1, TickMath.getSqrtRatioAtTick(0), 300);
+        uint256 tokenId = addLiquidity(pool, 1e5, liquidityProvider, 0, 10, true);
 
         // Add underlying tokens and its oracles to Arcadia.
         addUnderlyingTokenToArcadia(address(token0), 1);
@@ -1001,3 +1006,7 @@ contract RiskVariablesManagement1Test is UniV3Test {
         assertEq(actualLiqFactor, expectedLiqFactor);
     }
 }
+
+/*///////////////////////////////////////////////////////////////
+                    INTEGRATION TEST
+///////////////////////////////////////////////////////////////*/

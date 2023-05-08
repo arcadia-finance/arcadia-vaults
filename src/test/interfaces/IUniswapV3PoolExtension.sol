@@ -7,4 +7,8 @@ interface IUniswapV3PoolExtension is IUniswapV3Pool {
     function increaseObservationCardinalityNext(uint16 observationCardinalityNext) external;
 
     function maxLiquidityPerTick() external view returns (uint128 maxLiquidityPerTick);
+
+    function token0() external view returns (address token0);
+
+    function token1() external view returns (address token1);
 }
