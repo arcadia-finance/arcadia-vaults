@@ -50,6 +50,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
      * @param mainRegistry_ The contract address of the MainRegistry.
      * @param oracleHub_ The contract address of the OracleHub.
      * @param riskManager_ The address of the Risk Manager.
+     * @param erc20PricingModule_ The contract address of the Pricing Module for ERC20s
      * @dev AssetType for Uniswap V3 Liquidity Positions (ERC721) is 1.
      */
     constructor(address mainRegistry_, address oracleHub_, address riskManager_, address erc20PricingModule_)
@@ -244,7 +245,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         uint256 sqrtPriceXd9 = FixedPointMathLib.sqrt(priceXd18);
 
         // Change sqrtPrice from a decimal fixed point number with 9 digits to a binary fixed point number with 96 digits.
-        // Unsafe cast: Cast will only overflow when priceToken0/priceToken1 >= 2¨^128.
+        // Unsafe cast: Cast will only overflow when priceToken0/priceToken1 >= 2^128.
         sqrtPriceX96 = uint160((sqrtPriceXd9 << FixedPoint96.RESOLUTION) / 1e9);
     }
 
@@ -367,7 +368,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
                 IUniswapV3Pool(PoolAddress.computeAddress(assetToV3Factory[asset], token0, token1, fee));
 
             // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic).
-            // We do not use the TWAP price to calculate the current value of the asset, only to ensure ensure that the deposited Liquidity Range
+            // We do not use the TWAP price to calculate the current value of the asset, only to ensure that the deposited Liquidity Range
             // hence the risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
             int24 tickCurrent = _getTwat(pool);
 
@@ -394,7 +395,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         require(exposure1 <= exposure[token1].maxExposure, "PMUV3_PD: Exposure1 not in limits");
 
         // Update exposure
-        // Unsafe casts: we already know from previous requires that exposure is smaller as maxExposure (uint128).
+        // Unsafe casts: we already know from previous requires that exposure is smaller than maxExposure (uint128).
         exposure[token0].exposure = uint128(exposure0);
         exposure[token1].exposure = uint128(exposure1);
     }
@@ -403,6 +404,9 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
      * @notice Calculates the time weighted average tick over 300s.
      * @param pool The liquidity pool.
      * @return tick The time weighted average tick over 300s.
+     * @dev We do not use the TWAT price to calculate the current value of the asset.
+     * It is used only to ensure that the deposited Liquidity range and thus
+     * the risk of exposure manipulation is acceptable.
      */
     function _getTwat(IUniswapV3Pool pool) internal view returns (int24 tick) {
         uint32[] memory secondsAgos = new uint32[](2);
@@ -414,7 +418,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
     }
 
     /**
-     * @notice Processes the withdrawal an asset.
+     * @notice Processes the withdrawal of an asset.
      * param vault The address of the vault where the asset is withdrawn from
      * @param asset The contract address of the asset.
      * @param assetId The Id of the asset.
