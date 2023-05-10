@@ -573,7 +573,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.warp(block.timestamp + 300);
 
         vm.startPrank(address(mainRegistry));
-        vm.expectRevert("PMUV3_PD: Range not in limits");
+        vm.expectRevert("PMUV3_PD: Tlow not in limits");
         uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
         vm.stopPrank();
     }
@@ -608,7 +608,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.warp(block.timestamp + 300);
 
         vm.startPrank(address(mainRegistry));
-        vm.expectRevert("PMUV3_PD: Range not in limits");
+        vm.expectRevert("PMUV3_PD: Tup not in limits");
         uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
         vm.stopPrank();
     }
@@ -659,7 +659,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.warp(block.timestamp + 300);
 
         vm.startPrank(address(mainRegistry));
-        vm.expectRevert("PMUV3_PD: Exposure not in limits");
+        vm.expectRevert("PMUV3_PD: Exposure0 not in limits");
         uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
         vm.stopPrank();
     }
@@ -710,7 +710,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.warp(block.timestamp + 300);
 
         vm.startPrank(address(mainRegistry));
-        vm.expectRevert("PMUV3_PD: Exposure not in limits");
+        vm.expectRevert("PMUV3_PD: Exposure1 not in limits");
         uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
         vm.stopPrank();
     }
@@ -1126,6 +1126,7 @@ contract IntegrationTest is UniV3Test {
 
         uint256 expectedValue = mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, address(0));
 
-        assertInRange(actualValue, expectedValue, 3);
+        // Precision Chainlink oracles is often in the order of percentages.
+        assertInRange(actualValue, expectedValue, 2);
     }
 }

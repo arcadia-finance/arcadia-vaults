@@ -373,8 +373,8 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
 
             // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
             // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
-            require(tickCurrent - tickLower <= 16_095, "PMUV3_PD: Range not in limits");
-            require(tickUpper - tickCurrent <= 16_095, "PMUV3_PD: Range not in limits");
+            require(tickCurrent - tickLower <= 16_095, "PMUV3_PD: Tlow not in limits");
+            require(tickUpper - tickCurrent <= 16_095, "PMUV3_PD: Tup not in limits");
         }
 
         // Cache sqrtRatio.
@@ -390,8 +390,8 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         uint256 exposure1 = amount1Max + exposure[token1].exposure;
 
         // Check that exposure doesn't exceed maxExposure
-        require(exposure0 <= exposure[token0].maxExposure, "PMUV3_PD: Exposure not in limits");
-        require(exposure1 <= exposure[token1].maxExposure, "PMUV3_PD: Exposure not in limits");
+        require(exposure0 <= exposure[token0].maxExposure, "PMUV3_PD: Exposure0 not in limits");
+        require(exposure1 <= exposure[token1].maxExposure, "PMUV3_PD: Exposure1 not in limits");
 
         // Update exposure
         // Unsafe casts: we already know from previous requires that exposure is smaller as maxExposure (uint128).
