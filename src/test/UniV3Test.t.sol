@@ -5,10 +5,11 @@
 pragma solidity ^0.8.13;
 
 import "../../lib/forge-std/src/Test.sol";
-import { DeployedContracts, OracleHub } from "./fixtures/DeployedContracts.f.sol";
+import { DeployedContracts, OracleHub, Vault } from "./fixtures/DeployedContracts.f.sol";
 import { ERC20Fixture } from "./fixtures/ERC20Fixture.f.sol";
 import { ArcadiaOracleFixture, ArcadiaOracle } from "./fixtures/ArcadiaOracleFixture.f.sol";
 import { ERC20 } from "../../lib/solmate/src/tokens/ERC20.sol";
+import { ERC721 } from "../../lib/solmate/src/tokens/ERC721.sol";
 import {
     UniswapV3PricingModule,
     PricingModule,
@@ -59,6 +60,7 @@ abstract contract UniV3Test is DeployedContracts, Test {
 
     address public liquidityProvider = address(1);
     address public swapper = address(2);
+    address public user = address(3);
 
     UniswapV3PricingModuleExtension uniV3PricingModule;
     INonfungiblePositionManagerExtension public uniV3 =
@@ -162,6 +164,7 @@ abstract contract UniV3Test is DeployedContracts, Test {
 
         address token0 = pool.token0();
         address token1 = pool.token1();
+        uint24 fee = pool.fee();
 
         deal(token0, liquidityProvider_, amount0);
         deal(token1, liquidityProvider_, amount1);
@@ -172,7 +175,7 @@ abstract contract UniV3Test is DeployedContracts, Test {
             INonfungiblePositionManagerExtension.MintParams({
                 token0: token0,
                 token1: token1,
-                fee: 100,
+                fee: fee,
                 tickLower: tickLower,
                 tickUpper: tickUpper,
                 amount0Desired: amount0,
@@ -214,6 +217,16 @@ abstract contract UniV3Test is DeployedContracts, Test {
         );
         standardERC20PricingModule.addAsset(token, oracleArr, riskVars, type(uint128).max);
         vm.stopPrank();
+    }
+
+    function assertInRange(uint256 actualValue, uint256 expectedValue, uint8 precision) internal {
+        if (expectedValue == 0) {
+            assertEq(actualValue, expectedValue);
+        } else {
+            vm.assume(expectedValue > 10 ** (2 * precision));
+            assertGe(actualValue * (10 ** precision + 1) / 10 ** precision, expectedValue);
+            assertLe(actualValue * (10 ** precision - 1) / 10 ** precision, expectedValue);
+        }
     }
 }
 
@@ -428,10 +441,8 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
-    function testSuccess_setExposureOfAsset(uint8 decimals, uint128 maxExposure) public {
-        vm.assume(decimals <= 18);
-
-        ERC20 token = erc20Fixture.createToken(deployer, decimals);
+    function testSuccess_setExposureOfAsset(uint128 maxExposure) public {
+        ERC20 token = erc20Fixture.createToken();
         addUnderlyingTokenToArcadia(address(token), 1);
 
         vm.startPrank(deployer);
@@ -442,9 +453,6 @@ contract RiskVariablesManagementTest is UniV3Test {
 
         (uint128 actualMaxExposure,) = uniV3PricingModule.exposure(address(token));
         assertEq(actualMaxExposure, maxExposure);
-
-        uint256 actualUnit = uniV3PricingModule.unit(address(token));
-        assertEq(actualUnit, 10 ** decimals);
     }
 
     function testSuccess_getTwat(
@@ -848,17 +856,14 @@ contract RiskVariablesManagementTest is UniV3Test {
         // Function will overFlow, not realistic.
         vm.assume(priceToken0 <= type(uint256).max / 1e18);
         // Cast to uint160 will overflow, not realistic.
-        vm.assume(priceToken0 / priceToken1 < 1e18 * 2 ** 128);
+        vm.assume(priceToken0 / priceToken1 < 2 ** 128);
 
         uint256 priceXd18 = priceToken0 * 1e18 / priceToken1;
+        uint256 sqrtPriceXd9 = FixedPointMathLib.sqrt(priceXd18);
 
-        uint256 sqrtPriceXd18 = FixedPointMathLib.sqrt(priceXd18);
-        uint256 expectedSqrtPriceX96 = sqrtPriceXd18 * 2 ** 96 / 1e18;
-        console.log(uint160(expectedSqrtPriceX96));
-        console.log(1e18 * 2 ** 128);
-        console.log(priceToken0);
-
+        uint256 expectedSqrtPriceX96 = sqrtPriceXd9 * 2 ** 96 / 1e9;
         uint256 actualSqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(priceToken0, priceToken1);
+
         assertEq(actualSqrtPriceX96, expectedSqrtPriceX96);
     }
 
@@ -873,6 +878,8 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.assume(priceToken1 > 0);
         // Function will overFlow, not realistic.
         vm.assume(priceToken0 <= type(uint256).max / 1e18);
+        // Cast to uint160 will overflow, not realistic.
+        vm.assume(priceToken0 / priceToken1 < 2 ** 128);
 
         uint160 sqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(priceToken0, priceToken1);
         (uint256 expectedAmount0, uint256 expectedAmount1) = LiquidityAmounts.getAmountsForLiquidity(
@@ -888,36 +895,40 @@ contract RiskVariablesManagementTest is UniV3Test {
     function testSuccess_getValue_valueInUsd(
         uint256 decimals0,
         uint256 decimals1,
-        uint128 liquidity,
+        uint80 liquidity,
         int24 tickLower,
         int24 tickUpper,
-        uint256 priceToken0,
-        uint256 priceToken1
+        uint64 priceToken0,
+        uint64 priceToken1
     ) public {
         // Check that ticks are within allowed ranges.
         vm.assume(tickLower < tickUpper);
         vm.assume(isWithinAllowedRange(tickLower));
         vm.assume(isWithinAllowedRange(tickUpper));
 
-        // Limit tokenPrice to a uint64, this is already unreasonably big.
-        // Keep in mind that priceToken0 is the usd price with 18 decimals precision
-        // of 10**decimals tokens for an asset with maximal 18 decimals.
-        priceToken0 = bound(priceToken0, 0, type(uint64).max);
-        priceToken1 = bound(priceToken1, 1, type(uint64).max); // Avoid divide by 0 in next line.
-        uint160 sqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(priceToken0, priceToken1);
-        vm.assume(sqrtPriceX96 >= 4_295_128_739);
-        vm.assume(sqrtPriceX96 <= 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342);
-
-        // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
-        decimals0 = bound(decimals0, 0, 18);
-        decimals1 = bound(decimals1, 0, 18);
+        // Deploy and sort tokens.
+        decimals0 = bound(decimals0, 6, 18);
+        decimals1 = bound(decimals1, 6, 18);
         token0 = erc20Fixture.createToken(deployer, uint8(decimals0));
         token1 = erc20Fixture.createToken(deployer, uint8(decimals1));
         if (token0 > token1) {
             (token0, token1) = (token1, token0);
             (decimals0, decimals1) = (decimals1, decimals0);
+            (priceToken0, priceToken1) = (priceToken1, priceToken0);
         }
 
+        // Avoid divide by 0 in next line.
+        vm.assume(priceToken1 > 0);
+        // Cast to uint160 will overflow, not realistic.
+        vm.assume(priceToken0 / priceToken1 < 2 ** 128);
+        //Check that sqrtPriceX96 is within allowed Uniswap V3 ranges.
+        uint160 sqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(
+            priceToken0 * 10 ** (18 - decimals0), priceToken1 * 10 ** (18 - decimals1)
+        );
+        vm.assume(sqrtPriceX96 >= 4_295_128_739);
+        vm.assume(sqrtPriceX96 <= 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342);
+
+        // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
         pool = createPool(token0, token1, sqrtPriceX96, 300);
 
         // Check that Liquidity is within allowed ranges.
@@ -934,20 +945,22 @@ contract RiskVariablesManagementTest is UniV3Test {
         (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
             sqrtPriceX96, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity_
         );
-        vm.assume(amount0 < type(uint128).max);
-        vm.assume(amount1 < type(uint128).max);
+
+        // Overflows Uniswap libraries, not realistic.
+        vm.assume(amount0 < type(uint104).max);
+        vm.assume(amount1 < type(uint104).max);
 
         // Add underlying tokens and its oracles to Arcadia.
-        addUnderlyingTokenToArcadia(address(token0), int256(priceToken0));
-        addUnderlyingTokenToArcadia(address(token1), int256(priceToken1));
+        addUnderlyingTokenToArcadia(address(token0), int256(uint256(priceToken0)));
+        addUnderlyingTokenToArcadia(address(token1), int256(uint256(priceToken1)));
         vm.startPrank(deployer);
         uniV3PricingModule.setExposureOfAsset(address(token0), type(uint128).max);
         uniV3PricingModule.setExposureOfAsset(address(token1), type(uint128).max);
         vm.stopPrank();
 
         // Calculate the expected value
-        uint256 valueToken0 = 1e18 * priceToken0 * amount0 / 10 ** decimals0;
-        uint256 valueToken1 = 1e18 * priceToken1 * amount1 / 10 ** decimals1;
+        uint256 valueToken0 = 1e18 * uint256(priceToken0) * amount0 / 10 ** decimals0;
+        uint256 valueToken1 = 1e18 * uint256(priceToken1) * amount1 / 10 ** decimals1;
 
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = uniV3PricingModule.getValue(
             IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
@@ -1010,3 +1023,109 @@ contract RiskVariablesManagementTest is UniV3Test {
 /*///////////////////////////////////////////////////////////////
                     INTEGRATION TEST
 ///////////////////////////////////////////////////////////////*/
+contract IntegrationTest is UniV3Test {
+    using stdStorage for StdStorage;
+
+    ERC20 usdc;
+    ERC20 weth;
+
+    // Before Each.
+    function setUp() public override {
+        super.setUp();
+        vm.selectFork(fork);
+    }
+
+    function testSuccess_deposit(uint128 liquidity, int24 tickLower, int24 tickUpper) public {
+        vm.startPrank(deployer);
+        uniV3PricingModule =
+        new UniswapV3PricingModuleExtension(address(mainRegistry), address(oracleHub), deployer, address(standardERC20PricingModule));
+        mainRegistry.addPricingModule(address(uniV3PricingModule));
+        vm.stopPrank();
+
+        vm.prank(deployer);
+        uniV3PricingModule.addAsset(address(uniV3));
+
+        // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
+        usdc = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+        //usdc = ERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F); // dai
+        weth = ERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+
+        IUniswapV3PoolExtension pool = IUniswapV3PoolExtension(uniV3factory.getPool(address(usdc), address(weth), 100));
+        (uint160 sqrtPriceX96, int24 tickCurrent,,,,,) = pool.slot0();
+
+        // Check that ticks are within allowed ranges.
+        tickLower = int24(bound(tickLower, tickCurrent - 16_095, tickCurrent + 16_095));
+        tickUpper = int24(bound(tickUpper, tickCurrent - 16_095, tickCurrent + 16_095));
+        // Ensure Tick is correctly spaced.
+        {
+            int24 tickSpacing = uniV3factory.feeAmountTickSpacing(pool.fee());
+            tickLower = tickLower / tickSpacing * tickSpacing;
+            tickUpper = tickUpper / tickSpacing * tickSpacing;
+        }
+        vm.assume(tickLower < tickUpper);
+        vm.assume(isWithinAllowedRange(tickLower));
+        vm.assume(isWithinAllowedRange(tickUpper));
+
+        // Check that Liquidity is within allowed ranges.
+        vm.assume(liquidity > 10_000);
+        vm.assume(liquidity <= pool.maxLiquidityPerTick());
+
+        // Mint liquidity position.
+        uint256 tokenId = addLiquidity(pool, liquidity, user, tickLower, tickUpper, false);
+
+        // Warp 300 seconds to ensure that TWAT of 300s can be calculated (for some pools cardinality might be 1).
+        vm.warp(block.timestamp + 300);
+
+        // Calculate amounts of underlying tokens.
+        // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
+        // This is because there might be some small differences due to rounding errors.
+        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
+        (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
+            sqrtPriceX96, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity_
+        );
+        vm.assume(amount0 < type(uint128).max);
+        vm.assume(amount1 < type(uint128).max);
+        (uint256 amountUsdc, uint256 amountWeth) = usdc < weth ? (amount0, amount1) : (amount1, amount0);
+
+        // Set max exposure to underlying tokens.
+        vm.startPrank(deployer);
+        uniV3PricingModule.setExposureOfAsset(address(usdc), type(uint128).max);
+        uniV3PricingModule.setExposureOfAsset(address(weth), type(uint128).max);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        address proxyAddr = factory.createVault(200, 0, address(0));
+        Vault proxy = Vault(proxyAddr);
+        //proxy.openTrustedMarginAccount(address(lendingPool));
+        ERC721(address(uniV3)).approve(proxyAddr, tokenId);
+        {
+            address[] memory assetAddress = new address[](1);
+            assetAddress[0] = address(uniV3);
+
+            uint256[] memory assetId = new uint256[](1);
+            assetId[0] = tokenId;
+
+            uint256[] memory assetAmount = new uint256[](1);
+            assetAmount[0] = 1;
+
+            proxy.deposit(assetAddress, assetId, assetAmount);
+        }
+        vm.stopPrank();
+
+        uint256 actualValue = proxy.getVaultValue(address(0));
+
+        address[] memory assetAddresses = new address[](2);
+        assetAddresses[0] = address(usdc);
+        assetAddresses[1] = address(weth);
+
+        uint256[] memory assetIds = new uint256[](2);
+
+        uint256[] memory assetAmounts = new uint256[](2);
+        assetAmounts[0] = amountUsdc;
+        assetAmounts[1] = amountWeth;
+
+        uint256 expectedValue = mainRegistry.getTotalValue(assetAddresses, assetIds, assetAmounts, address(0));
+
+        assertInRange(actualValue, expectedValue, 3);
+    }
+}

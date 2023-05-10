@@ -44,8 +44,6 @@ contract UniswapV3PricingModule is PricingModule {
 
     // Map asset => uniswapV3Factory.
     mapping(address => address) public assetToV3Factory;
-    // Map asset => assetUnit.
-    mapping(address => uint256) public unit;
 
     // The Arcadia Pricing Module for standard ERC20 tokens (the underlying assets).
     PricingModule immutable erc20PricingModule;
@@ -126,7 +124,7 @@ contract UniswapV3PricingModule is PricingModule {
     ///////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Returns the value of a Uniswap 3 Liquidity Range, denominated in USD.
+     * @notice Returns the value of a Uniswap V3 Liquidity Range.
      * @param getValueInput A Struct with the input variables (avoid stack too deep).
      * - asset: The contract address of the asset.
      * - assetId: The Id of the range.
@@ -137,6 +135,8 @@ contract UniswapV3PricingModule is PricingModule {
      * @return collateralFactor The collateral factor of the asset for a given baseCurrency, with 2 decimals precision.
      * @return liquidationFactor The liquidation factor of the asset for a given baseCurrency, with 2 decimals precision.
      * @dev The UniswapV3PricingModule will always return the value denominated in USD.
+     * @dev Uniswap Pools can be manipulated, we can't rely on the current price (or tick).
+     * We use Chainlink oracles of the underlying assets to calculate the flashloan resistant price.
      */
     function getValue(IPricingModule.GetValueInput memory getValueInput)
         public
@@ -154,14 +154,13 @@ contract UniswapV3PricingModule is PricingModule {
             (,, token0, token1,, tickLower, tickUpper, liquidity,,,,) =
                 INonfungiblePositionManager(getValueInput.asset).positions(getValueInput.assetId);
 
-            // Uniswap Pools can be manipulated, we can't rely on the current price (or tick).
-            // We use Chainlink oracles of the underlying assets to calculate the flashloan resistant current price.
-            // usdPriceToken is the USD price for 10**tokenDecimals of tokens, it has 18 decimals precision.
+            // We use the USD price per 10^18 tokens instead of the USD price per token to guarantee
+            // sufficient precision.
             (uint256 usdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
-                GetValueInput({ asset: token0, assetId: 0, assetAmount: unit[token0], baseCurrency: 0 })
+                GetValueInput({ asset: token0, assetId: 0, assetAmount: 1e18, baseCurrency: 0 })
             );
             (uint256 usdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
-                GetValueInput({ asset: token1, assetId: 0, assetAmount: unit[token1], baseCurrency: 0 })
+                GetValueInput({ asset: token1, assetId: 0, assetAmount: 1e18, baseCurrency: 0 })
             );
 
             // If the Usd price of one of the tokens is 0, the LP-token will also have a value of 0.
@@ -171,9 +170,8 @@ contract UniswapV3PricingModule is PricingModule {
             (uint256 amount0, uint256 amount1) =
                 _getPrincipalAmounts(tickLower, tickUpper, liquidity, usdPriceToken0, usdPriceToken1);
 
-            // Calculate the total value in USD, with 18 decimals precision.
-            valueInUsd =
-                usdPriceToken0.mulDivDown(amount0, unit[token0]) + usdPriceToken1.mulDivDown(amount1, unit[token1]);
+            // Calculate the total value in USD, since the USD price is per 10^18 tokens we have to divide by 10^18.
+            valueInUsd = usdPriceToken0.mulDivDown(amount0, 1e18) + usdPriceToken1.mulDivDown(amount1, 1e18);
         }
 
         {
@@ -198,8 +196,8 @@ contract UniswapV3PricingModule is PricingModule {
      * @notice Calculates the underlying token amounts of a liquidity position, given external trusted prices.
      * @param tickLower The lower tick of the liquidity position.
      * @param tickUpper The upper tick of the liquidity position.
-     * @param priceToken0 The price of token0 in USD, with 18 decimals precision.
-     * @param priceToken1 The price of token1 in USD, with 18 decimals precision.
+     * @param priceToken0 The price of 10^18 tokens of token0 in USD, with 18 decimals precision.
+     * @param priceToken1 The price of 10^18 tokens of token1 in USD, with 18 decimals precision.
      * @return amount0 The amount of underlying token0 tokens.
      * @return amount1 The amount of underlying token1 tokens.
      */
@@ -221,9 +219,9 @@ contract UniswapV3PricingModule is PricingModule {
     }
 
     /**
-     * @notice Calculates the square root of the price (token1/token0).
-     * @param priceToken0 The price of token0 in USD, with 18 decimals precision.
-     * @param priceToken1 The price of token1 in USD, with 18 decimals precision.
+     * @notice Calculates the sqrtPriceX96 (token1/token0) from trusted USD prices of both tokens.
+     * @param priceToken0 The price of 10^18 tokens of token0 in USD, with 18 decimals precision.
+     * @param priceToken1 The price of 10^18 tokens of token1 in USD, with 18 decimals precision.
      * @return sqrtPriceX96 The square root of the price (token1/token0), with 96 binary precision.
      * @dev The price in Uniswap V3 is defined as:
      * price = amountToken1/amountToken0.
@@ -235,12 +233,13 @@ contract UniswapV3PricingModule is PricingModule {
     function _getSqrtPriceX96(uint256 priceToken0, uint256 priceToken1) internal pure returns (uint160 sqrtPriceX96) {
         // Both priceTokens have 18 decimals precision and result of division should also have 18 decimals precision.
         // -> multiply by 10**18
-        uint256 priceXd18 = priceToken0.mulDivDown(FixedPointMathLib.WAD, priceToken1);
-        uint256 sqrtPriceXd18 = FixedPointMathLib.sqrt(priceXd18);
+        uint256 priceXd18 = priceToken0.mulDivDown(1e18, priceToken1);
+        // Square root of a number with 18 decimals precision has 9 decimals precision.
+        uint256 sqrtPriceXd9 = FixedPointMathLib.sqrt(priceXd18);
 
-        // Change sqrtPrice from a decimal fixed point number with 18 digits to a binary fixed point number with 96 digits.
-        // Unsafe cast: Function will only overflow when priceToken0/priceToken1 >= 10^¨18 * 2¨^128.
-        sqrtPriceX96 = uint160((sqrtPriceXd18 << FixedPoint96.RESOLUTION) / FixedPointMathLib.WAD);
+        // Change sqrtPrice from a decimal fixed point number with 9 digits to a binary fixed point number with 96 digits.
+        // Unsafe cast: Cast will only overflow when priceToken0/priceToken1 >= 2¨^128.
+        sqrtPriceX96 = uint160((sqrtPriceXd9 << FixedPoint96.RESOLUTION) / 1e9);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -258,10 +257,9 @@ contract UniswapV3PricingModule is PricingModule {
         super.setExposureOfAsset(asset, maxExposure);
 
         // If the maximum exposure for an asset is set for the first time, check that the asset can be priced
-        // by the erc20PricingModule and also store the unit of the underlying asset.
+        // by the erc20PricingModule.
         if (exposure[asset].exposure == 0) {
             require(PricingModule(erc20PricingModule).inPricingModule(asset), "PMUV3_SEOA: Unknown asset");
-            unit[asset] = 10 ** IERC20(asset).decimals();
         }
     }
 

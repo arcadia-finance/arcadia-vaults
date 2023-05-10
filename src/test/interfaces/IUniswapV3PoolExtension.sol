@@ -11,4 +11,6 @@ interface IUniswapV3PoolExtension is IUniswapV3Pool {
     function token0() external view returns (address token0);
 
     function token1() external view returns (address token1);
+
+    function fee() external view returns (uint24 fee);
 }
