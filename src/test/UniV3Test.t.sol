@@ -953,6 +953,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         // Add underlying tokens and its oracles to Arcadia.
         addUnderlyingTokenToArcadia(address(token0), int256(uint256(priceToken0)));
         addUnderlyingTokenToArcadia(address(token1), int256(uint256(priceToken1)));
+
         vm.startPrank(deployer);
         uniV3PricingModule.setExposureOfAsset(address(token0), type(uint128).max);
         uniV3PricingModule.setExposureOfAsset(address(token1), type(uint128).max);
