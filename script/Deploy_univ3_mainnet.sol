@@ -25,11 +25,7 @@ contract ArcadiaUniV3DeployerMainnet is Test {
 
     UniswapV3WithFeesPricingModule public uniV3PricingModule;
 
-    constructor() {
-        /*///////////////////////////////////////////////////////////////
-                          ADDRESSES
-        ///////////////////////////////////////////////////////////////*/
-    }
+    constructor() { }
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_DEPLOYER_MAINNET");
