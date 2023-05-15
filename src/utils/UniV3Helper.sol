@@ -62,15 +62,8 @@ contract UniV3Helper {
             }
         }
 
-        address token0;
-        address token1;
-        uint24 fee;
-        bool canDeposit;
-        string memory message;
         for (uint256 j; j < assetIds.length;) {
-            (token0, token1, fee, canDeposit, message) = getNftInfo(nftAsset, assetIds[j]);
-
-            nftInfo[j] = NftInfo(token0, token1, fee, canDeposit, message);
+            nftInfo[j] = getNftInfo(nftAsset, assetIds[j]);
 
             unchecked {
                 ++j;
@@ -81,17 +74,9 @@ contract UniV3Helper {
     /**
      * @param asset The address of the NFT asset.
      * @param assetId The id of the NFT.
-     * @return token0 The address of the first token.
-     * @return token1 The address of the second token.
-     * @return fee The fee of the NFT.
-     * @return allowed Whether the NFT can be deposited.
-     * @return message The reason why the NFT cannot be deposited.
+     * @return nftInfo The info of the NFT.
      */
-    function getNftInfo(address asset, uint256 assetId)
-        public
-        view
-        returns (address, address, uint24, bool, string memory)
-    {
+    function getNftInfo(address asset, uint256 assetId) public view returns (NftInfo memory nftInfo) {
         (,, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
             INonfungiblePositionManager(asset).positions(assetId);
 
@@ -108,11 +93,11 @@ contract UniV3Helper {
             // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
             // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
             if (tickCurrent - tickLower <= 16_095) {
-                return (address(0), address(0), 0, false, "PMUV3_CD: Tlow not in limits");
+                return NftInfo(address(0), address(0), 0, false, "PMUV3_CD: Tlow not in limits");
             }
 
             if (tickUpper - tickCurrent <= 16_095) {
-                return (address(0), address(0), 0, false, "PMUV3_CD: Tup not in limits");
+                return NftInfo(address(0), address(0), 0, false, "PMUV3_CD: Tup not in limits");
             }
         }
 
@@ -130,13 +115,13 @@ contract UniV3Helper {
 
         // Check that exposure doesn't exceed maxExposure
         if (exposure0 <= uniswapV3PricingModule.exposure(token0).maxExposure) {
-            return (address(0), address(0), 0, false, "PMUV3_CD: Exposure0 not in limits");
+            return NftInfo(address(0), address(0), 0, false, "PMUV3_CD: Exposure0 not in limits");
         }
         if (exposure1 <= uniswapV3PricingModule.exposure(token1).maxExposure) {
-            return (address(0), address(0), 0, false, "PMUV3_CD: Exposure1 not in limits");
+            return NftInfo(address(0), address(0), 0, false, "PMUV3_CD: Exposure1 not in limits");
         }
 
-        return (token0, token1, fee, true, "");
+        return NftInfo(token0, token1, fee, true, "");
     }
 
     /**
