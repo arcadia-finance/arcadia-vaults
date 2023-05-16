@@ -25,7 +25,7 @@ interface IUniswapV3PricingModule {
 contract UniV3Helper {
     IUniswapV3PricingModule public immutable uniswapV3PricingModule;
 
-    struct NftInfo {
+    struct Output {
         address asset;
         uint256 assetId;
         address token0;
@@ -35,28 +35,23 @@ contract UniV3Helper {
         string message;
     }
 
+    struct Input {
+        address asset;
+        uint256 amount;
+        uint256 assetId;
+    }
+
     constructor(address _uniswapV3PricingModule) {
         uniswapV3PricingModule = IUniswapV3PricingModule(_uniswapV3PricingModule);
     }
 
     /**
-     * @param nftAssets The addresses of the NFT assets.
-     * @param assetIds The ids of the NFTs.
+     * @param nftAssets The addresses and IDs of the NFT assets.
      * @return nftInfo The info of the NFTs.
      */
-    function getDepositInfo(address[] calldata nftAssets, uint256[] calldata assetIds)
-        public
-        view
-        returns (NftInfo[] memory nftInfo)
-    {
+    function getDepositInfo(Input[] calldata nftAssets) public view returns (Output[] memory nftInfo) {
         for (uint256 i; i < nftAssets.length;) {
-            for (uint256 j; j < assetIds.length;) {
-                nftInfo[j] = getNftInfo(nftAssets[i], assetIds[j]);
-
-                unchecked {
-                    ++j;
-                }
-            }
+            nftInfo[i] = getNftInfo(nftAssets[i]);
 
             unchecked {
                 ++i;
@@ -65,17 +60,16 @@ contract UniV3Helper {
     }
 
     /**
-     * @param asset The address of the NFT asset.
-     * @param assetId The id of the NFT.
+     * @param input The address of the NFT asset.
      * @return nftInfo The info of the NFT.
      */
-    function getNftInfo(address asset, uint256 assetId) public view returns (NftInfo memory nftInfo) {
+    function getNftInfo(Input memory input) public view returns (Output memory nftInfo) {
         (,, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
-            INonfungiblePositionManager(asset).positions(assetId);
+            INonfungiblePositionManager(input.asset).positions(input.assetId);
 
         {
             IUniswapV3Pool pool = IUniswapV3Pool(
-                PoolAddress.computeAddress(uniswapV3PricingModule.assetToV3Factory(asset), token0, token1, fee)
+                PoolAddress.computeAddress(uniswapV3PricingModule.assetToV3Factory(input.asset), token0, token1, fee)
             );
 
             // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic).
@@ -86,35 +80,37 @@ contract UniV3Helper {
             // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
             // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
             if (tickCurrent - tickLower <= 16_095) {
-                return NftInfo(asset, assetId, address(0), address(0), 0, false, "PMUV3_CD: Tlow not in limits");
+                return
+                    Output(input.asset, input.assetId, address(0), address(0), 0, false, "PMUV3_CD: Tlow not in limits");
             }
 
             if (tickUpper - tickCurrent <= 16_095) {
-                return NftInfo(asset, assetId, address(0), address(0), 0, false, "PMUV3_CD: Tup not in limits");
+                return
+                    Output(input.asset, input.assetId, address(0), address(0), 0, false, "PMUV3_CD: Tup not in limits");
             }
         }
 
-        // Cache sqrtRatio.
-        uint160 sqrtRatioLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
-        uint160 sqrtRatioUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
-
-        // Calculate the maximal possible exposure to each underlying asset.
-        uint256 amount0Max = LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity);
-        uint256 amount1Max = LiquidityAmounts.getAmount1ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity);
-
         // Calculate updated exposure.
-        uint256 exposure0 = amount0Max + uniswapV3PricingModule.exposure(token0).exposure;
-        uint256 exposure1 = amount1Max + uniswapV3PricingModule.exposure(token1).exposure;
+        uint256 exposure0 = LiquidityAmounts.getAmount0ForLiquidity(
+            TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity
+        ) + uniswapV3PricingModule.exposure(token0).exposure;
+        uint256 exposure1 = LiquidityAmounts.getAmount1ForLiquidity(
+            TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity
+        ) + uniswapV3PricingModule.exposure(token1).exposure;
 
         // Check that exposure doesn't exceed maxExposure
         if (exposure0 <= uniswapV3PricingModule.exposure(token0).maxExposure) {
-            return NftInfo(asset, assetId, address(0), address(0), 0, false, "PMUV3_CD: Exposure0 not in limits");
+            return Output(
+                input.asset, input.assetId, address(0), address(0), 0, false, "PMUV3_CD: Exposure0 not in limits"
+            );
         }
         if (exposure1 <= uniswapV3PricingModule.exposure(token1).maxExposure) {
-            return NftInfo(asset, assetId, address(0), address(0), 0, false, "PMUV3_CD: Exposure1 not in limits");
+            return Output(
+                input.asset, input.assetId, address(0), address(0), 0, false, "PMUV3_CD: Exposure1 not in limits"
+            );
         }
 
-        return NftInfo(asset, assetId, token0, token1, fee, true, "");
+        return Output(input.asset, input.assetId, token0, token1, fee, true, "");
     }
 
     /**

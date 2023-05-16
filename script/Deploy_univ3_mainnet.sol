@@ -15,6 +15,8 @@ import {
 } from "../src/PricingModules/UniswapV3/UniswapV3WithFeesPricingModule.sol";
 import { OracleHub } from "../src/OracleHub.sol";
 
+import { UniV3Helper } from "../src/utils/UniV3Helper.sol";
+
 contract ArcadiaUniV3DeployerMainnet is Test {
     MainRegistry public constant mainRegistry = MainRegistry(0x046fc9f35EB7Cb165a5e07915d37bF4022b8dE33);
     OracleHub public constant oracleHub = OracleHub(0x950A8833b9533A19Fb4D1B2EFC823Ea6835f6d95);
@@ -24,6 +26,7 @@ contract ArcadiaUniV3DeployerMainnet is Test {
     address public constant deployer = 0xbA32A3D407353FC3adAA6f7eC6264Df5bCA51c4b;
 
     UniswapV3WithFeesPricingModule public uniV3PricingModule;
+    UniV3Helper public uniV3Helper;
 
     constructor() { }
 
@@ -38,6 +41,8 @@ contract ArcadiaUniV3DeployerMainnet is Test {
             address(deployer),
             address(standardERC20PricingModule)
         );
+
+        uniV3Helper = new UniV3Helper(address(uniV3PricingModule));
 
         mainRegistry.addPricingModule(address(uniV3PricingModule));
 
