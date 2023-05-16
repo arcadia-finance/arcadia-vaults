@@ -22,14 +22,12 @@ interface IUniswapV3PricingModule {
     function exposure(address) external view returns (Exposure memory);
 }
 
-interface IERC20 {
-    function balanceOf(address) external view returns (uint256);
-}
-
 contract UniV3Helper {
     IUniswapV3PricingModule public immutable uniswapV3PricingModule;
 
     struct NftInfo {
+        address asset;
+        uint256 assetId;
         address token0;
         address token1;
         uint24 fee;
@@ -42,31 +40,26 @@ contract UniV3Helper {
     }
 
     /**
-     * @param user The address of the user.
-     * @param erc20s The addresses of the ERC20 tokens to check balances for.
-     * @param nftAsset The address of the NFT asset.
+     * @param nftAssets The addresses of the NFT assets.
      * @param assetIds The ids of the NFTs.
-     * @return balances The balances of the ERC20 tokens.
      * @return nftInfo The info of the NFTs.
      */
-    function getBalanceAndNFT(address user, address[] calldata erc20s, address nftAsset, uint256[] calldata assetIds)
+    function getDepositInfo(address[] calldata nftAssets, uint256[] calldata assetIds)
         public
         view
-        returns (uint256[] memory balances, NftInfo[] memory nftInfo)
+        returns (NftInfo[] memory nftInfo)
     {
-        for (uint256 i; i < erc20s.length;) {
-            balances[i] = IERC20(erc20s[i]).balanceOf(user);
+        for (uint256 i; i < nftAssets.length;) {
+            for (uint256 j; j < assetIds.length;) {
+                nftInfo[j] = getNftInfo(nftAssets[i], assetIds[j]);
+
+                unchecked {
+                    ++j;
+                }
+            }
 
             unchecked {
                 ++i;
-            }
-        }
-
-        for (uint256 j; j < assetIds.length;) {
-            nftInfo[j] = getNftInfo(nftAsset, assetIds[j]);
-
-            unchecked {
-                ++j;
             }
         }
     }
@@ -93,11 +86,11 @@ contract UniV3Helper {
             // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
             // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
             if (tickCurrent - tickLower <= 16_095) {
-                return NftInfo(address(0), address(0), 0, false, "PMUV3_CD: Tlow not in limits");
+                return NftInfo(asset, assetId, address(0), address(0), 0, false, "PMUV3_CD: Tlow not in limits");
             }
 
             if (tickUpper - tickCurrent <= 16_095) {
-                return NftInfo(address(0), address(0), 0, false, "PMUV3_CD: Tup not in limits");
+                return NftInfo(asset, assetId, address(0), address(0), 0, false, "PMUV3_CD: Tup not in limits");
             }
         }
 
@@ -115,13 +108,13 @@ contract UniV3Helper {
 
         // Check that exposure doesn't exceed maxExposure
         if (exposure0 <= uniswapV3PricingModule.exposure(token0).maxExposure) {
-            return NftInfo(address(0), address(0), 0, false, "PMUV3_CD: Exposure0 not in limits");
+            return NftInfo(asset, assetId, address(0), address(0), 0, false, "PMUV3_CD: Exposure0 not in limits");
         }
         if (exposure1 <= uniswapV3PricingModule.exposure(token1).maxExposure) {
-            return NftInfo(address(0), address(0), 0, false, "PMUV3_CD: Exposure1 not in limits");
+            return NftInfo(asset, assetId, address(0), address(0), 0, false, "PMUV3_CD: Exposure1 not in limits");
         }
 
-        return NftInfo(token0, token1, fee, true, "");
+        return NftInfo(asset, assetId, token0, token1, fee, true, "");
     }
 
     /**
