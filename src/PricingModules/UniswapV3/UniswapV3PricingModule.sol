@@ -44,8 +44,18 @@ contract UniswapV3PricingModule is PricingModule {
     // Map asset => uniswapV3Factory.
     mapping(address => address) public assetToV3Factory;
 
+    mapping(address => mapping(uint256 => Position)) positions;
+
     // The Arcadia Pricing Module for standard ERC20 tokens (the underlying assets).
     PricingModule immutable erc20PricingModule;
+
+    struct Position {
+        address token0;
+        address token1;
+        int24 tickLower;
+        int24 tickUpper;
+        uint128 liquidity;
+    }
 
     /* //////////////////////////////////////////////////////////////
                                 CONSTRUCTOR
@@ -151,8 +161,7 @@ contract UniswapV3PricingModule is PricingModule {
             int24 tickLower;
             int24 tickUpper;
             uint128 liquidity;
-            (,, token0, token1,, tickLower, tickUpper, liquidity,,,,) =
-                INonfungiblePositionManager(getValueInput.asset).positions(getValueInput.assetId);
+            (token0, token1, tickLower, tickUpper, liquidity) = _getPosition(getValueInput.asset, getValueInput.assetId);
 
             // We use the USD price per 10^18 tokens instead of the USD price per token to guarantee
             // sufficient precision.
@@ -190,6 +199,23 @@ contract UniswapV3PricingModule is PricingModule {
         }
 
         return (valueInUsd, 0, collateralFactor, liquidationFactor);
+    }
+
+    function _getPosition(address asset, uint256 id)
+        internal
+        view
+        returns (address token0, address token1, int24 tickLower, int24 tickUpper, uint128 liquidity)
+    {
+        liquidity = positions[asset][id].liquidity;
+
+        if (liquidity > 0) {
+            token0 = positions[asset][id].token0;
+            token1 = positions[asset][id].token1;
+            tickLower = positions[asset][id].tickLower;
+            tickUpper = positions[asset][id].tickUpper;
+        } else {
+            (,, token0, token1,, tickLower, tickUpper, liquidity,,,,) = INonfungiblePositionManager(asset).positions(id);
+        }
     }
 
     /**
@@ -282,6 +308,16 @@ contract UniswapV3PricingModule is PricingModule {
         (,, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
             INonfungiblePositionManager(asset).positions(assetId);
 
+        require(liquidity > 0, "PMUV3_PD: 0 liquidity");
+
+        positions[asset][assetId] = Position({
+            token0: token0,
+            token1: token1,
+            tickLower: tickLower,
+            tickUpper: tickUpper,
+            liquidity: liquidity
+        });
+
         {
             IUniswapV3Pool pool =
                 IUniswapV3Pool(PoolAddress.computeAddress(assetToV3Factory[asset], token0, token1, fee));
@@ -345,21 +381,24 @@ contract UniswapV3PricingModule is PricingModule {
      * @dev Unsafe cast to uint128, we know that the same cast did not overflow in deposit().
      */
     function processWithdrawal(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
-        (,, address token0, address token1,, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
-            INonfungiblePositionManager(asset).positions(assetId);
-
         // Cache sqrtRatio.
-        uint160 sqrtRatioLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
-        uint160 sqrtRatioUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+        uint160 sqrtRatioLowerX96 = TickMath.getSqrtRatioAtTick(positions[asset][assetId].tickLower);
+        uint160 sqrtRatioUpperX96 = TickMath.getSqrtRatioAtTick(positions[asset][assetId].tickUpper);
 
         // Calculate the maximal possible exposure to each underlying asset.
-        uint128 amount0Max =
-            uint128(LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity));
-        uint128 amount1Max =
-            uint128(LiquidityAmounts.getAmount1ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity));
+        uint128 amount0Max = uint128(
+            LiquidityAmounts.getAmount0ForLiquidity(
+                sqrtRatioLowerX96, sqrtRatioUpperX96, positions[asset][assetId].liquidity
+            )
+        );
+        uint128 amount1Max = uint128(
+            LiquidityAmounts.getAmount1ForLiquidity(
+                sqrtRatioLowerX96, sqrtRatioUpperX96, positions[asset][assetId].liquidity
+            )
+        );
 
         // Update exposure to underlying assets.
-        exposure[token0].exposure -= amount0Max;
-        exposure[token1].exposure -= amount1Max;
+        exposure[positions[asset][assetId].token0].exposure -= amount0Max;
+        exposure[positions[asset][assetId].token1].exposure -= amount1Max;
     }
 }

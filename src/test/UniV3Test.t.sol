@@ -825,10 +825,12 @@ contract RiskVariablesManagementTest is UniV3Test {
             TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity_
         );
 
-        // Check that exposures are bigger than amounts (tokens had to be deposited first).
-        // Contract should never be able to reach a state where amount > exposure.
-        vm.assume(amount0 <= initialExposure0);
-        vm.assume(amount1 <= initialExposure1);
+        // Avoid overflow.
+        vm.assume(amount0 <= type(uint128).max - initialExposure0);
+        vm.assume(amount1 <= type(uint128).max - initialExposure1);
+        // Check that there is sufficient free exposure.
+        vm.assume(amount0 + initialExposure0 <= maxExposure0);
+        vm.assume(amount1 + initialExposure1 <= maxExposure1);
         // Set maxExposures
         vm.startPrank(deployer);
         uniV3PricingModule.setExposure(address(token0), initialExposure0, maxExposure0);
@@ -838,13 +840,17 @@ contract RiskVariablesManagementTest is UniV3Test {
         // Warp 300 seconds to ensure that TWAT of 300s can be calculated.
         vm.warp(block.timestamp + 300);
 
+        // Deposit assets (necessary to update the position in the Pricing Module).
+        vm.prank(address(mainRegistry));
+        uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
+
         vm.prank(address(mainRegistry));
         uniV3PricingModule.processWithdrawal(address(0), address(uniV3), tokenId, 0);
 
         (, uint128 exposure0) = uniV3PricingModule.exposure(address(token0));
         (, uint128 exposure1) = uniV3PricingModule.exposure(address(token1));
-        assertEq(exposure0, initialExposure0 - amount0);
-        assertEq(exposure1, initialExposure1 - amount1);
+        assertEq(exposure0, initialExposure0);
+        assertEq(exposure1, initialExposure1);
     }
 
     /*///////////////////////////////////////////////////////////////
