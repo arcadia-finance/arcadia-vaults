@@ -10,10 +10,8 @@ import { INonfungiblePositionManager } from "./interfaces/INonfungiblePositionMa
 import { IUniswapV3Pool } from "./interfaces/IUniswapV3Pool.sol";
 import { IERC20 } from "./interfaces/IERC20.sol";
 import { TickMath } from "./libraries/TickMath.sol";
-import { FullMath } from "./libraries/FullMath.sol";
 import { PoolAddress } from "./libraries/PoolAddress.sol";
 import { FixedPoint96 } from "./libraries/FixedPoint96.sol";
-import { FixedPoint128 } from "./libraries/FixedPoint128.sol";
 import { LiquidityAmounts } from "./libraries/LiquidityAmounts.sol";
 import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
@@ -35,7 +33,6 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
  */
 contract UniswapV3PricingModule is PricingModule {
     using FixedPointMathLib for uint256;
-    using FullMath for uint256;
 
     /* //////////////////////////////////////////////////////////////
                                 STORAGE
@@ -44,17 +41,19 @@ contract UniswapV3PricingModule is PricingModule {
     // Map asset => uniswapV3Factory.
     mapping(address => address) public assetToV3Factory;
 
-    mapping(address => mapping(uint256 => Position)) positions;
+    // Map asset => id => positionInformation.
+    mapping(address => mapping(uint256 => Position)) internal positions;
 
     // The Arcadia Pricing Module for standard ERC20 tokens (the underlying assets).
     PricingModule immutable erc20PricingModule;
 
+    // Struct with information of a specific Liquidity Position.
     struct Position {
-        address token0;
-        address token1;
-        int24 tickLower;
-        int24 tickUpper;
-        uint128 liquidity;
+        address token0; // Token0 of the Liquidity Pool.
+        address token1; // Token1 of the Liquidity Pool.
+        int24 tickLower; // The lower tick of the liquidity position.
+        int24 tickUpper; // The upper tick of the liquidity position.
+        uint128 liquidity; // The liquidity per tick of the liquidity position.
     }
 
     /* //////////////////////////////////////////////////////////////
@@ -201,6 +200,16 @@ contract UniswapV3PricingModule is PricingModule {
         return (valueInUsd, 0, collateralFactor, liquidationFactor);
     }
 
+    /**
+     * @notice Returns the position information.
+     * @param asset The contract address of the asset.
+     * @param id The Id of the asset.
+     * @return token0 Token0 of the Liquidity Pool.
+     * @return token1 Token1 of the Liquidity Pool.
+     * @return tickLower The lower tick of the liquidity position.
+     * @return tickUpper The upper tick of the liquidity position.
+     * @return liquidity The liquidity per tick of the liquidity position.
+     */
     function _getPosition(address asset, uint256 id)
         internal
         view
@@ -209,11 +218,15 @@ contract UniswapV3PricingModule is PricingModule {
         liquidity = positions[asset][id].liquidity;
 
         if (liquidity > 0) {
+            // For deposited assets, the information of the Liquidity Position is stored in the Pricing Module,
+            // not fetched from the NonfungiblePositionManager.
+            // Since liquidity of a position can be increased by a non-owner, the max exposure checks could otherwise be circumvented.
             token0 = positions[asset][id].token0;
             token1 = positions[asset][id].token1;
             tickLower = positions[asset][id].tickLower;
             tickUpper = positions[asset][id].tickUpper;
         } else {
+            // Only used as an off-chain view function to return the value of a non deposited Liquidity Position.
             (,, token0, token1,, tickLower, tickUpper, liquidity,,,,) = INonfungiblePositionManager(asset).positions(id);
         }
     }
@@ -308,8 +321,11 @@ contract UniswapV3PricingModule is PricingModule {
         (,, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
             INonfungiblePositionManager(asset).positions(assetId);
 
+        //
         require(liquidity > 0, "PMUV3_PD: 0 liquidity");
 
+        // Since liquidity of a position can be increased by a non-owner, we have to store the liquidity during deposit.
+        // Otherwise the max exposure checks can be circumvented.
         positions[asset][assetId] = Position({
             token0: token0,
             token1: token1,
@@ -379,6 +395,7 @@ contract UniswapV3PricingModule is PricingModule {
      * @param assetId The Id of the asset.
      * param amount The amount of tokens.
      * @dev Unsafe cast to uint128, we know that the same cast did not overflow in deposit().
+     * @dev ToDo Should we delete storage vars of withdrawn positions?
      */
     function processWithdrawal(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
         // Cache sqrtRatio.

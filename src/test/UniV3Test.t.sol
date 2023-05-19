@@ -545,6 +545,34 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
+    function testRevert_processDeposit_ZeroLiquidity() public {
+        // Create Uniswap V3 pool initiated at tick 0 with cardinality 300.
+        pool = createPool(token0, token1, TickMath.getSqrtRatioAtTick(0), 300);
+
+        // Mint liquidity position.
+        uint256 tokenId = addLiquidity(pool, 1000, liquidityProvider, -60, 60, true);
+
+        // Decrease liquidity so that position has 0 liquidity.
+        // Fetch liquidity from position instead of using input liquidity
+        // This is because there might be some small differences due to rounding errors.
+        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
+        vm.prank(liquidityProvider);
+        uniV3.decreaseLiquidity(
+            INonfungiblePositionManagerExtension.DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: liquidity_,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: type(uint160).max
+            })
+        );
+
+        vm.startPrank(address(mainRegistry));
+        vm.expectRevert("PMUV3_PD: 0 liquidity");
+        uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
+        vm.stopPrank();
+    }
+
     function testRevert_processDeposit_BelowAcceptedRange(
         uint128 liquidity,
         int24 tickLower,
@@ -715,7 +743,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
-    function testRevert_processDeposit_Success(
+    function testSuccess_processDeposit(
         uint128 liquidity,
         int24 tickLower,
         int24 tickUpper,
