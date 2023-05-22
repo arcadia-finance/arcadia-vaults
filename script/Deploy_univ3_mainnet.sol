@@ -45,6 +45,7 @@ contract ArcadiaUniV3DeployerMainnet is Test {
         uniV3Helper = new UniV3Helper(address(uniV3PricingModule));
 
         mainRegistry.addPricingModule(address(uniV3PricingModule));
+        uniV3PricingModule.addAsset(DeployAddresses.uniswapV3PositionMgr_mainnet);
 
         uniV3PricingModule.setExposureOfAsset(DeployAddresses.crv_mainnet, type(uint128).max);
         uniV3PricingModule.setExposureOfAsset(DeployAddresses.dai_mainnet, type(uint128).max);
