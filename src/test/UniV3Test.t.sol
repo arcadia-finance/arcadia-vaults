@@ -11,13 +11,13 @@ import { ArcadiaOracleFixture, ArcadiaOracle } from "./fixtures/ArcadiaOracleFix
 import { ERC20 } from "../../lib/solmate/src/tokens/ERC20.sol";
 import { ERC721 } from "../../lib/solmate/src/tokens/ERC721.sol";
 import {
-    UniswapV3PricingModule,
+    UniswapV3WithFeesPricingModule,
     PricingModule,
     IPricingModule,
     TickMath,
     LiquidityAmounts,
     FixedPointMathLib
-} from "../PricingModules/UniswapV3/UniswapV3PricingModule.sol";
+} from "../PricingModules/UniswapV3/UniswapV3WithFeesPricingModule.sol";
 import { INonfungiblePositionManagerExtension } from "./interfaces/INonfungiblePositionManagerExtension.sol";
 import { IUniswapV3PoolExtension } from "./interfaces/IUniswapV3PoolExtension.sol";
 import { IUniswapV3Factory } from "./interfaces/IUniswapV3Factory.sol";
@@ -25,9 +25,9 @@ import { ISwapRouter } from "./interfaces/ISwapRouter.sol";
 import { LiquidityAmountsExtension } from "./libraries/LiquidityAmountsExtension.sol";
 import { TickMathsExtension } from "./libraries/TickMathsExtension.sol";
 
-contract UniswapV3PricingModuleExtension is UniswapV3PricingModule {
+contract UniswapV3PricingModuleExtension is UniswapV3WithFeesPricingModule {
     constructor(address mainRegistry_, address oracleHub_, address riskManager_, address erc20PricingModule_)
-        UniswapV3PricingModule(mainRegistry_, oracleHub_, riskManager_, erc20PricingModule_)
+        UniswapV3WithFeesPricingModule(mainRegistry_, oracleHub_, riskManager_, erc20PricingModule_)
     { }
 
     function getPrincipalAmounts(
