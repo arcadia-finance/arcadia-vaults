@@ -49,7 +49,8 @@ contract UniV3Helper {
      * @param nftAssets The addresses and IDs of the NFT assets.
      * @return nftInfo The info of the NFTs.
      */
-    function getDepositInfo(Input[] calldata nftAssets) public view returns (Output[] memory nftInfo) {
+    function getDepositInfo(Input[] calldata nftAssets) public view returns (Output[] memory) {
+        Output[] memory nftInfo = new Output[](nftAssets.length);
         for (uint256 i; i < nftAssets.length;) {
             nftInfo[i] = getNftInfo(nftAssets[i]);
 
@@ -57,13 +58,15 @@ contract UniV3Helper {
                 ++i;
             }
         }
+
+        return nftInfo;
     }
 
     /**
      * @param input The address of the NFT asset.
      * @return nftInfo The info of the NFT.
      */
-    function getNftInfo(Input memory input) public view returns (Output memory nftInfo) {
+    function getNftInfo(Input memory input) public view returns (Output memory) {
         (,, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
             INonfungiblePositionManager(input.asset).positions(input.assetId);
 
@@ -79,12 +82,12 @@ contract UniV3Helper {
 
             // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
             // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
-            if (tickCurrent - tickLower <= 16_095) {
+            if (tickCurrent - tickLower > 16_095) {
                 return
                     Output(input.asset, input.assetId, address(0), address(0), 0, false, "PMUV3_CD: Tlow not in limits");
             }
 
-            if (tickUpper - tickCurrent <= 16_095) {
+            if (tickUpper - tickCurrent > 16_095) {
                 return
                     Output(input.asset, input.assetId, address(0), address(0), 0, false, "PMUV3_CD: Tup not in limits");
             }
@@ -99,18 +102,20 @@ contract UniV3Helper {
         ) + uniswapV3PricingModule.exposure(token1).exposure;
 
         // Check that exposure doesn't exceed maxExposure
-        if (exposure0 <= uniswapV3PricingModule.exposure(token0).maxExposure) {
+        if (exposure0 > uniswapV3PricingModule.exposure(token0).maxExposure) {
             return Output(
                 input.asset, input.assetId, address(0), address(0), 0, false, "PMUV3_CD: Exposure0 not in limits"
             );
         }
-        if (exposure1 <= uniswapV3PricingModule.exposure(token1).maxExposure) {
+        if (exposure1 > uniswapV3PricingModule.exposure(token1).maxExposure) {
             return Output(
                 input.asset, input.assetId, address(0), address(0), 0, false, "PMUV3_CD: Exposure1 not in limits"
             );
         }
 
-        return Output(input.asset, input.assetId, token0, token1, fee, true, "");
+        Output memory returnVal = Output(input.asset, input.assetId, token0, token1, fee, true, "");
+
+        return returnVal;
     }
 
     /**
