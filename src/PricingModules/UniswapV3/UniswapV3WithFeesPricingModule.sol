@@ -296,22 +296,30 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
             uint24 fee,
             int24 tickLower,
             int24 tickUpper,
-            uint128 liquidity,
+            uint256 liquidity, // gas: cheaper to use uint256 instead of uint128.
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
-            uint256 tokensOwed0,
-            uint256 tokensOwed1
+            uint256 tokensOwed0, // gas: cheaper to use uint256 instead of uint128.
+            uint256 tokensOwed1 // gas: cheaper to use uint256 instead of uint128.
         ) = INonfungiblePositionManager(asset).positions(id);
 
         (uint256 feeGrowthInside0CurrentX128, uint256 feeGrowthInside1CurrentX128) =
             _getFeeGrowthInside(factory, token0, token1, fee, tickLower, tickUpper);
 
-        // Calculate the total amount of fees by adding the already realized fees (tokensOwed), to the accumulated fees
-        // since the last time the position was updated ((feeGrowthInsideCurrentX128 - feeGrowthInsideLastX128) * liquidity).
-        amount0 = FullMath.mulDiv(feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128)
-            + tokensOwed0;
-        amount1 = FullMath.mulDiv(feeGrowthInside1CurrentX128 - feeGrowthInside1LastX128, liquidity, FixedPoint128.Q128)
-            + tokensOwed1;
+        // Calculate the total amount of fees by adding the already realized fees (tokensOwed),
+        // to the accumulated fees since the last time the position was updated:
+        // (feeGrowthInsideCurrentX128 - feeGrowthInsideLastX128) * liquidity.
+        // Fee calculations in NonfungiblePositionManager.sol overflow (without reverting) when
+        // one or both terms, or their sum, is bigger as a uint128.
+        // This is however much bigger as in any realistic situation can happen.
+        unchecked {
+            amount0 = FullMath.mulDiv(
+                feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128
+            ) + tokensOwed0;
+            amount1 = FullMath.mulDiv(
+                feeGrowthInside1CurrentX128 - feeGrowthInside1LastX128, liquidity, FixedPoint128.Q128
+            ) + tokensOwed1;
+        }
     }
 
     /**
@@ -335,21 +343,26 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
     ) internal view returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) {
         IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, token0, token1, fee));
 
-        // To calculate the pending fees, the actual current tick has to be used, even if the pool would be manipulated.
+        // To calculate the pending fees, the current tick has to be used, even if the pool would be unbalanced.
         (, int24 tickCurrent,,,,,) = pool.slot0();
         (,, uint256 lowerFeeGrowthOutside0X128, uint256 lowerFeeGrowthOutside1X128,,,,) = pool.ticks(tickLower);
         (,, uint256 upperFeeGrowthOutside0X128, uint256 upperFeeGrowthOutside1X128,,,,) = pool.ticks(tickUpper);
 
         // Calculate the fee growth inside of the Liquidity Range since the last time the position was updated.
-        if (tickCurrent < tickLower) {
-            feeGrowthInside0X128 = lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
-            feeGrowthInside1X128 = lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
-        } else if (tickCurrent < tickUpper) {
-            feeGrowthInside0X128 = pool.feeGrowthGlobal0X128() - lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
-            feeGrowthInside1X128 = pool.feeGrowthGlobal1X128() - lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
-        } else {
-            feeGrowthInside0X128 = upperFeeGrowthOutside0X128 - lowerFeeGrowthOutside0X128;
-            feeGrowthInside1X128 = upperFeeGrowthOutside1X128 - lowerFeeGrowthOutside1X128;
+        // feeGrowthInside can overflow (without reverting), as is the case in the Uniswap fee calculations.
+        unchecked {
+            if (tickCurrent < tickLower) {
+                feeGrowthInside0X128 = lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
+                feeGrowthInside1X128 = lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+            } else if (tickCurrent < tickUpper) {
+                feeGrowthInside0X128 =
+                    pool.feeGrowthGlobal0X128() - lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
+                feeGrowthInside1X128 =
+                    pool.feeGrowthGlobal1X128() - lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+            } else {
+                feeGrowthInside0X128 = upperFeeGrowthOutside0X128 - lowerFeeGrowthOutside0X128;
+                feeGrowthInside1X128 = upperFeeGrowthOutside1X128 - lowerFeeGrowthOutside1X128;
+            }
         }
     }
 
