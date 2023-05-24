@@ -152,20 +152,27 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         returns (uint256 valueInUsd, uint256, uint256 collateralFactor, uint256 liquidationFactor)
     {
         // Use variables as much as possible in local context, to avoid stack too deep errors.
+        address asset = getValueInput.asset;
+        uint256 id = getValueInput.assetId;
         address token0;
         address token1;
+        uint256 usdPriceToken0;
+        uint256 usdPriceToken1;
+        uint256 principal0;
+        uint256 principal1;
+        uint256 baseCurrency = getValueInput.baseCurrency;
         {
             int24 tickLower;
             int24 tickUpper;
             uint128 liquidity;
-            (token0, token1, tickLower, tickUpper, liquidity) = _getPosition(getValueInput.asset, getValueInput.assetId);
+            (token0, token1, tickLower, tickUpper, liquidity) = _getPosition(asset, id);
 
             // We use the USD price per 10^18 tokens instead of the USD price per token to guarantee
             // sufficient precision.
-            (uint256 usdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
+            (usdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
                 GetValueInput({ asset: token0, assetId: 0, assetAmount: 1e18, baseCurrency: 0 })
             );
-            (uint256 usdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
+            (usdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
                 GetValueInput({ asset: token1, assetId: 0, assetAmount: 1e18, baseCurrency: 0 })
             );
 
@@ -173,19 +180,25 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
             if (usdPriceToken0 == 0 || usdPriceToken1 == 0) return (0, 0, 0, 0);
 
             // Calculate amount0 and amount1 of the principal (the actual liquidity position).
-            (uint256 amount0, uint256 amount1) =
+            (principal0, principal1) =
                 _getPrincipalAmounts(tickLower, tickUpper, liquidity, usdPriceToken0, usdPriceToken1);
+        }
+
+        {
+            // Calculate amount0 and amount1 of the accumulated fees.
+            (uint256 fee0, uint256 fee1) = _getFeeAmounts(asset, id);
 
             // Calculate the total value in USD, since the USD price is per 10^18 tokens we have to divide by 10^18.
-            valueInUsd = usdPriceToken0.mulDivDown(amount0, 1e18) + usdPriceToken1.mulDivDown(amount1, 1e18);
+            valueInUsd =
+                usdPriceToken0.mulDivDown(principal0 + fee0, 1e18) + usdPriceToken1.mulDivDown(principal1 + fee1, 1e18);
         }
 
         {
             // Fetch the risk variables of the underlying tokens for the given baseCurrency.
             (uint256 collateralFactor0, uint256 liquidationFactor0) =
-                PricingModule(erc20PricingModule).getRiskVariables(token0, getValueInput.baseCurrency);
+                PricingModule(erc20PricingModule).getRiskVariables(token0, baseCurrency);
             (uint256 collateralFactor1, uint256 liquidationFactor1) =
-                PricingModule(erc20PricingModule).getRiskVariables(token1, getValueInput.baseCurrency);
+                PricingModule(erc20PricingModule).getRiskVariables(token1, baseCurrency);
 
             // We take the most conservative (lowest) factor of both underlying assets.
             // If one token loses in value compared to the other token, Liquidity Providers will be relatively more exposed
