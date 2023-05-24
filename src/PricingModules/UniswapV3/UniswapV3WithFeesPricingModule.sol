@@ -161,13 +161,13 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         // Use variables as much as possible in local context, to avoid stack too deep errors.
         address asset = getValueInput.asset;
         uint256 id = getValueInput.assetId;
+        uint256 baseCurrency = getValueInput.baseCurrency;
         address token0;
         address token1;
         uint256 usdPriceToken0;
         uint256 usdPriceToken1;
         uint256 principal0;
         uint256 principal1;
-        uint256 baseCurrency = getValueInput.baseCurrency;
         {
             int24 tickLower;
             int24 tickUpper;
@@ -445,7 +445,8 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
 
             // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic).
             // We do not use the TWAP price to calculate the current value of the asset, only to ensure that the deposited Liquidity Range
-            // hence the risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
+            // is within 5x of the current tick.
+            // The risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
             int24 tickCurrent = _getTwat(pool);
 
             // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
