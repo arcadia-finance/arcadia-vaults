@@ -324,7 +324,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         // (feeGrowthInsideCurrentX128 - feeGrowthInsideLastX128) * liquidity.
         // Fee calculations in NonfungiblePositionManager.sol overflow (without reverting) when
         // one or both terms, or their sum, is bigger than a uint128.
-        // This is however much bigger as in any realistic situation can happen.
+        // This is however much bigger than any realistic situation.
         unchecked {
             amount0 = FullMath.mulDiv(
                 feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128
