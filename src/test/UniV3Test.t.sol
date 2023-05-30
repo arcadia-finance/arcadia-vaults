@@ -11,13 +11,13 @@ import { ArcadiaOracleFixture, ArcadiaOracle } from "./fixtures/ArcadiaOracleFix
 import { ERC20 } from "../../lib/solmate/src/tokens/ERC20.sol";
 import { ERC721 } from "../../lib/solmate/src/tokens/ERC721.sol";
 import {
-    UniswapV3PricingModule,
+    UniswapV3WithFeesPricingModule,
     PricingModule,
     IPricingModule,
     TickMath,
     LiquidityAmounts,
     FixedPointMathLib
-} from "../PricingModules/UniswapV3/UniswapV3PricingModule.sol";
+} from "../PricingModules/UniswapV3/UniswapV3WithFeesPricingModule.sol";
 import { INonfungiblePositionManagerExtension } from "./interfaces/INonfungiblePositionManagerExtension.sol";
 import { IUniswapV3PoolExtension } from "./interfaces/IUniswapV3PoolExtension.sol";
 import { IUniswapV3Factory } from "./interfaces/IUniswapV3Factory.sol";
@@ -25,9 +25,9 @@ import { ISwapRouter } from "./interfaces/ISwapRouter.sol";
 import { LiquidityAmountsExtension } from "./libraries/LiquidityAmountsExtension.sol";
 import { TickMathsExtension } from "./libraries/TickMathsExtension.sol";
 
-contract UniswapV3PricingModuleExtension is UniswapV3PricingModule {
+contract UniswapV3PricingModuleExtension is UniswapV3WithFeesPricingModule {
     constructor(address mainRegistry_, address oracleHub_, address riskManager_, address erc20PricingModule_)
-        UniswapV3PricingModule(mainRegistry_, oracleHub_, riskManager_, erc20PricingModule_)
+        UniswapV3WithFeesPricingModule(mainRegistry_, oracleHub_, riskManager_, erc20PricingModule_)
     { }
 
     function getPrincipalAmounts(
@@ -545,6 +545,34 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
+    function testRevert_processDeposit_ZeroLiquidity() public {
+        // Create Uniswap V3 pool initiated at tick 0 with cardinality 300.
+        pool = createPool(token0, token1, TickMath.getSqrtRatioAtTick(0), 300);
+
+        // Mint liquidity position.
+        uint256 tokenId = addLiquidity(pool, 1000, liquidityProvider, -60, 60, true);
+
+        // Decrease liquidity so that position has 0 liquidity.
+        // Fetch liquidity from position instead of using input liquidity
+        // This is because there might be some small differences due to rounding errors.
+        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
+        vm.prank(liquidityProvider);
+        uniV3.decreaseLiquidity(
+            INonfungiblePositionManagerExtension.DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: liquidity_,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: type(uint160).max
+            })
+        );
+
+        vm.startPrank(address(mainRegistry));
+        vm.expectRevert("PMUV3_PD: 0 liquidity");
+        uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
+        vm.stopPrank();
+    }
+
     function testRevert_processDeposit_BelowAcceptedRange(
         uint128 liquidity,
         int24 tickLower,
@@ -715,7 +743,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
-    function testRevert_processDeposit_Success(
+    function testSuccess_processDeposit(
         uint128 liquidity,
         int24 tickLower,
         int24 tickUpper,
@@ -825,10 +853,12 @@ contract RiskVariablesManagementTest is UniV3Test {
             TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity_
         );
 
-        // Check that exposures are bigger than amounts (tokens had to be deposited first).
-        // Contract should never be able to reach a state where amount > exposure.
-        vm.assume(amount0 <= initialExposure0);
-        vm.assume(amount1 <= initialExposure1);
+        // Avoid overflow.
+        vm.assume(amount0 <= type(uint128).max - initialExposure0);
+        vm.assume(amount1 <= type(uint128).max - initialExposure1);
+        // Check that there is sufficient free exposure.
+        vm.assume(amount0 + initialExposure0 <= maxExposure0);
+        vm.assume(amount1 + initialExposure1 <= maxExposure1);
         // Set maxExposures
         vm.startPrank(deployer);
         uniV3PricingModule.setExposure(address(token0), initialExposure0, maxExposure0);
@@ -838,13 +868,17 @@ contract RiskVariablesManagementTest is UniV3Test {
         // Warp 300 seconds to ensure that TWAT of 300s can be calculated.
         vm.warp(block.timestamp + 300);
 
+        // Deposit assets (necessary to update the position in the Pricing Module).
+        vm.prank(address(mainRegistry));
+        uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
+
         vm.prank(address(mainRegistry));
         uniV3PricingModule.processWithdrawal(address(0), address(uniV3), tokenId, 0);
 
         (, uint128 exposure0) = uniV3PricingModule.exposure(address(token0));
         (, uint128 exposure1) = uniV3PricingModule.exposure(address(token1));
-        assertEq(exposure0, initialExposure0 - amount0);
-        assertEq(exposure1, initialExposure1 - amount1);
+        assertEq(exposure0, initialExposure0);
+        assertEq(exposure1, initialExposure1);
     }
 
     /*///////////////////////////////////////////////////////////////
