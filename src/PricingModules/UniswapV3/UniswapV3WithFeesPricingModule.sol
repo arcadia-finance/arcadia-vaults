@@ -36,6 +36,13 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
                                 STORAGE
     ////////////////////////////////////////////////////////////// */
 
+    // The maximum difference between the upper or lower tick and the current tick (from 0.2x to 5X the current price).
+    // Calculated as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
+    int24 public constant MAX_TICK_DIFFERENCE = 16_095;
+
+    // The Number of seconds in the past from which to calculate the time-weighted tick.
+    uint32 public constant TWAT_INTERVAL = 5 minutes;
+
     // Map asset => uniswapV3Factory.
     mapping(address => address) public assetToV3Factory;
 
@@ -154,13 +161,13 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         // Use variables as much as possible in local context, to avoid stack too deep errors.
         address asset = getValueInput.asset;
         uint256 id = getValueInput.assetId;
+        uint256 baseCurrency = getValueInput.baseCurrency;
         address token0;
         address token1;
         uint256 usdPriceToken0;
         uint256 usdPriceToken1;
         uint256 principal0;
         uint256 principal1;
-        uint256 baseCurrency = getValueInput.baseCurrency;
         {
             int24 tickLower;
             int24 tickUpper;
@@ -309,22 +316,30 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
             uint24 fee,
             int24 tickLower,
             int24 tickUpper,
-            uint128 liquidity,
+            uint256 liquidity, // gas: cheaper to use uint256 instead of uint128.
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
-            uint256 tokensOwed0,
-            uint256 tokensOwed1
+            uint256 tokensOwed0, // gas: cheaper to use uint256 instead of uint128.
+            uint256 tokensOwed1 // gas: cheaper to use uint256 instead of uint128.
         ) = INonfungiblePositionManager(asset).positions(id);
 
         (uint256 feeGrowthInside0CurrentX128, uint256 feeGrowthInside1CurrentX128) =
             _getFeeGrowthInside(factory, token0, token1, fee, tickLower, tickUpper);
 
-        // Calculate the total amount of fees by adding the already realized fees (tokensOwed), to the accumulated fees
-        // since the last time the position was updated ((feeGrowthInsideCurrentX128 - feeGrowthInsideLastX128) * liquidity).
-        amount0 = FullMath.mulDiv(feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128)
-            + tokensOwed0;
-        amount1 = FullMath.mulDiv(feeGrowthInside1CurrentX128 - feeGrowthInside1LastX128, liquidity, FixedPoint128.Q128)
-            + tokensOwed1;
+        // Calculate the total amount of fees by adding the already realized fees (tokensOwed),
+        // to the accumulated fees since the last time the position was updated:
+        // (feeGrowthInsideCurrentX128 - feeGrowthInsideLastX128) * liquidity.
+        // Fee calculations in NonfungiblePositionManager.sol overflow (without reverting) when
+        // one or both terms, or their sum, is bigger than a uint128.
+        // This is however much bigger than any realistic situation.
+        unchecked {
+            amount0 = FullMath.mulDiv(
+                feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128
+            ) + tokensOwed0;
+            amount1 = FullMath.mulDiv(
+                feeGrowthInside1CurrentX128 - feeGrowthInside1LastX128, liquidity, FixedPoint128.Q128
+            ) + tokensOwed1;
+        }
     }
 
     /**
@@ -348,21 +363,26 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
     ) internal view returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) {
         IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, token0, token1, fee));
 
-        // To calculate the pending fees, the actual current tick has to be used, even if the pool would be manipulated.
+        // To calculate the pending fees, the current tick has to be used, even if the pool would be unbalanced.
         (, int24 tickCurrent,,,,,) = pool.slot0();
         (,, uint256 lowerFeeGrowthOutside0X128, uint256 lowerFeeGrowthOutside1X128,,,,) = pool.ticks(tickLower);
         (,, uint256 upperFeeGrowthOutside0X128, uint256 upperFeeGrowthOutside1X128,,,,) = pool.ticks(tickUpper);
 
         // Calculate the fee growth inside of the Liquidity Range since the last time the position was updated.
-        if (tickCurrent < tickLower) {
-            feeGrowthInside0X128 = lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
-            feeGrowthInside1X128 = lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
-        } else if (tickCurrent < tickUpper) {
-            feeGrowthInside0X128 = pool.feeGrowthGlobal0X128() - lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
-            feeGrowthInside1X128 = pool.feeGrowthGlobal1X128() - lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
-        } else {
-            feeGrowthInside0X128 = upperFeeGrowthOutside0X128 - lowerFeeGrowthOutside0X128;
-            feeGrowthInside1X128 = upperFeeGrowthOutside1X128 - lowerFeeGrowthOutside1X128;
+        // feeGrowthInside can overflow (without reverting), as is the case in the Uniswap fee calculations.
+        unchecked {
+            if (tickCurrent < tickLower) {
+                feeGrowthInside0X128 = lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
+                feeGrowthInside1X128 = lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+            } else if (tickCurrent < tickUpper) {
+                feeGrowthInside0X128 =
+                    pool.feeGrowthGlobal0X128() - lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
+                feeGrowthInside1X128 =
+                    pool.feeGrowthGlobal1X128() - lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+            } else {
+                feeGrowthInside0X128 = upperFeeGrowthOutside0X128 - lowerFeeGrowthOutside0X128;
+                feeGrowthInside1X128 = upperFeeGrowthOutside1X128 - lowerFeeGrowthOutside1X128;
+            }
         }
     }
 
@@ -425,13 +445,14 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
 
             // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic).
             // We do not use the TWAP price to calculate the current value of the asset, only to ensure that the deposited Liquidity Range
-            // hence the risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
+            // is within 5x of the current tick.
+            // The risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
             int24 tickCurrent = _getTwat(pool);
 
             // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
             // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
-            require(tickCurrent - tickLower <= 16_095, "PMUV3_PD: Tlow not in limits");
-            require(tickUpper - tickCurrent <= 16_095, "PMUV3_PD: Tup not in limits");
+            require(tickCurrent - tickLower <= MAX_TICK_DIFFERENCE, "PMUV3_PD: Tlow not in limits");
+            require(tickUpper - tickCurrent <= MAX_TICK_DIFFERENCE, "PMUV3_PD: Tup not in limits");
         }
 
         // Cache sqrtRatio.
@@ -466,11 +487,11 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
      */
     function _getTwat(IUniswapV3Pool pool) internal view returns (int24 tick) {
         uint32[] memory secondsAgos = new uint32[](2);
-        secondsAgos[1] = 300; // We take a 5 minute time interval.
+        secondsAgos[1] = TWAT_INTERVAL; // We take a 5 minute time interval.
 
         (int56[] memory tickCumulatives,) = pool.observe(secondsAgos);
 
-        tick = int24((tickCumulatives[0] - tickCumulatives[1]) / 300);
+        tick = int24((tickCumulatives[0] - tickCumulatives[1]) / int32(TWAT_INTERVAL));
     }
 
     /**
