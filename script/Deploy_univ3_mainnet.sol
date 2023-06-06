@@ -9,13 +9,8 @@ import { DeployAddresses } from "./Constants/DeployConstants.sol";
 
 import { MainRegistry } from "../src/MainRegistry.sol";
 import { StandardERC20PricingModule } from "../src/PricingModules/StandardERC20PricingModule.sol";
-import {
-    PricingModule,
-    UniswapV3WithFeesPricingModule
-} from "../src/PricingModules/UniswapV3/UniswapV3WithFeesPricingModule.sol";
+import { PricingModule, UniswapV3PricingModule } from "../src/PricingModules/UniswapV3/UniswapV3PricingModule.sol";
 import { OracleHub } from "../src/OracleHub.sol";
-
-import { UniV3Helper } from "../src/utils/UniV3Helper.sol";
 
 contract ArcadiaUniV3DeployerMainnet is Test {
     MainRegistry public constant mainRegistry = MainRegistry(0x046fc9f35EB7Cb165a5e07915d37bF4022b8dE33);
@@ -25,8 +20,7 @@ contract ArcadiaUniV3DeployerMainnet is Test {
 
     address public constant deployer = 0xbA32A3D407353FC3adAA6f7eC6264Df5bCA51c4b;
 
-    UniswapV3WithFeesPricingModule public uniV3PricingModule;
-    UniV3Helper public uniV3Helper;
+    UniswapV3PricingModule public uniV3PricingModule;
 
     constructor() { }
 
@@ -35,14 +29,12 @@ contract ArcadiaUniV3DeployerMainnet is Test {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        uniV3PricingModule = new UniswapV3WithFeesPricingModule(
+        uniV3PricingModule = new UniswapV3PricingModule(
             address(mainRegistry),
             address(oracleHub),
             address(deployer),
             address(standardERC20PricingModule)
         );
-
-        uniV3Helper = new UniV3Helper(address(uniV3PricingModule));
 
         mainRegistry.addPricingModule(address(uniV3PricingModule));
         uniV3PricingModule.addAsset(DeployAddresses.uniswapV3PositionMgr_mainnet);
