@@ -23,11 +23,10 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
  * @title Pricing Module for Uniswap V3 Liquidity Positions.
  * @author Pragma Labs
  * @notice The pricing logic and basic information for Uniswap V3 Liquidity Positions.
- * @dev This Pricing Module only takes into account the value of the principal
- * (the actual Liquidity Position), not the value of accrued fees.
+ * @dev This Pricing Module has the option to take into account the value of the principal
+ * and the value of accrued fees or a combination of them.
+ * This feature can be setted by the contract owner.
  * This is a deliberate choice to reduce complexity and gas usage.
- * An implementation for the Pricing Module with fees can be found here:
- * https://github.com/arcadia-finance/arcadia-vaults/blob/main/src/PricingModules/Uniswap-V3/UniswapV3WithFeesPricingModule.sol
  * @dev The UniswapV3PricingModule will not price the LP-tokens via direct price oracles,
  * it will break down liquidity positions in the underlying tokens (ERC20s).
  * Only LP tokens for which the underlying tokens are allowed as collateral can be priced.
@@ -50,6 +49,10 @@ contract UniswapV3PricingModule is PricingModule {
     // Map asset => id => positionInformation.
     mapping(address => mapping(uint256 => Position)) internal positions;
 
+    /**
+     * on feesValuation.None, only the principlas is valued. No fees nor tokensowed are taken into account.
+     * on feesValuation.TokensOwed, only the princypal and tokensOwed is valued. No fees are taken into account.
+     */
     FeesValuation public feesValuation;
 
     enum FeesValuation {

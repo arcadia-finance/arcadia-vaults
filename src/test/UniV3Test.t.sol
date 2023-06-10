@@ -11,13 +11,13 @@ import { ArcadiaOracleFixture, ArcadiaOracle } from "./fixtures/ArcadiaOracleFix
 import { ERC20 } from "../../lib/solmate/src/tokens/ERC20.sol";
 import { ERC721 } from "../../lib/solmate/src/tokens/ERC721.sol";
 import {
-    UniswapV3WithFeesPricingModule,
+    UniswapV3PricingModule,
     PricingModule,
     IPricingModule,
     TickMath,
     LiquidityAmounts,
     FixedPointMathLib
-} from "../PricingModules/UniswapV3/UniswapV3WithFeesPricingModule.sol";
+} from "../PricingModules/UniswapV3/UniswapV3PricingModule.sol";
 import { INonfungiblePositionManagerExtension } from "./interfaces/INonfungiblePositionManagerExtension.sol";
 import { IUniswapV3PoolExtension } from "./interfaces/IUniswapV3PoolExtension.sol";
 import { IUniswapV3Factory } from "./interfaces/IUniswapV3Factory.sol";
@@ -25,9 +25,9 @@ import { ISwapRouter } from "./interfaces/ISwapRouter.sol";
 import { LiquidityAmountsExtension } from "./libraries/LiquidityAmountsExtension.sol";
 import { TickMathsExtension } from "./libraries/TickMathsExtension.sol";
 
-contract UniswapV3PricingModuleExtension is UniswapV3WithFeesPricingModule {
+contract UniswapV3PricingModuleExtension is UniswapV3PricingModule {
     constructor(address mainRegistry_, address oracleHub_, address riskManager_, address erc20PricingModule_)
-        UniswapV3WithFeesPricingModule(mainRegistry_, oracleHub_, riskManager_, erc20PricingModule_)
+        UniswapV3PricingModule(mainRegistry_, oracleHub_, riskManager_, erc20PricingModule_)
     { }
 
     function getPrincipalAmounts(
@@ -998,7 +998,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         uint256 valueToken1 = 1e18 * uint256(priceToken1) * amount1 / 10 ** decimals1;
 
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = uniV3PricingModule.getValue(
-            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
+            IPricingModule.GetValueInput({asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0})
         );
 
         assertEq(actualValueInUsd, valueToken0 + valueToken1);
@@ -1047,7 +1047,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         uint256 expectedLiqFactor = liqFactor0 < liqFactor1 ? liqFactor0 : liqFactor1;
 
         (,, uint256 actualCollFactor, uint256 actualLiqFactor) = uniV3PricingModule.getValue(
-            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
+            IPricingModule.GetValueInput({asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0})
         );
 
         assertEq(actualCollFactor, expectedCollFactor);
