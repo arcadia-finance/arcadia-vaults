@@ -1083,7 +1083,9 @@ contract RiskVariablesManagementTest is UniV3Test {
 
         swapAmountIn = bound(swapAmountIn, amount1 > 100_000 ? amount1 / 100 : 1, amount1); //against rounding errors
 
-        // Do a swap.
+        // Do a swap
+        // then collect fees
+        // assert that the fees collected are the actual fees paid during the swap
         deal(address(token1), swapper, type(uint256).max);
         vm.startPrank(swapper);
         token1.approve(address(router), type(uint256).max);
@@ -1197,7 +1199,10 @@ contract RiskVariablesManagementTest is UniV3Test {
 
         swapAmountIn = bound(swapAmountIn, amount1 > 100_000 ? amount1 / 100 : 1, amount1 / 10); //against rounding errors
 
-        // Do a swap.
+        // Do a swap
+        // then collect fees
+        // then do another swap
+        // assert that the valuation of a position is no_fees <= token_owed <= all_fees
         deal(address(token1), swapper, type(uint256).max);
         vm.startPrank(swapper);
         token1.approve(address(router), type(uint256).max);
