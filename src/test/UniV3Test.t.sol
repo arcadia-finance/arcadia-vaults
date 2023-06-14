@@ -959,7 +959,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.assume(priceToken1 > 0);
         // Cast to uint160 will overflow, not realistic.
         vm.assume(priceToken0 / priceToken1 < 2 ** 128);
-        //Check that sqrtPriceX96 is within allowed Uniswap V3 ranges.
+        // Check that sqrtPriceX96 is within allowed Uniswap V3 ranges.
         uint160 sqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(
             priceToken0 * 10 ** (18 - decimals0), priceToken1 * 10 ** (18 - decimals1)
         );
@@ -1017,11 +1017,10 @@ contract RiskVariablesManagementTest is UniV3Test {
         int24 tickUpper,
         uint64 priceToken0,
         uint64 priceToken1,
-        uint256 swapAmountIn
+        uint256 amountOut
     ) public {
-        vm.startPrank(deployer);
-        uniV3PricingModule.setFeeValuation(UniswapV3PricingModule.FeesValuation.TokensOwed);
-        vm.stopPrank();
+        vm.prank(deployer);
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
 
         // Check that ticks are within allowed ranges.
         vm.assume(tickLower < tickUpper);
@@ -1081,52 +1080,55 @@ contract RiskVariablesManagementTest is UniV3Test {
         uniV3PricingModule.setExposureOfAsset(address(token1), type(uint128).max);
         vm.stopPrank();
 
-        swapAmountIn = bound(swapAmountIn, amount1 > 100_000 ? amount1 / 100 : 1, amount1); //against rounding errors
+        // amountOut cannot exceed available liquidity.
+        amountOut = bound(amountOut, 1, amount0);
 
-        // Do a swap
-        // then collect fees
-        // assert that the fees collected are the actual fees paid during the swap
+        // Do the swap
         deal(address(token1), swapper, type(uint256).max);
         vm.startPrank(swapper);
         token1.approve(address(router), type(uint256).max);
-        router.exactInputSingle(
-            ISwapRouter.ExactInputSingleParams({
+        uint256 amountIn = router.exactOutputSingle(
+            ISwapRouter.ExactOutputSingleParams({
                 tokenIn: address(token1),
                 tokenOut: address(token0),
                 fee: 100,
                 recipient: swapper,
                 deadline: type(uint160).max,
-                amountIn: swapAmountIn,
-                amountOutMinimum: 0,
+                amountOut: amountOut,
+                amountInMaximum: type(uint256).max,
                 sqrtPriceLimitX96: 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341
             })
         );
-
-        uint256 expectedSwapFee = swapAmountIn / 10_000;
-        emit log_named_uint("swapFee", expectedSwapFee);
-
         vm.stopPrank();
 
+        // When amountIn is smaller as fee, calculations get tricky, but overall value will be neglectible.
+        vm.assume(amountIn > 10_000);
+
+        // Calculate the expected fee in token1 (fees are only in tokenIn).
+        uint256 expectedFee0 = 0;
+        uint256 expectedFee1 = amountIn / 10_000;
+
+        // We want to test tokensOwed in this test -> we first have to claim the pending fees.
+        // To do this we decrease the position with minimal amount.
         vm.prank(liquidityProvider);
-        uniV3.decreaseLiquidity(
+        (uint256 principal0, uint256 principal1) = uniV3.decreaseLiquidity(
             INonfungiblePositionManagerExtension.DecreaseLiquidityParams({
                 tokenId: tokenId,
                 liquidity: 1,
-                amount0Min: 1,
+                amount0Min: 0,
                 amount1Min: 0,
                 deadline: type(uint128).max
             })
         );
 
-        (uint256 actualSwapFee0, uint256 actualSwapFee1) = uniV3PricingModule.getFeeAmounts(address(uniV3), tokenId);
+        (uint256 tokensOwed0, uint256 tokensOwed1) = uniV3PricingModule.getFeeAmounts(address(uniV3), tokenId);
+        // Decreasing liquidity positions will also increase tokensOwed
+        // To know the actual fees we have to substract the tokensOwed due to a decrease of principal LP from the total tokensOwed.
+        uint256 actualFee0 = tokensOwed0 - principal0;
+        uint256 actualFee1 = tokensOwed1 - principal1;
 
-        emit log_named_uint("actualSwapFee0", actualSwapFee0);
-        emit log_named_uint("actualSwapFee1", actualSwapFee1);
-        emit log_named_uint("expectedSwapFee", expectedSwapFee);
-        emit log_named_uint("swapAmountIn", swapAmountIn);
-
-        assertEq(actualSwapFee1, expectedSwapFee);
-        assertEq(0, actualSwapFee0);
+        assertEq(actualFee0, expectedFee0);
+        assertInRange(actualFee1, expectedFee1, 3);
     }
 
     function testSuccess_getValue_valueInUsdFeesInvariant(
@@ -1252,16 +1254,15 @@ contract RiskVariablesManagementTest is UniV3Test {
             IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
         );
 
-        vm.startPrank(deployer);
-        uniV3PricingModule.setFeeValuation(UniswapV3PricingModule.FeesValuation.TokensOwed);
-        vm.stopPrank();
+        vm.prank(deployer);
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
 
         (uint256 actualValueInUsdTokenOwed,,,) = uniV3PricingModule.getValue(
             IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
         );
 
         vm.startPrank(deployer);
-        uniV3PricingModule.setFeeValuation(UniswapV3PricingModule.FeesValuation.All);
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
         vm.stopPrank();
 
         (uint256 actualValueInUsdAll,,,) = uniV3PricingModule.getValue(
