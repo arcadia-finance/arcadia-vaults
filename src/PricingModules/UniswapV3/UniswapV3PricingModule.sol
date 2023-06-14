@@ -49,16 +49,14 @@ contract UniswapV3PricingModule is PricingModule {
     // Map asset => id => positionInformation.
     mapping(address => mapping(uint256 => Position)) internal positions;
 
-    /**
-     * on feesValuation.None, only the principlas is valued. No fees nor tokensowed are taken into account.
-     * on feesValuation.TokensOwed, only the princypal and tokensOwed is valued. No fees are taken into account.
-     */
-    FeesValuation public feesValuation;
+    // Flag indicating if the principal, tokensOwed and fees should be priced, or only a subset.
+    FeeFlag public feeFlag;
 
-    enum FeesValuation {
-        None,
-        TokensOwed,
-        All
+    // Enum with the different fee pricing settings.
+    enum FeeFlag {
+        None, // Only the principal is valued. No fees and tokensOwed are taken into account.
+        TokensOwed, // Only the principal and tokensOwed are valued. No fees are taken into account.
+        All // Principal, tokensOwed and fees are valued.
     }
 
     // Struct with information of a specific Liquidity Position.
@@ -110,7 +108,19 @@ contract UniswapV3PricingModule is PricingModule {
     }
 
     /*///////////////////////////////////////////////////////////////
-                        ALLOW LIST MANAGEMENT
+                        FEE FLAG MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice sets feeFlag to a new value.
+     * @param feeFlag_ The new fee pricing setting.
+     */
+    function setFeeFlag(FeeFlag feeFlag_) external onlyOwner {
+        feeFlag = feeFlag_;
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                            ALLOW LIST
     ///////////////////////////////////////////////////////////////*/
 
     /**
@@ -145,10 +155,6 @@ contract UniswapV3PricingModule is PricingModule {
     /*///////////////////////////////////////////////////////////////
                           PRICING LOGIC
     ///////////////////////////////////////////////////////////////*/
-
-    function setFeeValuation(FeesValuation _feesValuation) external onlyOwner {
-        feesValuation = _feesValuation;
-    }
 
     /**
      * @notice Returns the value of a Uniswap V3 Liquidity Range.
@@ -211,7 +217,7 @@ contract UniswapV3PricingModule is PricingModule {
             uint256 fee0;
             uint256 fee1;
 
-            if (feesValuation != FeesValuation.None) {
+            if (feeFlag != FeeFlag.None) {
                 // Calculate amount0 and amount1 of the accumulated fees.
                 (fee0, fee1) = _getFeeAmounts(asset, id);
             }
@@ -327,7 +333,7 @@ contract UniswapV3PricingModule is PricingModule {
      * @return amount1 The amount of fees underlying token1 tokens.
      */
     function _getFeeAmounts(address asset, uint256 id) internal view returns (uint256 amount0, uint256 amount1) {
-        if (feesValuation == FeesValuation.TokensOwed) {
+        if (feeFlag == FeeFlag.TokensOwed) {
             (,,,,,,,,,, amount0, amount1) = INonfungiblePositionManager(asset).positions(id);
         } else {
             address factory = assetToV3Factory[asset];
