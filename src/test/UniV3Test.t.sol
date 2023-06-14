@@ -52,6 +52,10 @@ contract UniswapV3PricingModuleExtension is UniswapV3PricingModule {
         exposure[asset].exposure = exposure_;
         exposure[asset].maxExposure = maxExposure;
     }
+
+    function getFeeAmounts(address asset, uint256 id) public view returns (uint256 amount0, uint256 amount1) {
+        (amount0, amount1) = _getFeeAmounts(asset, id);
+    }
 }
 
 abstract contract UniV3Test is DeployedContracts, Test {
@@ -998,7 +1002,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         uint256 valueToken1 = 1e18 * uint256(priceToken1) * amount1 / 10 ** decimals1;
 
         (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = uniV3PricingModule.getValue(
-            IPricingModule.GetValueInput({asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0})
+            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
         );
 
         assertEq(actualValueInUsd, valueToken0 + valueToken1);
@@ -1077,7 +1081,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         uniV3PricingModule.setExposureOfAsset(address(token1), type(uint128).max);
         vm.stopPrank();
 
-        swapAmountIn = bound(swapAmountIn, amount1 > 100 ? amount1 / 100 : 1, amount1);
+        swapAmountIn = bound(swapAmountIn, amount1 > 100_000 ? amount1 / 100 : 1, amount1); //against rounding errors
 
         // Do a swap.
         deal(address(token1), swapper, type(uint256).max);
@@ -1096,8 +1100,119 @@ contract RiskVariablesManagementTest is UniV3Test {
             })
         );
 
-        uint256 swapFee = swapAmountIn / 10_000;
-        emit log_named_uint("swapFee", swapFee);
+        uint256 expectedSwapFee = swapAmountIn / 10_000;
+        emit log_named_uint("swapFee", expectedSwapFee);
+
+        vm.stopPrank();
+
+        vm.prank(liquidityProvider);
+        uniV3.decreaseLiquidity(
+            INonfungiblePositionManagerExtension.DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: 1,
+                amount0Min: 1,
+                amount1Min: 0,
+                deadline: type(uint128).max
+            })
+        );
+
+        (uint256 actualSwapFee0, uint256 actualSwapFee1) = uniV3PricingModule.getFeeAmounts(address(uniV3), tokenId);
+
+        emit log_named_uint("actualSwapFee0", actualSwapFee0);
+        emit log_named_uint("actualSwapFee1", actualSwapFee1);
+        emit log_named_uint("expectedSwapFee", expectedSwapFee);
+        emit log_named_uint("swapAmountIn", swapAmountIn);
+
+        assertEq(actualSwapFee1, expectedSwapFee);
+        assertEq(0, actualSwapFee0);
+    }
+
+    function testSuccess_getValue_valueInUsdFeesInvariant(
+        uint256 decimals0,
+        uint256 decimals1,
+        uint80 liquidity,
+        int24 tickLower,
+        int24 tickUpper,
+        uint64 priceToken0,
+        uint64 priceToken1,
+        uint256 swapAmountIn
+    ) public {
+        // Check that ticks are within allowed ranges.
+        vm.assume(tickLower < tickUpper);
+        vm.assume(isWithinAllowedRange(tickLower));
+        vm.assume(isWithinAllowedRange(tickUpper));
+
+        // Deploy and sort tokens.
+        decimals0 = bound(decimals0, 6, 18);
+        decimals1 = bound(decimals1, 6, 18);
+        token0 = erc20Fixture.createToken(deployer, uint8(decimals0));
+        token1 = erc20Fixture.createToken(deployer, uint8(decimals1));
+        if (token0 > token1) {
+            (token0, token1) = (token1, token0);
+            (decimals0, decimals1) = (decimals1, decimals0);
+            (priceToken0, priceToken1) = (priceToken1, priceToken0);
+        }
+
+        // Avoid divide by 0 in next line.
+        vm.assume(priceToken1 > 0);
+        // Cast to uint160 will overflow, not realistic.
+        vm.assume(priceToken0 / priceToken1 < 2 ** 128);
+        //Check that sqrtPriceX96 is within allowed Uniswap V3 ranges.
+        uint160 sqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(
+            priceToken0 * 10 ** (18 - decimals0), priceToken1 * 10 ** (18 - decimals1)
+        );
+        vm.assume(sqrtPriceX96 >= 4_295_128_739);
+        vm.assume(sqrtPriceX96 <= 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342);
+
+        // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
+        pool = createPool(token0, token1, sqrtPriceX96, 300);
+
+        // Check that Liquidity is within allowed ranges.
+        vm.assume(liquidity > 0);
+        vm.assume(liquidity <= pool.maxLiquidityPerTick());
+
+        // Mint liquidity position.
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
+
+        // Calculate amounts of underlying tokens.
+        // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
+        // This is because there might be some small differences due to rounding errors.
+        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
+        (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
+            sqrtPriceX96, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity_
+        );
+
+        // Overflows Uniswap libraries, not realistic.
+        vm.assume(amount0 < type(uint104).max && amount0 > 0);
+        vm.assume(amount1 < type(uint104).max && amount1 > 9); //to prevent it become lower than the min on bound(swapAmountIn)
+
+        // Add underlying tokens and its oracles to Arcadia.
+        addUnderlyingTokenToArcadia(address(token0), int256(uint256(priceToken0)));
+        addUnderlyingTokenToArcadia(address(token1), int256(uint256(priceToken1)));
+
+        vm.startPrank(deployer);
+        uniV3PricingModule.setExposureOfAsset(address(token0), type(uint128).max);
+        uniV3PricingModule.setExposureOfAsset(address(token1), type(uint128).max);
+        vm.stopPrank();
+
+        swapAmountIn = bound(swapAmountIn, amount1 > 100_000 ? amount1 / 100 : 1, amount1 / 10); //against rounding errors
+
+        // Do a swap.
+        deal(address(token1), swapper, type(uint256).max);
+        vm.startPrank(swapper);
+        token1.approve(address(router), type(uint256).max);
+        router.exactInputSingle(
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: address(token1),
+                tokenOut: address(token0),
+                fee: 100,
+                recipient: swapper,
+                deadline: type(uint160).max,
+                amountIn: swapAmountIn,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341
+            })
+        );
 
         vm.stopPrank();
 
@@ -1112,18 +1227,44 @@ contract RiskVariablesManagementTest is UniV3Test {
             })
         );
 
-        // Calculate the expected value
-        uint256 valueToken0 = 1e18 * uint256(priceToken0) * amount0 / 10 ** decimals0;
-        uint256 valueToken1 = 1e18 * uint256(priceToken1) * amount1 / 10 ** decimals1;
-        uint256 valueTokenOwed = 1e18 * uint256(priceToken1) * swapFee / 10 ** decimals1;
-        emit log_named_uint("valueTokenOwed", valueTokenOwed);
+        vm.startPrank(swapper);
+        token1.approve(address(router), type(uint256).max);
+        router.exactInputSingle(
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: address(token1),
+                tokenOut: address(token0),
+                fee: 100,
+                recipient: swapper,
+                deadline: type(uint160).max,
+                amountIn: swapAmountIn,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341
+            })
+        );
+        vm.stopPrank();
 
-        (uint256 actualValueInUsd, uint256 actualValueInBaseCurrency,,) = uniV3PricingModule.getValue(
-            IPricingModule.GetValueInput({asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0})
+        (uint256 actualValueInUsd,,,) = uniV3PricingModule.getValue(
+            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
         );
 
-        assertEq(actualValueInUsd, valueToken0 + valueToken1 + valueTokenOwed);
-        assertEq(actualValueInBaseCurrency, 0);
+        vm.startPrank(deployer);
+        uniV3PricingModule.setFeeValuation(UniswapV3PricingModule.FeesValuation.TokensOwed);
+        vm.stopPrank();
+
+        (uint256 actualValueInUsdTokenOwed,,,) = uniV3PricingModule.getValue(
+            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
+        );
+
+        vm.startPrank(deployer);
+        uniV3PricingModule.setFeeValuation(UniswapV3PricingModule.FeesValuation.All);
+        vm.stopPrank();
+
+        (uint256 actualValueInUsdAll,,,) = uniV3PricingModule.getValue(
+            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
+        );
+
+        assertGe(actualValueInUsdTokenOwed, actualValueInUsd);
+        assertGe(actualValueInUsdAll, actualValueInUsdTokenOwed);
     }
 
     function testSuccess_getValue_RiskFactors(
@@ -1168,7 +1309,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         uint256 expectedLiqFactor = liqFactor0 < liqFactor1 ? liqFactor0 : liqFactor1;
 
         (,, uint256 actualCollFactor, uint256 actualLiqFactor) = uniV3PricingModule.getValue(
-            IPricingModule.GetValueInput({asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0})
+            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
         );
 
         assertEq(actualCollFactor, expectedCollFactor);
