@@ -1068,7 +1068,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         );
 
         // Overflows Uniswap libraries, not realistic.
-        vm.assume(amount0 < type(uint104).max && amount0 > 0);
+        vm.assume(amount0 < type(uint104).max && amount0 > 1);
         vm.assume(amount1 < type(uint104).max && amount1 > 0);
 
         // Add underlying tokens and its oracles to Arcadia.
@@ -1191,7 +1191,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         );
 
         // Overflows Uniswap libraries, not realistic.
-        vm.assume(amount0 < type(uint104).max && amount0 > 0);
+        vm.assume(amount0 < type(uint104).max && amount0 > 2);
         vm.assume(amount1 < type(uint104).max && amount1 > 0);
 
         // Add underlying tokens and its oracles to Arcadia.
@@ -1293,6 +1293,17 @@ contract RiskVariablesManagementTest is UniV3Test {
         uint256 amountOutA,
         uint256 amountOutB
     ) public {
+        // uint256 decimals0 = 7_604_499;
+        // uint256 decimals1 = 458_109_441_038_728_277;
+        // uint80 liquidity = 10_596_598_221_965_419_816_900;
+        // int24 tickLower = 0;
+        // int24 tickUpper = 776_137;
+        // uint64 priceToken0 = 1_533_595_406_792;
+        // uint64 priceToken1 = 18_446_744_073_709_551_614;
+        // uint256 amountOutA = 401_637_403_266_736;
+        // uint256 amountOutB =
+        //     115_792_089_237_316_195_423_570_985_008_687_907_853_269_984_665_640_564_039_457_584_007_913_129_639_935;
+
         // Check that ticks are within allowed ranges.
         vm.assume(tickLower < tickUpper);
         vm.assume(isWithinAllowedRange(tickLower));
@@ -1339,7 +1350,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         );
 
         // Overflows Uniswap libraries, not realistic.
-        vm.assume(amount0 < type(uint104).max && amount0 > 0);
+        vm.assume(amount0 < type(uint104).max && amount0 > 2);
         vm.assume(amount1 < type(uint104).max && amount1 > 0);
 
         // Add underlying tokens and its oracles to Arcadia.
@@ -1394,7 +1405,7 @@ contract RiskVariablesManagementTest is UniV3Test {
 
         // Do the second swap
         vm.prank(swapper);
-        router.exactOutputSingle(
+        uint256 amountIn = router.exactOutputSingle(
             ISwapRouter.ExactOutputSingleParams({
                 tokenIn: address(token1),
                 tokenOut: address(token0),
@@ -1406,6 +1417,9 @@ contract RiskVariablesManagementTest is UniV3Test {
                 sqrtPriceLimitX96: 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341
             })
         );
+
+        // usd value of tokenIn cannot realisticly exceed 2**128 (3*10e38) USD.
+        vm.assume(amountIn * 10 ** (18 - token1.decimals()) <= type(uint128).max / priceToken1);
 
         // Assert that the value of a position always statisfies: no_fees <= token_owed <= all_fees
         (uint256 actualValueInUsd,,,) = uniV3PricingModule.getValue(

@@ -208,22 +208,17 @@ contract UniswapV3PricingModule is PricingModule {
             // Calculate amount0 and amount1 of the principal (the actual liquidity position).
             (principal0, principal1) =
                 _getPrincipalAmounts(tickLower, tickUpper, liquidity, usdPriceToken0, usdPriceToken1);
-
-            // Calculate the total value in USD, since the USD price is per 10^18 tokens we have to divide by 10^18.
-            valueInUsd = usdPriceToken0.mulDivDown(principal0, 1e18) + usdPriceToken1.mulDivDown(principal1, 1e18);
         }
 
         {
-            uint256 fee0;
-            uint256 fee1;
-
-            if (feeFlag != FeeFlag.None) {
-                // Calculate amount0 and amount1 of the accumulated fees.
-                (fee0, fee1) = _getFeeAmounts(asset, id);
-            }
+            // Calculate amount0 and amount1 of the accumulated fees.
+            (uint256 fee0, uint256 fee1) = _getFeeAmounts(asset, id);
 
             // Calculate the total value in USD, since the USD price is per 10^18 tokens we have to divide by 10^18.
-            valueInUsd += usdPriceToken0.mulDivDown(fee0, 1e18) + usdPriceToken1.mulDivDown(fee1, 1e18);
+            unchecked {
+                valueInUsd = usdPriceToken0.mulDivDown(principal0 + fee0, 1e18)
+                    + usdPriceToken1.mulDivDown(principal1 + fee1, 1e18);
+            }
         }
 
         {
@@ -333,7 +328,9 @@ contract UniswapV3PricingModule is PricingModule {
      * @return amount1 The amount of fees underlying token1 tokens.
      */
     function _getFeeAmounts(address asset, uint256 id) internal view returns (uint256 amount0, uint256 amount1) {
-        if (feeFlag == FeeFlag.TokensOwed) {
+        if (feeFlag == FeeFlag.None) {
+            return (0, 0);
+        } else if (feeFlag == FeeFlag.TokensOwed) {
             (,,,,,,,,,, amount0, amount1) = INonfungiblePositionManager(asset).positions(id);
         } else {
             address factory = assetToV3Factory[asset];
