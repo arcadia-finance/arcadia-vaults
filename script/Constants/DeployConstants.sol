@@ -36,6 +36,8 @@ library DeployAddresses {
     address public constant oracleEthToUsd_mainnet = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address public constant oracleCbethToEth_mainnet = 0xF017fcB346A1885194689bA23Eff2fE6fA5C483b;
     address public constant oracleRethToEth_mainnet = 0x536218f9E9Eb48863970252233c8F271f554C2d0;
+
+    address public constant uniswapV3PositionMgr_mainnet = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
     //
 
     // Optimism
@@ -58,6 +60,8 @@ library DeployAddresses {
     address public constant oracleEthToUsd_optimism = 0x13e3Ee699D1909E989722E753853AE30b17e08c5;
     address public constant oracleWstethToUsd_optimism = 0x698B585CbC4407e2D54aa898B2600B53C68958f7;
     address public constant oracleOpToUsd_optimism = 0x0D276FC14719f9292D5C1eA2198673d1f4269246;
+
+    address public constant uniswapV3PositionMgr_optimism = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
     //
     address public constant treasury_optimism = 0xBEB56fbEf3387af554A554E7DB25830eB7b92e32;
     // gnosis safe
