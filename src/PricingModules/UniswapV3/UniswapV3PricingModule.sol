@@ -114,8 +114,20 @@ contract UniswapV3PricingModule is PricingModule {
     /**
      * @notice sets feeFlag to a new value.
      * @param feeFlag_ The new fee pricing setting.
+     * @dev Calculation of pending fees of Uniswap V3 liquidity positions are very gas intensive.
+     * With the feeFlag the calculation of certain fees can be omitted.
+     * This saves users gas, but part of their position is not valued as collateral.
+     * The options are:
+     *  - None: Only the principal is valued. No pending fees or tokensOwed are taken into account.
+     *  - TokensOwed: Only the principal and tokensOwed are valued. No pending fees are taken into account.
+     *  - All: The principal, tokensOwed and pending fees are valued.
+     * The flag only omits the valuation, the user can still withdraw the whole position (principal, tokensOwed and pending fees).
+     * @dev feeFlag can only be changed such that the value of Uni V3 positions increase in value:
+     *  - From None to TokensOwed or All.
+     *  - From TokensOwed to All.
      */
     function setFeeFlag(FeeFlag feeFlag_) external onlyOwner {
+        require(feeFlag_ > feeFlag, "PMUV3_SFF: Invalid Change");
         feeFlag = feeFlag_;
     }
 

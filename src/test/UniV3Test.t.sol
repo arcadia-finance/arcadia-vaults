@@ -314,6 +314,62 @@ contract AssetManagementTest is UniV3Test {
 }
 
 /*///////////////////////////////////////////////////////////////
+                    ASSET MANAGEMENT
+///////////////////////////////////////////////////////////////*/
+contract FeeFlagManagementTest is UniV3Test {
+    using stdStorage for StdStorage;
+
+    function setUp() public override {
+        super.setUp();
+        vm.selectFork(fork);
+
+        vm.prank(deployer);
+        uniV3PricingModule =
+        new UniswapV3PricingModuleExtension(address(mainRegistry), address(oracleHub), deployer, address(standardERC20PricingModule));
+    }
+
+    function testRevert_setFeeFlag_NonOwner(address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != deployer);
+        vm.startPrank(unprivilegedAddress_);
+
+        vm.expectRevert("UNAUTHORIZED");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
+        vm.stopPrank();
+    }
+
+    function testRevert_setFeeFlag_InvalidFeeFlag() public {
+        vm.startPrank(deployer);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.None);
+
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.None);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
+
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.None);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setFeeFlag() public {
+        vm.startPrank(deployer);
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
+        assertEq(uint256(uniV3PricingModule.feeFlag()), uint256(UniswapV3PricingModule.FeeFlag.TokensOwed));
+
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
+        assertEq(uint256(uniV3PricingModule.feeFlag()), uint256(UniswapV3PricingModule.FeeFlag.All));
+        vm.stopPrank();
+    }
+}
+
+/*///////////////////////////////////////////////////////////////
                     ALLOW LIST MANAGEMENT
 ///////////////////////////////////////////////////////////////*/
 contract AllowListManagementTest is UniV3Test {
