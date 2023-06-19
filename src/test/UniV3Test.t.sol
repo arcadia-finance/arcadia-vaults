@@ -1177,9 +1177,13 @@ contract RiskVariablesManagementTest is UniV3Test {
             })
         );
 
+        // If fees + principal are bigger as a type(uint128).max (unrealistic), uniswap will overflow the fees without reverting.
+        // This will cause the test to fail.
+        vm.assume(expectedFee1 + principal1 < type(uint128).max);
+
         (uint256 tokensOwed0, uint256 tokensOwed1) = uniV3PricingModule.getFeeAmounts(address(uniV3), tokenId);
         // Decreasing liquidity positions will also increase tokensOwed
-        // To know the actual fees we have to substract the tokensOwed due to a decrease of principal LP from the total tokensOwed.
+        // To know the actual fees we have to subtract the tokensOwed due to a decrease of principal LP from the total tokensOwed.
         uint256 actualFee0 = tokensOwed0 - principal0;
         uint256 actualFee1 = tokensOwed1 - principal1;
 
@@ -1336,9 +1340,13 @@ contract RiskVariablesManagementTest is UniV3Test {
         // Update the expected fee in token1 (fees are only in tokenIn).
         expectedFee1 += amountIn / 10_000;
 
+        // If fees + principal are bigger as a type(uint128).max (unrealistic), uniswap will overflow the fees without reverting.
+        // This will cause the test to fail.
+        vm.assume(expectedFee1 + principal1 < type(uint128).max);
+
         (uint256 actualFee0, uint256 actualFee1) = uniV3PricingModule.getFeeAmounts(address(uniV3), tokenId);
         // Decreasing liquidity positions will also increase tokensOwed
-        // To know the actual fees we have to substract the tokensOwed due to a decrease of principal LP from the total tokensOwed.
+        // To know the actual fees we have to subtract the tokensOwed due to a decrease of principal LP from the total tokensOwed.
         actualFee0 -= principal0;
         actualFee1 -= principal1;
 
