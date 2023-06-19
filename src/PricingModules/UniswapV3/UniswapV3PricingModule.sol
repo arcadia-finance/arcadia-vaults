@@ -25,7 +25,7 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
  * @notice The pricing logic and basic information for Uniswap V3 Liquidity Positions.
  * @dev This Pricing Module has the option to take into account the value of the principal
  * and the value of accrued fees or a combination of them.
- * This feature can be setted by the contract owner.
+ * This feature can be set by the contract owner.
  * This is a deliberate choice to reduce complexity and gas usage.
  * @dev The UniswapV3PricingModule will not price the LP-tokens via direct price oracles,
  * it will break down liquidity positions in the underlying tokens (ERC20s).
@@ -335,7 +335,7 @@ contract UniswapV3PricingModule is PricingModule {
     /**
      * @notice Calculates the underlying token amounts of accrued fees, both collected as uncollected.
      * @param asset The contract address of the asset.
-     * @param id The Id of the range.
+     * @param id The Id of the Liquidity Position.
      * @return amount0 The amount fees of underlying token0 tokens.
      * @return amount1 The amount of fees underlying token1 tokens.
      */
@@ -539,7 +539,6 @@ contract UniswapV3PricingModule is PricingModule {
      * @param assetId The Id of the asset.
      * param amount The amount of tokens.
      * @dev Unsafe cast to uint128, we know that the same cast did not overflow in deposit().
-     * @dev ToDo Should we delete storage vars of withdrawn positions?
      */
     function processWithdrawal(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
         // Cache sqrtRatio.

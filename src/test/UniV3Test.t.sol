@@ -1157,7 +1157,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         );
         vm.stopPrank();
 
-        // When amountIn is smaller as fee, calculations get tricky, but overall value will be neglectible.
+        // When amountIn is smaller than fee, calculations get tricky, but overall value will be neglectable.
         vm.assume(amountIn > 10_000);
 
         // Calculate the expected fee in token1 (fees are only in tokenIn).
@@ -1565,7 +1565,7 @@ contract IntegrationTest is UniV3Test {
         vm.selectFork(fork);
     }
 
-    function testSuccess_deposita(uint128 liquidity, int24 tickLower, int24 tickUpper) public {
+    function testSuccess_deposit(uint128 liquidity, int24 tickLower, int24 tickUpper) public {
         vm.startPrank(deployer);
         uniV3PricingModule =
         new UniswapV3PricingModuleExtension(address(mainRegistry), address(oracleHub), deployer, address(standardERC20PricingModule));
