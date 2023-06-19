@@ -13,6 +13,7 @@ import { TickMath } from "./libraries/TickMath.sol";
 import { FullMath } from "./libraries/FullMath.sol";
 import { PoolAddress } from "./libraries/PoolAddress.sol";
 import { FixedPoint96 } from "./libraries/FixedPoint96.sol";
+
 import { FixedPoint128 } from "./libraries/FixedPoint128.sol";
 import { LiquidityAmounts } from "./libraries/LiquidityAmounts.sol";
 import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
@@ -22,11 +23,10 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
  * @title Pricing Module for Uniswap V3 Liquidity Positions.
  * @author Pragma Labs
  * @notice The pricing logic and basic information for Uniswap V3 Liquidity Positions.
- * @dev This Pricing Module only takes into account the value of the principal
- * (the actual Liquidity Position), not the value of accrued fees.
+ * @dev This Pricing Module has the option to take into account the value of the principal
+ * and the value of accrued fees or a combination of them.
+ * This feature can be set by the contract owner.
  * This is a deliberate choice to reduce complexity and gas usage.
- * An implementation for the Pricing Module with fees can be found here:
- * https://github.com/arcadia-finance/arcadia-vaults/blob/main/src/PricingModules/Uniswap-V3/UniswapV3WithFeesPricingModule.sol
  * @dev The UniswapV3PricingModule will not price the LP-tokens via direct price oracles,
  * it will break down liquidity positions in the underlying tokens (ERC20s).
  * Only LP tokens for which the underlying tokens are allowed as collateral can be priced.
@@ -35,7 +35,9 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
  */
 contract UniswapV3PricingModule is PricingModule {
     using FixedPointMathLib for uint256;
-    using FullMath for uint256;
+
+    // The Arcadia Pricing Module for standard ERC20 tokens (the underlying assets).
+    PricingModule immutable erc20PricingModule;
 
     /* //////////////////////////////////////////////////////////////
                                 STORAGE
@@ -44,8 +46,27 @@ contract UniswapV3PricingModule is PricingModule {
     // Map asset => uniswapV3Factory.
     mapping(address => address) public assetToV3Factory;
 
-    // The Arcadia Pricing Module for standard ERC20 tokens (the underlying assets).
-    PricingModule immutable erc20PricingModule;
+    // Map asset => id => positionInformation.
+    mapping(address => mapping(uint256 => Position)) internal positions;
+
+    // Flag indicating if the principal, tokensOwed and fees should be priced, or only a subset.
+    FeeFlag public feeFlag;
+
+    // Enum with the different fee pricing settings.
+    enum FeeFlag {
+        None, // Only the principal is valued. No fees and tokensOwed are taken into account.
+        TokensOwed, // Only the principal and tokensOwed are valued. No fees are taken into account.
+        All // Principal, tokensOwed and fees are valued.
+    }
+
+    // Struct with information of a specific Liquidity Position.
+    struct Position {
+        address token0; // Token0 of the Liquidity Pool.
+        address token1; // Token1 of the Liquidity Pool.
+        int24 tickLower; // The lower tick of the liquidity position.
+        int24 tickUpper; // The upper tick of the liquidity position.
+        uint128 liquidity; // The liquidity per tick of the liquidity position.
+    }
 
     /* //////////////////////////////////////////////////////////////
                                 CONSTRUCTOR
@@ -87,7 +108,31 @@ contract UniswapV3PricingModule is PricingModule {
     }
 
     /*///////////////////////////////////////////////////////////////
-                        ALLOW LIST MANAGEMENT
+                        FEE FLAG MANAGEMENT
+    ///////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice sets feeFlag to a new value.
+     * @param feeFlag_ The new fee pricing setting.
+     * @dev Calculation of pending fees of Uniswap V3 liquidity positions are very gas intensive.
+     * With the feeFlag the calculation of certain fees can be omitted.
+     * This saves users gas, but part of their position is not valued as collateral.
+     * The options are:
+     *  - None: Only the principal is valued. No pending fees or tokensOwed are taken into account.
+     *  - TokensOwed: Only the principal and tokensOwed are valued. No pending fees are taken into account.
+     *  - All: The principal, tokensOwed and pending fees are valued.
+     * The flag only omits the valuation, the user can still withdraw the whole position (principal, tokensOwed and pending fees).
+     * @dev feeFlag can only be changed such that the value of Uni V3 positions increase in value:
+     *  - From None to TokensOwed or All.
+     *  - From TokensOwed to All.
+     */
+    function setFeeFlag(FeeFlag feeFlag_) external onlyOwner {
+        require(feeFlag_ > feeFlag, "PMUV3_SFF: Invalid Change");
+        feeFlag = feeFlag_;
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                            ALLOW LIST
     ///////////////////////////////////////////////////////////////*/
 
     /**
@@ -145,21 +190,27 @@ contract UniswapV3PricingModule is PricingModule {
         returns (uint256 valueInUsd, uint256, uint256 collateralFactor, uint256 liquidationFactor)
     {
         // Use variables as much as possible in local context, to avoid stack too deep errors.
+        address asset = getValueInput.asset;
+        uint256 id = getValueInput.assetId;
+        uint256 baseCurrency = getValueInput.baseCurrency;
         address token0;
         address token1;
+        uint256 usdPriceToken0;
+        uint256 usdPriceToken1;
+        uint256 principal0;
+        uint256 principal1;
         {
             int24 tickLower;
             int24 tickUpper;
             uint128 liquidity;
-            (,, token0, token1,, tickLower, tickUpper, liquidity,,,,) =
-                INonfungiblePositionManager(getValueInput.asset).positions(getValueInput.assetId);
+            (token0, token1, tickLower, tickUpper, liquidity) = _getPosition(asset, id);
 
             // We use the USD price per 10^18 tokens instead of the USD price per token to guarantee
             // sufficient precision.
-            (uint256 usdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
+            (usdPriceToken0,,,) = PricingModule(erc20PricingModule).getValue(
                 GetValueInput({ asset: token0, assetId: 0, assetAmount: 1e18, baseCurrency: 0 })
             );
-            (uint256 usdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
+            (usdPriceToken1,,,) = PricingModule(erc20PricingModule).getValue(
                 GetValueInput({ asset: token1, assetId: 0, assetAmount: 1e18, baseCurrency: 0 })
             );
 
@@ -167,19 +218,27 @@ contract UniswapV3PricingModule is PricingModule {
             if (usdPriceToken0 == 0 || usdPriceToken1 == 0) return (0, 0, 0, 0);
 
             // Calculate amount0 and amount1 of the principal (the actual liquidity position).
-            (uint256 amount0, uint256 amount1) =
+            (principal0, principal1) =
                 _getPrincipalAmounts(tickLower, tickUpper, liquidity, usdPriceToken0, usdPriceToken1);
+        }
+
+        {
+            // Calculate amount0 and amount1 of the accumulated fees.
+            (uint256 fee0, uint256 fee1) = _getFeeAmounts(asset, id);
 
             // Calculate the total value in USD, since the USD price is per 10^18 tokens we have to divide by 10^18.
-            valueInUsd = usdPriceToken0.mulDivDown(amount0, 1e18) + usdPriceToken1.mulDivDown(amount1, 1e18);
+            unchecked {
+                valueInUsd = usdPriceToken0.mulDivDown(principal0 + fee0, 1e18)
+                    + usdPriceToken1.mulDivDown(principal1 + fee1, 1e18);
+            }
         }
 
         {
             // Fetch the risk variables of the underlying tokens for the given baseCurrency.
             (uint256 collateralFactor0, uint256 liquidationFactor0) =
-                PricingModule(erc20PricingModule).getRiskVariables(token0, getValueInput.baseCurrency);
+                PricingModule(erc20PricingModule).getRiskVariables(token0, baseCurrency);
             (uint256 collateralFactor1, uint256 liquidationFactor1) =
-                PricingModule(erc20PricingModule).getRiskVariables(token1, getValueInput.baseCurrency);
+                PricingModule(erc20PricingModule).getRiskVariables(token1, baseCurrency);
 
             // We take the most conservative (lowest) factor of both underlying assets.
             // If one token loses in value compared to the other token, Liquidity Providers will be relatively more exposed
@@ -190,6 +249,37 @@ contract UniswapV3PricingModule is PricingModule {
         }
 
         return (valueInUsd, 0, collateralFactor, liquidationFactor);
+    }
+
+    /**
+     * @notice Returns the position information.
+     * @param asset The contract address of the asset.
+     * @param id The Id of the asset.
+     * @return token0 Token0 of the Liquidity Pool.
+     * @return token1 Token1 of the Liquidity Pool.
+     * @return tickLower The lower tick of the liquidity position.
+     * @return tickUpper The upper tick of the liquidity position.
+     * @return liquidity The liquidity per tick of the liquidity position.
+     */
+    function _getPosition(address asset, uint256 id)
+        internal
+        view
+        returns (address token0, address token1, int24 tickLower, int24 tickUpper, uint128 liquidity)
+    {
+        liquidity = positions[asset][id].liquidity;
+
+        if (liquidity > 0) {
+            // For deposited assets, the information of the Liquidity Position is stored in the Pricing Module,
+            // not fetched from the NonfungiblePositionManager.
+            // Since liquidity of a position can be increased by a non-owner, the max exposure checks could otherwise be circumvented.
+            token0 = positions[asset][id].token0;
+            token1 = positions[asset][id].token1;
+            tickLower = positions[asset][id].tickLower;
+            tickUpper = positions[asset][id].tickUpper;
+        } else {
+            // Only used as an off-chain view function to return the value of a non deposited Liquidity Position.
+            (,, token0, token1,, tickLower, tickUpper, liquidity,,,,) = INonfungiblePositionManager(asset).positions(id);
+        }
     }
 
     /**
@@ -242,6 +332,99 @@ contract UniswapV3PricingModule is PricingModule {
         sqrtPriceX96 = uint160((sqrtPriceXd9 << FixedPoint96.RESOLUTION) / 1e9);
     }
 
+    /**
+     * @notice Calculates the underlying token amounts of accrued fees, both collected as uncollected.
+     * @param asset The contract address of the asset.
+     * @param id The Id of the Liquidity Position.
+     * @return amount0 The amount fees of underlying token0 tokens.
+     * @return amount1 The amount of fees underlying token1 tokens.
+     */
+    function _getFeeAmounts(address asset, uint256 id) internal view returns (uint256 amount0, uint256 amount1) {
+        if (feeFlag == FeeFlag.None) {
+            return (0, 0);
+        } else if (feeFlag == FeeFlag.TokensOwed) {
+            (,,,,,,,,,, amount0, amount1) = INonfungiblePositionManager(asset).positions(id);
+        } else {
+            address factory = assetToV3Factory[asset];
+            (
+                ,
+                ,
+                address token0,
+                address token1,
+                uint24 fee,
+                int24 tickLower,
+                int24 tickUpper,
+                uint256 liquidity, // gas: cheaper to use uint256 instead of uint128.
+                uint256 feeGrowthInside0LastX128,
+                uint256 feeGrowthInside1LastX128,
+                uint256 tokensOwed0, // gas: cheaper to use uint256 instead of uint128.
+                uint256 tokensOwed1 // gas: cheaper to use uint256 instead of uint128.
+            ) = INonfungiblePositionManager(asset).positions(id);
+
+            (uint256 feeGrowthInside0CurrentX128, uint256 feeGrowthInside1CurrentX128) =
+                _getFeeGrowthInside(factory, token0, token1, fee, tickLower, tickUpper);
+
+            // Calculate the total amount of fees by adding the already realized fees (tokensOwed),
+            // to the accumulated fees since the last time the position was updated:
+            // (feeGrowthInsideCurrentX128 - feeGrowthInsideLastX128) * liquidity.
+            // Fee calculations in NonfungiblePositionManager.sol overflow (without reverting) when
+            // one or both terms, or their sum, is bigger than a uint128.
+            // This is however much bigger than any realistic situation.
+            unchecked {
+                amount0 = FullMath.mulDiv(
+                    feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128
+                ) + tokensOwed0;
+                amount1 = FullMath.mulDiv(
+                    feeGrowthInside1CurrentX128 - feeGrowthInside1LastX128, liquidity, FixedPoint128.Q128
+                ) + tokensOwed1;
+            }
+        }
+    }
+
+    /**
+     * @notice Calculates the current fee growth inside the Liquidity Range.
+     * @param factory The contract address of the pool factory.
+     * @param token0 Token0 of the Liquidity Pool.
+     * @param token1 Token1 of the Liquidity Pool.
+     * @param fee The fee of the Liquidity Pool.
+     * @param tickLower The lower tick of the liquidity position.
+     * @param tickUpper The upper tick of the liquidity position.
+     * @return feeGrowthInside0X128 The amount fees of underlying token0 tokens.
+     * @return feeGrowthInside1X128 The amount of fees underlying token1 tokens.
+     */
+    function _getFeeGrowthInside(
+        address factory,
+        address token0,
+        address token1,
+        uint24 fee,
+        int24 tickLower,
+        int24 tickUpper
+    ) internal view returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) {
+        IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, token0, token1, fee));
+
+        // To calculate the pending fees, the current tick has to be used, even if the pool would be unbalanced.
+        (, int24 tickCurrent,,,,,) = pool.slot0();
+        (,, uint256 lowerFeeGrowthOutside0X128, uint256 lowerFeeGrowthOutside1X128,,,,) = pool.ticks(tickLower);
+        (,, uint256 upperFeeGrowthOutside0X128, uint256 upperFeeGrowthOutside1X128,,,,) = pool.ticks(tickUpper);
+
+        // Calculate the fee growth inside of the Liquidity Range since the last time the position was updated.
+        // feeGrowthInside can overflow (without reverting), as is the case in the Uniswap fee calculations.
+        unchecked {
+            if (tickCurrent < tickLower) {
+                feeGrowthInside0X128 = lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
+                feeGrowthInside1X128 = lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+            } else if (tickCurrent < tickUpper) {
+                feeGrowthInside0X128 =
+                    pool.feeGrowthGlobal0X128() - lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
+                feeGrowthInside1X128 =
+                    pool.feeGrowthGlobal1X128() - lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+            } else {
+                feeGrowthInside0X128 = upperFeeGrowthOutside0X128 - lowerFeeGrowthOutside0X128;
+                feeGrowthInside1X128 = upperFeeGrowthOutside1X128 - lowerFeeGrowthOutside1X128;
+            }
+        }
+    }
+
     /*///////////////////////////////////////////////////////////////
                     RISK VARIABLES MANAGEMENT
     ///////////////////////////////////////////////////////////////*/
@@ -281,6 +464,19 @@ contract UniswapV3PricingModule is PricingModule {
     function processDeposit(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
         (,, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
             INonfungiblePositionManager(asset).positions(assetId);
+
+        //
+        require(liquidity > 0, "PMUV3_PD: 0 liquidity");
+
+        // Since liquidity of a position can be increased by a non-owner, we have to store the liquidity during deposit.
+        // Otherwise the max exposure checks can be circumvented.
+        positions[asset][assetId] = Position({
+            token0: token0,
+            token1: token1,
+            tickLower: tickLower,
+            tickUpper: tickUpper,
+            liquidity: liquidity
+        });
 
         {
             IUniswapV3Pool pool =
@@ -345,21 +541,24 @@ contract UniswapV3PricingModule is PricingModule {
      * @dev Unsafe cast to uint128, we know that the same cast did not overflow in deposit().
      */
     function processWithdrawal(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
-        (,, address token0, address token1,, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
-            INonfungiblePositionManager(asset).positions(assetId);
-
         // Cache sqrtRatio.
-        uint160 sqrtRatioLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
-        uint160 sqrtRatioUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+        uint160 sqrtRatioLowerX96 = TickMath.getSqrtRatioAtTick(positions[asset][assetId].tickLower);
+        uint160 sqrtRatioUpperX96 = TickMath.getSqrtRatioAtTick(positions[asset][assetId].tickUpper);
 
         // Calculate the maximal possible exposure to each underlying asset.
-        uint128 amount0Max =
-            uint128(LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity));
-        uint128 amount1Max =
-            uint128(LiquidityAmounts.getAmount1ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity));
+        uint128 amount0Max = uint128(
+            LiquidityAmounts.getAmount0ForLiquidity(
+                sqrtRatioLowerX96, sqrtRatioUpperX96, positions[asset][assetId].liquidity
+            )
+        );
+        uint128 amount1Max = uint128(
+            LiquidityAmounts.getAmount1ForLiquidity(
+                sqrtRatioLowerX96, sqrtRatioUpperX96, positions[asset][assetId].liquidity
+            )
+        );
 
         // Update exposure to underlying assets.
-        exposure[token0].exposure -= amount0Max;
-        exposure[token1].exposure -= amount1Max;
+        exposure[positions[asset][assetId].token0].exposure -= amount0Max;
+        exposure[positions[asset][assetId].token1].exposure -= amount1Max;
     }
 }

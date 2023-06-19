@@ -52,6 +52,10 @@ contract UniswapV3PricingModuleExtension is UniswapV3PricingModule {
         exposure[asset].exposure = exposure_;
         exposure[asset].maxExposure = maxExposure;
     }
+
+    function getFeeAmounts(address asset, uint256 id) public view returns (uint256 amount0, uint256 amount1) {
+        (amount0, amount1) = _getFeeAmounts(asset, id);
+    }
 }
 
 abstract contract UniV3Test is DeployedContracts, Test {
@@ -310,6 +314,62 @@ contract AssetManagementTest is UniV3Test {
 }
 
 /*///////////////////////////////////////////////////////////////
+                    ASSET MANAGEMENT
+///////////////////////////////////////////////////////////////*/
+contract FeeFlagManagementTest is UniV3Test {
+    using stdStorage for StdStorage;
+
+    function setUp() public override {
+        super.setUp();
+        vm.selectFork(fork);
+
+        vm.prank(deployer);
+        uniV3PricingModule =
+        new UniswapV3PricingModuleExtension(address(mainRegistry), address(oracleHub), deployer, address(standardERC20PricingModule));
+    }
+
+    function testRevert_setFeeFlag_NonOwner(address unprivilegedAddress_) public {
+        vm.assume(unprivilegedAddress_ != deployer);
+        vm.startPrank(unprivilegedAddress_);
+
+        vm.expectRevert("UNAUTHORIZED");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
+        vm.stopPrank();
+    }
+
+    function testRevert_setFeeFlag_InvalidFeeFlag() public {
+        vm.startPrank(deployer);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.None);
+
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.None);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
+
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.None);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
+        vm.expectRevert("PMUV3_SFF: Invalid Change");
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
+        vm.stopPrank();
+    }
+
+    function testSuccess_setFeeFlag() public {
+        vm.startPrank(deployer);
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
+        assertEq(uint256(uniV3PricingModule.feeFlag()), uint256(UniswapV3PricingModule.FeeFlag.TokensOwed));
+
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
+        assertEq(uint256(uniV3PricingModule.feeFlag()), uint256(UniswapV3PricingModule.FeeFlag.All));
+        vm.stopPrank();
+    }
+}
+
+/*///////////////////////////////////////////////////////////////
                     ALLOW LIST MANAGEMENT
 ///////////////////////////////////////////////////////////////*/
 contract AllowListManagementTest is UniV3Test {
@@ -545,6 +605,34 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
+    function testRevert_processDeposit_ZeroLiquidity() public {
+        // Create Uniswap V3 pool initiated at tick 0 with cardinality 300.
+        pool = createPool(token0, token1, TickMath.getSqrtRatioAtTick(0), 300);
+
+        // Mint liquidity position.
+        uint256 tokenId = addLiquidity(pool, 1000, liquidityProvider, -60, 60, true);
+
+        // Decrease liquidity so that position has 0 liquidity.
+        // Fetch liquidity from position instead of using input liquidity
+        // This is because there might be some small differences due to rounding errors.
+        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
+        vm.prank(liquidityProvider);
+        uniV3.decreaseLiquidity(
+            INonfungiblePositionManagerExtension.DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: liquidity_,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: type(uint160).max
+            })
+        );
+
+        vm.startPrank(address(mainRegistry));
+        vm.expectRevert("PMUV3_PD: 0 liquidity");
+        uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
+        vm.stopPrank();
+    }
+
     function testRevert_processDeposit_BelowAcceptedRange(
         uint128 liquidity,
         int24 tickLower,
@@ -715,7 +803,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.stopPrank();
     }
 
-    function testRevert_processDeposit_Success(
+    function testSuccess_processDeposit(
         uint128 liquidity,
         int24 tickLower,
         int24 tickUpper,
@@ -825,10 +913,12 @@ contract RiskVariablesManagementTest is UniV3Test {
             TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity_
         );
 
-        // Check that exposures are bigger than amounts (tokens had to be deposited first).
-        // Contract should never be able to reach a state where amount > exposure.
-        vm.assume(amount0 <= initialExposure0);
-        vm.assume(amount1 <= initialExposure1);
+        // Avoid overflow.
+        vm.assume(amount0 <= type(uint128).max - initialExposure0);
+        vm.assume(amount1 <= type(uint128).max - initialExposure1);
+        // Check that there is sufficient free exposure.
+        vm.assume(amount0 + initialExposure0 <= maxExposure0);
+        vm.assume(amount1 + initialExposure1 <= maxExposure1);
         // Set maxExposures
         vm.startPrank(deployer);
         uniV3PricingModule.setExposure(address(token0), initialExposure0, maxExposure0);
@@ -838,13 +928,17 @@ contract RiskVariablesManagementTest is UniV3Test {
         // Warp 300 seconds to ensure that TWAT of 300s can be calculated.
         vm.warp(block.timestamp + 300);
 
+        // Deposit assets (necessary to update the position in the Pricing Module).
+        vm.prank(address(mainRegistry));
+        uniV3PricingModule.processDeposit(address(0), address(uniV3), tokenId, 0);
+
         vm.prank(address(mainRegistry));
         uniV3PricingModule.processWithdrawal(address(0), address(uniV3), tokenId, 0);
 
         (, uint128 exposure0) = uniV3PricingModule.exposure(address(token0));
         (, uint128 exposure1) = uniV3PricingModule.exposure(address(token1));
-        assertEq(exposure0, initialExposure0 - amount0);
-        assertEq(exposure1, initialExposure1 - amount1);
+        assertEq(exposure0, initialExposure0);
+        assertEq(exposure1, initialExposure1);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -921,7 +1015,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.assume(priceToken1 > 0);
         // Cast to uint160 will overflow, not realistic.
         vm.assume(priceToken0 / priceToken1 < 2 ** 128);
-        //Check that sqrtPriceX96 is within allowed Uniswap V3 ranges.
+        // Check that sqrtPriceX96 is within allowed Uniswap V3 ranges.
         uint160 sqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(
             priceToken0 * 10 ** (18 - decimals0), priceToken1 * 10 ** (18 - decimals1)
         );
@@ -969,6 +1063,449 @@ contract RiskVariablesManagementTest is UniV3Test {
 
         assertEq(actualValueInUsd, valueToken0 + valueToken1);
         assertEq(actualValueInBaseCurrency, 0);
+    }
+
+    function testSuccess_getValue_valueWithTokensOwed(
+        uint256 decimals0,
+        uint256 decimals1,
+        uint80 liquidity,
+        int24 tickLower,
+        int24 tickUpper,
+        uint64 priceToken0,
+        uint64 priceToken1,
+        uint256 amountOut
+    ) public {
+        vm.prank(deployer);
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
+
+        // Check that ticks are within allowed ranges.
+        vm.assume(tickLower < tickUpper);
+        vm.assume(isWithinAllowedRange(tickLower));
+        vm.assume(isWithinAllowedRange(tickUpper));
+
+        // Deploy and sort tokens.
+        decimals0 = bound(decimals0, 6, 18);
+        decimals1 = bound(decimals1, 6, 18);
+        token0 = erc20Fixture.createToken(deployer, uint8(decimals0));
+        token1 = erc20Fixture.createToken(deployer, uint8(decimals1));
+        if (token0 > token1) {
+            (token0, token1) = (token1, token0);
+            (decimals0, decimals1) = (decimals1, decimals0);
+            (priceToken0, priceToken1) = (priceToken1, priceToken0);
+        }
+
+        // Avoid divide by 0 in next line.
+        vm.assume(priceToken1 > 0);
+        // Cast to uint160 will overflow, not realistic.
+        vm.assume(priceToken0 / priceToken1 < 2 ** 128);
+        //Check that sqrtPriceX96 is within allowed Uniswap V3 ranges.
+        uint160 sqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(
+            priceToken0 * 10 ** (18 - decimals0), priceToken1 * 10 ** (18 - decimals1)
+        );
+        vm.assume(sqrtPriceX96 >= 4_295_128_739);
+        vm.assume(sqrtPriceX96 <= 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342);
+
+        // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
+        pool = createPool(token0, token1, sqrtPriceX96, 300);
+
+        // Check that Liquidity is within allowed ranges.
+        vm.assume(liquidity > 0);
+        vm.assume(liquidity <= pool.maxLiquidityPerTick());
+
+        // Mint liquidity position.
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
+
+        // Calculate amounts of underlying tokens.
+        // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
+        // This is because there might be some small differences due to rounding errors.
+        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
+        (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
+            sqrtPriceX96, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity_
+        );
+
+        // Overflows Uniswap libraries, not realistic.
+        vm.assume(amount0 < type(uint104).max && amount0 > 1);
+        vm.assume(amount1 < type(uint104).max && amount1 > 0);
+
+        // Add underlying tokens and its oracles to Arcadia.
+        addUnderlyingTokenToArcadia(address(token0), int256(uint256(priceToken0)));
+        addUnderlyingTokenToArcadia(address(token1), int256(uint256(priceToken1)));
+
+        vm.startPrank(deployer);
+        uniV3PricingModule.setExposureOfAsset(address(token0), type(uint128).max);
+        uniV3PricingModule.setExposureOfAsset(address(token1), type(uint128).max);
+        vm.stopPrank();
+
+        // amountOut cannot exceed available liquidity.
+        amountOut = bound(amountOut, 1, amount0);
+
+        // Do the swap
+        deal(address(token1), swapper, type(uint256).max);
+        vm.startPrank(swapper);
+        token1.approve(address(router), type(uint256).max);
+        uint256 amountIn = router.exactOutputSingle(
+            ISwapRouter.ExactOutputSingleParams({
+                tokenIn: address(token1),
+                tokenOut: address(token0),
+                fee: 100,
+                recipient: swapper,
+                deadline: type(uint160).max,
+                amountOut: amountOut,
+                amountInMaximum: type(uint256).max,
+                sqrtPriceLimitX96: 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341
+            })
+        );
+        vm.stopPrank();
+
+        // When amountIn is smaller than fee, calculations get tricky, but overall value will be neglectable.
+        vm.assume(amountIn > 10_000);
+
+        // Calculate the expected fee in token1 (fees are only in tokenIn).
+        uint256 expectedFee0 = 0;
+        uint256 expectedFee1 = amountIn / 10_000;
+
+        // We want to test tokensOwed in this test -> we first have to claim the pending fees.
+        // To do this we decrease the position with minimal amount.
+        vm.prank(liquidityProvider);
+        (uint256 principal0, uint256 principal1) = uniV3.decreaseLiquidity(
+            INonfungiblePositionManagerExtension.DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: 1,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: type(uint128).max
+            })
+        );
+
+        // If fees + principal are bigger as a type(uint128).max (unrealistic), uniswap will overflow the fees without reverting.
+        // This will cause the test to fail.
+        vm.assume(expectedFee1 + principal1 < type(uint128).max);
+
+        (uint256 tokensOwed0, uint256 tokensOwed1) = uniV3PricingModule.getFeeAmounts(address(uniV3), tokenId);
+        // Decreasing liquidity positions will also increase tokensOwed
+        // To know the actual fees we have to subtract the tokensOwed due to a decrease of principal LP from the total tokensOwed.
+        uint256 actualFee0 = tokensOwed0 - principal0;
+        uint256 actualFee1 = tokensOwed1 - principal1;
+
+        assertEq(actualFee0, expectedFee0);
+        assertInRange(actualFee1, expectedFee1, 3);
+    }
+
+    function testSuccess_getValue_valueWithFeeGrowth(
+        uint256 decimals0,
+        uint256 decimals1,
+        uint80 liquidity,
+        int24 tickLower,
+        int24 tickUpper,
+        uint64 priceToken0,
+        uint64 priceToken1,
+        uint256 amountOutA,
+        uint256 amountOutB
+    ) public {
+        vm.prank(deployer);
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
+
+        // Check that ticks are within allowed ranges.
+        vm.assume(tickLower < tickUpper);
+        vm.assume(isWithinAllowedRange(tickLower));
+        vm.assume(isWithinAllowedRange(tickUpper));
+
+        // Deploy and sort tokens.
+        decimals0 = bound(decimals0, 6, 18);
+        decimals1 = bound(decimals1, 6, 18);
+        token0 = erc20Fixture.createToken(deployer, uint8(decimals0));
+        token1 = erc20Fixture.createToken(deployer, uint8(decimals1));
+        if (token0 > token1) {
+            (token0, token1) = (token1, token0);
+            (decimals0, decimals1) = (decimals1, decimals0);
+            (priceToken0, priceToken1) = (priceToken1, priceToken0);
+        }
+
+        // Avoid divide by 0 in next line.
+        vm.assume(priceToken1 > 0);
+        // Cast to uint160 will overflow, not realistic.
+        vm.assume(priceToken0 / priceToken1 < 2 ** 128);
+        //Check that sqrtPriceX96 is within allowed Uniswap V3 ranges.
+        uint160 sqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(
+            priceToken0 * 10 ** (18 - decimals0), priceToken1 * 10 ** (18 - decimals1)
+        );
+        vm.assume(sqrtPriceX96 >= 4_295_128_739);
+        vm.assume(sqrtPriceX96 <= 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342);
+
+        // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
+        pool = createPool(token0, token1, sqrtPriceX96, 300);
+
+        // Check that Liquidity is within allowed ranges.
+        vm.assume(liquidity > 0);
+        vm.assume(liquidity <= pool.maxLiquidityPerTick());
+
+        // Mint liquidity position.
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
+
+        uint256 amount0;
+        {
+            // Calculate amounts of underlying tokens.
+            // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
+            // This is because there might be some small differences due to rounding errors.
+            (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
+            uint256 amount1;
+            (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity_
+            );
+
+            // Amounts bigger type(uint104).max as Overflows Uniswap libraries, not realistic.
+            // Amount0 should be greater as 2 since we want to do 2 swaps with minimal 1 amountOut.
+            vm.assume(amount0 < type(uint104).max && amount0 > 2);
+            vm.assume(amount1 < type(uint104).max && amount1 > 0);
+        }
+
+        // Add underlying tokens and its oracles to Arcadia.
+        addUnderlyingTokenToArcadia(address(token0), int256(uint256(priceToken0)));
+        addUnderlyingTokenToArcadia(address(token1), int256(uint256(priceToken1)));
+
+        vm.startPrank(deployer);
+        uniV3PricingModule.setExposureOfAsset(address(token0), type(uint128).max);
+        uniV3PricingModule.setExposureOfAsset(address(token1), type(uint128).max);
+        vm.stopPrank();
+
+        // amountOutA cannot exceed available liquidity.
+        // Term (amount0 - 1) since amountOutB of second swap must be bigger as 1.
+        amountOutA = bound(amountOutA, 1, amount0 - 1);
+
+        // Do the first swap
+        deal(address(token1), swapper, type(uint256).max);
+        vm.startPrank(swapper);
+        token1.approve(address(router), type(uint256).max);
+        uint256 amountIn = router.exactOutputSingle(
+            ISwapRouter.ExactOutputSingleParams({
+                tokenIn: address(token1),
+                tokenOut: address(token0),
+                fee: 100,
+                recipient: swapper,
+                deadline: type(uint160).max,
+                amountOut: amountOutA,
+                amountInMaximum: type(uint256).max,
+                sqrtPriceLimitX96: 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341
+            })
+        );
+        vm.stopPrank();
+
+        // When amountIn is smaller as fee, calculations get tricky, but overall value will be neglectible.
+        vm.assume(amountIn > 10_000);
+
+        // Calculate the expected fee in token1 (fees are only in tokenIn).
+        uint256 expectedFee1 = amountIn / 10_000;
+
+        // We want part of the fees in tokensOwed in this test -> we have to claim the pending fees.
+        // To do this we decrease the position with minimal amount.
+        vm.prank(liquidityProvider);
+        (uint256 principal0, uint256 principal1) = uniV3.decreaseLiquidity(
+            INonfungiblePositionManagerExtension.DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: 1,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: type(uint128).max
+            })
+        );
+
+        {
+            // We do another swap from token1 to token0 -> start price cannot be the sqrtPriceLimitX96.
+            (uint160 sqrtPrice_, int24 tick,,,,,) = pool.slot0();
+            vm.assume(sqrtPrice_ < 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341);
+            // amountOutB cannot exceed remaining liquidity.
+            amountOutB = bound(amountOutB, 1, amount0 - amountOutA);
+            // Current tick must be smaller as last tick of liquidity range or second swap will revert.
+            vm.assume(tick < tickUpper);
+        }
+
+        // Do the second swap
+        vm.prank(swapper);
+        amountIn = router.exactOutputSingle(
+            ISwapRouter.ExactOutputSingleParams({
+                tokenIn: address(token1),
+                tokenOut: address(token0),
+                fee: 100,
+                recipient: swapper,
+                deadline: type(uint160).max,
+                amountOut: amountOutB,
+                amountInMaximum: type(uint256).max,
+                sqrtPriceLimitX96: 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341
+            })
+        );
+
+        // When amountIn is smaller as fee, calculations get tricky, but overall value will be neglectible.
+        vm.assume(amountIn > 10_000);
+
+        // Update the expected fee in token1 (fees are only in tokenIn).
+        expectedFee1 += amountIn / 10_000;
+
+        // If fees + principal are bigger as a type(uint128).max (unrealistic), uniswap will overflow the fees without reverting.
+        // This will cause the test to fail.
+        vm.assume(expectedFee1 + principal1 < type(uint128).max);
+
+        (uint256 actualFee0, uint256 actualFee1) = uniV3PricingModule.getFeeAmounts(address(uniV3), tokenId);
+        // Decreasing liquidity positions will also increase tokensOwed
+        // To know the actual fees we have to subtract the tokensOwed due to a decrease of principal LP from the total tokensOwed.
+        actualFee0 -= principal0;
+        actualFee1 -= principal1;
+
+        assertEq(actualFee0, 0); // No fees on amountOut
+        assertInRange(actualFee1, expectedFee1, 3);
+    }
+
+    function testSuccess_getValue_valueFeesInvariant(
+        uint256 decimals0,
+        uint256 decimals1,
+        uint80 liquidity,
+        int24 tickLower,
+        int24 tickUpper,
+        uint64 priceToken0,
+        uint64 priceToken1,
+        uint256 amountOutA,
+        uint256 amountOutB
+    ) public {
+        // Check that ticks are within allowed ranges.
+        vm.assume(tickLower < tickUpper);
+        vm.assume(isWithinAllowedRange(tickLower));
+        vm.assume(isWithinAllowedRange(tickUpper));
+
+        // Deploy and sort tokens.
+        decimals0 = bound(decimals0, 6, 18);
+        decimals1 = bound(decimals1, 6, 18);
+        token0 = erc20Fixture.createToken(deployer, uint8(decimals0));
+        token1 = erc20Fixture.createToken(deployer, uint8(decimals1));
+        if (token0 > token1) {
+            (token0, token1) = (token1, token0);
+            (decimals0, decimals1) = (decimals1, decimals0);
+            (priceToken0, priceToken1) = (priceToken1, priceToken0);
+        }
+
+        // Avoid divide by 0 in next line.
+        vm.assume(priceToken1 > 0);
+        // Cast to uint160 will overflow, not realistic.
+        vm.assume(priceToken0 / priceToken1 < 2 ** 128);
+        //Check that sqrtPriceX96 is within allowed Uniswap V3 ranges.
+        uint160 sqrtPriceX96 = uniV3PricingModule.getSqrtPriceX96(
+            priceToken0 * 10 ** (18 - decimals0), priceToken1 * 10 ** (18 - decimals1)
+        );
+        vm.assume(sqrtPriceX96 >= 4_295_128_739);
+        vm.assume(sqrtPriceX96 <= 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342);
+
+        // Create Uniswap V3 pool initiated at tickCurrent with cardinality 300.
+        pool = createPool(token0, token1, sqrtPriceX96, 300);
+
+        // Check that Liquidity is within allowed ranges.
+        vm.assume(liquidity > 0);
+        vm.assume(liquidity <= pool.maxLiquidityPerTick());
+
+        // Mint liquidity position.
+        uint256 tokenId = addLiquidity(pool, liquidity, liquidityProvider, tickLower, tickUpper, false);
+
+        // Calculate amounts of underlying tokens.
+        // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
+        // This is because there might be some small differences due to rounding errors.
+        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
+        (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
+            sqrtPriceX96, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity_
+        );
+
+        // Amounts bigger type(uint104).max as Overflows Uniswap libraries, not realistic.
+        // Amount0 should be greater as 2 since we want to do 2 swaps with minimal 1 amountOut.
+        vm.assume(amount0 < type(uint104).max && amount0 > 2);
+        vm.assume(amount1 < type(uint104).max && amount1 > 0);
+
+        // Add underlying tokens and its oracles to Arcadia.
+        addUnderlyingTokenToArcadia(address(token0), int256(uint256(priceToken0)));
+        addUnderlyingTokenToArcadia(address(token1), int256(uint256(priceToken1)));
+
+        vm.startPrank(deployer);
+        uniV3PricingModule.setExposureOfAsset(address(token0), type(uint128).max);
+        uniV3PricingModule.setExposureOfAsset(address(token1), type(uint128).max);
+        vm.stopPrank();
+
+        // amountOutA cannot exceed available liquidity.
+        // Term (amount0 - 1) since amountOutB of second swap must be bigger as 1.
+        amountOutA = bound(amountOutA, 1, amount0 - 1);
+
+        // Do the first swap
+        deal(address(token1), swapper, type(uint256).max);
+        vm.startPrank(swapper);
+        token1.approve(address(router), type(uint256).max);
+        router.exactOutputSingle(
+            ISwapRouter.ExactOutputSingleParams({
+                tokenIn: address(token1),
+                tokenOut: address(token0),
+                fee: 100,
+                recipient: swapper,
+                deadline: type(uint160).max,
+                amountOut: amountOutA,
+                amountInMaximum: type(uint256).max,
+                sqrtPriceLimitX96: 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341
+            })
+        );
+        vm.stopPrank();
+
+        // We want part of the fees in tokensOwed in this test -> we have to claim the pending fees.
+        // To do this we decrease the position with minimal amount.
+        vm.prank(liquidityProvider);
+        uniV3.decreaseLiquidity(
+            INonfungiblePositionManagerExtension.DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: 1,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: type(uint128).max
+            })
+        );
+
+        // We do another swap from token1 to token0 -> start price cannot be the sqrtPriceLimitX96.
+        (uint160 sqrtPrice_, int24 tick,,,,,) = pool.slot0();
+        vm.assume(sqrtPrice_ < 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341);
+        // amountOutB cannot exceed remaining liquidity.
+        amountOutB = bound(amountOutB, 1, amount0 - amountOutA);
+        // Current tick must be smaller as last tick of liquidity range or second swap will revert.
+        vm.assume(tick < tickUpper);
+
+        // Do the second swap
+        vm.prank(swapper);
+        uint256 amountIn = router.exactOutputSingle(
+            ISwapRouter.ExactOutputSingleParams({
+                tokenIn: address(token1),
+                tokenOut: address(token0),
+                fee: 100,
+                recipient: swapper,
+                deadline: type(uint160).max,
+                amountOut: amountOutB,
+                amountInMaximum: type(uint256).max,
+                sqrtPriceLimitX96: 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341
+            })
+        );
+
+        // usd value of tokenIn cannot realisticly exceed 2**128 (3*10e38) USD.
+        vm.assume(amountIn * 10 ** (18 - token1.decimals()) <= type(uint128).max / priceToken1);
+
+        // Assert that the value of a position always statisfies: no_fees <= token_owed <= all_fees
+        (uint256 actualValueInUsd,,,) = uniV3PricingModule.getValue(
+            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
+        );
+
+        vm.prank(deployer);
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.TokensOwed);
+
+        (uint256 actualValueInUsdTokenOwed,,,) = uniV3PricingModule.getValue(
+            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
+        );
+
+        vm.prank(deployer);
+        uniV3PricingModule.setFeeFlag(UniswapV3PricingModule.FeeFlag.All);
+
+        (uint256 actualValueInUsdAll,,,) = uniV3PricingModule.getValue(
+            IPricingModule.GetValueInput({ asset: address(uniV3), assetId: tokenId, assetAmount: 1, baseCurrency: 0 })
+        );
+
+        assertGe(actualValueInUsdTokenOwed, actualValueInUsd);
+        assertGe(actualValueInUsdAll, actualValueInUsdTokenOwed);
     }
 
     function testSuccess_getValue_RiskFactors(
@@ -1052,7 +1589,7 @@ contract IntegrationTest is UniV3Test {
         weth = ERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
         IUniswapV3PoolExtension pool = IUniswapV3PoolExtension(uniV3factory.getPool(address(usdc), address(weth), 100));
-        (uint160 sqrtPriceX96, int24 tickCurrent,,,,,) = pool.slot0();
+        (, int24 tickCurrent,,,,,) = pool.slot0();
 
         // Check that ticks are within allowed ranges.
         tickLower = int24(bound(tickLower, tickCurrent - 16_095, tickCurrent + 16_095));
@@ -1071,22 +1608,26 @@ contract IntegrationTest is UniV3Test {
         vm.assume(liquidity > 10_000);
         vm.assume(liquidity <= pool.maxLiquidityPerTick());
 
+        // Balance pool before mint
+        uint256 amountUsdcBefore = usdc.balanceOf(address(pool));
+        uint256 amountWethBefore = weth.balanceOf(address(pool));
+
         // Mint liquidity position.
         uint256 tokenId = addLiquidity(pool, liquidity, user, tickLower, tickUpper, false);
 
+        // Balance pool after mint
+        uint256 amountUsdcAfter = usdc.balanceOf(address(pool));
+        uint256 amountWethAfter = weth.balanceOf(address(pool));
+
+        // Amounts deposited in the pool.
+        uint256 amountUsdc = amountUsdcAfter - amountUsdcBefore;
+        uint256 amountWeth = amountWethAfter - amountWethBefore;
+
+        // Precision oracles up to % -> need to deposit at least 1000 tokens or rounding errors lead to bigger errors.
+        vm.assume(amountUsdc + amountWeth > 100);
+
         // Warp 300 seconds to ensure that TWAT of 300s can be calculated (for some pools cardinality might be 1).
         vm.warp(block.timestamp + 300);
-
-        // Calculate amounts of underlying tokens.
-        // We do not use the fuzzed liquidity, but fetch liquidity from the contract.
-        // This is because there might be some small differences due to rounding errors.
-        (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
-        (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
-            sqrtPriceX96, TickMath.getSqrtRatioAtTick(tickLower), TickMath.getSqrtRatioAtTick(tickUpper), liquidity_
-        );
-        vm.assume(amount0 < type(uint128).max);
-        vm.assume(amount1 < type(uint128).max);
-        (uint256 amountUsdc, uint256 amountWeth) = usdc < weth ? (amount0, amount1) : (amount1, amount0);
 
         // Set max exposure to underlying tokens.
         vm.startPrank(deployer);
@@ -1094,10 +1635,10 @@ contract IntegrationTest is UniV3Test {
         uniV3PricingModule.setExposureOfAsset(address(weth), type(uint128).max);
         vm.stopPrank();
 
+        // Create vault and deposit the Liquidity Position.
         vm.startPrank(user);
         address proxyAddr = factory.createVault(200, 0, address(0));
         Vault proxy = Vault(proxyAddr);
-        //proxy.openTrustedMarginAccount(address(lendingPool));
         ERC721(address(uniV3)).approve(proxyAddr, tokenId);
         {
             address[] memory assetAddress = new address[](1);
