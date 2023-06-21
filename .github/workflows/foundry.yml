@@ -33,7 +33,7 @@ jobs:
       - name: Run tests
         run: |
              export DEVNET_RPC_URL=$(tenderly devnet spawn-rpc --project arcadia-finance-tenderly --template devnet-gh-actions-1 --account ${TENDERLY_ACCOUNT_ID} --access_key ${TENDERLY_ACCESS_KEY} 2>&1)
-             FOUNDRY_PROFILE=gh forge test -vvvv --mt testRevert_processDeposit_BelowAcceptedRange 
+             FOUNDRY_PROFILE=gh forge test -vvvv
         env:
             TENDERLY_ACCESS_KEY: ${{ secrets.TENDERLY_ACCESS_KEY }}
             TENDERLY_ACCOUNT_ID: ${{ secrets.TENDERLY_ACCOUNT_ID }}
