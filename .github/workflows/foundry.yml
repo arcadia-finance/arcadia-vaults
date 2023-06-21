@@ -32,13 +32,13 @@ jobs:
 
       - name: Run tests
         run: |
-             echo "DEVNET_RPC_URL=$(tenderly devnet spawn-rpc --project ${TENDERLY_PROJECT_SLUG} --template ${TENDERLY_DEVNET_TEMPLATE} --account ${TENDERLY_ACCOUNT_ID}  --access_key ${TENDERLY_ACCESS_KEY})" >> $GITHUB_ENV
+             echo "DEVNET_RPC_URL=$(tenderly devnet spawn-rpc --project arcadia-finance-tenderly --template devnet-gh-actions-1 --account ${TENDERLY_ACCOUNT_ID} --access_key ${TENDERLY_ACCESS_KEY})" >> $GITHUB_ENV
+             echo "Devnet RPC:"
              echo "${{ env.DEVNET_RPC_URL }}"
+             echo "Devnet creation done."
              RPC_URL=$${{ env.DEVNET_RPC_URL }} FOUNDRY_PROFILE=gh forge test -vvv
         env:
             TENDERLY_ACCESS_KEY: ${{ secrets.TENDERLY_ACCESS_KEY }}
-            TENDERLY_PROJECT_SLUG: ${{ secrets.TENDERLY_PROJECT_SLUG }}
-            TENDERLY_DEVNET_TEMPLATE: ${{ secrets.TENDERLY_DEVNET_TEMPLATE }}
             TENDERLY_ACCOUNT_ID: ${{ secrets.TENDERLY_ACCOUNT_ID }}
       - name: Run snapshot
         run: forge snapshot --match-contract gas
