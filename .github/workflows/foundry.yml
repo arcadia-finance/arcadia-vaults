@@ -36,7 +36,7 @@ jobs:
              echo "Devnet RPC:"
              echo "${{ env.DEVNET_RPC_URL }}"
              echo "Devnet creation done."
-             RPC_URL=$${{ env.DEVNET_RPC_URL }} FOUNDRY_PROFILE=gh forge test -vvv
+             DEVNET_RPC_URL=$${{ env.DEVNET_RPC_URL }} FOUNDRY_PROFILE=gh forge test -vvv
         env:
             TENDERLY_ACCESS_KEY: ${{ secrets.TENDERLY_ACCESS_KEY }}
             TENDERLY_ACCOUNT_ID: ${{ secrets.TENDERLY_ACCOUNT_ID }}
