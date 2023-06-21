@@ -76,6 +76,7 @@ abstract contract UniV3Test is DeployedContracts, Test {
 
     //this is a before
     constructor() {
+        emit log_named_string("rpc url", RPC_URL);
         fork = vm.createFork(RPC_URL);
 
         erc20Fixture = new ERC20Fixture();
