@@ -32,8 +32,8 @@ jobs:
 
       - name: Run tests
         run: |
-             echo "DEVNET_RPC_URL=$(tenderly devnet spawn-rpc --project arcadia-finance-tenderly --template devnet-gh-actions-1 --account ${TENDERLY_ACCOUNT_ID} --access_key ${TENDERLY_ACCESS_KEY} 2>&1)" >> "$GITHUB_ENV"
-             DEVNET_RPC_URL=${{ env.DEVNET_RPC_URL }} FOUNDRY_PROFILE=gh forge test -vvvv --mt testRevert_processDeposit_BelowAcceptedRange 
+             export DEVNET_RPC_URL=$(tenderly devnet spawn-rpc --project arcadia-finance-tenderly --template devnet-gh-actions-1 --account ${TENDERLY_ACCOUNT_ID} --access_key ${TENDERLY_ACCESS_KEY} 2>&1)
+             FOUNDRY_PROFILE=gh forge test -vvvv --mt testRevert_processDeposit_BelowAcceptedRange 
         env:
             TENDERLY_ACCESS_KEY: ${{ secrets.TENDERLY_ACCESS_KEY }}
             TENDERLY_ACCOUNT_ID: ${{ secrets.TENDERLY_ACCOUNT_ID }}
