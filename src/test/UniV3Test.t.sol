@@ -59,7 +59,7 @@ contract UniswapV3PricingModuleExtension is UniswapV3PricingModule {
 }
 
 abstract contract UniV3Test is DeployedContracts, Test {
-    string RPC_URL = vm.envString("RPC_URL");
+    string RPC_URL = vm.envString("DEVNET_RPC_URL");
     uint256 fork;
 
     address public liquidityProvider = address(1);
@@ -80,6 +80,7 @@ abstract contract UniV3Test is DeployedContracts, Test {
 
     //this is a before
     constructor() {
+        emit log_named_string("rpc url", RPC_URL);
         fork = vm.createFork(RPC_URL);
 
         erc20Fixture = new ERC20Fixture();
