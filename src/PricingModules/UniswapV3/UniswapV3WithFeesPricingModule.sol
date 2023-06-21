@@ -48,18 +48,8 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
     // Map asset => id => positionInformation.
     mapping(address => mapping(uint256 => Position)) internal positions;
 
-    // Flag indicating if the principal, tokensOwed and fees should be priced, or only a subset.
-    FeeFlag public feeFlag;
-
     // The Arcadia Pricing Module for standard ERC20 tokens (the underlying assets).
     PricingModule immutable erc20PricingModule;
-
-    // Enum with the different fee pricing settings.
-    enum FeeFlag {
-        None, // Only the principal is valued. No fees and tokensOwed are taken into account.
-        TokensOwed, // Only the principal and tokensOwed are valued. No fees are taken into account.
-        All // Principal, tokensOwed and fees are valued.
-    }
 
     // Struct with information of a specific Liquidity Position.
     struct Position {
@@ -107,30 +97,6 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
 
         // Will revert in MainRegistry if asset can't be added.
         IMainRegistry(mainRegistry).addAsset(asset, assetType);
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                        FEE FLAG MANAGEMENT
-    ///////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice sets feeFlag to a new value.
-     * @param feeFlag_ The new fee pricing setting.
-     * @dev Calculation of pending fees of Uniswap V3 liquidity positions are very gas intensive.
-     * With the feeFlag the calculation of certain fees can be omitted.
-     * This saves users gas, but part of their position is not valued as collateral.
-     * The options are:
-     *  - None: Only the principal is valued. No pending fees or tokensOwed are taken into account.
-     *  - TokensOwed: Only the principal and tokensOwed are valued. No pending fees are taken into account.
-     *  - All: The principal, tokensOwed and pending fees are valued.
-     * The flag only omits the valuation, the user can still withdraw the whole position (principal, tokensOwed and pending fees).
-     * @dev feeFlag can only be changed such that the value of Uni V3 positions increase in value:
-     *  - From None to TokensOwed or All.
-     *  - From TokensOwed to All.
-     */
-    function setFeeFlag(FeeFlag feeFlag_) external onlyOwner {
-        require(feeFlag_ > feeFlag, "PMUV3_SFF: Invalid Change");
-        feeFlag = feeFlag_;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -342,44 +308,38 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
      * @return amount1 The amount of fees underlying token1 tokens.
      */
     function _getFeeAmounts(address asset, uint256 id) internal view returns (uint256 amount0, uint256 amount1) {
-        if (feeFlag == FeeFlag.None) {
-            return (0, 0);
-        } else if (feeFlag == FeeFlag.TokensOwed) {
-            (,,,,,,,,,, amount0, amount1) = INonfungiblePositionManager(asset).positions(id);
-        } else {
-            address factory = assetToV3Factory[asset];
-            (
-                ,
-                ,
-                address token0,
-                address token1,
-                uint24 fee,
-                int24 tickLower,
-                int24 tickUpper,
-                uint256 liquidity, // gas: cheaper to use uint256 instead of uint128.
-                uint256 feeGrowthInside0LastX128,
-                uint256 feeGrowthInside1LastX128,
-                uint256 tokensOwed0, // gas: cheaper to use uint256 instead of uint128.
-                uint256 tokensOwed1 // gas: cheaper to use uint256 instead of uint128.
-            ) = INonfungiblePositionManager(asset).positions(id);
+        address factory = assetToV3Factory[asset];
+        (
+            ,
+            ,
+            address token0,
+            address token1,
+            uint24 fee,
+            int24 tickLower,
+            int24 tickUpper,
+            uint256 liquidity, // gas: cheaper to use uint256 instead of uint128.
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
+            uint256 tokensOwed0, // gas: cheaper to use uint256 instead of uint128.
+            uint256 tokensOwed1 // gas: cheaper to use uint256 instead of uint128.
+        ) = INonfungiblePositionManager(asset).positions(id);
 
-            (uint256 feeGrowthInside0CurrentX128, uint256 feeGrowthInside1CurrentX128) =
-                _getFeeGrowthInside(factory, token0, token1, fee, tickLower, tickUpper);
+        (uint256 feeGrowthInside0CurrentX128, uint256 feeGrowthInside1CurrentX128) =
+            _getFeeGrowthInside(factory, token0, token1, fee, tickLower, tickUpper);
 
-            // Calculate the total amount of fees by adding the already realized fees (tokensOwed),
-            // to the accumulated fees since the last time the position was updated:
-            // (feeGrowthInsideCurrentX128 - feeGrowthInsideLastX128) * liquidity.
-            // Fee calculations in NonfungiblePositionManager.sol overflow (without reverting) when
-            // one or both terms, or their sum, is bigger than a uint128.
-            // This is however much bigger than any realistic situation.
-            unchecked {
-                amount0 = FullMath.mulDiv(
-                    feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128
-                ) + tokensOwed0;
-                amount1 = FullMath.mulDiv(
-                    feeGrowthInside1CurrentX128 - feeGrowthInside1LastX128, liquidity, FixedPoint128.Q128
-                ) + tokensOwed1;
-            }
+        // Calculate the total amount of fees by adding the already realized fees (tokensOwed),
+        // to the accumulated fees since the last time the position was updated:
+        // (feeGrowthInsideCurrentX128 - feeGrowthInsideLastX128) * liquidity.
+        // Fee calculations in NonfungiblePositionManager.sol overflow (without reverting) when
+        // one or both terms, or their sum, is bigger than a uint128.
+        // This is however much bigger than any realistic situation.
+        unchecked {
+            amount0 = FullMath.mulDiv(
+                feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128
+            ) + tokensOwed0;
+            amount1 = FullMath.mulDiv(
+                feeGrowthInside1CurrentX128 - feeGrowthInside1LastX128, liquidity, FixedPoint128.Q128
+            ) + tokensOwed1;
         }
     }
 
