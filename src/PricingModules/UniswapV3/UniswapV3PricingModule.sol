@@ -13,7 +13,6 @@ import { TickMath } from "./libraries/TickMath.sol";
 import { FullMath } from "./libraries/FullMath.sol";
 import { PoolAddress } from "./libraries/PoolAddress.sol";
 import { FixedPoint96 } from "./libraries/FixedPoint96.sol";
-
 import { FixedPoint128 } from "./libraries/FixedPoint128.sol";
 import { LiquidityAmounts } from "./libraries/LiquidityAmounts.sol";
 import { FixedPointMathLib } from "lib/solmate/src/utils/FixedPointMathLib.sol";
@@ -36,12 +35,16 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
 contract UniswapV3PricingModule is PricingModule {
     using FixedPointMathLib for uint256;
 
-    // The Arcadia Pricing Module for standard ERC20 tokens (the underlying assets).
-    PricingModule immutable erc20PricingModule;
-
     /* //////////////////////////////////////////////////////////////
                                 STORAGE
     ////////////////////////////////////////////////////////////// */
+
+    // The maximum difference between the upper or lower tick and the current tick (from 0.2x to 5X the current price).
+    // Calculated as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
+    int24 public constant MAX_TICK_DIFFERENCE = 16_095;
+
+    // The Number of seconds in the past from which to calculate the time-weighted tick.
+    uint32 public constant TWAT_INTERVAL = 5 minutes;
 
     // Map asset => uniswapV3Factory.
     mapping(address => address) public assetToV3Factory;
@@ -51,6 +54,9 @@ contract UniswapV3PricingModule is PricingModule {
 
     // Flag indicating if the principal, tokensOwed and fees should be priced, or only a subset.
     FeeFlag public feeFlag;
+
+    // The Arcadia Pricing Module for standard ERC20 tokens (the underlying assets).
+    PricingModule immutable erc20PricingModule;
 
     // Enum with the different fee pricing settings.
     enum FeeFlag {
@@ -489,8 +495,8 @@ contract UniswapV3PricingModule is PricingModule {
 
             // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
             // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
-            require(tickCurrent - tickLower <= 16_095, "PMUV3_PD: Tlow not in limits");
-            require(tickUpper - tickCurrent <= 16_095, "PMUV3_PD: Tup not in limits");
+            require(tickCurrent - tickLower <= MAX_TICK_DIFFERENCE, "PMUV3_PD: Tlow not in limits");
+            require(tickUpper - tickCurrent <= MAX_TICK_DIFFERENCE, "PMUV3_PD: Tup not in limits");
         }
 
         // Cache sqrtRatio.
@@ -525,11 +531,11 @@ contract UniswapV3PricingModule is PricingModule {
      */
     function _getTwat(IUniswapV3Pool pool) internal view returns (int24 tick) {
         uint32[] memory secondsAgos = new uint32[](2);
-        secondsAgos[1] = 300; // We take a 5 minute time interval.
+        secondsAgos[1] = TWAT_INTERVAL; // We take a 5 minute time interval.
 
         (int56[] memory tickCumulatives,) = pool.observe(secondsAgos);
 
-        tick = int24((tickCumulatives[0] - tickCumulatives[1]) / 300);
+        tick = int24((tickCumulatives[0] - tickCumulatives[1]) / int32(TWAT_INTERVAL));
     }
 
     /**
