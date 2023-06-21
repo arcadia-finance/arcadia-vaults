@@ -55,7 +55,7 @@ contract UniswapV3PricingModuleExtension is UniswapV3WithFeesPricingModule {
 }
 
 abstract contract UniV3Test is DeployedContracts, Test {
-    string RPC_URL = vm.envString("DEVNET_JSON_RPC_URL");
+    string RPC_URL = vm.envString("DEVNET_RPC_URL");
     uint256 fork;
 
     address public liquidityProvider = address(1);
