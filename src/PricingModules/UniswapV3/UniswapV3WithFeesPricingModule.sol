@@ -30,7 +30,6 @@ import { SafeCastLib } from "lib/solmate/src/utils/SafeCastLib.sol";
  */
 contract UniswapV3WithFeesPricingModule is PricingModule {
     using FixedPointMathLib for uint256;
-    using FullMath for uint256;
 
     /* //////////////////////////////////////////////////////////////
                                 STORAGE
@@ -101,7 +100,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
     }
 
     /*///////////////////////////////////////////////////////////////
-                        ALLOW LIST MANAGEMENT
+                            ALLOW LIST
     ///////////////////////////////////////////////////////////////*/
 
     /**
@@ -196,8 +195,10 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
             (uint256 fee0, uint256 fee1) = _getFeeAmounts(asset, id);
 
             // Calculate the total value in USD, since the USD price is per 10^18 tokens we have to divide by 10^18.
-            valueInUsd =
-                usdPriceToken0.mulDivDown(principal0 + fee0, 1e18) + usdPriceToken1.mulDivDown(principal1 + fee1, 1e18);
+            unchecked {
+                valueInUsd = usdPriceToken0.mulDivDown(principal0 + fee0, 1e18)
+                    + usdPriceToken1.mulDivDown(principal1 + fee1, 1e18);
+            }
         }
 
         {
@@ -302,12 +303,12 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
     /**
      * @notice Calculates the underlying token amounts of accrued fees, both collected as uncollected.
      * @param asset The contract address of the asset.
-     * @param id The Id of the range.
+     * @param id The Id of the Liquidity Position.
      * @return amount0 The amount fees of underlying token0 tokens.
      * @return amount1 The amount of fees underlying token1 tokens.
      */
     function _getFeeAmounts(address asset, uint256 id) internal view returns (uint256 amount0, uint256 amount1) {
-        address factory = assetToV3Factory[asset]; // Have to cache the factory address to avoid a stack too deep error.
+        address factory = assetToV3Factory[asset];
         (
             ,
             ,
@@ -445,8 +446,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
 
             // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic).
             // We do not use the TWAP price to calculate the current value of the asset, only to ensure that the deposited Liquidity Range
-            // is within 5x of the current tick.
-            // The risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
+            // hence the risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
             int24 tickCurrent = _getTwat(pool);
 
             // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
@@ -501,7 +501,6 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
      * @param assetId The Id of the asset.
      * param amount The amount of tokens.
      * @dev Unsafe cast to uint128, we know that the same cast did not overflow in deposit().
-     * @dev ToDo Should we delete storage vars of withdrawn positions?
      */
     function processWithdrawal(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
         // Cache sqrtRatio.
