@@ -571,7 +571,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.assume(priceToken0 <= type(uint256).max / 10 ** (54 - decimals0)); // Overflow in _getSqrtPriceX96
         vm.assume(priceToken1 <= type(uint256).max / 10 ** 36); // Overflow in Pricing Module
         // Cast to uint160 will overflow, not realistic.
-        vm.assume(priceToken0 / priceToken1 < 2 ** 128);
+        vm.assume(priceToken0 / priceToken1 / 10 ** decimals0 < 2 ** 128 / 10 ** decimals1);
 
         // Deploy tokens.
         token0 = erc20Fixture.createToken(deployer, uint8(decimals0));
@@ -611,7 +611,7 @@ contract RiskVariablesManagementTest is UniV3Test {
         vm.assume(priceToken0 <= type(uint256).max / 10 ** (54 - decimals0)); // Overflow in _getSqrtPriceX96
         vm.assume(priceToken1 <= type(uint256).max / 10 ** 36); // Overflow in Pricing Module
         // Cast to uint160 will overflow, not realistic.
-        vm.assume(priceToken0 / priceToken1 < 2 ** 128);
+        vm.assume(priceToken0 / priceToken1 / 10 ** decimals0 < 2 ** 128 / 10 ** decimals1);
 
         // Deploy tokens.
         token0 = erc20Fixture.createToken(deployer, uint8(decimals0));
