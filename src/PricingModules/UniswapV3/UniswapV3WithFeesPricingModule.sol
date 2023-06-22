@@ -35,12 +35,9 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
                                 STORAGE
     ////////////////////////////////////////////////////////////// */
 
-    // The maximum difference between the upper or lower tick and the current tick (from 0.2x to 5X the current price).
+    // The maximum difference between the upper or lower tick and the current tick (from 0.2x to 5x the current price).
     // Calculated as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
     int24 public constant MAX_TICK_DIFFERENCE = 16_095;
-
-    // The Number of seconds in the past from which to calculate the time-weighted tick.
-    uint32 public constant TWAT_INTERVAL = 5 minutes;
 
     // Map asset => uniswapV3Factory.
     mapping(address => address) public assetToV3Factory;
@@ -442,10 +439,10 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         {
             int256 tickCurrent = _getTrustedTickCurrent(token0, token1);
 
-            // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
+            // The liquidity must be in an acceptable range (from 0.2x to 5x the current price).
             // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
-            require(tickCurrent - tickLower <= 16_095, "PMUV3_PD: Tlow not in limits");
-            require(tickUpper - tickCurrent <= 16_095, "PMUV3_PD: Tup not in limits");
+            require(tickCurrent - tickLower <= MAX_TICK_DIFFERENCE, "PMUV3_PD: Tlow not in limits");
+            require(tickUpper - tickCurrent <= MAX_TICK_DIFFERENCE, "PMUV3_PD: Tup not in limits");
         }
 
         // Cache sqrtRatio.
@@ -470,6 +467,12 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         exposure[token1].exposure = uint128(exposure1);
     }
 
+    /**
+     * @notice Calculates the current tick from trusted USD prices of both tokens.
+     * @param token0 The contract address of token0.
+     * @param token1 The contract address of token1.
+     * @return tickCurrent The current tick.
+     */
     function _getTrustedTickCurrent(address token0, address token1) internal view returns (int256 tickCurrent) {
         // We use the USD price per 10^18 tokens instead of the USD price per token to guarantee
         // sufficient precision.
