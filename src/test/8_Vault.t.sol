@@ -1097,6 +1097,7 @@ contract VaultActionTest is vaultTests {
     function testRevert_vaultManagementAction_OwnerChanged(address assetManager) public {
         vm.assume(assetManager != address(0));
         address newOwner = address(60); //Annoying to fuzz since it often fuzzes to existing contracts without an onERC721Received
+        vm.assume(assetManager != newOwner);
 
         vm.prank(vaultOwner);
         proxy_.setAssetManager(assetManager, true);
