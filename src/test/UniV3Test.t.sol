@@ -54,7 +54,7 @@ contract UniswapV3PricingModuleExtension is UniswapV3WithFeesPricingModule {
     }
 
     function getFeeAmounts(address asset, uint256 id) public view returns (uint256 amount0, uint256 amount1) {
-        (amount0, amount1) = _getFeeAmounts(asset, id);
+        (amount0, amount1) = _getTokensOwedAndFeeAmounts(asset, id);
     }
 }
 

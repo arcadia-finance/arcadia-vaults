@@ -44,6 +44,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
 
     // Map asset => id => positionInformation.
     mapping(address => mapping(uint256 => Position)) internal positions;
+    mapping(address => mapping(uint256 => Position2)) internal positions2;
 
     // The Arcadia Pricing Module for standard ERC20 tokens (the underlying assets).
     PricingModule immutable erc20PricingModule;
@@ -54,6 +55,13 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         address token1; // Token1 of the Liquidity Pool.
         int24 tickLower; // The lower tick of the liquidity position.
         int24 tickUpper; // The upper tick of the liquidity position.
+        uint128 liquidity; // The liquidity per tick of the liquidity position.
+    }
+
+    // Struct with information of a specific Liquidity Position.
+    struct Position2 {
+        uint128 exposureDelta0; // The lower tick of the liquidity position.
+        uint128 exposureDelta1; // The upper tick of the liquidity position.
         uint128 liquidity; // The liquidity per tick of the liquidity position.
     }
 
@@ -189,7 +197,7 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
 
         {
             // Calculate amount0 and amount1 of the accumulated fees.
-            (uint256 fee0, uint256 fee1) = _getFeeAmounts(asset, id);
+            (uint256 fee0, uint256 fee1) = _getTokensOwedAndFeeAmounts(asset, id);
 
             // Calculate the total value in USD, since the USD price is per 10^18 tokens we have to divide by 10^18.
             unchecked {
@@ -304,8 +312,9 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
      * @return amount0 The amount fees of underlying token0 tokens.
      * @return amount1 The amount of fees underlying token1 tokens.
      */
-    function _getFeeAmounts(address asset, uint256 id) internal view returns (uint256 amount0, uint256 amount1) {
+    function _getTokensOwedAndFeeAmounts(address asset, uint256 id) internal view returns (uint256, uint256) {
         address factory = assetToV3Factory[asset];
+
         (
             ,
             ,
@@ -321,8 +330,30 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
             uint256 tokensOwed1 // gas: cheaper to use uint256 instead of uint128.
         ) = INonfungiblePositionManager(asset).positions(id);
 
+        return _addFeeAmountsToExposureDeltas(
+            PoolAddress.computeAddress(factory, token0, token1, fee),
+            tickLower,
+            tickUpper,
+            liquidity,
+            feeGrowthInside0LastX128,
+            feeGrowthInside1LastX128,
+            tokensOwed0,
+            tokensOwed1
+        );
+    }
+
+    function _addFeeAmountsToExposureDeltas(
+        address poolAddress,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 liquidity,
+        uint256 feeGrowthInside0LastX128,
+        uint256 feeGrowthInside1LastX128,
+        uint256 exposureDelta0,
+        uint256 exposureDelta1
+    ) internal view returns (uint256, uint256) {
         (uint256 feeGrowthInside0CurrentX128, uint256 feeGrowthInside1CurrentX128) =
-            _getFeeGrowthInside(factory, token0, token1, fee, tickLower, tickUpper);
+            _getFeeGrowthInside(poolAddress, tickLower, tickUpper);
 
         // Calculate the total amount of fees by adding the already realized fees (tokensOwed),
         // to the accumulated fees since the last time the position was updated:
@@ -331,35 +362,29 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         // one or both terms, or their sum, is bigger than a uint128.
         // This is however much bigger than any realistic situation.
         unchecked {
-            amount0 = FullMath.mulDiv(
-                feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128
-            ) + tokensOwed0;
-            amount1 = FullMath.mulDiv(
-                feeGrowthInside1CurrentX128 - feeGrowthInside1LastX128, liquidity, FixedPoint128.Q128
-            ) + tokensOwed1;
+            exposureDelta0 +=
+                FullMath.mulDiv(feeGrowthInside0CurrentX128 - feeGrowthInside0LastX128, liquidity, FixedPoint128.Q128);
+            exposureDelta1 +=
+                FullMath.mulDiv(feeGrowthInside1CurrentX128 - feeGrowthInside1LastX128, liquidity, FixedPoint128.Q128);
+
+            return (exposureDelta0, exposureDelta1);
         }
     }
 
     /**
      * @notice Calculates the current fee growth inside the Liquidity Range.
-     * @param factory The contract address of the pool factory.
-     * @param token0 Token0 of the Liquidity Pool.
-     * @param token1 Token1 of the Liquidity Pool.
-     * @param fee The fee of the Liquidity Pool.
+     * @param poolAddress The contract address of the pool.
      * @param tickLower The lower tick of the liquidity position.
      * @param tickUpper The upper tick of the liquidity position.
      * @return feeGrowthInside0X128 The amount fees of underlying token0 tokens.
      * @return feeGrowthInside1X128 The amount of fees underlying token1 tokens.
      */
-    function _getFeeGrowthInside(
-        address factory,
-        address token0,
-        address token1,
-        uint24 fee,
-        int24 tickLower,
-        int24 tickUpper
-    ) internal view returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) {
-        IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, token0, token1, fee));
+    function _getFeeGrowthInside(address poolAddress, int24 tickLower, int24 tickUpper)
+        internal
+        view
+        returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128)
+    {
+        IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
 
         // To calculate the pending fees, the current tick has to be used, even if the pool would be unbalanced.
         (, int24 tickCurrent,,,,,) = pool.slot0();
@@ -421,20 +446,28 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
      * making it expensive for malicious actors to manipulate exposures (now they have to deposit at least 20% of the max exposure).
      */
     function processDeposit(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
-        (,, address token0, address token1,, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
-            INonfungiblePositionManager(asset).positions(assetId);
+        // Call internal function with strictly necessary input variables to avoid stack to deep.
+        _processDeposit(asset, assetId);
+    }
+
+    function _processDeposit(address asset, uint256 assetId) internal {
+        address factory = assetToV3Factory[asset];
+        (
+            ,
+            ,
+            address token0,
+            address token1,
+            uint24 fee,
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
+            uint256 exposureDelta0, // equals tokensOwed0.
+            uint256 exposureDelta1 // equals tokensOwed0.
+        ) = INonfungiblePositionManager(asset).positions(assetId);
 
         require(liquidity > 0, "PMUV3_PD: 0 liquidity");
-
-        // Since liquidity of a position can be increased by a non-owner, we have to store the liquidity during deposit.
-        // Otherwise the max exposure checks can be circumvented.
-        positions[asset][assetId] = Position({
-            token0: token0,
-            token1: token1,
-            tickLower: tickLower,
-            tickUpper: tickUpper,
-            liquidity: liquidity
-        });
 
         {
             int256 tickCurrent = _getTrustedTickCurrent(token0, token1);
@@ -445,26 +478,57 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
             require(tickUpper - tickCurrent <= MAX_TICK_DIFFERENCE, "PMUV3_PD: Tup not in limits");
         }
 
+        // Add pending fees to exposureDelta (tokensOwed).
+        (exposureDelta0, exposureDelta1) = _addFeeAmountsToExposureDeltas(
+            PoolAddress.computeAddress(factory, token0, token1, fee),
+            tickLower,
+            tickUpper,
+            liquidity,
+            feeGrowthInside0LastX128,
+            feeGrowthInside1LastX128,
+            exposureDelta0,
+            exposureDelta1
+        );
+
+        // Add the maximal exposure of the principal to exposureDelta (tokensOwed + fees).
+        (exposureDelta0, exposureDelta1) =
+            _addPrincipalExposure(tickLower, tickUpper, liquidity, exposureDelta0, exposureDelta1);
+
+        {
+            // Calculate updated total exposure.
+            uint256 exposure0 = exposureDelta0 + exposure[token0].exposure;
+            uint256 exposure1 = exposureDelta1 + exposure[token1].exposure;
+
+            // Check that exposure doesn't exceed maxExposure
+            require(exposure0 <= exposure[token0].maxExposure, "PMUV3_PD: Exposure0 not in limits");
+            require(exposure1 <= exposure[token1].maxExposure, "PMUV3_PD: Exposure1 not in limits");
+
+            // Update exposure
+            // Unsafe casts: we already know from previous requires that exposure is smaller than maxExposure (uint128).
+            exposure[token0].exposure = uint128(exposure0);
+            exposure[token1].exposure = uint128(exposure1);
+        }
+
+        // Store information of the position.
+        positions2[asset][assetId] = Position2({
+            exposureDelta0: uint128(exposureDelta0),
+            exposureDelta1: uint128(exposureDelta1),
+            liquidity: liquidity
+        });
+    }
+
+    function _addPrincipalExposure(int24 tickLower, int24 tickUpper, uint128 liquidity, uint256 fee0, uint256 fee1)
+        internal
+        pure
+        returns (uint256 amount0Max, uint256 amount1Max)
+    {
         // Cache sqrtRatio.
         uint160 sqrtRatioLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
         uint160 sqrtRatioUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
 
         // Calculate the maximal possible exposure to each underlying asset.
-        uint256 amount0Max = LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity);
-        uint256 amount1Max = LiquidityAmounts.getAmount1ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity);
-
-        // Calculate updated exposure.
-        uint256 exposure0 = amount0Max + exposure[token0].exposure;
-        uint256 exposure1 = amount1Max + exposure[token1].exposure;
-
-        // Check that exposure doesn't exceed maxExposure
-        require(exposure0 <= exposure[token0].maxExposure, "PMUV3_PD: Exposure0 not in limits");
-        require(exposure1 <= exposure[token1].maxExposure, "PMUV3_PD: Exposure1 not in limits");
-
-        // Update exposure
-        // Unsafe casts: we already know from previous requires that exposure is smaller than maxExposure (uint128).
-        exposure[token0].exposure = uint128(exposure0);
-        exposure[token1].exposure = uint128(exposure1);
+        amount0Max = LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity) + fee0;
+        amount1Max = LiquidityAmounts.getAmount1ForLiquidity(sqrtRatioLowerX96, sqrtRatioUpperX96, liquidity) + fee1;
     }
 
     /**
