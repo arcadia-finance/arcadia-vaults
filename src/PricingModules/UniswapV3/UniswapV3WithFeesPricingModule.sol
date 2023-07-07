@@ -50,9 +50,9 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
 
     // Struct with information of a specific Liquidity Position.
     struct Position {
-        uint96 exposureDelta0; // The total max exposure of token0 of the Liquidity Position at the time of deposit.
+        uint128 exposureDelta0; // The total max exposure of token0 of the Liquidity Position at the time of deposit.
+        uint128 exposureDelta1; // The total max exposure of token1 of the Liquidity Position at the time of deposit.
         address token0; // The contract address of the token0.
-        uint96 exposureDelta1; // The total max exposure of token1 of the Liquidity Position at the time of deposit.
         address token1; // The contract address of the token1.
         uint128 liquidity; // The liquidity per tick of the Liquidity Position.
     }
@@ -523,10 +523,11 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         }
 
         // Store information of the position.
+        // Unsafe casts: we already know from previous requires that exposure is smaller than maxExposure (uint128).
         positions[asset][assetId] = Position({
-            exposureDelta0: uint96(exposureDelta0),
+            exposureDelta0: uint128(exposureDelta0),
+            exposureDelta1: uint128(exposureDelta1),
             token0: token0,
-            exposureDelta1: uint96(exposureDelta1),
             token1: token1,
             liquidity: liquidity
         });
@@ -559,7 +560,6 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
      * @param asset The contract address of the asset.
      * @param assetId The Id of the asset.
      * param amount The amount of tokens.
-     * @dev Unsafe cast to uint128, we know that the same cast did not overflow in deposit().
      */
     function processWithdrawal(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
         // Update exposure to underlying assets.

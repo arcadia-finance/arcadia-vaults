@@ -826,29 +826,26 @@ contract PricingLogicTest is UniV3Test {
         assertEq(actualValueInBaseCurrency, 0);
     }
 
-    function testSuccess_getValue_PrincipalAndTokensOwedAndFees()
-        // uint80 liquidity,
-        // uint256 decimals0,
-        // uint256 decimals1,
-        // uint80 liquidityWithdrawn,
-        // uint64 priceToken0,
-        // uint64 priceToken1,
-        // int24 tickLower,
-        // int24 tickUpper,
-        // uint256 amountOut
-        public
-    {
-        uint80 liquidity = 12062;
-        uint256 decimals0 =
-            266345608915412720044064725502329664178360535727766213679;
-        uint256 decimals1 = 2;
-        uint80 liquidityWithdrawn = 8417903558;
-        uint64 priceToken0 = 15383475337050865;
-        uint64 priceToken1 = 18446744073709551612;
-        int24 tickLower = 1;
-        int24 tickUpper = 696757;
-        uint256 amountOut =
-            40306167076555005586429283545150100426073068386313;
+    function testSuccess_getValue_PrincipalAndTokensOwedAndFees(
+        uint80 liquidity,
+        uint256 decimals0,
+        uint256 decimals1,
+        uint80 liquidityWithdrawn,
+        uint64 priceToken0,
+        uint64 priceToken1,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amountOut
+    ) public {
+        // uint80 liquidity = 12_062;
+        // uint256 decimals0 = 6;
+        // uint256 decimals1 = 8;
+        // uint80 liquidityWithdrawn = 974;
+        // uint64 priceToken0 = 15_383_475_337_050_865;
+        // uint64 priceToken1 = 18_446_744_073_709_551_612;
+        // int24 tickLower = 1;
+        // int24 tickUpper = 696_757;
+        // uint256 amountOut = 8969;
 
         // Check that ticks are within allowed ranges.
         vm.assume(tickLower < tickUpper);
@@ -954,6 +951,16 @@ contract PricingLogicTest is UniV3Test {
                 );
                 vm.stopPrank();
 
+                {
+                    (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
+                    (uint160 sqrtPrice,,,,,,) = pool.slot0();
+                    (uint256 principal0_, uint256 principal1_) = LiquidityAmounts.getAmountsForLiquidity(
+                        sqrtPrice, TickMath.getSqrtRatioAtTick(1), TickMath.getSqrtRatioAtTick(696_757), liquidity_
+                    );
+                    emit log_named_uint("principal0_", principal0_);
+                    emit log_named_uint("principal1_", principal1_);
+                }
+
                 // When amountIn is smaller as fee, calculations get tricky, but overall value will be neglectible.
                 vm.assume(amountIn > 10_000);
 
@@ -973,7 +980,7 @@ contract PricingLogicTest is UniV3Test {
 
                     (,,,,,,, uint128 liquidity_,,,,) = uniV3.positions(tokenId);
                     int24 tickLower_ = 1;
-                    int24 tickUpper_ = 696757;
+                    int24 tickUpper_ = 696_757;
                     (, uint256 feeGrowthInside1X128) =
                         uniV3PricingModule.getFeeGrowthInside(address(pool), tickLower_, tickUpper_);
                     uint256 fee1Exact = feeGrowthInside1X128 * liquidity_ / 0x100000000000000000000000000000000;
