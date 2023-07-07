@@ -22,8 +22,16 @@ jobs:
       - name: Run format
         run: forge fmt --check
 
+      - name: Install Tenderly CLI
+        run: curl https://raw.githubusercontent.com/Tenderly/tenderly-cli/master/scripts/install-linux.sh | sudo sh
+
       - name: Run tests
-        run: FOUNDRY_PROFILE=hf forge test -vvv
+        run: |
+          export RPC_URL=$(tenderly devnet spawn-rpc --project arcadia-finance-tenderly --template devnet-gh-actions-1 --account ${TENDERLY_ACCOUNT_ID} --access_key ${TENDERLY_ACCESS_KEY} 2>&1)
+          FOUNDRY_PROFILE=hf forge test -vvv
+        env:
+          TENDERLY_ACCESS_KEY: ${{ secrets.TENDERLY_ACCESS_KEY }}
+          TENDERLY_ACCOUNT_ID: ${{ secrets.TENDERLY_ACCOUNT_ID }}
 
       - name: Run snapshot
         run: forge snapshot --match-contract gas
