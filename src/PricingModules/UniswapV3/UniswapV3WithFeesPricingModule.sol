@@ -35,12 +35,9 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
                                 STORAGE
     ////////////////////////////////////////////////////////////// */
 
-    // The maximum difference between the upper or lower tick and the current tick (from 0.2x to 5X the current price).
+    // The maximum difference between the upper or lower tick and the current tick (from 0.2x to 5x the current price).
     // Calculated as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
     int24 public constant MAX_TICK_DIFFERENCE = 16_095;
-
-    // The Number of seconds in the past from which to calculate the time-weighted tick.
-    uint32 public constant TWAT_INTERVAL = 5 minutes;
 
     // Map asset => uniswapV3Factory.
     mapping(address => address) public assetToV3Factory;
@@ -424,10 +421,9 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
      * making it expensive for malicious actors to manipulate exposures (now they have to deposit at least 20% of the max exposure).
      */
     function processDeposit(address, address asset, uint256 assetId, uint256) external override onlyMainReg {
-        (,, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
+        (,, address token0, address token1,, int24 tickLower, int24 tickUpper, uint128 liquidity,,,,) =
             INonfungiblePositionManager(asset).positions(assetId);
 
-        //
         require(liquidity > 0, "PMUV3_PD: 0 liquidity");
 
         // Since liquidity of a position can be increased by a non-owner, we have to store the liquidity during deposit.
@@ -441,15 +437,9 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
         });
 
         {
-            IUniswapV3Pool pool =
-                IUniswapV3Pool(PoolAddress.computeAddress(assetToV3Factory[asset], token0, token1, fee));
+            int256 tickCurrent = _getTrustedTickCurrent(token0, token1);
 
-            // We calculate current tick via the TWAP price. TWAP prices can be manipulated, but it is costly (not atomic).
-            // We do not use the TWAP price to calculate the current value of the asset, only to ensure that the deposited Liquidity Range
-            // hence the risk of manipulation is acceptable since it can never be used to steal funds (only to deposit ranges further than 5x).
-            int24 tickCurrent = _getTwat(pool);
-
-            // The liquidity must be in an acceptable range (from 0.2x to 5X the current price).
+            // The liquidity must be in an acceptable range (from 0.2x to 5x the current price).
             // Tick difference defined as: (sqrt(1.0001))log(sqrt(5)) = 16095.2
             require(tickCurrent - tickLower <= MAX_TICK_DIFFERENCE, "PMUV3_PD: Tlow not in limits");
             require(tickUpper - tickCurrent <= MAX_TICK_DIFFERENCE, "PMUV3_PD: Tup not in limits");
@@ -478,20 +468,24 @@ contract UniswapV3WithFeesPricingModule is PricingModule {
     }
 
     /**
-     * @notice Calculates the time weighted average tick over 300s.
-     * @param pool The liquidity pool.
-     * @return tick The time weighted average tick over 300s.
-     * @dev We do not use the TWAT price to calculate the current value of the asset.
-     * It is used only to ensure that the deposited Liquidity range and thus
-     * the risk of exposure manipulation is acceptable.
+     * @notice Calculates the current tick from trusted USD prices of both tokens.
+     * @param token0 The contract address of token0.
+     * @param token1 The contract address of token1.
+     * @return tickCurrent The current tick.
      */
-    function _getTwat(IUniswapV3Pool pool) internal view returns (int24 tick) {
-        uint32[] memory secondsAgos = new uint32[](2);
-        secondsAgos[1] = TWAT_INTERVAL; // We take a 5 minute time interval.
+    function _getTrustedTickCurrent(address token0, address token1) internal view returns (int256 tickCurrent) {
+        // We use the USD price per 10^18 tokens instead of the USD price per token to guarantee
+        // sufficient precision.
+        (uint256 priceToken0,,,) = PricingModule(erc20PricingModule).getValue(
+            GetValueInput({ asset: token0, assetId: 0, assetAmount: 1e18, baseCurrency: 0 })
+        );
+        (uint256 priceToken1,,,) = PricingModule(erc20PricingModule).getValue(
+            GetValueInput({ asset: token1, assetId: 0, assetAmount: 1e18, baseCurrency: 0 })
+        );
 
-        (int56[] memory tickCumulatives,) = pool.observe(secondsAgos);
+        uint160 sqrtPriceX96 = _getSqrtPriceX96(priceToken0, priceToken1);
 
-        tick = int24((tickCumulatives[0] - tickCumulatives[1]) / int32(TWAT_INTERVAL));
+        tickCurrent = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
     }
 
     /**
